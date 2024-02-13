@@ -13,6 +13,8 @@ SimpleSim <- function(nreads = 1000, fn = 0.5,
                       pnew = 0.05, pold = 0.001,
                       rlen = 100, Ucont = 0.25){
 
+  # The dumb hack that gets check() to shut up
+  TC <- nT <- NULL
 
   # Determine newness status of each read
     # 1 = new; 0 = old
