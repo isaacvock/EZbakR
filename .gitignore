@@ -3,6 +3,9 @@ src/*
 .Rproj.user
 *.Rproj
 .Rhistory
+.httr-oauth
+.DS_Store
+.quarto
 .travis.yml
 inst/doc
 vignettes/rsconnect
