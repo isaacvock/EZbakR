@@ -1,0 +1,9 @@
+src
+src/*
+.Rproj.user
+*.Rproj
+.Rhistory
+.travis.yml
+inst/doc
+vignettes/rsconnect
+docs
