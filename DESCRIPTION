@@ -1,10 +1,20 @@
 Package: EZbakR
-Title: What the Package Does (One Line, Title Case)
+Title: Analyze and Integrate Any Type of Nucleotide Recoding RNA-seq Data
 Version: 0.0.0.9000
-Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
+Authors@R:
+    person(given = "Isaac",
+           family = "Vock",
+           role = c("aut", "cre"),
+           email = "isaac.vock@gmail.com",
+           comment = c(ORCID = "0000-0002-7178-6886"))
+Description: A complete rewrite and reimagination of bakR. Designed to support
+a wide array of analyses of nucleotide recoding RNA-seq (NR-seq) datasets of any
+type. Specifially designed with the following NR-seq methods in mind: TimeLapse-seq/
+SLAM-seq/TUC-seq, Start-TimeLapse-seq (STL-seq), TT-TimeLapse-seq (TT-TL-seq), TILAC,
+subcellular TimeLapse-seq. Support for single cell NR-seq methods is provided though
+may be expanded in the future. Also designed to support nucleotide specific mutational
+analyses and thus analyses of any mutational probing RNA-seq method (SHAPE-seq, DMS-MaPseq,
+TRIBE, DART-seq, etc.). 
 License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
     license
 Encoding: UTF-8
