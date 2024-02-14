@@ -16,7 +16,7 @@ SimpleSim(
 \arguments{
 \item{nreads}{Number of reads to simulate}
 
-\item{fn}{Fraction of reasd that are new in simulation. Whether a read will
+\item{fn}{Fraction of reads that are new in simulation. Whether a read will
 be new will be determined by a draw from a Bernoulli(fn) distribution.}
 
 \item{pnew}{T-to-C mutation rate in new reads}
