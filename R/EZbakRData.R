@@ -49,10 +49,11 @@ validate_EZbakRData <- function(obj){
   ### Does cB_cols contain sample and n?
   if(!("sample" %in% cB_cols & "n" %in% cB_cols)){
 
-    stop(
+    rlang::abort(
       "cB must include columns named sample (representing the sample ID)
       and n (representing the number of reads with identical values for the
-      columns included in the cB)!"
+      columns included in the cB)!",
+      class = "cB_sample_n"
     )
 
   }
@@ -63,13 +64,14 @@ validate_EZbakRData <- function(obj){
 
   if(!all(basecounts_expected %in% cB_cols)){
 
-    stop(
+    rlang::abort(
       "Not all of the columns tracking the counts of relevant nucleotides
       are present! For example, if you have columns called TC and GA,
       you need to have corresponding columns called nT and nG. TC and GA
       should represent the number of T-to-C and G-to-A mutations
       in sequencing reads, respectively, and nT and nG should represent
-      the number of Ts and Gs in the read (if there had been no mutations in that read)."
+      the number of Ts and Gs in the read (if there had been no mutations in that read).",
+      class = "cB_basecount"
     )
 
   }
@@ -78,8 +80,9 @@ validate_EZbakRData <- function(obj){
   ### Does metadf contain sample and correct tl(s)?
 
   if(!("sample" %in% metadf_cols)){
-    stop(
-      "metadf must include a column named sample (representing the sample ID)!"
+    rlang::abort(
+      "metadf must include a column named sample (representing the sample ID)!",
+      class = "metadf_sample"
     )
   }
 
@@ -97,14 +100,15 @@ validate_EZbakRData <- function(obj){
       if(!(all(tl_expected_p %in% metadf_cols) & all(tl_expected_c %in% metadf_cols))){
 
 
-        stop(
+        rlang::abort(
           "Not all of the relevant label times are included in the metadf.
           For example, if your cB has columns TC and GA, your metadf must
           include columns called tl_TC and tl_GA, representing the label times
           for metabolic labels whose recoding yield apparent T-to-C and
           G-to-A mutations, respectively. Alternatively, if you performed a
           pulse-chase, then you need columns tpulse_TC, tpulse_GA, tchase_TC,
-          and tpulse_GA."
+          and tpulse_GA.",
+          class = "metadf_tl_multimut"
         )
 
       }else{
@@ -130,10 +134,11 @@ validate_EZbakRData <- function(obj){
 
       if(!all(c("tchase", "tpulse") %in% metadf_cols)){
 
-        stop(
+        rlang::abort(
           "metadf must contain a column called tl (the label time if using a pulse-label design)
           or a combination of tpulse and tchase (pulse and chase times respectively
-          if using a pulse-chase design)."
+          if using a pulse-chase design).",
+          class = "metadf_tl_onemut"
         )
 
       }else{
@@ -158,7 +163,8 @@ validate_EZbakRData <- function(obj){
   samps_cB <- unique(cB$sample)
 
   if(!all(samps_cB %in% metadf$sample)){
-    stop("Not all samples in the cB are present in the metadf!")
+    rlang::abort("Not all samples in the cB are present in the metadf!",
+          class = "cB_metadf_samples")
   }
 
 
@@ -197,7 +203,8 @@ validate_EZbakRData <- function(obj){
 
   if(!all(sapply(cB[,mutcounts_in_cB], is_pos_whole))){
 
-    stop("Not all columns tracking counts of mutations are positive whole numbers!")
+    rlang::abort("Not all columns tracking counts of mutations are positive whole numbers!",
+          class = "mut_not_pos_whole")
 
   }
 
@@ -205,7 +212,8 @@ validate_EZbakRData <- function(obj){
 
   if(!all(sapply(cB[,basecounts_expected], is_pos_whole))){
 
-    stop("Not all columns tracking counts of nucleotides are positive whole numbers!")
+    rlang::abort("Not all columns tracking counts of nucleotides are positive whole numbers!",
+                 class = "basecounts_not_pos_whole")
 
   }
 
@@ -233,8 +241,9 @@ validate_EZbakRData <- function(obj){
 
   if(!all(sapply(metadf[,tl_cols], is_pos_num))){
 
-    stop("Not all columns of metadf representing label times are numbers
-         greater than or equal to 0.")
+    rlang::abort("Not all columns of metadf representing label times are numbers
+         greater than or equal to 0.",
+          class = "tl_pos_num")
 
   }
 
@@ -243,8 +252,9 @@ validate_EZbakRData <- function(obj){
 
   if(!all(sapply(cB[,"n"], is_pos_whole2))){
 
-    stop("Not all columns of cB tracking counts of reads contain positive whole numbers
-         strictly greating than 0!")
+    rlang::abort("Not all columns of cB tracking counts of reads contain positive whole numbers
+         strictly greating than 0!",
+          class = "cB_n_pos_whole")
 
   }
 
