@@ -89,18 +89,38 @@ validate_EZbakRData <- function(obj){
   if(length(mutcounts_in_cB) > 1){
 
     tl_expected <- paste0("tl_", mutcounts_in_cB)
+    tl_expected_p <- paste0("tpulse_", mutcounts_in_cB)
+    tl_expected_c <- paste0("tchase_", mutcounts_in_cB)
 
     if(!all(tl_expected %in% metadf_cols)){
 
-      stop(
-        "Not all of the relevant label times are included in the metadf.
-        For example, if your cB has columns TC and GA, your metadf must
-        include columns called tl_TC and tl_GA, representing the label times
-        for metabolic labels whose recoding yield apparent T-to-C and
-        G-to-A mutations, respectively."
+      if(!(all(tl_expected_p %in% metadf_cols) & all(tl_expected_c %in% metadf_cols))){
+
+
+        stop(
+          "Not all of the relevant label times are included in the metadf.
+          For example, if your cB has columns TC and GA, your metadf must
+          include columns called tl_TC and tl_GA, representing the label times
+          for metabolic labels whose recoding yield apparent T-to-C and
+          G-to-A mutations, respectively. Alternatively, if you performed a
+          pulse-chase, then you need columns tpulse_TC, tpulse_GA, tchase_TC,
+          and tpulse_GA."
         )
 
+      }else{
+
+        tl_cols <- c(tl_expected_p, tl_expected_c)
+
+      }
+
+
+
+    }else{
+
+      tl_cols <- tl_expected
+
     }
+
 
 
 
@@ -116,11 +136,21 @@ validate_EZbakRData <- function(obj){
           if using a pulse-chase design)."
         )
 
+      }else{
+
+        tl_cols <- c("tchase", "tpulse")
+
       }
+
+    }else{
+
+      tl_cols <- "tl"
 
     }
 
   }
+
+
 
 
   ### Check if all of the samples in cB are also in metadf
@@ -133,12 +163,101 @@ validate_EZbakRData <- function(obj){
 
 
   ### Check that mutation counts can be coerced to positive integers
+  is_pos_whole <- function(x){
 
+    if(all(is.numeric(x))){
+
+      bool <- all((floor(x) == x) & (x >= 0))
+
+    }else{
+
+      bool <- FALSE
+
+    }
+
+    return(bool)
+
+
+  }
+  is_pos_whole2 <- function(x){
+
+    if(all(is.numeric(x))){
+
+      bool <- all((floor(x) == x) & (x > 0))
+
+    }else{
+
+      bool <- FALSE
+
+    }
+
+    return(bool)
+
+  }
+
+  if(!all(sapply(cB[,mutcounts_in_cB], is_pos_whole))){
+
+    stop("Not all columns tracking counts of mutations are positive whole numbers!")
+
+  }
 
   ### Check that base counts can be coerced to positive integers
 
+  if(!all(sapply(cB[,basecounts_expected], is_pos_whole))){
+
+    stop("Not all columns tracking counts of nucleotides are positive whole numbers!")
+
+  }
 
   ### Check that label times are numeric and >= 0
+
+
+  is_pos_num <- function(x){
+
+    if(all(is.numeric(x))){
+
+      bool <- all(x >= 0)
+
+
+    }else{
+
+      bool <- FALSE
+
+    }
+
+
+    return(bool)
+
+  }
+
+
+  if(!all(sapply(metadf[,tl_cols], is_pos_num))){
+
+    stop("Not all columns of metadf representing label times are numbers
+         greater than or equal to 0.")
+
+  }
+
+
+  ### Check that n in cB is numeric and > 0
+
+  if(!all(sapply(cB[,"n"], is_pos_whole2))){
+
+    stop("Not all columns of cB tracking counts of reads contain positive whole numbers
+         strictly greating than 0!")
+
+  }
+
+
+  ### Make sure there is at least one labeled sample
+    ## Also label for each mutation type tracking; tell them to get rid
+    ## of unnecessary mutation types if not.
+    ## Also make sure for pulse-chase that there is in fact a pulse and a
+    ## chase
+
+
+
+  return(obj)
 
 
 
