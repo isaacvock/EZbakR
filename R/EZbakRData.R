@@ -256,6 +256,8 @@ validate_EZbakRData <- function(obj){
     ## chase
 
 
+  ### Make sure there is at least one feature column in cB
+
 
   return(obj)
 
