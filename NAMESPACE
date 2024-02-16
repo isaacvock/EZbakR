@@ -2,4 +2,5 @@
 
 export(EZbakRData)
 export(SimpleSim)
+import(data.table)
 importFrom(magrittr,"%>%")

@@ -35,12 +35,11 @@ validate_EZbakRData <- function(obj){
 
   vals <- unclass(obj)
 
-  cB <- vals$cB
-  metadf <- vals$metadf
+  cB <- as.data.frame(vals$cB)
+  metadf <- as.data.frame(vals$metadf)
 
   cB_cols <- colnames(cB)
   metadf_cols <- colnames(metadf)
-
 
   # Which mutcounts are in the cB?
   mutcounts_in_cB <- cB_cols[cB_cols %in% mutcounts]
