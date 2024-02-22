@@ -183,7 +183,7 @@ EstimateMutRates <- function(obj,
   # Helper function to run optim and organize output
   estimate_ps <- function(muts, nucs, n){
 
-    fit <- optim(par = c(0, -2, -4), fn = mixture_lik, muts = muts, nucs = nucs, n = n,
+    fit <- stats::optim(par = c(0, -2, -4), fn = mixture_lik, muts = muts, nucs = nucs, n = n,
                  method = "L-BFGS-B", lower = c(-7, -7, -7), upper = c(7, 7, 7))
     return(list(p1 = fit$par[1], p2 = fit$par[2], p3 = fit$par[3]))
 
@@ -327,7 +327,7 @@ fit_general_mixture <- function(dataset, mutrate_design,
                                 pnew, pold, mutcols, basecols){
 
 
-  fit <- optim(par = rep(0, times = nrow(mutrate_design)),
+  fit <- stats::optim(par = rep(0, times = nrow(mutrate_design)),
                          fn = generalized_likelihood,
                          dataset = dataset,
                          mutrate_design = mutrate_design,
