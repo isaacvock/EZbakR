@@ -14,6 +14,10 @@ EstimateMutRates(
 \arguments{
 \item{obj}{EZbakRDataobject}
 
+\item{populations}{Character vector of the set of mutational populations
+that you want to infer the fractions of. For example, say your cB file contains
+columns tracking T-to-C and G-to-A}
+
 \item{pnew_strategy}{String denoting which new read mutation rate estimation strategy to use.
 Options include:
 \itemize{

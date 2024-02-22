@@ -7,8 +7,10 @@
 EstimateFractions(
   obj,
   features = "all",
-  populations = "all",
-  mutrate_strategy = "standard"
+  mutrate_populations = "all",
+  fraction_design = NULL,
+  pnew_strategy = "standard",
+  pold_strategy = "standard"
 )
 }
 \arguments{
@@ -18,9 +20,26 @@ EstimateFractions(
 reads by and estimate proportions of each RNA population. The default of "all"
 will use all feature columns.}
 
-\item{populations}{Character vector of the set of mutational populations
-that you want to infer the fractions of. For example, say your cB file contains
-columns tracking T-to-C and G-to-A}
+\item{mutrate_populations}{Character vector of the set of mutational populations
+that you want to infer the rates of mutations for.}
+
+\item{fraction_design}{"Design matrix" specifying which RNA populations exist
+in your samples}
+
+\item{pnew_strategy}{String denoting which new read mutation rate estimation strategy to use.
+Options include:
+\itemize{
+\item standard: Estimate a single new read and old read mutation rate for each
+sample. This is done via a binomial mixture model aggregating over
+\item hierarchical: Estimate feature-specific mutation rate with standard , regularizing the feature-specific
+estimate with a sample-wide prior.
+\item smalec: Estimate two old read mutation rates, as was done in
+Smalec et al., 2023. Idea is that alignment artifacts can give rise to a
+high mutation rate old read population that should be accounted for
+to avoid overestimating the fraction of new reads
+}}
+
+\item{pold_strategy}{String denoting which old read mutation rate estimation strategy}
 }
 \description{
 Estimate fractions of each RNA population
