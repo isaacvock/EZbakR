@@ -28,4 +28,6 @@ Imports:
     dplyr,
     magrittr,
     purrr,
-    rlang
+    rlang,
+    tidyr,
+    tximport

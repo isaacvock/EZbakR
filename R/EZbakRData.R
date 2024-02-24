@@ -35,8 +35,8 @@ validate_EZbakRData <- function(obj){
 
   vals <- unclass(obj)
 
-  cB <- as.data.frame(vals$cB)
-  metadf <- as.data.frame(vals$metadf)
+  cB <- dplyr::as_tibble(vals$cB)
+  metadf <- dplyr::as_tibble(vals$metadf)
 
   cB_cols <- colnames(cB)
   metadf_cols <- colnames(metadf)

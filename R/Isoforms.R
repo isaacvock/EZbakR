@@ -20,9 +20,19 @@
 #'  that the quantification files can be properly interpreted
 #' }
 EstimateIsoformFractions <- function(obj, quantification,
-                                     quant_tool = NULL,
+                                     quant_tool = c("none", "salmon", "sailfish",
+                                                    "alevin", "piscem", "kallisto",
+                                                    "rsem", "stringtie"),
+                                     tx2gene = NULL,
                                      cores = 1){
 
+
+  ### Import quantification data
+
+
+
+
+  ### Estimate fractions
   if(cores > 1){
 
     # Check if furrr is available
