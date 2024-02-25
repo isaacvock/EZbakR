@@ -105,16 +105,18 @@ EstimateFractions <- function(obj, features = "all",
   # Summarize data
   if(Poisson){
 
-    message("Averaging out the basecounts for improved efficiency")
+    message("Averaging out the nucleotide counts for improved efficiency")
     cols_to_group_pois <- c("sample", mutcounts_in_cB, features_to_analyze)
     cols_to_avg <- setdiff(names(cB), c(cols_to_group_pois, "n"))
 
-    cB <- cB[, c(lapply(.SD, function(x) weighted.mean(x, w = n)),
+    cB <- cB[, c(lapply(.SD, function(x) sum(x*n)/sum(n) ),
                      .(n = sum(n))),
                  by = cols_to_group_pois, .SDcols = cols_to_avg]
 
   }
 
+  # TO-DO: Add an estimated runtime here based on the number of rows in the cB,
+  # the number of features, and what model is being run.
   message("Estimating fractions")
   if(ncol(mutrate_design) == 1){
 
@@ -164,8 +166,7 @@ EstimateFractions <- function(obj, features = "all",
   message("Processing output")
   # Unroll the fraction estimates
   fns <- fns %>%
-    tidyr::unnest_wider(mixture_fit) %>%
-    dplyr::select(-mixture_fit)
+    tidyr::unnest_wider(mixture_fit)
 
 
   # What should output be named?
@@ -429,6 +430,7 @@ softmax <- function(vect){
 fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp,
                                 pnew, pold, mutcols, basecols, highpop = NULL){
 
+
   if(twocomp){
 
     fit <- stats::optim(par = 0,
@@ -503,7 +505,17 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
                       simplify = "vector")
 
 
-  outlist <- as.list(fit$par)
+  if(twocomp){
+
+    outlist <- list(fit$par, logit(1 - inv_logit(fit$par)))
+
+
+  }else{
+
+    outlist <- as.list(fit$par)
+
+  }
+
   names(outlist) <- listnames
 
   return(outlist)
