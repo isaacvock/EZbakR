@@ -31,3 +31,6 @@ Imports:
     rlang,
     tidyr,
     tximport
+Depends: 
+    R (>= 2.10)
+LazyData: true

@@ -1,3 +1,30 @@
+#' Generate a `fraction_design` table for `EstimateFractions`
+#'
+#' @param mutrate_populations Character vector of the set of mutational populations
+#' present in your data.
+#' @return A `fraction_design` table that assumes that every possible combination of
+#' mutational populations listed in `mutrate_populations` are present in your data.
+#' The `present` column can be modified if this assumption is incorrect
+create_fraction_design <- function(mutrate_populations){
+
+  fraction_design <- dplyr::tibble(present = rep(TRUE,
+                                                 times = 2^length(mutrate_populations)))
+
+  fraction_list <- list()
+  for(p in mutrate_populations){
+
+    fraction_list[[p]] <- c("TRUE", "FALSE")
+
+  }
+
+  fraction_design <- fraction_design %>%
+    dplyr::bind_cols(dplyr::as_tibble(expand.grid(fraction_list))) %>%
+    dplyr::select(!!mutrate_populations, present)
+
+  return(fraction_design)
+
+}
+
 #' Estimate fractions of each RNA population
 #'
 #' @param obj EZbakRDataobject
@@ -7,7 +34,59 @@
 #' @param mutrate_populations Character vector of the set of mutational populations
 #' that you want to infer the rates of mutations for.
 #' @param fraction_design "Design matrix" specifying which RNA populations exist
-#' in your samples
+#' in your samples. By default, this will be created automatically and will assume
+#' that all combinations of the `mutrate_populations` you have requested to analyze are
+#' present in your data. If this is not the case for your data, then you will have
+#' to create one manually.
+#'
+#' If you call the function \code{create_fraction_design(...)}, providing a vector
+#' of mutational population names as input, it will create a `fraction_design` table for
+#' you, with the assumption that every single possible combination of mutational populations
+#' is present in your data. You can then edit the `present` column as necessary to
+#' get an appropriate `fraction_design` for your use case. See below for details on
+#' the required contents of `fraction_design` and its interpretation.
+#'
+#' `fraction_design` must have one column per element of `mutrate_populations`,
+#' with these columns sharing the name of the `mutrate_populations`. It must also have
+#' one additional column named `present`. All elements of fraction_design should be
+#' booleans (`TRUE` or `FALSE`). It should include all possible combinations of `TRUE`
+#' and `FALSE` for the `mutrate_populations` columns. A `TRUE` in one of these columns
+#' represents a population of RNA that is expected to have above background mutation
+#' rates of that type. `present` will denote whether or not that population of RNA
+#' is expected to exist in your data.
+#'
+#' For example, assume you are doing a typical TimeLapse-seq/SLAM-seq/TUC-seq/etc. experiment
+#' where you have fed cells with s^4U and recoded any incorporated s^4U to a nucleotide
+#' that reverse transcriptase will read as a cytosine. That means that `mutrate_populations`
+#' will be "TC", since you want to estimate the fraction of RNA that was s^4U labeled, i.e.,
+#' the fraction with high T-to-C mutation content. `fraction_design` will thus have two columns:
+#' `TC` and `present`. It will also have two rows. One of these rows must have a value of
+#' `TRUE` for `TC`, and the other must have a value of `FALSE`. The row with a value of `TRUE`
+#' for `TC` represents the population of reads with high T-to-C mutation content,
+#' i.e., the reads from RNA that were synthesized while s^4U was present. The row
+#' with a value of `FALSE` for `TC` reprsents the population of reads with low T-to-C mutation
+#' content, i.e., the reads from RNA that existed prior to s^4U labeling. Both of these
+#' populations exist in your data, so the value of the `present` column should be `TRUE` for
+#' both of these. See the lazily loaded `standard_fraction_design` object for an example
+#' of what this tibble could look like. ("lazily loaded `standard_fraction_design` object"
+#' means that if you run \code{print(standard_fraction_design)} after loading `EZbakR` with \code{library(EZbakR)},
+#' then you can see its contents. More specifically, lazily loaded means that this table is not loaded
+#' into memory until you ask for it, via something like a \code{print()} call.)
+#'
+#' As another example, consider TILAC, a NR-seq extension developed by the Simon lab. TILAC was originally
+#' described in [Courvan et al., 2022](https://academic.oup.com/nar/article/50/19/e110/6677324). In this
+#' method, two populations of RNA, one from s^4U fed cells and one from s^6G fed cells, are pooled
+#' and prepped for sequencing together. This allows for internally controlled comparisons of RNA
+#' abundance without spike-ins. s^4U is recoded to a cytosine analog by TimeLapse chemistry
+#' (or similar chemistry) and s^6G is recoded to an adenine analog. Thus, `fraction_design` includes
+#' columns called `TC` and `GA`. A unique aspect of the TILAC `fraction_design` table is that
+#' one of the possible populations, `TC` and `GA` both `TRUE`, is denoted as not present (`present` = `FALSE`).
+#' This is because there is no RNA was exposed to both s^4U and s^6G, thus a population of reads
+#' with both high T-to-C and G-to-A mutational content should not exist. To see an example
+#' of what a TILAC `fraction_design` table could look like, see the lazily loaded
+#' `tilac_fraction_design` object.
+#'
+#'
 #' @param Poisson Use U-content adjusted Poisson mixture modeling strategy. Can see
 #' significant performance gain without sacrificing accuracy.
 #' @param strategy String denoting which new read mutation rate estimation strategy to use.
@@ -108,20 +187,7 @@ EstimateFractions <- function(obj, features = "all",
 
   if(is.null(fraction_design)){
 
-    fraction_design <- dplyr::tibble(present = rep(TRUE,
-                                                   times = 2^length(pops_to_analyze)))
-
-    fraction_list <- list()
-    for(p in pops_to_analyze){
-
-      fraction_list[[p]] <- c("TRUE", "FALSE")
-
-    }
-
-    fraction_design <- fraction_design %>%
-      dplyr::bind_cols(dplyr::as_tibble(expand.grid(fraction_list))) %>%
-      dplyr::select(!!pops_to_analyze, present)
-
+    fraction_design <- create_fraction_design(pops_to_analyze)
 
   }
 
@@ -168,6 +234,21 @@ EstimateFractions <- function(obj, features = "all",
       highpop <- 2
 
     }
+
+    # dplyr rewrite that may somehow be much faster...
+    # fns <- as_tibble(cB) %>%
+    #   dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
+    #   dplyr::do(dplyr::tibble(mixture_fit = list(dataset = .,
+    #                                       mutrate_design = mutrate_design,
+    #                                       mutcols = mutcounts_in_cB,
+    #                                       basecols = basecounts_in_cB,
+    #                                       Poisson = Poisson,
+    #                                       highpop = highpop,
+    #                                       twocomp = TRUE,
+    #                                       pnew = sapply(mutcounts_in_cB,
+    #                                                     function(name) mutation_rates[[name]]$pnew),
+    #                                       pold = sapply(mutcounts_in_cB,
+    #                                                     function(name) mutation_rates[[name]]$pold))))
 
     fns <- cB[,.(mixture_fit = list(fit_general_mixture(dataset = .SD,
                                                         mutrate_design = mutrate_design,
