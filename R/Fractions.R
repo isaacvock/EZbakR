@@ -85,6 +85,47 @@ EstimateFractions <- function(obj, features = "all",
   }
 
 
+  ### Figure out which mutational populations to analyze
+
+  if(mutrate_populations == "all"){
+
+    pops_to_analyze <- mutcounts_in_cB
+
+  }else{
+
+    if(!all(mutrate_populations %in% mutcounts_in_cB)){
+
+      stop("mutrate_populations includes columns that do not exist in your cB!")
+
+    }else{
+
+      pops_to_analyze <- mutrate_populations
+
+    }
+  }
+
+  ### Create fraction_design data frame if necessary
+
+  if(is.null(fraction_design)){
+
+    fraction_design <- dplyr::tibble(present = rep(TRUE,
+                                                   times = 2^length(pops_to_analyze)))
+
+    fraction_list <- list()
+    for(p in pops_to_analyze){
+
+      fraction_list[[p]] <- c("TRUE", "FALSE")
+
+    }
+
+    fraction_design <- fraction_design %>%
+      dplyr::bind_cols(dplyr::as_tibble(expand.grid(fraction_list))) %>%
+      dplyr::select(!!pops_to_analyze, present)
+
+
+  }
+
+
   ### Estimate fraction new for each feature in each sample
   message("Summarizing data for feature(s) of interest")
 
