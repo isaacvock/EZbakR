@@ -10,27 +10,26 @@
 #' in your samples
 #' @param Poisson Use U-content adjusted Poisson mixture modeling strategy. Can see
 #' significant performance gain without sacrificing accuracy.
-#' @param pnew_strategy String denoting which new read mutation rate estimation strategy to use.
+#' @param strategy String denoting which new read mutation rate estimation strategy to use.
 #' Options include:
 #' \itemize{
 #'  \item standard: Estimate a single new read and old read mutation rate for each
 #'  sample. This is done via a binomial mixture model aggregating over
-#'  \item hierarchical: Estimate feature-specific mutation rate with standard , regularizing the feature-specific
+#'  \item hierarchical (NOT YET IMPLEMENTED): Estimate feature-specific mutation
+#'  rate with standard, regularizing the feature-specific
 #'  estimate with a sample-wide prior.
-#'  \item smalec: Estimate two old read mutation rates, as was done in
+#'  \item smalec (NOT YET IMPLEMENTED): Estimate two old read mutation rates, as was done in
 #'  Smalec et al., 2023. Idea is that alignment artifacts can give rise to a
 #'  high mutation rate old read population that should be accounted for
 #'  to avoid overestimating the fraction of new reads
 #' }
-#' @param pold_strategy String denoting which old read mutation rate estimation strategy
 #' @import data.table
 #' @importFrom magrittr %>%
 EstimateFractions <- function(obj, features = "all",
                               mutrate_populations = "all",
                               fraction_design = NULL,
                               Poisson = TRUE,
-                              pnew_strategy = "standard",
-                              pold_strategy = "standard"){
+                              strategy = "standard"){
 
   `.` <- list
 
@@ -44,9 +43,8 @@ EstimateFractions <- function(obj, features = "all",
   ### Estimate mutation rates
   message("Estimating mutation rates")
   obj <- EstimateMutRates(obj,
-                                     populations = mutrate_populations,
-                                     pnew_strategy = pnew_strategy,
-                                     pold_strategy = pold_strategy)
+                           populations = mutrate_populations,
+                           strategy = strategy)
 
   mutation_rates <- obj$mutation_rates
 
@@ -199,22 +197,23 @@ EstimateFractions <- function(obj, features = "all",
 #' @param populations Character vector of the set of mutational populations
 #' that you want to infer the fractions of. For example, say your cB file contains
 #' columns tracking T-to-C and G-to-A
-#' @param pnew_strategy String denoting which new read mutation rate estimation strategy to use.
+#' @param strategy String denoting which new read mutation rate estimation strategy to use.
 #' Options include:
 #' \itemize{
 #'  \item standard: Estimate a single new read and old read mutation rate for each
 #'  sample. This is done via a binomial mixture model aggregating over
-#'  \item intronic: Estimate sample-wide pnew from intronic mutation rate. Have to
-#'  specify which feature in the EZbakRDataobject cB represents the intronic reads
-#'  \item hierarchical: Estimate feature-specific pnew with standard , regularizing the feature-specific
+#'  \item hierarchical (NOT YET IMPLEMENTED): Estimate feature-specific mutation
+#'  rate with standard, regularizing the feature-specific
 #'  estimate with a sample-wide prior.
+#'  \item smalec (NOT YET IMPLEMENTED): Estimate two old read mutation rates, as was done in
+#'  Smalec et al., 2023. Idea is that alignment artifacts can give rise to a
+#'  high mutation rate old read population that should be accounted for
+#'  to avoid overestimating the fraction of new reads
 #' }
 #' @import data.table
-#' @param pold_strategy String denoting which old read mutation rate estimation strategy
 EstimateMutRates <- function(obj,
                              populations = "all",
-                             pnew_strategy = "standard",
-                             pold_strategy = "standard"
+                             strategy = "standard"
                              ){
 
   `.` <- list
