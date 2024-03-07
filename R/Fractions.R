@@ -86,8 +86,7 @@ create_fraction_design <- function(mutrate_populations){
 #' of what a TILAC `fraction_design` table could look like, see the lazily loaded
 #' `tilac_fraction_design` object.
 #'
-#'
-#' @param Poisson Use U-content adjusted Poisson mixture modeling strategy. Can see
+#' @param Poisson If `TRUE`, use U-content adjusted Poisson mixture modeling strategy. Often provides
 #' significant performance gain without sacrificing accuracy.
 #' @param strategy String denoting which new read mutation rate estimation strategy to use.
 #' Options include:
@@ -183,6 +182,9 @@ EstimateFractions <- function(obj, features = "all",
     }
   }
 
+  # Get nucleotide counts that are needed
+  necessary_basecounts <- paste0("n", substr(pops_to_analyze, start = 1, stop = 1))
+
   ### Create fraction_design data frame if necessary
 
   if(is.null(fraction_design)){
@@ -198,7 +200,7 @@ EstimateFractions <- function(obj, features = "all",
   cB <- setDT(cB)
 
   # Keep only feature of interest
-  cols_to_group <- c(basecounts_in_cB, mutcounts_in_cB, "sample", features_to_analyze)
+  cols_to_group <- c(necessary_basecounts, pops_to_analyze, "sample", features_to_analyze)
   cB[,.(n = sum(n)), by = cols_to_group]
 
   # Pair down design matrix
@@ -211,7 +213,7 @@ EstimateFractions <- function(obj, features = "all",
   if(Poisson){
 
     message("Averaging out the nucleotide counts for improved efficiency")
-    cols_to_group_pois <- c("sample", mutcounts_in_cB, features_to_analyze)
+    cols_to_group_pois <- c("sample", pops_to_analyze, features_to_analyze)
     cols_to_avg <- setdiff(names(cB), c(cols_to_group_pois, "n"))
 
     cB <- cB[, c(lapply(.SD, function(x) sum(x*n)/sum(n) ),
@@ -224,6 +226,8 @@ EstimateFractions <- function(obj, features = "all",
   # the number of features, and what model is being run.
   message("Estimating fractions")
   if(ncol(mutrate_design) == 1){
+
+    ### Can optimize for two-component mixture model
 
     if(unlist(mutrate_design[1,1])){
 
@@ -252,14 +256,14 @@ EstimateFractions <- function(obj, features = "all",
 
     fns <- cB[,.(mixture_fit = list(fit_general_mixture(dataset = .SD,
                                                         mutrate_design = mutrate_design,
-                                                        mutcols = mutcounts_in_cB,
-                                                        basecols = basecounts_in_cB,
+                                                        mutcols = pops_to_analyze,
+                                                        basecols = necessary_basecounts,
                                                         Poisson = Poisson,
                                                         highpop = highpop,
                                                         twocomp = TRUE,
-                                                        pnew = sapply(mutcounts_in_cB,
+                                                        pnew = sapply(pops_to_analyze,
                                                                       function(name) mutation_rates[[name]]$pnew),
-                                                        pold = sapply(mutcounts_in_cB,
+                                                        pold = sapply(pops_to_analyze,
                                                                       function(name) mutation_rates[[name]]$pold)) )),
               by = c("sample", features_to_analyze)]
 
@@ -268,13 +272,13 @@ EstimateFractions <- function(obj, features = "all",
 
     fns <- cB[,.(mixture_fit = list(fit_general_mixture(dataset = .SD,
                                                         mutrate_design = mutrate_design,
-                                                        mutcols = mutcounts_in_cB,
-                                                        basecols = basecounts_in_cB,
+                                                        mutcols = pops_to_analyze,
+                                                        basecols = necessary_basecounts,
                                                         Poisson = Poisson,
                                                         twocomp = FALSE,
-                                                        pnew = sapply(mutcounts_in_cB,
+                                                        pnew = sapply(pops_to_analyze,
                                                                       function(name) mutation_rates[[name]]$pnew),
-                                                        pold = sapply(mutcounts_in_cB,
+                                                        pold = sapply(pops_to_analyze,
                                                                       function(name) mutation_rates[[name]]$pold)) )),
               by = c("sample", features_to_analyze)]
 
