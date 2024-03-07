@@ -1,4 +1,38 @@
-#' Perform comparative analyses of kinetic parameter estimates
+#' Average parameter estimates across replicates, and regularize variance estimates
+#'
+#' `AverageAndRegularize` uses a linear model to average estimates of a parameter
+#' of interest over replicates, and to get averages for all of a set of conditions
+#' specified by the user. This specification is done through formulas that will
+#' be used to create a design matrix for parameters to estimate.
+#'
+#' @param obj An `EZbakRFractions` object, which is an `EZbakRData` object on
+#' which `EstimateFractions()` has been run.
+#' @param features Character vector of the set of features you want to stratify
+#' reads by and estimate proportions of each RNA population. The default of "all"
+#' will use all feature columns in the `obj`'s cB.
+#' @param parameter Parameter to average across replicates of a given condition.
+#' @param formula_mean An R formula object specifying how the `parameter` of interest
+#' depends on the sample characteristics specified in `obj`'s metadf. The most formula
+#' will be `~ treatment` or `~ treatment + batch`, where `treatment` and `batch` would
+#' be replaced with whatever you called the main treatment and batch identifiers in
+#' your metadf.
+#' @param formula_sd Same as `formula_mean`, but this time specifying how the variance
+#' in the replicate estimates of `parameter` depends on the sample characteristics specified
+#' in `obj`'s metadf. Unlike standard linear modeling, this allows you to specify
+#' a heteroskedastic model. I suggest allowing a `parameter`'s variance to depend on
+#' the "treatment" condition, as changes in relative RNA abundance can impact `parameter` variance,
+#' so differential expression caused by your "treatment" could impact `parameter` variance.
+#' @param include_all_parameters If TRUE, an additional table will be saved with the prefix `fullfit_`,
+#' which includes all of the parameters estimated throughout the course of linear modeling and
+#' regularization. This can be nice for visualizing the regularized mean-variance trend.
+#' @param sd_reg_factor Determines how strongly variance estimates are shrunk towards trend.
+#' Higher numbers lead to more regularization. Eventually, this will be replaced with estimation
+#' of how much variance there seems to be in the population of variances.
+#' @param error_if_singular If TRUE, linear model will throw an error if parameters
+#' cannot be uniquely identified. This is most often caused by parameters that cannot
+#' be estimated from the data, e.g., due to limited replicate numbers or correlated
+#' sample characteristics (i.e., all treatment As also correspond to batch As, and
+#' all treatment Bs correspond to batch Bs).
 #' @import data.table
 #' @importFrom magrittr %>%
 AverageAndRegularize <- function(obj, features = "all", parameter = "log_kdeg",
