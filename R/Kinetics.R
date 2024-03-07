@@ -1,8 +1,16 @@
 #' Generic function for estimating kinetic parameters
+#'
+#' @export
 EstimateKinetics <- function(obj,
                              features = "all",
                              strategy = "standard"){
 
+  ### Check that input is valid
+
+  strategy <- match.arg(strategy)
+
+
+  ### "Method dispatch"
 
   if(strategy == "standard"){
 
@@ -129,7 +137,7 @@ Standard_kinetic_estimation <- function(obj, features = "all"){
 
   # Figure out what to name output
   kinetics_name <- paste(c("kinetics", features_to_analyze), collapse = "_")
-  reads_name <- paste("readcounts", features_to_analyze, collapse = "_")
+  reads_name <- paste(c("readcounts", features_to_analyze), collapse = "_")
 
   obj[[kinetics_name]] <- kinetics
 

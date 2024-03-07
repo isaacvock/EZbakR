@@ -107,7 +107,7 @@ EstimateFractions <- function(obj, features = "all",
                               mutrate_populations = "all",
                               fraction_design = NULL,
                               Poisson = TRUE,
-                              strategy = "standard"){
+                              strategy = c("standard")){
 
   `.` <- list
 
@@ -115,8 +115,16 @@ EstimateFractions <- function(obj, features = "all",
 
   args <- c(as.list(environment()))
 
-  # check_EstimateFractions_input(args)
+  if(!is(obj, "EZbakRData")){
 
+    stop("obj is not an EZbakRData object!")
+
+  }
+
+  check_EstimateFractions_input(args)
+
+
+  strategy <- match.arg(strategy)
 
   ### Estimate mutation rates
   message("Estimating mutation rates")
@@ -351,11 +359,6 @@ EstimateFractions <- function(obj, features = "all",
 
 }
 
-# check_EstimateFractions_input(args){
-#
-#
-#
-# }
 
 
 
@@ -369,7 +372,7 @@ EstimateFractions <- function(obj, features = "all",
 #' Options include:
 #' \itemize{
 #'  \item standard: Estimate a single new read and old read mutation rate for each
-#'  sample. This is done via a binomial mixture model aggregating over
+#'  sample. This is done via a binomial mixture model fit to all reads in a given sample.
 #'  \item hierarchical (NOT YET IMPLEMENTED): Estimate feature-specific mutation
 #'  rate with standard, regularizing the feature-specific
 #'  estimate with a sample-wide prior.
@@ -727,5 +730,27 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
 
 }
 
+
+
+check_EstimateFractions_input(args){
+
+  ### features
+
+  if(!is.character(features)){
+
+    stop("features is not a character vector!")
+
+  }
+
+  ### Poisson
+
+  if(!is.logical(Poisson)){
+
+    stop("Poisson must be logical (TRUE or FALSE)!")
+
+  }
+
+
+}
 
 
