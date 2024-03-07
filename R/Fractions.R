@@ -13,7 +13,7 @@ create_fraction_design <- function(mutrate_populations){
   fraction_list <- list()
   for(p in mutrate_populations){
 
-    fraction_list[[p]] <- c("TRUE", "FALSE")
+    fraction_list[[p]] <- c(TRUE, FALSE)
 
   }
 
@@ -194,6 +194,38 @@ EstimateFractions <- function(obj, features = "all",
   }
 
 
+  ### Filter out label-less samples
+
+  metadf <- obj$metadf
+
+  # What columns represent label times of interest?
+  if(length(pops_to_analyze) == 1){
+
+    tl_cols_possible <- c("tl", "tpulse")
+
+  }else{
+
+    tl_cols_possible <- c(paste0("tl_", pops_to_analyze),
+                          paste0("tpulse_", pops_to_analyze))
+
+
+  }
+
+  tl_cols <- tl_cols_possible[tl_cols_possible %in% colnames(metadf)]
+
+  ### Which samples should be filtered out
+
+  metadf <- obj$metadf
+
+  samples_with_no_label <- metadf %>%
+    dplyr::rowwise() %>%
+    dplyr::filter(all(c_across(all_of(tl_cols)) == 0)) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(sample) %>%
+    unlist() %>%
+    unname()
+
+
   ### Estimate fraction new for each feature in each sample
   message("Summarizing data for feature(s) of interest")
 
@@ -201,7 +233,7 @@ EstimateFractions <- function(obj, features = "all",
 
   # Keep only feature of interest
   cols_to_group <- c(necessary_basecounts, pops_to_analyze, "sample", features_to_analyze)
-  cB[,.(n = sum(n)), by = cols_to_group]
+  cB <- cB[!(sample %in% samples_with_no_label),.(n = sum(n)), by = cols_to_group]
 
   # Pair down design matrix
   fraction_design <- as_tibble(fraction_design)
@@ -239,33 +271,42 @@ EstimateFractions <- function(obj, features = "all",
 
     }
 
-    # dplyr rewrite that may somehow be much faster...
-    # fns <- as_tibble(cB) %>%
-    #   dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
-    #   dplyr::do(dplyr::tibble(mixture_fit = list(dataset = .,
-    #                                       mutrate_design = mutrate_design,
-    #                                       mutcols = mutcounts_in_cB,
-    #                                       basecols = basecounts_in_cB,
-    #                                       Poisson = Poisson,
-    #                                       highpop = highpop,
-    #                                       twocomp = TRUE,
-    #                                       pnew = sapply(mutcounts_in_cB,
-    #                                                     function(name) mutation_rates[[name]]$pnew),
-    #                                       pold = sapply(mutcounts_in_cB,
-    #                                                     function(name) mutation_rates[[name]]$pold))))
 
-    fns <- cB[,.(mixture_fit = list(fit_general_mixture(dataset = .SD,
-                                                        mutrate_design = mutrate_design,
-                                                        mutcols = pops_to_analyze,
-                                                        basecols = necessary_basecounts,
-                                                        Poisson = Poisson,
-                                                        highpop = highpop,
-                                                        twocomp = TRUE,
-                                                        pnew = sapply(pops_to_analyze,
-                                                                      function(name) mutation_rates[[name]]$pnew),
-                                                        pold = sapply(pops_to_analyze,
-                                                                      function(name) mutation_rates[[name]]$pold)) )),
-              by = c("sample", features_to_analyze)]
+    ### Add mutation rate info
+
+    # Extract mutation rates
+    mutrates <- setDT(obj$mutation_rates[[1]] %>%
+      dplyr::select(-params))
+
+    # Key for fast join
+    setkey(mutrates, sample)
+    setkey(cB, sample)
+
+    # Join
+    cB <- cB[mutrates, nomatch = NULL]
+
+
+    ### Estimate fraction new
+
+    col_name <- paste0(pops_to_analyze, "high")
+    other_col_name <- paste0(pops_to_analyze, "low")
+
+    fns <- dplyr::as_tibble(cB) %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
+      dplyr::summarise(!!col_name := optim(0,
+                                           fn = two_comp_likelihood,
+                                           muts = !!sym(pops_to_analyze),
+                                           nucs = !!sym(necessary_basecounts),
+                                           pnew = pnew,
+                                           pold = pold,
+                                           Poisson = Poisson,
+                                           n = n,
+                                           lower = -7,
+                                           upper = 7,
+                                           method = "L-BFGS-B")$par[1]) %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(!!other_col_name := logit(1 - inv_logit(!!sym(col_name))))
+
 
 
   }else{
@@ -276,11 +317,14 @@ EstimateFractions <- function(obj, features = "all",
                                                         basecols = necessary_basecounts,
                                                         Poisson = Poisson,
                                                         twocomp = FALSE,
-                                                        pnew = sapply(pops_to_analyze,
-                                                                      function(name) mutation_rates[[name]]$pnew),
-                                                        pold = sapply(pops_to_analyze,
-                                                                      function(name) mutation_rates[[name]]$pold)) )),
+                                                        pnew = obj$mutation_rates[[1]]$pnew[obj$mutation_rates[[1]]$sample == sample],
+                                                        pold = obj$mutation_rates[[1]]$pold[obj$mutation_rates[[1]]$sample == sample] ) )),
               by = c("sample", features_to_analyze)]
+
+
+    # Unroll the fraction estimates
+    fns <- fns %>%
+      tidyr::unnest_wider(mixture_fit)
 
   }
 
@@ -288,9 +332,7 @@ EstimateFractions <- function(obj, features = "all",
 
 
   message("Processing output")
-  # Unroll the fraction estimates
-  fns <- fns %>%
-    tidyr::unnest_wider(mixture_fit)
+
 
 
   # What should output be named?
@@ -476,6 +518,36 @@ softmax <- function(vect){
 
 }
 
+# Two-component mixture model; optimized for simplest use-case
+two_comp_likelihood <- function(param, muts, nucs, Poisson = TRUE,
+                                pnew, pold, n){
+
+  if(Poisson){
+
+    likelihoods <- inv_logit(param[1])*dpois(muts,
+                                             lambda = pnew*nucs ) +
+
+      (1 - inv_logit(param[1]))*dpois(muts,
+                                      lambda = pold*nucs )
+
+  }else{
+
+    likelihoods <- inv_logit(param[1])*dbinom(x = muts,
+                                              size = nucs,
+                                              prob = pnew) +
+
+      (1 - inv_logit(param[1]))*dbinom(x = muts,
+                                       size = nucs,
+                                       prob = pold)
+
+
+  }
+
+  return(-sum(n*log(likelihoods)) - dnorm(param[1], log = TRUE))
+
+
+}
+
 # Abstract the concept of an NR-seq mixture model to oblivion
 generalized_likelihood <- function(param, dataset, Poisson = TRUE,
                                    mutrate_design, pnew, pold, highpop,
@@ -562,26 +634,29 @@ softmax <- function(vect){
 }
 
 # Fit and process the output of the generalized likelihood model
-fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp,
+fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp = FALSE,
                                 pnew, pold, mutcols, basecols, highpop = NULL){
 
 
   if(twocomp){
 
     fit <- stats::optim(par = 0,
-                        fn = generalized_likelihood,
+                        fn = two_comp_likelihood,
                         dataset = dataset,
                         Poisson = Poisson,
-                        mutrate_design = mutrate_design,
                         pnew = pnew,
                         pold = pold,
                         mutcols = mutcols,
                         basecols = basecols,
-                        highpop = highpop,
-                        twocomp = twocomp,
                         upper = 7,
                         lower = -7,
                         method = "L-BFGS-B")
+
+    outlist <- list(fit$par, logit(1 - inv_logit(fit$par)))
+
+    names(outlist) <- c(paste0(mutcols, "high"),
+                        paste0(mutcols, "low"))
+
 
   }else{
 
@@ -597,61 +672,55 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
                         basecols = basecols,
                         method = "L-BFGS-B")
 
-  }
-
-
-
-
-  # Figure out what to call each of the fractions
+    # Figure out what to call each of the fractions
     # Probably "p""muttype""old/new"_"muttype""old/new"
-  muttypes <- colnames(mutrate_design)
+    muttypes <- colnames(mutrate_design)
 
-  # Get vector of population statuses (new and old) for naming the output list
-  population_list <- vector(mode = "list", length = nrow(mutrate_design))
-  for(i in 1:nrow(mutrate_design)){
 
-    population_vector <- rep("", times = ncol(mutrate_design))
-    count <- 1
-    for(j in 1:ncol(mutrate_design)){
+    # Get vector of population statuses (new and old) for naming the output list
+    population_list <- vector(mode = "list", length = nrow(mutrate_design))
+    for(i in 1:nrow(mutrate_design)){
 
-      if(as.logical(mutrate_design[i, j])){
+      population_vector <- rep("", times = ncol(mutrate_design))
+      count <- 1
+      for(j in 1:ncol(mutrate_design)){
 
-        population_vector[count] <- "high"
+        if(as.logical(mutrate_design[i, j])){
 
-      }else{
+          population_vector[count] <- "high"
 
-        population_vector[count] <- "low"
+        }else{
+
+          population_vector[count] <- "low"
+
+        }
+
+        count <- count + 1
+
 
       }
 
-      count <- count + 1
-
+      population_list[[i]] <- population_vector
 
     }
 
-    population_list[[i]] <- population_vector
 
-  }
+    # Make names for the output list that are easily interpretable (I hope)
+    listnames <- lapply(population_list, function(x) paste0(muttypes, x))
+    listnames <- sapply(listnames, function(x) paste(x, collapse = "_"),
+                        simplify = "vector")
 
-
-  # Make names for the output list that are easily interpretable (I hope)
-  listnames <- lapply(population_list, function(x) paste0(muttypes, x))
-  listnames <- sapply(listnames, function(x) paste(x, collapse = "_"),
-                      simplify = "vector")
-
-
-  if(twocomp){
-
-    outlist <- list(fit$par, logit(1 - inv_logit(fit$par)))
-
-
-  }else{
 
     outlist <- as.list(fit$par)
 
+
+    names(outlist) <- listnames
+
   }
 
-  names(outlist) <- listnames
+
+
+
 
   return(outlist)
 
