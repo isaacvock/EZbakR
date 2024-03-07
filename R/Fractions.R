@@ -30,7 +30,7 @@ create_fraction_design <- function(mutrate_populations){
 #' @param obj EZbakRDataobject
 #' @param features Character vector of the set of features you want to stratify
 #' reads by and estimate proportions of each RNA population. The default of "all"
-#' will use all feature columns.
+#' will use all feature columns in the `obj`'s cB.
 #' @param mutrate_populations Character vector of the set of mutational populations
 #' that you want to infer the rates of mutations for.
 #' @param fraction_design "Design matrix" specifying which RNA populations exist

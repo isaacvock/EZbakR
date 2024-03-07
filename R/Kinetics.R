@@ -1,5 +1,23 @@
-#' Generic function for estimating kinetic parameters
+#' Generic function for estimating kinetic parameters.
 #'
+#' @param obj An `EZbakRFractions` object, which is an `EZbakRData` object on
+#' which `EstimateFractions()` has been run.
+#' @param features Character vector of the set of features you want to stratify
+#' reads by and estimate proportions of each RNA population. The default of "all"
+#' will use all feature columns in the `obj`'s cB.
+#' @param strategy Kinetic parameter estimation strategy.
+#' Options include:
+#' \itemize{
+#'  \item standard: Estimate a single new read and old read mutation rate for each
+#'  sample. This is done via a binomial mixture model aggregating over
+#'  \item pulse-chase (NOT YET IMPLEMENTED): Estimate kdeg for a pulse-chase experiment. A kdeg will be estimated
+#'  for each time point at which label was present. This includes any pulse-only samples,
+#'  as well as all samples including a chase after the pulse.
+#'  \item custom (NOT YET IMPLEMENTED): Provide a custom function that takes
+#'  fraction estimates as input and produces as output kinetic parameter estimates.
+#' }
+#' @return `EZbakRKinetics` object.
+#' @import data.table
 #' @export
 EstimateKinetics <- function(obj,
                              features = "all",
@@ -7,7 +25,32 @@ EstimateKinetics <- function(obj,
 
   ### Check that input is valid
 
+  # EZbakRData object on which EstimateFractions() has been run?
+  if(!is(obj, "EZbakRFractions")){
+
+    if(is(obj, "EZbakRData")){
+
+      stop("obj is not an EZbakRFractions object! Run `obj <- EstimateFractions(obj, ...)`,
+           where ... represents optional parameters, before running `EstimateKinetics`.")
+
+    }else{
+
+      stop("obj is not an EZbakRData object with fraction estimates!")
+
+    }
+
+
+  }
+
+  # Analysis strategy
   strategy <- match.arg(strategy)
+
+  # features
+  if(!is.character(features)){
+
+    stop("features is not a character vector!")
+
+  }
 
 
   ### "Method dispatch"
@@ -24,8 +67,12 @@ EstimateKinetics <- function(obj,
 }
 
 
-# Kinetic parameters = -log(1 - fn)/tl
+# kdeg = -log(1 - fn)/tl
+# ksyn = (normalized read count)*kdeg
 Standard_kinetic_estimation <- function(obj, features = "all"){
+
+
+  `.` <- list
 
   ### Figure out which fraction new estimates to use
 
