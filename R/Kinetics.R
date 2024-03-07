@@ -18,10 +18,6 @@ EstimateKinetics <- function(obj,
                                 features = features)
 
 
-  }else{
-
-    stop("Nothing else is implemented yet!")
-
   }
 
 
