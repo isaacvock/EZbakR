@@ -4,7 +4,14 @@
 \alias{EstimateIsoformFractions}
 \title{Estimate isoform-specific fraction news (or more generally "fractions").}
 \usage{
-EstimateIsoformFractions(obj, quantification, quant_tool = NULL, cores = 1)
+EstimateIsoformFractions(
+  obj,
+  quantification,
+  quant_tool = c("none", "salmon", "sailfish", "alevin", "piscem", "kallisto", "rsem",
+    "stringtie"),
+  tx2gene = NULL,
+  cores = 1
+)
 }
 \arguments{
 \item{obj}{An \code{EZbakRData} object}

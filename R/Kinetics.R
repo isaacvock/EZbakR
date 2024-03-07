@@ -70,7 +70,6 @@ Standard_kinetic_estimation <- function(obj, features = "all"){
 
   ### Estimate kdegs
 
-  browser()
   # Determine which column to use for kinetic parameter estimation
   fraction_cols <- colnames(kinetics)
 
@@ -90,7 +89,8 @@ Standard_kinetic_estimation <- function(obj, features = "all"){
   kinetics <- kinetics[tl > 0]
 
 
-  kinetics[,kdeg := -log(1 - inv_logit(get(fraction_of_interest)))/tl]
+  kinetics[, kdeg := -log(1 - inv_logit(get(fraction_of_interest)))/tl]
+  kinetics[, log_kdeg := log(kdeg)]
 
 
   ### Get normalized read counts

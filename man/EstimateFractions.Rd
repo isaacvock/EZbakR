@@ -9,6 +9,7 @@ EstimateFractions(
   features = "all",
   mutrate_populations = "all",
   fraction_design = NULL,
+  Poisson = TRUE,
   pnew_strategy = "standard",
   pold_strategy = "standard"
 )
@@ -25,6 +26,9 @@ that you want to infer the rates of mutations for.}
 
 \item{fraction_design}{"Design matrix" specifying which RNA populations exist
 in your samples}
+
+\item{Poisson}{Use U-content adjusted Poisson mixture modeling strategy. Can see
+significant performance gain without sacrificing accuracy.}
 
 \item{pnew_strategy}{String denoting which new read mutation rate estimation strategy to use.
 Options include:

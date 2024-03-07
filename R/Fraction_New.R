@@ -219,6 +219,7 @@ EstimateMutRates <- function(obj,
 
   `.` <- list
 
+
   cB <- obj$cB
   cB <- data.table::setDT(cB)
 
@@ -269,7 +270,7 @@ EstimateMutRates <- function(obj,
 
     mutest_temp[,c("pold",
                    "pnew") := .(min(c(p1, p2)),
-                                        max(c(p1, p2)))]
+                                        max(c(p1, p2))), by = 1:nrow(mutest_temp)]
 
     mutest_temp[,c("p1", "p2") := .(NULL, NULL)]
 
@@ -415,7 +416,16 @@ generalized_likelihood <- function(param, dataset, Poisson = TRUE,
 
   }
 
-  return(-sum(dataset[["n"]]*log(likelihoods)))
+  # Prior regularize
+  if(twocomp){
+
+    return(-sum(dataset[["n"]]*log(likelihoods)) - dnorm(param[1], log = TRUE))
+
+  }else{
+
+    return(-sum(dataset[["n"]]*log(likelihoods)))
+
+  }
 
 }
 
