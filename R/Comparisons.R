@@ -236,7 +236,29 @@ AverageAndRegularize <- function(obj, features = "all", parameter = "log_kdeg",
 }
 
 
+tilac_avg_and_reg <- function(){
+
+
+
+}
+
+
+general_avg_and_reg <- function(){
+
+
+
+}
+
+
+
 #' Get contrasts of estimated parameters
+#'
+#' @param obj An `EZbakRFit` object, which is an `EZbakRFractions` object on
+#' which `AverageAndRegularize()` has been run.
+#' @param features Character vector of the set of features you want to stratify
+#' reads by and estimate proportions of each RNA population. The default of "all"
+#' will use all feature columns in the `obj`'s cB.
+#' @param parameter Parameter to average across replicates of a given condition.
 #' @import data.table
 #' @importFrom magrittr %>%
 CompareParameters <- function(obj, features = "all", parameter = "log_kdeg",
