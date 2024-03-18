@@ -227,7 +227,7 @@ EstimateFractions <- function(obj, features = "all",
 
   samples_with_no_label <- metadf %>%
     dplyr::rowwise() %>%
-    dplyr::filter(all(c_across(all_of(tl_cols)) == 0)) %>%
+    dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) == 0)) %>%
     dplyr::ungroup() %>%
     dplyr::select(sample) %>%
     unlist() %>%
@@ -244,7 +244,7 @@ EstimateFractions <- function(obj, features = "all",
   cB <- cB[!(sample %in% samples_with_no_label),.(n = sum(n)), by = cols_to_group]
 
   # Pair down design matrix
-  fraction_design <- as_tibble(fraction_design)
+  fraction_design <- dplyr::as_tibble(fraction_design)
   mutrate_design <- fraction_design %>%
     dplyr::filter(present) %>%
     dplyr::select(-present)
@@ -303,8 +303,8 @@ EstimateFractions <- function(obj, features = "all",
       dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
       dplyr::summarise(!!col_name := optim(0,
                                            fn = two_comp_likelihood,
-                                           muts = !!sym(pops_to_analyze),
-                                           nucs = !!sym(necessary_basecounts),
+                                           muts = !!dplyr::sym(pops_to_analyze),
+                                           nucs = !!dplyr::sym(necessary_basecounts),
                                            pnew = pnew,
                                            pold = pold,
                                            Poisson = Poisson,
@@ -313,11 +313,12 @@ EstimateFractions <- function(obj, features = "all",
                                            upper = 7,
                                            method = "L-BFGS-B")$par[1]) %>%
       dplyr::ungroup() %>%
-      dplyr::mutate(!!other_col_name := logit(1 - inv_logit(!!sym(col_name))))
+      dplyr::mutate(!!other_col_name := logit(1 - inv_logit(!!dplyr::sym(col_name))))
 
 
 
   }else{
+
 
     fns <- cB[,.(mixture_fit = list(fit_general_mixture(dataset = .SD,
                                                         mutrate_design = mutrate_design,
@@ -325,8 +326,10 @@ EstimateFractions <- function(obj, features = "all",
                                                         basecols = necessary_basecounts,
                                                         Poisson = Poisson,
                                                         twocomp = FALSE,
-                                                        pnew = obj$mutation_rates[[1]]$pnew[obj$mutation_rates[[1]]$sample == sample],
-                                                        pold = obj$mutation_rates[[1]]$pold[obj$mutation_rates[[1]]$sample == sample] ) )),
+                                                        pnew = sapply(pops_to_analyze,
+                                                                      function(name) mutation_rates[[name]]$pnew[mutation_rates[[name]]$sample == sample ]),
+                                                        pold = sapply(pops_to_analyze,
+                                                                      function(name) mutation_rates[[name]]$pold[mutation_rates[[name]]$sample == sample ]) ) )),
               by = c("sample", features_to_analyze)]
 
 
@@ -476,7 +479,16 @@ inv_logit <- function(x) exp(x)/(1+exp(x))
 standard_binom_mix <- function(param, muts, nucs, n){
 
   logl <- sum(n*log( inv_logit(param[1])*dbinom(muts, nucs, inv_logit(param[2]))
-                     + (1 - inv_logit(param[1]))*dbinom(muts, nucs, inv_logit(param[3])) ) )
+                     + (1 - inv_logit(param[1]))*dbinom(muts, nucs, inv_logit(param[3])) ) ) +
+    dnorm(param[2],
+          -2.94,
+          0.3,
+          log = TRUE) +
+    dnorm(param[3],
+          -6.5,
+          0.5,
+          log = TRUE)
+
 
   return(-logl)
 
@@ -555,6 +567,46 @@ two_comp_likelihood <- function(param, muts, nucs, Poisson = TRUE,
 generalized_likelihood <- function(param, dataset, Poisson = TRUE,
                                    mutrate_design, pnew, pold, highpop,
                                    mutcols, basecols, twocomp = TRUE){
+
+
+  # # # POTENTIAL VECTORIZATION
+  # # # Assuming `rates` is KxN, `dataset` is a dataframe, `basecols` and `mutcols` are vectors of column names
+  # # # Precompute rates for each population and mutation
+  # rates_new <- sweep(mutrate_design, 2, pnew, `*`)
+  # rates_old <- sweep(1 - mutrate_design, 2, pold, `*`)
+  # rates <- rates_new + rates_old
+  #
+  # # Assuming `rates` is KxN, `dataset` is a dataframe, `basecols` and `mutcols` are vectors of column names
+  #
+  # # Step 1: Generate lambda matrix for a single data point (extendable to all points)
+  # generate_lambda <- function(dataset_row) {
+  #   sapply(1:length(basecols), function(j) rates[, j] * dataset_row[basecols[j]])
+  # }
+  #
+  # # For all dataset points (assuming dataset is a dataframe and iterating over its rows)
+  # lambda_matrix_list <- apply(dataset, 1, generate_lambda)
+  #
+  # # Step 2: Calculate Poisson likelihoods for each lambda
+  # calculate_poisson_likelihoods <- function(lambda_matrix, dataset_row) {
+  #   sapply(1:nrow(lambda_matrix), function(i) {
+  #     dpois(dataset_row[mutcols], lambda_matrix[i, ])
+  #   })
+  # }
+  #
+  # # For all dataset points
+  # poisson_likelihoods_list <- mapply(calculate_poisson_likelihoods, lambda_matrix_list,
+  #                                    MoreArgs = list(dataset_row = dataset))
+  #
+  # # Step 3: Calculate total likelihood for each data point
+  # calculate_total_likelihood <- function(poisson_likelihoods) {
+  #   colSums(apply(poisson_likelihoods, 2, prod))
+  # }
+  #
+  # total_likelihoods <- lapply(poisson_likelihoods_list, calculate_total_likelihood)
+  #
+  # # Assuming you need to sum these total likelihoods for a final value (depends on your model)
+  # final_likelihood <- sum(unlist(total_likelihoods))
+
 
 
   likelihoods <- rep(0, times = length(dataset[[1]]))
@@ -732,11 +784,11 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
 
 
 
-check_EstimateFractions_input(args){
+check_EstimateFractions_input <- function(args){
 
   ### features
 
-  if(!is.character(features)){
+  if(!is.character(args$features)){
 
     stop("features is not a character vector!")
 
@@ -744,7 +796,7 @@ check_EstimateFractions_input(args){
 
   ### Poisson
 
-  if(!is.logical(Poisson)){
+  if(!is.logical(args$Poisson)){
 
     stop("Poisson must be logical (TRUE or FALSE)!")
 

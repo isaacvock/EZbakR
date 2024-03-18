@@ -42,6 +42,87 @@ AverageAndRegularize <- function(obj, features = "all", parameter = "log_kdeg",
                             error_if_singular = TRUE){
 
 
+
+  if(parameter == "log_TILAC_ratio"){
+
+    obj <- general_avg_and_reg(obj = obj, features = features, parameter = parameter,
+                             formula_mean = formula_mean, formula_sd = formula_sd,
+                             include_all_parameters = include_all_parameters,
+                             sd_reg_factor = sd_reg_factor,
+                             error_if_singular = error_if_singular,
+                             TILAC = TRUE)
+
+  }else{
+
+    obj <- general_avg_and_reg(obj = obj, features = features, parameter = parameter,
+                        formula_mean = formula_mean, formula_sd = formula_sd,
+                        include_all_parameters = include_all_parameters,
+                        sd_reg_factor = sd_reg_factor,
+                        error_if_singular = error_if_singular)
+
+  }
+
+  return(obj)
+
+}
+
+
+# See if a factor referenced in a formula object has only a single factor.
+  # This will break the linear modeling strategies I employ in this function
+checkSingleLevelFactors <- function(formula, data) {
+
+  variables <- all.vars(formula)
+
+  # Initialize a vector to keep track of single-level factors
+  singleLevelFactors <- logical(length = 0)
+
+  # Loop through each variable to check if it's a factor present
+  # in the data with only one level
+  for (var in variables) {
+
+    if (var %in% names(data) && is.factor(data[[var]])) {
+
+      if (length(levels(data[[var]])) == 1) {
+
+        singleLevelFactors <- c(singleLevelFactors, TRUE)
+
+      } else {
+
+        singleLevelFactors <- c(singleLevelFactors, FALSE)
+
+      }
+    }
+  }
+
+  # Return TRUE if any single-level factors are found, FALSE otherwise
+  any(singleLevelFactors)
+}
+
+
+# Function to get normal distribution posterior mean
+# This is on log-scale, so have to return on natural
+# scale to make it usable in downstream test statistic
+# calculations.
+get_sd_posterior <- function(n = 1, sd_est, sd_var,
+                             fit_var, fit_mean){
+
+  denom <- (n/sd_var + 1/fit_var)
+  num <- sd_est/sd_var + fit_mean/fit_var
+
+  return(num/denom)
+
+}
+
+
+
+general_avg_and_reg <- function(obj, features, parameter,
+                                formula_mean, formula_sd,
+                                include_all_parameters,
+                                sd_reg_factor,
+                                error_if_singular,
+                                TILAC = FALSE){
+
+
   ### Extract kinetic parameters of interest
 
   # metadf for covariates
@@ -85,7 +166,9 @@ AverageAndRegularize <- function(obj, features = "all", parameter = "log_kdeg",
   kinetics_name <- paste(c("kinetics", features_to_analyze), collapse = "_")
   kinetics <- obj[[kinetics_name]]
   kinetics <- kinetics %>%
-    mutate(log_normalized_reads = log10(normalized_reads))
+    dplyr::mutate(log_normalized_reads = log10(normalized_reads))
+
+
 
   # Add kinetic parameter column to formula
   formula_mean <- as.formula(paste(c(parameter, formula_mean), collapse = ""))
@@ -93,27 +176,67 @@ AverageAndRegularize <- function(obj, features = "all", parameter = "log_kdeg",
   formula_sd <- as.formula(paste(c(parameter, formula_sd), collapse = ""))
 
   ### Fit linear, potentially heteroskedastic model
+  meta_cols <- colnames(metadf)
+  tl_cols <- meta_cols[grepl("^tl", meta_cols)]
 
   # Add covariates to kinetics
   kinetics <- kinetics %>%
-    inner_join(metadf %>%
-                 dplyr::select(-tl), by = "sample")
+    dplyr::inner_join(metadf %>%
+                 dplyr::select(-!!tl_cols), by = "sample")
+
+
+  ### Need to coverage for edge case where there are single level factors
+  single_level_mean <- checkSingleLevelFactors(kinetics,
+                                               formula_mean)
+  single_level_sd <- checkSingleLevelFactors(kinetics,
+                                             formula_sd)
 
 
   message("Fitting linear model")
-  model_fit <- kinetics %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
-    dplyr::do(dplyr::tibble(parameters = list(fit_heteroskedastic_linear_model(.,
-                                                                 formula_mean = formula_mean,
-                                                                 formula_sd = formula_sd,
-                                                                 dependent_var = parameter,
-                                                                 error_if_singular = error_if_singular)),
-                            coverages = list(calc_avg_coverage(.,
-                                                               formula = formula_reads))))
+  if(single_level_mean | single_level_sd){
 
-  model_fit <- model_fit %>%
-    tidyr::unnest_wider(coverages) %>%
-    tidyr::unnest_wider(parameters)
+    if(length(all.vars(formula_mean)) != 2 | length(all.vars(formula_sd)) != 2 ){
+
+      stop("You have specified a multi-covariate model where one or more of the covariates
+           has a single level. The mean and standard deviations of all of the groups
+           in such a model cannot be estimated. For example, if you have 4 samples,
+           and two covariates, call them treatment and batch, and treatment has the values
+           of 'A', 'A', 'B', 'B' for the 4 samples, and batch has a value of 'Z' for all 4 samples,
+           there is no way to estimate the average value of a parameter in batch 'Z' because
+           the average value in the first two samples is the mu_A + mu_Z, and in the
+           second two samples is the sum of mu_B and mu_Z, where mu_x is the average
+           value of the parameter of interest in group x. In this case, there are
+           three parameters to estimate (mu_A, mu_B, and mu_Z) but only two
+           unique groups of data points (A+Z and B+Z).
+           SOLUTION: remove the single-level covariate(s) or specify a model
+           in which there is only a single covariate, a single-level one.")
+
+
+    }
+
+    model_fit <- kinetics %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
+      dplyr::summarise()
+
+  }else{
+
+    model_fit <- kinetics %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
+      dplyr::do(dplyr::tibble(parameters = list(fit_heteroskedastic_linear_model(.,
+                                                                                 formula_mean = formula_mean,
+                                                                                 formula_sd = formula_sd,
+                                                                                 dependent_var = parameter,
+                                                                                 error_if_singular = error_if_singular)),
+                              coverages = list(calc_avg_coverage(.,
+                                                                 formula = formula_reads))))
+
+    model_fit <- model_fit %>%
+      tidyr::unnest_wider(coverages) %>%
+      tidyr::unnest_wider(parameters)
+
+  }
+
+
 
   ### Estimate coverage vs. variance trends for each standard deviation estimate
 
@@ -127,7 +250,7 @@ AverageAndRegularize <- function(obj, features = "all", parameter = "log_kdeg",
   relevant_columns <- union(sd_columns, coverage_columns)
 
   # Step 2: Iterate and perform regression
-  regression_results <- map(covariate_names, ~ {
+  regression_results <- purrr::map(covariate_names, ~ {
 
     # Dynamically create formula
     formula_str <- paste("logsd_", .x, " ~ coverage_", .x, sep = "")
@@ -163,19 +286,6 @@ AverageAndRegularize <- function(obj, features = "all", parameter = "log_kdeg",
 
   message("Regularizing variance estimates")
 
-  # Function to get normal distribution posterior mean
-  # This is on log-scale, so have to return on natural
-  # scale to make it usable in downstream test statistic
-  # calculations.
-  get_sd_posterior <- function(n = 1, sd_est, sd_var,
-                   fit_var, fit_mean){
-
-    denom <- (n/sd_var + 1/fit_var)
-    num <- sd_est/sd_var + fit_mean/fit_var
-
-    return(num/denom)
-
-  }
 
   # Loop over each covariate's sd to be regularized
   cols_to_keep <- c()
@@ -192,11 +302,11 @@ AverageAndRegularize <- function(obj, features = "all", parameter = "log_kdeg",
 
     # Regularize
     model_fit <- model_fit %>%
-      dplyr::mutate(!!col_name := get_sd_posterior(sd_est = !!sym(sd_est_name),
-                                                         sd_var = (!!sym(sd_var_name)) ^ 2,
-                                                         fit_var = var(regression_results[[c]]$lm_result$residuals) / sd_reg_factor,
-                                                         fit_mean = !!sym(fit_mean_name))) %>%
-      dplyr::mutate(!!natural_col_name := exp((!!sym(col_name))))
+      dplyr::mutate(!!col_name := get_sd_posterior(sd_est = !!dplyr::sym(sd_est_name),
+                                                   sd_var = (!!dplyr::sym(sd_var_name)) ^ 2,
+                                                   fit_var = var(regression_results[[c]]$lm_result$residuals) / sd_reg_factor,
+                                                   fit_mean = !!dplyr::sym(fit_mean_name))) %>%
+      dplyr::mutate(!!natural_col_name := exp((!!dplyr::sym(col_name))))
 
     mean_est <- paste0("mean_", c)
     coverage_est <- paste0("coverage_", c)
@@ -234,21 +344,6 @@ AverageAndRegularize <- function(obj, features = "all", parameter = "log_kdeg",
 
 
 }
-
-
-tilac_avg_and_reg <- function(){
-
-
-
-}
-
-
-general_avg_and_reg <- function(){
-
-
-
-}
-
 
 
 #' Get contrasts of estimated parameters
@@ -319,11 +414,11 @@ CompareParameters <- function(obj, features = "all", parameter = "log_kdeg",
   exp_cov <- paste0("coverage_", condition, experimental)
 
   comparison <- parameter_est %>%
-    dplyr::mutate(difference = !!sym(exp_mean) - !!sym(ref_mean),
-           uncertainty = sqrt( (!!sym(ref_sd))^2 + (!!sym(exp_sd))^2 ),
+    dplyr::mutate(difference = !!dplyr::sym(exp_mean) - !!dplyr::sym(ref_mean),
+           uncertainty = sqrt( (!!dplyr::sym(ref_sd))^2 + (!!dplyr::sym(exp_sd))^2 ),
            stat = difference/uncertainty,
            pval = 2*pnorm(-abs(stat)),
-           avg_coverage = ((!!sym(ref_cov)) + (!!sym(exp_cov))) / 2) %>%
+           avg_coverage = ((!!dplyr::sym(ref_cov)) + (!!dplyr::sym(exp_cov))) / 2) %>%
     dplyr::mutate(padj = stats::p.adjust(pval, method = "BH")) %>%
     dplyr::select(!!features_to_analyze, difference, uncertainty, stat, pval, padj, avg_coverage)
 
