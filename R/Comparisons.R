@@ -35,11 +35,12 @@
 #' all treatment Bs correspond to batch Bs).
 #' @import data.table
 #' @importFrom magrittr %>%
-AverageAndRegularize <- function(obj, features = "all", parameter = "log_kdeg",
+AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                             formula_mean = NULL, formula_sd = NULL,
                             include_all_parameters = TRUE,
                             sd_reg_factor = 10,
-                            error_if_singular = TRUE){
+                            error_if_singular = TRUE,
+                            min_reads = 10){
 
 
 
@@ -50,7 +51,7 @@ AverageAndRegularize <- function(obj, features = "all", parameter = "log_kdeg",
                              include_all_parameters = include_all_parameters,
                              sd_reg_factor = sd_reg_factor,
                              error_if_singular = error_if_singular,
-                             TILAC = TRUE)
+                             TILAC = TRUE, min_reads = min_reads)
 
   }else{
 
@@ -58,7 +59,7 @@ AverageAndRegularize <- function(obj, features = "all", parameter = "log_kdeg",
                         formula_mean = formula_mean, formula_sd = formula_sd,
                         include_all_parameters = include_all_parameters,
                         sd_reg_factor = sd_reg_factor,
-                        error_if_singular = error_if_singular)
+                        error_if_singular = error_if_singular, min_reads = min_reads)
 
   }
 
@@ -120,7 +121,7 @@ general_avg_and_reg <- function(obj, features, parameter,
                                 include_all_parameters,
                                 sd_reg_factor,
                                 error_if_singular,
-                                TILAC = FALSE){
+                                TILAC = FALSE, min_reads = 10){
 
 
   ### Extract kinetic parameters of interest
@@ -177,6 +178,7 @@ general_avg_and_reg <- function(obj, features, parameter,
   rm(fractions)
 
 
+  browser()
   # Add kinetic parameter column to formula
   formula_mean <- as.formula(paste(c(parameter, formula_mean), collapse = ""))
   formula_reads <- as.formula(paste(c("log_normalized_reads", formula_sd), collapse = ""))
@@ -192,7 +194,25 @@ general_avg_and_reg <- function(obj, features, parameter,
                  dplyr::select(-!!tl_cols), by = "sample")
 
 
-  ### Need to coverage for edge case where there are single level factors
+
+  ### Filter out features that are not present in all samples
+
+  num_samps <- length(unique(kinetics$sample))
+
+  features_to_keep <- kinetics %>%
+    dplyr::filter(n > min_reads) %>%
+    dplyr::select(-n) %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
+    dplyr::count() %>%
+    dplyr::filter(n == num_samps) %>%
+    dplyr::select(!!features_to_analyze)
+
+  kinetics <- kinetics %>%
+    dplyr::inner_join(features_to_keep,
+                      by = features_to_analyze)
+
+
+  ### Need to cover for edge case where there are single level factors
   single_level_mean <- checkSingleLevelFactors(kinetics,
                                                formula_mean)
   single_level_sd <- checkSingleLevelFactors(kinetics,
@@ -470,7 +490,7 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
                                              dependent_var,
                                              error_if_singular = TRUE) {
 
-
+  browser()
   # Parse formula objects into model matrices
   designMatrix_mean <- model.matrix(formula_mean, data)
   designMatrix_sd <- model.matrix(formula_sd, data)
@@ -518,12 +538,10 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
   }
 
   tryCatch({
-    # Call your function inside tryCatch
     solve(opt$hessian)
   }, error = function(e) {
-    # If an error occurs, print the error message
     print(e)
-    # Then enter the RStudio debugger
+    browser()
   })
 
   # Estimate uncertainty from Hessian
@@ -549,5 +567,26 @@ calc_avg_coverage <- function(data, formula){
   names(estimates) <- c(paste0("coverage_", names(estimates)))
 
   return(as.list(estimates))
+
+}
+
+
+identify_features_to_keep <- function(kinetics, features_to_analyze,
+                                      min_n = 10){
+
+  num_samps <- length(unique(kinetics$sample))
+
+  features <- kinetics %>%
+    dplyr::filter(n > min_n) %>%
+    dplyr::select(-n) %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
+    dplyr::count() %>%
+    dplyr::filter(n != num_sapms) %>%
+    dplyr::select(!!features_to_analyze)
+
+  return(features)
+
+
+
 
 }
