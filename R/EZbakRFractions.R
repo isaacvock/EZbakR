@@ -12,6 +12,10 @@ new_EZbakRFractions <- function(fractions, metadf){
 
   # What should list elements be named?
   features <- get_features(fractions, objtype = 'fractions')
+
+  # Can't have '_' in feature names when naming the fractions object
+  features <- gsub("_", "", features)
+
   list_names <- c(paste0('fractions_', paste(features, collapse = "_")), "metadf")
 
   # Make output

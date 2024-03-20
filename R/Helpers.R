@@ -12,9 +12,9 @@ get_normalized_read_counts <- function(obj,
 get_normalized_read_counts.EZbakRFractions <- function(obj,
                                                        features_to_analyze){
 
-  fraction_name <- paste0("fractions_", paste(features_to_analyze, collapse = "_"))
+  fraction_name <- paste0("fractions_", paste(gsub("_","",features_to_analyze), collapse = "_"))
 
-  reads <- data.table::setDT(obj[[fraction_name]])
+  reads <- data.table::copy(data.table::setDT(obj[[fraction_name]]))
 
   reads <- normalize_reads(reads, features_to_analyze)
 

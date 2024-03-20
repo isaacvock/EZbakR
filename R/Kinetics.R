@@ -109,7 +109,7 @@ Standard_kinetic_estimation <- function(obj, features = NULL){
 
   }else{
 
-    supposed_fractions_name <- paste0("fractions_", paste(features, collapse = "_"))
+    supposed_fractions_name <- paste0("fractions_", paste(gsub("_","",features), collapse = "_"))
 
     if(!(supposed_fractions_name %in% names(obj))){
 
@@ -123,12 +123,13 @@ Standard_kinetic_estimation <- function(obj, features = NULL){
 
   }
 
-
   # Name of fractions table to use
   fractions_table_name <- paste(c("fractions", features_to_analyze), collapse = "_")
 
   # Get fractions
   kinetics <- obj[[fractions_table_name]]
+
+  features_to_analyze <- get_features(kinetics, objtype = "fractions")
 
 
 
@@ -178,13 +179,15 @@ Standard_kinetic_estimation <- function(obj, features = NULL){
 
 
   # Figure out what to name output
-  kinetics_name <- paste(c("kinetics", features_to_analyze), collapse = "_")
-  reads_name <- paste(c("readcounts", features_to_analyze), collapse = "_")
+  kinetics_name <- paste(c("kinetics", gsub("_","",features_to_analyze)), collapse = "_")
+  reads_name <- paste(c("readcounts", gsub("_","",features_to_analyze)), collapse = "_")
 
-  obj[[kinetics_name]] <- kinetics
+  obj[[kinetics_name]] <- kinetics %>%
+    dplyr::select(-!!fraction_of_interest, dplyr::everything(), n, normalized_reads, tl)
 
   # Eventually want to add count matrix output
-  obj[[reads_name]] <- list(reads_df = reads_norm)
+  obj[[reads_name]] <- reads_norm %>%
+    dplyr::select(sample, !!features_to_analyze, n, normalized_reads, geom_mean, scale_factor)
 
   if(!is(obj, "EZbakRKinetics")){
 
