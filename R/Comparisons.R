@@ -128,31 +128,30 @@ general_avg_and_reg <- function(obj, features, parameter,
   # metadf for covariates
   metadf <- obj$metadf
 
-  # cB columns
-  cB <- obj$cB
-  cB_cols <- colnames(cB)
-
-  # Mutation columns in cB
-  mutcounts_in_cB <- find_mutcounts(obj)
-
-  # Base count columns in cB
-  basecounts_in_cB <- paste0("n", substr(mutcounts_in_cB, start = 1, stop = 1))
-
-  # feature columns
-  features_in_cB <- cB_cols[!(cB_cols %in% c(mutcounts_in_cB,
-                                             basecounts_in_cB,
-                                             "sample", "n"))]
-
   # Need to determine which columns of the cB to group reads by
-  if(features == "all"){
+  if(is.null(features)){
 
-    features_to_analyze <- features_in_cB
+    fractions_name <- names(obj)[grepl("fractions_", names(obj))]
+
+    if(length(fractions_name) > 1){
+
+      stop("There is more than one fractions estimate data frame; therefore,
+           you need to explicit specify a `features` vector to let EZbakR
+           know which of these you would like to use!")
+
+    }
+
+    features_to_analyze <- unname(unlist(strsplit(fractions_name, "_")))
+    lf <- length(features_to_analyze)
+    features_to_analyze <- features_to_analyze[2:lf]
 
   }else{
 
-    if(!all(features %in% features_in_cB)){
+    supposed_fractions_name <- paste0("fractions_", paste(gsub("_","",features), collapse = "_"))
 
-      stop("features includes columns that do not exist in your cB!")
+    if(!(supposed_fractions_name %in% names(obj))){
+
+      stop("features do not have an associated fractions data frame!")
 
     }else{
 
@@ -168,6 +167,14 @@ general_avg_and_reg <- function(obj, features, parameter,
   kinetics <- kinetics %>%
     dplyr::mutate(log_normalized_reads = log10(normalized_reads))
 
+  # Get features to analyze
+  fractions_table_name <- paste(c("fractions", features_to_analyze), collapse = "_")
+
+  fractions <- obj[[fractions_table_name]]
+
+  features_to_analyze <- get_features(fractions, objtype = "fractions")
+
+  rm(fractions)
 
 
   # Add kinetic parameter column to formula
