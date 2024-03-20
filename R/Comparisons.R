@@ -132,27 +132,27 @@ general_avg_and_reg <- function(obj, features, parameter,
   # Need to determine which columns of the cB to group reads by
   if(is.null(features)){
 
-    fractions_name <- names(obj)[grepl("fractions_", names(obj))]
+    kinetics_name <- names(obj)[grepl("kinetics_", names(obj))]
 
-    if(length(fractions_name) > 1){
+    if(length(kinetics_name) > 1){
 
-      stop("There is more than one fractions estimate data frame; therefore,
+      stop("There is more than one kinetics estimate data frame; therefore,
            you need to explicit specify a `features` vector to let EZbakR
            know which of these you would like to use!")
 
     }
 
-    features_to_analyze <- unname(unlist(strsplit(fractions_name, "_")))
+    features_to_analyze <- unname(unlist(strsplit(kinetics_name, "_")))
     lf <- length(features_to_analyze)
     features_to_analyze <- features_to_analyze[2:lf]
 
   }else{
 
-    supposed_fractions_name <- paste0("fractions_", paste(gsub("_","",features), collapse = "_"))
+    supposed_kinetics_name <- paste0("kinetics_", paste(gsub("_","",features), collapse = "_"))
 
-    if(!(supposed_fractions_name %in% names(obj))){
+    if(!(supposed_kinetics_name %in% names(obj))){
 
-      stop("features do not have an associated fractions data frame!")
+      stop("features do not have an associated kinetics data frame!")
 
     }else{
 
@@ -178,11 +178,10 @@ general_avg_and_reg <- function(obj, features, parameter,
   rm(fractions)
 
 
-  browser()
   # Add kinetic parameter column to formula
-  formula_mean <- as.formula(paste(c(parameter, formula_mean), collapse = ""))
-  formula_reads <- as.formula(paste(c("log_normalized_reads", formula_sd), collapse = ""))
-  formula_sd <- as.formula(paste(c(parameter, formula_sd), collapse = ""))
+  formula_mean <- as.formula(paste0(paste(c(parameter, formula_mean), collapse = ""), "-1"))
+  formula_reads <- as.formula(paste0(paste(c("log_normalized_reads", formula_sd), collapse = ""), "-1"))
+  formula_sd <- as.formula(paste0(paste(c(parameter, formula_sd), collapse = ""), "-1"))
 
   ### Fit linear, potentially heteroskedastic model
   meta_cols <- colnames(metadf)
@@ -350,13 +349,13 @@ general_avg_and_reg <- function(obj, features, parameter,
 
 
   # Prep output
-  output_name <- paste0("average_", parameter, "_", features_to_analyze)
+  output_name <- paste0("average_", parameter, "_", paste(gsub("_","",features_to_analyze), collapse = "_"))
 
   obj[[output_name]] <- final_output
 
   if(include_all_parameters){
 
-    output_name <- paste0("fullfit_average_", parameter, "_", features_to_analyze)
+    output_name <- paste0("fullfit_average_", parameter, "_", paste(gsub("_","",features_to_analyze), collapse = "_"))
     obj[[output_name]] <- model_fit
 
   }
@@ -490,7 +489,6 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
                                              dependent_var,
                                              error_if_singular = TRUE) {
 
-  browser()
   # Parse formula objects into model matrices
   designMatrix_mean <- model.matrix(formula_mean, data)
   designMatrix_sd <- model.matrix(formula_sd, data)
@@ -567,26 +565,5 @@ calc_avg_coverage <- function(data, formula){
   names(estimates) <- c(paste0("coverage_", names(estimates)))
 
   return(as.list(estimates))
-
-}
-
-
-identify_features_to_keep <- function(kinetics, features_to_analyze,
-                                      min_n = 10){
-
-  num_samps <- length(unique(kinetics$sample))
-
-  features <- kinetics %>%
-    dplyr::filter(n > min_n) %>%
-    dplyr::select(-n) %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
-    dplyr::count() %>%
-    dplyr::filter(n != num_sapms) %>%
-    dplyr::select(!!features_to_analyze)
-
-  return(features)
-
-
-
 
 }
