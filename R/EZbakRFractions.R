@@ -1,25 +1,25 @@
-#' `EZbakRDataobject` constructor for internal use
+#' `EZbakRFractions` object constructor
 #'
 #' \code{new_EZbakRData} efficiently creates an object of class `EZbakRData`.
 #' It does not perform any rigorous checks of the legitimacy of this object.
-#' @param cB Data frame tracking the sample ID, mutational and nucleotide content,
-#' and feature assignment of sequencing reads.
+#' @param fractions Data frame containing information about the fraction of reads
+#' from each mutational population of interest.
 #' @param metadf Data frame tracking features of each of the samples included
 #' in `cB`.
-new_EZbakRData <- function(cB, metadf){
-  stopifnot(is.data.frame(cB))
+new_EZbakRFractions <- function(fractions, metadf){
+  stopifnot(is.data.frame(fractions))
   stopifnot(is.data.frame(metadf))
-  structure(list(cB = cB, metadf = metadf), class = "EZbakRData")
+  structure(list(cB = fractions, metadf = metadf), class = "EZbakRFractions")
 }
 
-#' `EZbakRDataobject` validator
+#' `EZbakRFractions` object validator
 #'
-#' \code{validate_EZbakRData} ensures that input for `EZbakRDataobject` construction
+#' \code{validate_EZbakRData} ensures that input for `EZbakRFractions` construction
 #' is valid.
-#' @param obj An object of class `EZbakRDataobject`
-validate_EZbakRData <- function(obj){
+#' @param obj An object of class `EZbakRFractions`
+validate_EZbakRFractions <- function(obj){
 
-  ### Vectors of potential column names
+  ### Vector of potential mutational populations
 
   # Mutation counts
   mutcounts <- expand.grid(c("T", "C", "G", "A", "U", "N"),
@@ -35,45 +35,39 @@ validate_EZbakRData <- function(obj){
 
   vals <- unclass(obj)
 
-  cB <- dplyr::as_tibble(vals$cB)
+  fractions <- dplyr::as_tibble(vals$fractions)
   metadf <- dplyr::as_tibble(vals$metadf)
 
-  cB_cols <- colnames(cB)
+  fraction_cols <- colnames(fractions)
   metadf_cols <- colnames(metadf)
 
-  # Which mutcounts are in the cB?
-  mutcounts_in_cB <- cB_cols[cB_cols %in% mutcounts]
+
+  ### Get the mutation counts of interest
+
+  # A bit sketchy because you risk snagging a feature column,
+  # but it would have to specifcally be a feature column that includes 'fraction_'
+  # in its name, so that seems like an unlikely occurence. Furthermore,
+  # a substring of the feature column would have to include 'high' or 'low'
+  # to screw things up. Even then, I will probably add a filter for valid
+  # mutation types to catch this crazy edge case (or a misnamed fraction).
+  substrings <- unlist(strsplit(fraction_cols[grepl("fraction_", fraction_cols)], "_"))
+  pops <- substrings[grepl("high", substrings) | grepl("low", fraction_cols)]
+  mutations_in_fractions <- substr(pops, nchar(pops) - 1, nchar(pops))
+
+  mutations_in_fractions <- mutations_in_fractions[mutations_in_fractions %in% mutcounts]
 
 
-  ### Does cB_cols contain sample and n?
-  if(!("sample" %in% cB_cols & "n" %in% cB_cols)){
+  ### Does fractions data frame contain columns named "sample" and "n"?
+  if(!("sample" %in% fraction_cols & "n" %in% fraction_cols)){
 
     rlang::abort(
-      "cB must include columns named sample (representing the sample ID)
-      and n (representing the number of reads with identical values for the
-      columns included in the cB)!",
-      class = "cB_sample_n"
+      "fractions must include columns named sample (representing the sample ID)
+      and n (representing the number of reads)!",
+      class = "fraction_sample_n"
     )
 
   }
 
-
-  ### Does cB_cols contain the necessary base count column(s)?
-  basecounts_expected <- paste0("n", substr(mutcounts_in_cB, start = 1, stop = 1))
-
-  if(!all(basecounts_expected %in% cB_cols)){
-
-    rlang::abort(
-      "Not all of the columns tracking the counts of relevant nucleotides
-      are present! For example, if you have columns called TC and GA,
-      you need to have corresponding columns called nT and nG. TC and GA
-      should represent the number of T-to-C and G-to-A mutations
-      in sequencing reads, respectively, and nT and nG should represent
-      the number of Ts and Gs in the read (if there had been no mutations in that read).",
-      class = "cB_basecount"
-    )
-
-  }
 
 
   ### Does metadf contain sample and correct tl(s)?
@@ -85,14 +79,14 @@ validate_EZbakRData <- function(obj){
     )
   }
 
-  # If only one mutation type tracked in cB, then need either tl or tchase + tpulse
-  # If more than one mutation type tracked in cB, need tl_<muttype> for each
-  # <muttype (e.g., TC, GA, etc.) in the cB.
-  if(length(mutcounts_in_cB) > 1){
+  # If only one mutation type tracked in fractions, then need either tl or tchase + tpulse
+  # If more than one mutation type tracked in fractions, need tl_<muttype> for each
+  # <muttype (e.g., TC, GA, etc.) in the fractions.
+  if(length(mutations_in_fractions) > 1){
 
-    tl_expected <- paste0("tl_", mutcounts_in_cB)
-    tl_expected_p <- paste0("tpulse_", mutcounts_in_cB)
-    tl_expected_c <- paste0("tchase_", mutcounts_in_cB)
+    tl_expected <- paste0("tl_", mutations_in_fractions)
+    tl_expected_p <- paste0("tpulse_", mutations_in_fractions)
+    tl_expected_c <- paste0("tchase_", mutations_in_fractions)
 
     if(!all(tl_expected %in% metadf_cols)){
 
@@ -101,8 +95,8 @@ validate_EZbakRData <- function(obj){
 
         rlang::abort(
           "Not all of the relevant label times are included in the metadf.
-          For example, if your cB has columns TC and GA, your metadf must
-          include columns called tl_TC and tl_GA, representing the label times
+          For example, if your fractions has columns referring to high/low TC and GA,
+          your metadf must include columns called tl_TC and tl_GA, representing the label times
           for metabolic labels whose recoding yield apparent T-to-C and
           G-to-A mutations, respectively. Alternatively, if you performed a
           pulse-chase, then you need columns tpulse_TC, tpulse_GA, tchase_TC,
@@ -157,33 +151,18 @@ validate_EZbakRData <- function(obj){
 
 
 
-  ### Check if all of the samples in cB are also in metadf
+  ### Check if all of the samples in fractions are also in metadf
 
-  samps_cB <- unique(cB$sample)
+  samps_fractions <- unique(fractions$sample)
 
-  if(!all(samps_cB %in% metadf$sample)){
-    rlang::abort("Not all samples in the cB are present in the metadf!",
-                 class = "cB_metadf_samples")
+  if(!all(samps_fractions %in% metadf$sample)){
+    rlang::abort("Not all samples in fractions are present in the metadf!",
+                 class = "fractions_metadf_samples")
   }
 
 
-  ### Check that mutation counts can be coerced to positive integers
-  is_pos_whole <- function(x){
+  ### Check that n in fractions is numeric and > 0
 
-    if(all(is.numeric(x))){
-
-      bool <- all((floor(x) == x) & (x >= 0))
-
-    }else{
-
-      bool <- FALSE
-
-    }
-
-    return(bool)
-
-
-  }
   is_pos_whole2 <- function(x){
 
     if(all(is.numeric(x))){
@@ -200,21 +179,15 @@ validate_EZbakRData <- function(obj){
 
   }
 
-  if(!all(sapply(cB[,mutcounts_in_cB], is_pos_whole))){
 
-    rlang::abort("Not all columns tracking counts of mutations are positive whole numbers!",
-                 class = "mut_not_pos_whole")
+  if(!all(sapply(fractions[,"n"], is_pos_whole2))){
 
-  }
-
-  ### Check that base counts can be coerced to positive integers
-
-  if(!all(sapply(cB[,basecounts_expected], is_pos_whole))){
-
-    rlang::abort("Not all columns tracking counts of nucleotides are positive whole numbers!",
-                 class = "basecounts_not_pos_whole")
+    rlang::abort("Not all columns of fraction tracking counts of reads contain positive whole numbers
+         strictly greating than 0!",
+                 class = "fractions_n_pos_whole")
 
   }
+
 
   ### Check that label times are numeric and >= 0
 
@@ -247,15 +220,7 @@ validate_EZbakRData <- function(obj){
   }
 
 
-  ### Check that n in cB is numeric and > 0
 
-  if(!all(sapply(cB[,"n"], is_pos_whole2))){
-
-    rlang::abort("Not all columns of cB tracking counts of reads contain positive whole numbers
-         strictly greating than 0!",
-                 class = "cB_n_pos_whole")
-
-  }
 
 
   ### Make sure there is at least one labeled sample
@@ -265,7 +230,7 @@ validate_EZbakRData <- function(obj){
   ## chase
 
 
-  ### Make sure there is at least one feature column in cB
+  ### Make sure there is at least one feature column in fractions
 
 
   return(obj)
@@ -276,53 +241,23 @@ validate_EZbakRData <- function(obj){
 }
 
 
-#' `EZbakRDataobject` helper function for users
+#' `EZbakRFractions` helper function for users
 #'
 #' \code{EZbakRData} creates an object of class `EZbakRData` and checks the validity
 #' of the provided input.
-#' @param cB Data frame with the following columns:
+#' @param fractions Data frame with the following columns:
 #' \itemize{
 #'  \item sample: Name given to particular sample from which data was collected.
-#'  \item mutational counts: Integers corresponding to the number of a particular
-#'  mutation seen in a sequencing read. The following column names are allowed:
-#'  \itemize{
-#'    \item TC: Number of Thymine-to-Cytosine mutations
-#'    \item TA: Number of Thymine-to-Adenine mutations
-#'    \item TG: Number of Thymine-to-Guanine mutations
-#'    \item CT: Number of Cytosine-to-Thymine mutations
-#'    \item CA: Number of Cytosine-to-Adenine mutations
-#'    \item CG: Number of Cytosine-to-Guanine mutations
-#'    \item CU: Number of Cytosine-to-Uridine mutations
-#'    \item AT: Number of Adenine-to-Thymine mutations
-#'    \item AC: Number of Adenine-to-Cytosine mutations
-#'    \item AG: Number of Adenine-to-Guanine mutations
-#'    \item AU: Number of Adenine-to-Uridine mutations
-#'    \item GT: Number of Guanine-to-Thymine mutations
-#'    \item GC: Number of Guanine-to-Cytosine mutations
-#'    \item GA: Number of Guanine-to-Adenine mutations
-#'    \item GU: Number of Guanine-to-Uridine mutations
-#'    \item TN: Number of Thymine-to-Adenine/Cytosine/Guanine mutations
-#'    \item CN: Number of Cytosine-to-Adenine/Thymine/Guanine/Uridine mutations
-#'    \item AN: Number of Adenine-to-Thymine/Cytosine/Guanine/Uridine mutations
-#'    \item GN: Number of Guanine-to-Adenine/Cytosine/Thymine/Uridine mutations
-#'    \item UN: Number of Uridine-to-Adenine/Cytosine/Guanine mutations
-#'    \item NT: Number of Adenine/Cytosine/Guanine-to-Thymine mutations
-#'    \item NC: Number of Adenine/Thymine/Guanine/Uridine-to-Cytosine mutations
-#'    \item NtoA: Number of Thymine/Cytosine/Guanine/Uridine-to-Adenine mutations. (Naming convention changed because NA taken)
-#'    \item NU: Number of Cytosine/Guanine/Adenine-to-Uridine mutations.
-#'    \item NN: Number of any kind of mutation
-#'  }
-#'  \item base nucleotide count: Integers corresponding to the number of instances of a
-#'  particular type of nucleotide whose mutations are tracked in a corresponding
-#'  mutation count column. The following column names are allowed:
-#'  \itemize{
-#'    \item nT: Number of Thymines
-#'    \item nG: Number of Guanines
-#'    \item nA: Number of Adenines
-#'    \item nC: Number of Cytosines
-#'    \item nU: Number of Uridines
-#'    \item nN: number of any kind of nucleotide
-#'  }
+#'  \item estimates of population fractions: These columns refer to the estimate
+#'  for the fraction of reads coming from a particular mutational population.
+#'  For example, in a standard NR-seq experiment, you should have one column
+#'  named `fraction_highTC`. This refers to the fraction of RNA inferred to have
+#'  a high T-to-C mutation rate (e.g., the newly synthesized RNA in a pulse-labeling NR-seq
+#'  experiment).
+#'  If you estimated the fractions of more than 2 mutation types (e.g., T-to-C and
+#'  G-to-A), then you need to explicitly list all fractions of interest estimated.
+#'  For example, in a TILAC experiment, this would be `fraction_highTC_lowGA`,
+#'  `fraction_lowTC_highGA`, and `fraction_lowTC_lowGA`.
 #'  \item features: Any columns that cannot be interpreted as a mutation count
 #'  or base nucleotide count (and that aren't named `sample` or `n`) will be
 #'  interpreted as an ID for a genomic "feature" from which a read originated.
@@ -400,11 +335,11 @@ validate_EZbakRData <- function(obj){
 #' @return An EZbakRData object. This is simply a list of the provide `cB` and
 #' `metadf` with class `EZbakRData`
 #' @export
-EZbakRData <- function(cB, metadf){
+EZbakRFractions <- function(fractions, metadf){
 
-  cB <- setDT(cB)
+  fractions <- setDT(fractions)
   metadf <- setDT(metadf)
 
-  validate_EZbakRData(new_EZbakRData(cB, metadf))
+  validate_EZbakRFractions(new_EZbakRFractions(fractions, metadf))
 
 }
