@@ -351,7 +351,7 @@ EstimateFractions <- function(obj, features = "all",
 
 
   # What should output be named?
-  fraction_vect <- paste(c("fractions", features_to_analyze), collapse = "_")
+  fraction_vect <- paste(c("fractions", gsub("_","",features_to_analyze)), collapse = "_")
 
   obj[[fraction_vect]] <- fns
 
