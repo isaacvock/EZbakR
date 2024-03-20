@@ -296,12 +296,12 @@ EstimateFractions <- function(obj, features = "all",
 
     ### Estimate fraction new
 
-    col_name <- paste0(pops_to_analyze, "high")
-    other_col_name <- paste0(pops_to_analyze, "low")
+    col_name <- paste0("logit_fraction_high", pops_to_analyze)
+    natural_col_name <- paste0("fraction_high", pops_to_analyze)
 
     fns <- dplyr::as_tibble(cB) %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
-      dplyr::summarise(!!col_name := optim(0,
+      dplyr::summarise(!!col_name := inv_logit(optim(0,
                                            fn = two_comp_likelihood,
                                            muts = !!dplyr::sym(pops_to_analyze),
                                            nucs = !!dplyr::sym(necessary_basecounts),
@@ -311,10 +311,12 @@ EstimateFractions <- function(obj, features = "all",
                                            n = n,
                                            lower = -7,
                                            upper = 7,
-                                           method = "L-BFGS-B")$par[1],
+                                           method = "L-BFGS-B")$par[1]),
                        n = sum(n)) %>%
       dplyr::ungroup() %>%
-      dplyr::mutate(!!other_col_name := logit(1 - inv_logit(!!dplyr::sym(col_name))))
+      dplyr::mutate(!!natural_col_name := inv_logit(!!dplyr::sym(col_name))) %>%
+      dplyr::select(sample, !!features_to_analyze, !!natural_col_name,
+                    !!col_name, n)
 
 
 
@@ -330,7 +332,8 @@ EstimateFractions <- function(obj, features = "all",
                                                         pnew = sapply(pops_to_analyze,
                                                                       function(name) mutation_rates[[name]]$pnew[mutation_rates[[name]]$sample == sample ]),
                                                         pold = sapply(pops_to_analyze,
-                                                                      function(name) mutation_rates[[name]]$pold[mutation_rates[[name]]$sample == sample ]) ) )),
+                                                                      function(name) mutation_rates[[name]]$pold[mutation_rates[[name]]$sample == sample ]) ) ),
+                 n = sum(n)),
               by = c("sample", features_to_analyze)]
 
 
@@ -762,7 +765,7 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
 
 
     # Make names for the output list that are easily interpretable (I hope)
-    listnames <- lapply(population_list, function(x) paste0(muttypes, x))
+    listnames <- lapply(population_list, function(x) paste0(x, muttypes))
     listnames <- sapply(listnames, function(x) paste(x, collapse = "_"),
                         simplify = "vector")
 
