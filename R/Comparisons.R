@@ -246,19 +246,69 @@ general_avg_and_reg <- function(obj, features, parameter,
 
   }else{
 
-    model_fit <- kinetics %>%
-      dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
-      dplyr::do(dplyr::tibble(parameters = list(fit_heteroskedastic_linear_model(.,
-                                                                                 formula_mean = formula_mean,
-                                                                                 formula_sd = formula_sd,
-                                                                                 dependent_var = parameter,
-                                                                                 error_if_singular = error_if_singular)),
-                              coverages = list(calc_avg_coverage(.,
-                                                                 formula = formula_reads))))
+    ### If there is only one element of formula, then just do simple averaging.
+    ### Else, will have to estimate maximum likelihood parameters
+    mean_vars <- all.vars(formula_mean)
+    sd_vars <- all.vars(formula_sd)
 
-    model_fit <- model_fit %>%
-      tidyr::unnest_wider(coverages) %>%
-      tidyr::unnest_wider(parameters)
+    if(length(mean_vars) == 2 & length(sd_vars) == 2){
+
+      # It's much faster this way
+      model_fit <- kinetics %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
+        dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
+                         logsd = log(sd(!!dplyr::sym(parameter))),
+                         coverage = mean(log_normalized_reads)) %>%
+        dplyr::mutate(se_mean = exp(logsd)/sqrt(dplyr::n()),
+                      se_logsd = (1/(2*exp(logsd)^2)) * sqrt((2*exp(logsd)^4)/(dplyr::n() - 1)) ) %>%
+        tidyr::pivot_wider(names_from = !!mean_vars[2],
+                           values_from = c(mean, logsd, coverage, se_mean, se_logsd),
+                           names_sep = paste0("_", mean_vars[2]))
+
+
+    }else if(length(mean_vars) == 2 & length(sd_vars) == 1){
+
+      # It's much faster this way
+      model_fit <- kinetics %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(c(features_to_analyze)))) %>%
+        dplyr::mutate(logsd = log(sd(!!dplyr::sym(parameter))),
+                      coverage = mean(log_normalized_reads)) %>%
+        dplyr::mutate(se_logsd = (1/(2*exp(logsd)^2)) * sqrt((2*exp(logsd)^4)/(dplyr::n() - 1))) %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
+        dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
+                         logsd = mean(logsd),
+                         coverage = mean(coverage),
+                         se_logsd = mean(se_logsd)) %>%
+        dplyr::mutate(se_mean = exp(logsd)/sqrt(dplyr::n())) %>%
+        tidyr::pivot_wider(names_from = !!mean_vars[2],
+                           values_from = c(mean, logsd, coverage, se_mean, se_logsd),
+                           names_sep = paste0("_", mean_vars[2]))
+
+    }else{
+
+      model_fit <- kinetics %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
+        dplyr::do(dplyr::tibble(parameters = list(fit_heteroskedastic_linear_model(.,
+                                                                                   formula_mean = formula_mean,
+                                                                                   formula_sd = formula_sd,
+                                                                                   dependent_var = parameter,
+                                                                                   error_if_singular = error_if_singular)),
+                                coverages = list(calc_avg_coverage(.,
+                                                                   formula = formula_reads))))
+
+      model_fit <- model_fit %>%
+        tidyr::unnest_wider(coverages) %>%
+        tidyr::unnest_wider(parameters)
+
+      # Add carriage return so next message is separate from progress bar
+      message("")
+
+    }
+
+
+
+
+
 
   }
 
@@ -266,7 +316,6 @@ general_avg_and_reg <- function(obj, features, parameter,
 
   ### Estimate coverage vs. variance trends for each standard deviation estimate
 
-  message("")
   message("Estimating coverage vs. variance trend")
 
   # Step 1: Filter column names for relevant patterns
@@ -539,7 +588,8 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
     solve(opt$hessian)
   }, error = function(e) {
     print(e)
-    browser()
+    print("Looks like you don't have enough data to estimate all of your parameters!
+          Specify a simpler model and try again.")
   })
 
   # Estimate uncertainty from Hessian
