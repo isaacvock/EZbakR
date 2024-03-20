@@ -20,7 +20,7 @@
 #' @import data.table
 #' @export
 EstimateKinetics <- function(obj,
-                             features = "all",
+                             features = NULL,
                              strategy = c("standard", "tilac")){
 
   ### Check that input is valid
@@ -46,11 +46,17 @@ EstimateKinetics <- function(obj,
   strategy <- match.arg(strategy)
 
   # features
-  if(!is.character(features)){
+  if(!is.null(features)){
 
-    stop("features is not a character vector!")
+    if(!is.character(features)){
+
+      stop("features is not a character vector!")
+
+    }
 
   }
+
+
 
 
   ### "Method dispatch"
@@ -76,38 +82,38 @@ EstimateKinetics <- function(obj,
 
 # kdeg = -log(1 - fn)/tl
 # ksyn = (normalized read count)*kdeg
-Standard_kinetic_estimation <- function(obj, features = "all"){
+Standard_kinetic_estimation <- function(obj, features = NULL){
 
 
   `.` <- list
 
+
   ### Figure out which fraction new estimates to use
 
-  # cB columns
-  cB <- obj$cB
-  cB_cols <- colnames(cB)
-
-  # Mutation columns in cB
-  mutcounts_in_cB <- find_mutcounts(obj)
-
-  # Base count columns in cB
-  basecounts_in_cB <- paste0("n", substr(mutcounts_in_cB, start = 1, stop = 1))
-
-  # feature columns
-  features_in_cB <- cB_cols[!(cB_cols %in% c(mutcounts_in_cB,
-                                             basecounts_in_cB,
-                                             "sample", "n"))]
-
   # Need to determine which columns of the cB to group reads by
-  if(features == "all"){
+  if(is.null(features)){
 
-    features_to_analyze <- features_in_cB
+    fractions_name <- names(obj)[grepl("fractions_", names(obj))]
+
+    if(length(fractions_name) > 1){
+
+      stop("There is more than one fractions estimate data frame; therefore,
+           you need to explicit specify a `features` vector to let EZbakR
+           know which of these you would like to use!")
+
+    }
+
+    features_to_analyze <- unname(unlist(strsplit(fractions_name, "_")))
+    lf <- length(features_to_analyze)
+    features_to_analyze <- features_to_analyze[2:lf]
 
   }else{
 
-    if(!all(features %in% features_in_cB)){
+    supposed_fractions_name <- paste0("fractions_", paste(features, collapse = "_"))
 
-      stop("features includes columns that do not exist in your cB!")
+    if(!(supposed_fractions_name %in% names(obj))){
+
+      stop("features do not have an associated fractions data frame!")
 
     }else{
 
@@ -131,7 +137,7 @@ Standard_kinetic_estimation <- function(obj, features = "all"){
   # Determine which column to use for kinetic parameter estimation
   fraction_cols <- colnames(kinetics)
 
-  fraction_of_interest <- fraction_cols[grepl("high", fraction_cols)]
+  fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
 
   setDT(kinetics)
 
@@ -153,8 +159,8 @@ Standard_kinetic_estimation <- function(obj, features = "all"){
 
   ### Get normalized read counts
 
-  reads_norm <- normalized_read_counts(obj,
-                                       features_to_analyze = features_to_analyze)
+  reads_norm <- get_normalized_read_counts(obj = obj,
+                                           features_to_analyze = features_to_analyze)
 
 
   ### Estimate ksyn
@@ -201,31 +207,30 @@ tilac_ratio_estimation <- function(obj,
 
   ### Figure out which fraction new estimates to use
 
-  # cB columns
-  cB <- obj$cB
-  cB_cols <- colnames(cB)
-
-  # Mutation columns in cB
-  mutcounts_in_cB <- find_mutcounts(obj)
-
-  # Base count columns in cB
-  basecounts_in_cB <- paste0("n", substr(mutcounts_in_cB, start = 1, stop = 1))
-
-  # feature columns
-  features_in_cB <- cB_cols[!(cB_cols %in% c(mutcounts_in_cB,
-                                             basecounts_in_cB,
-                                             "sample", "n"))]
-
   # Need to determine which columns of the cB to group reads by
-  if(features == "all"){
+  if(is.null(features)){
 
-    features_to_analyze <- features_in_cB
+    fractions_name <- names(obj)[grepl("fractions_", names(obj))]
+
+    if(length(fractions_name) > 1){
+
+      stop("There is more than one fractions estimate data frame; therefore,
+           you need to explicit specify a `features` vector to let EZbakR
+           know which of these you would like to use!")
+
+    }
+
+    features_to_analyze <- unname(unlist(strsplit(fractions_name, "_")))
+    lf <- length(features_to_analyze)
+    features_to_analyze <- features_to_analyze[2:lf]
 
   }else{
 
-    if(!all(features %in% features_in_cB)){
+    supposed_fractions_name <- paste0("fractions_", paste(features, collapse = "_"))
 
-      stop("features includes columns that do not exist in your cB!")
+    if(!(supposed_fractions_name %in% names(obj))){
+
+      stop("features do not have an associated fractions data frame!")
 
     }else{
 
@@ -234,7 +239,6 @@ tilac_ratio_estimation <- function(obj,
     }
 
   }
-
 
   # Name of fractions table to use
   fractions_table_name <- paste(c("fractions", features_to_analyze), collapse = "_")
@@ -248,8 +252,7 @@ tilac_ratio_estimation <- function(obj,
 
   # Determine which column to use for kinetic parameter estimation
   fraction_cols <- colnames(kinetics)
-
-  fraction_of_interest <- fraction_cols[grepl("high", fraction_cols)]
+  fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
 
   # TODO: COULD ADD PARAMETER TO ALLOW USER TO DECIDE WHICH FRACTION COLUMNS TO USE
   if(length(fraction_of_interest) != 2){

@@ -14,9 +14,11 @@ get_normalized_read_counts.EZbakRFractions <- function(obj,
 
   fraction_name <- paste0("fractions_", paste(features_to_analyze, collapse = "_"))
 
-  reads <- setDT(obj[[fraction_name]])
+  reads <- data.table::setDT(obj[[fraction_name]])
 
-  reads <- normalize_reads(reads)
+  reads <- normalize_reads(reads, features_to_analyze)
+
+  return(reads)
 
 }
 
@@ -28,18 +30,21 @@ get_normalized_read_counts.default <- function(obj,
   cB <- obj$cB
 
   # Calc read counts for each feature
-  reads <- cB[,.(reads = sum(n)), by = c("sample", features_to_analyze)]
+  reads <- cB[,.(n = sum(n)), by = c("sample", features_to_analyze)]
 
 
-  return(reads_norm)
+  # Normalize
+  reads <- normalize_reads(reads, features_to_analyze)
+
+  return(reads)
 
 }
 
-normalize_reads <- function(reads){
+normalize_reads <- function(reads, features_to_analyze){
 
   # Median of ratios normalization
-  reads[, geom_mean := exp(mean(log(reads))), by = features_to_analyze]
-  scales <- reads[, .(scale_factor =  median(reads/geom_mean)), by = .(sample)]
+  reads[, geom_mean := exp(mean(log(n))), by = features_to_analyze]
+  scales <- reads[, .(scale_factor =  median(n/geom_mean)), by = .(sample)]
 
   setkey(scales, sample)
   setkey(reads, sample)
@@ -47,7 +52,7 @@ normalize_reads <- function(reads){
   # Normalize read counts
   reads_norm <- reads[scales, nomatch = NULL]
 
-  reads_norm[,normalized_reads := reads/scale_factor]
+  reads_norm[,normalized_reads := n/scale_factor]
 
   return(reads_norm)
 
