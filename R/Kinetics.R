@@ -287,8 +287,8 @@ tilac_ratio_estimation <- function(obj,
 
   ### Get normalized read counts
 
-  reads_norm <- normalized_read_counts(obj,
-                                       features_to_analyze = features_to_analyze)
+  reads_norm <- get_normalized_read_counts(obj,
+                                           features_to_analyze = features_to_analyze)
 
 
   ### Estimate ksyn
@@ -324,28 +324,5 @@ tilac_ratio_estimation <- function(obj,
 }
 
 
-normalized_read_counts <- function(obj,
-                                   features_to_analyze){
 
-  ### Get normalized read counts
 
-  cB <- obj$cB
-
-  # Calc read counts for each feature
-  reads <- cB[,.(reads = sum(n)), by = c("sample", features_to_analyze)]
-
-  # Median of ratios normalization
-  reads[, geom_mean := exp(mean(log(reads))), by = features_to_analyze]
-  scales <- reads[, .(scale_factor =  median(reads/geom_mean)), by = .(sample)]
-
-  setkey(scales, sample)
-  setkey(reads, sample)
-
-  # Normalize read counts
-  reads_norm <- reads[scales, nomatch = NULL]
-
-  reads_norm[,normalized_reads := reads/scale_factor]
-
-  return(reads_norm)
-
-}
