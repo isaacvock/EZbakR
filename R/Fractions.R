@@ -311,7 +311,8 @@ EstimateFractions <- function(obj, features = "all",
                                            n = n,
                                            lower = -7,
                                            upper = 7,
-                                           method = "L-BFGS-B")$par[1]) %>%
+                                           method = "L-BFGS-B")$par[1],
+                       n = sum(n)) %>%
       dplyr::ungroup() %>%
       dplyr::mutate(!!other_col_name := logit(1 - inv_logit(!!dplyr::sym(col_name))))
 

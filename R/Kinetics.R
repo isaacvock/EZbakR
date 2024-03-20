@@ -192,6 +192,7 @@ Standard_kinetic_estimation <- function(obj, features = "all"){
 }
 
 
+# Estimate TILAC ratio
 tilac_ratio_estimation <- function(obj,
                                    features){
 

@@ -1,3 +1,44 @@
+# Generic for inferring features from EZbakR objects
+get_features <- function(obj, objtype = "cB"){
+
+  if(objtype == "cB"){
+
+    stop("Not defined yet!")
+
+  }else if(objtype == "fractions"){
+
+    fractions <- obj
+
+    ### What are the features?
+
+    fraction_cols <- colnames(fractions)
+
+    substrings <- fraction_cols[grepl("fraction_", fraction_cols)]
+
+    features <- fraction_cols[!(fraction_cols %in% c(substrings, "n", "sample"))]
+
+    if(!(length(features) > 0)){
+
+      rlang::abort(
+        "No features are defined in your fractions data frame!",
+        class = "no_fractions_features"
+      )
+
+    }
+
+
+    return(features)
+
+  }else{
+
+    stop("objtype is undefined!")
+
+  }
+
+
+
+}
+
 #' Simple simulation function
 #'
 #' @param nreads Number of reads to simulate

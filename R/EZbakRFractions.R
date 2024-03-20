@@ -5,11 +5,20 @@
 #' @param fractions Data frame containing information about the fraction of reads
 #' from each mutational population of interest.
 #' @param metadf Data frame tracking features of each of the samples included
-#' in `cB`.
+#' in `fractions`.
 new_EZbakRFractions <- function(fractions, metadf){
   stopifnot(is.data.frame(fractions))
   stopifnot(is.data.frame(metadf))
-  structure(list(cB = fractions, metadf = metadf), class = "EZbakRFractions")
+
+  # What should list elements be named?
+  features <- get_features(fractions, objtype = 'fractions')
+  list_names <- c(paste0('fractions_', paste(features, collapse = "_")), "metadf")
+
+  # Make output
+  struct_list <- list(fractions, metadf)
+  names(struct_list) <- list_names
+
+  structure(struct_list, class = "EZbakRFractions")
 }
 
 #' `EZbakRFractions` object validator
@@ -18,6 +27,7 @@ new_EZbakRFractions <- function(fractions, metadf){
 #' is valid.
 #' @param obj An object of class `EZbakRFractions`
 validate_EZbakRFractions <- function(obj){
+
 
   ### Vector of potential mutational populations
 
@@ -35,8 +45,8 @@ validate_EZbakRFractions <- function(obj){
 
   vals <- unclass(obj)
 
-  fractions <- dplyr::as_tibble(vals$fractions)
-  metadf <- dplyr::as_tibble(vals$metadf)
+  fractions <- dplyr::as_tibble(vals[[1]])
+  metadf <- dplyr::as_tibble(vals[[2]])
 
   fraction_cols <- colnames(fractions)
   metadf_cols <- colnames(metadf)
@@ -51,10 +61,12 @@ validate_EZbakRFractions <- function(obj){
   # to screw things up. Even then, I will probably add a filter for valid
   # mutation types to catch this crazy edge case (or a misnamed fraction).
   substrings <- unlist(strsplit(fraction_cols[grepl("fraction_", fraction_cols)], "_"))
-  pops <- substrings[grepl("high", substrings) | grepl("low", fraction_cols)]
+  pops <- substrings[grepl("high", substrings) | grepl("low", substrings)]
   mutations_in_fractions <- substr(pops, nchar(pops) - 1, nchar(pops))
 
   mutations_in_fractions <- mutations_in_fractions[mutations_in_fractions %in% mutcounts]
+
+
 
 
   ### Does fractions data frame contain columns named "sample" and "n"?
@@ -220,19 +232,6 @@ validate_EZbakRFractions <- function(obj){
   }
 
 
-
-
-
-  ### Make sure there is at least one labeled sample
-  ## Also label for each mutation type tracking; tell them to get rid
-  ## of unnecessary mutation types if not.
-  ## Also make sure for pulse-chase that there is in fact a pulse and a
-  ## chase
-
-
-  ### Make sure there is at least one feature column in fractions
-
-
   return(obj)
 
 
@@ -277,15 +276,15 @@ validate_EZbakRFractions <- function(obj){
 #'  \item n: Number of reads with identical values for all other columns.
 #' }
 #' @param metadf Data frame detailing various aspects of each of the samples included
-#' in the cB. This includes:
+#' in the fractions data frame. This includes:
 #' \itemize{
-#'  \item `sample`: The sample ID, which should correspond to a sample ID in the provided cB.
+#'  \item `sample`: The sample ID, which should correspond to a sample ID in the provided fractions data frame.
 #'  \item `tl`: Metabolic label time. There are several edge cases to be aware of:
 #'  \itemize{
 #'    \item If more than one metabolic label was used in the set of samples described
 #'    by the metadf (e.g., s4U and s6G were used), then the `tl` column should be
 #'    replaced by `tl_<muttype>`, where `<muttype>` represents the corresponding mutation
-#'    type count column in the cB that the label whose incubation time will be listed
+#'    type referenced in the fractions that the label whose incubation time will be listed
 #'    in this column. For example, if feeding with s4U in some samples and s6G in others,
 #'    then performing standard nucleotide recoding chemistry, you will include
 #'    `tl_TC` and `tl_GA` columns corresponding to the s4U and s6G label times, respectively.
@@ -332,7 +331,7 @@ validate_EZbakRFractions <- function(obj){
 #'  }
 #'
 #' }
-#' @return An EZbakRData object. This is simply a list of the provide `cB` and
+#' @return An EZbakRData object. This is simply a list of the provide `fractions` and
 #' `metadf` with class `EZbakRData`
 #' @export
 EZbakRFractions <- function(fractions, metadf){
