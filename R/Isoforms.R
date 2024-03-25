@@ -10,6 +10,8 @@ ImportIsoformQuant <- function(obj, files,
                                                    "rsem", "stringtie"),
                                ...){
 
+  quant_tool <- match.arg(quant_tool)
+
   txi <- tximport::tximport(files, type = quant_tool, txIn = TRUE, txOut = TRUE)
 
   counts_df <- dplyr::as_tibble(txi$counts, rownames = "transcript_id") %>%
@@ -36,8 +38,22 @@ ImportIsoformQuant <- function(obj, files,
 
   }
 
-  obj[['readcounts']][table_name] <- final_df
 
+  outlist <- list(final_df)
+  names(outlist) <- table_name
+
+  if(exists("readcounts", where = obj)){
+
+    obj[['readcounts']] <- outlist
+
+  }else{
+
+    obj[['readcounts']] <- append(obj[['readcounts']], outlist)
+
+  }
+
+
+  return(obj)
 
 }
 
@@ -62,20 +78,21 @@ ImportIsoformQuant <- function(obj, files,
 #'  form of `quantification` is provided, then `quant_tool` must be specified so
 #'  that the quantification files can be properly interpreted
 #' }
-EstimateIsoformFractions <- function(obj, quantification,
-                                     quant_tool = c("none", "salmon", "sailfish",
-                                                    "alevin", "piscem", "kallisto",
-                                                    "rsem", "stringtie"),
-                                     tx2gene = NULL){
+EstimateIsoformFractions <- function(obj){
 
 
   ### Estimate fractions
+  samp_names <- unique(obj$fractions_GF_transcripts$sample)
 
   isoform_fit <- purrr::map(.x = samp_names,
                             .f = Isoform_Fraction_Disambiguation,
-                            obj = obj,
-                            quantification = quantification)
+                            obj = obj)
 
+  isoform_fit <- dplyr::bind_rows(isoform_fit)
+
+  obj[['fractions_isoforms']] <- isoform_fit
+
+  return(obj)
 
 
 }
@@ -143,9 +160,7 @@ fit_beta_regression <- function(data){
 
 
 # Process EZbakR data so as to fit beta regression model
-Isoform_Fraction_Disambiguation <- function(obj, sample_name,
-                          rsem_path = "G:/Shared drives/Matthew_Simon/IWV/Hogg_lab/fastq2bakR_runs/ac_betternb_transcripts/rsem/",
-                          debug = FALSE){
+Isoform_Fraction_Disambiguation <- function(obj, sample_name){
 
   message(paste0("Analyzing sample ", sample_name, "..."))
 
@@ -159,7 +174,7 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
   Fns <- obj$fractions_GF_transcripts %>%
     filter(sample == sample_name)
 
-  quant <- obj$readcounts[['rsem']] %>%
+  quant <- obj$readcounts[['isoform_quant_rsem']] %>%
     filter(sample == sample_name & expected_count > 0)
 
 
@@ -201,7 +216,8 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
     tidyr::nest() %>%
     dplyr::mutate(fnest = lapply(data, fit_beta_regression)) %>%
     dplyr::select(GF, fnest) %>%
-    tidyr::unnest(cols = c(fnest))
+    tidyr::unnest(cols = c(fnest)) %>%
+    dplyr::select(-logit_fn)
 
 
   output <- Fns_single %>%
