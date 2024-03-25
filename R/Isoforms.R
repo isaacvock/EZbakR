@@ -79,6 +79,7 @@ ImportIsoformQuant <- function(obj, files,
 #'  that the quantification files can be properly interpreted
 #' }
 EstimateIsoformFractions <- function(obj,
+                                     fractions_identifier = "transcripts",
                                      quant_name = NULL,
                                      fraction_name = NULL){
 
@@ -108,9 +109,9 @@ EstimateIsoformFractions <- function(obj,
 
     possible_fraction_names <- names(ezbdo$fractions)
 
-    fraction_name <- possible_fraction_names[grepl("transcripts_",
+    fraction_name <- possible_fraction_names[grepl(paste0(fractions_identifier, "_"),
                                                    possible_fraction_names) |
-                                               grepl("_transcripts",
+                                               grepl(paste0("_", fractions_identifier),
                                                      possible_fraction_names)]
 
     if(length(fraction_name) > 1){
@@ -148,7 +149,7 @@ EstimateIsoformFractions <- function(obj,
 
   isoform_feature <- features[which(lens == max(lens))]
 
-  gene_colnames <- features[!(features %in% isoform_features)]
+  gene_colnames <- features[features != isoform_feature]
 
 
 
@@ -166,7 +167,14 @@ EstimateIsoformFractions <- function(obj,
 
   isoform_fit <- dplyr::bind_rows(isoform_fit)
 
-  output_name <- paste0(paste(gsub("_","",gene_colnames), collapse = "_"), paste0('isoforms_', unlist(strsplit(quant_name, "_"))[3]))
+  output_name <- paste0(paste(gsub("_","",gene_colnames), collapse = "_"), paste0('_isoforms_', unlist(strsplit(quant_name, "_"))[3]))
+
+  output_name <- paste0("isoforms_",
+                        paste(gsub("_", "", gene_colnames), collapse = "_"),
+                        "_",
+                        gsub("_", "", isoform_feature),
+                        "_",
+                        unlist(strsplit(quant_name, "_"))[3])
 
   obj[['fractions']][[output_name]] <- isoform_fit
 
@@ -306,7 +314,8 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
     dplyr::select(sample, !!gene_colnames, transcript_id, fraction_highTC, logit_fraction_highTC,
                   expected_count, effective_length) %>%
     dplyr::bind_rows(Fns_multi %>% dplyr::ungroup()) %>%
-    dplyr::select(sample, !!gene_colnames, transcript_id, everything())
+    dplyr::select(sample, !!gene_colnames, transcript_id, everything()) %>%
+    dplyr::mutate(n = expected_count/(effective_length/1000))
 
   return(output)
 

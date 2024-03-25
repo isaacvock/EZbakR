@@ -10,14 +10,12 @@ get_normalized_read_counts <- function(obj,
 }
 
 get_normalized_read_counts.EZbakRFractions <- function(obj,
-                                                       features_to_analyze){
+                                                       features_to_analyze,
+                                                       isoform_fraction_name = NULL){
 
-  if(grepl("isoforms", features_to_analyze)){
+  if(!is.null(isoform_fraction_name)){
 
-    fraction_name <-  paste(gsub("_","",features_to_analyze), collapse = "_")
-
-    reads <- data.table::copy(data.table::setDT(obj[['fractions']][[fraction_name]])) %>%
-      dplyr::mutate(n = expected_count/(effective_length/1000))
+    reads <- data.table::copy(data.table::setDT(obj[['fractions']][[isoform_fraction_name]]))
 
     reads <- normalize_reads(reads, features_to_analyze)
 

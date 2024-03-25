@@ -21,7 +21,8 @@
 #' @export
 EstimateKinetics <- function(obj,
                              features = NULL,
-                             strategy = c("standard", "tilac")){
+                             strategy = c("standard", "tilac"),
+                             quant_name = NULL){
 
   ### Check that input is valid
 
@@ -64,7 +65,8 @@ EstimateKinetics <- function(obj,
   if(strategy == "standard"){
 
     obj <- Standard_kinetic_estimation(obj,
-                                features = features)
+                                features = features,
+                                quant_name = quant_name)
 
 
   }else if(strategy == "tilac"){
@@ -82,7 +84,8 @@ EstimateKinetics <- function(obj,
 
 # kdeg = -log(1 - fn)/tl
 # ksyn = (normalized read count)*kdeg
-Standard_kinetic_estimation <- function(obj, features = NULL){
+Standard_kinetic_estimation <- function(obj, features = NULL,
+                                        quant_name = NULL){
 
 
   `.` <- list
@@ -90,10 +93,14 @@ Standard_kinetic_estimation <- function(obj, features = NULL){
 
   ### Figure out which fraction new estimates to use
 
-  # Need to determine which columns of the cB to group reads by
+  fnames <- names(obj[['fractions']])
+
   if(is.null(features)){
 
-    fractions_name <- names(obj[['fractions']])
+    ### Use the only available fractions; or throw an error if there
+    ### is more than one fractions and thus auto-detection is impossible
+
+    fractions_name <- names(fnames)
 
     if(length(fractions_name) > 1){
 
@@ -104,30 +111,61 @@ Standard_kinetic_estimation <- function(obj, features = NULL){
     }
 
     features_to_analyze <- unname(unlist(strsplit(fractions_name, "_")))
-    lf <- length(features_to_analyze)
-    features_to_analyze <- features_to_analyze[2:lf]
+
+    fractions_name <- paste(features_to_analyze, collapse = "_")
+
 
   }else{
 
+    ### Look for features in the names of the fractions data frames,
+
     supposed_fractions_name <- paste(gsub("_","",features), collapse = "_")
 
-    if(!(supposed_fractions_name %in% names(obj[['fractions']]))){
+    if(!(supposed_fractions_name %in% names(fnames))){
 
-      stop("features do not have an associated fractions data frame!")
+      ### If that didn't work, check to see if one or more of the fractions
+      ### names contain the expected feature vector as part of an
+      ### isoform-specific fractions object
+
+      fractions_name <- fnames[grepl(supposed_fractions_name, fnames) & grepl("isoforms_")]
+
+      isoform_specific <- TRUE
+
+      if(length(fractions_name) > 1){
+
+        ### If there is more than one feature that matches the bill,
+        ### narrow down by grepping for the provided quant_name
+
+        if(is.null(quant_name)){
+
+          stop("You appear to be requesting isoform level kinetic analyses, but
+               have multiple isoform-level fraction estimates. Specify `quant_name`
+               to ")
+
+        }
+
+        fractions_name <- fractions_name[grepl(paste0("_", quant_name), fractions_name)]
+
+      }else if(length(fraction_name) == 0){
+
+        stop("features do not have an associated fractions data frame!")
+
+
+      }
+
 
     }else{
 
       features_to_analyze <- features
 
+      fractions_name <- paste(features_to_analyze, collapse = "_")
+
     }
 
   }
 
-  # Name of fractions table to use
-  fractions_table_name <- paste(features_to_analyze, collapse = "_")
-
   # Get fractions
-  kinetics <- obj[["fractions"]][[fractions_table_name]]
+  kinetics <- obj[["fractions"]][[fractions_name]]
 
   features_to_analyze <- get_features(kinetics, objtype = "fractions")
 
@@ -160,8 +198,20 @@ Standard_kinetic_estimation <- function(obj, features = NULL){
 
   ### Get normalized read counts
 
-  reads_norm <- get_normalized_read_counts(obj = obj,
-                                           features_to_analyze = features_to_analyze)
+  if(isoform_specific){
+
+    reads_norm <- get_normalized_read_counts(obj = obj,
+                                             features_to_analyze = features_to_analyze,
+                                             isoform_fraction_name = fractions_name)
+
+
+  }else{
+
+    reads_norm <- get_normalized_read_counts(obj = obj,
+                                             features_to_analyze = features_to_analyze)
+
+
+  }
 
 
   ### Estimate ksyn
@@ -179,10 +229,9 @@ Standard_kinetic_estimation <- function(obj, features = NULL){
 
 
   # Figure out what to name output
-  kinetics_name <- paste(c("kinetics", gsub("_","",features_to_analyze)), collapse = "_")
-  reads_name <- paste(c("readcounts", gsub("_","",features_to_analyze)), collapse = "_")
+  reads_name <- paste0("normalized_readcounts_", fractions_name)
 
-  obj[["kinetics"]][[kinetics_name]] <- kinetics %>%
+  obj[["kinetics"]][[fractions_name]] <- kinetics %>%
     dplyr::select(-!!fraction_of_interest, dplyr::everything(), n, normalized_reads, tl)
 
   # Eventually want to add count matrix output
