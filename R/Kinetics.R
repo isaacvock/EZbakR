@@ -127,7 +127,7 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
       ### names contain the expected feature vector as part of an
       ### isoform-specific fractions object
 
-      fractions_name <- fnames[grepl(supposed_fractions_name, fnames) & grepl("isoforms_")]
+      fractions_name <- fnames[grepl(supposed_fractions_name, fnames) & grepl("isoforms_", fnames)]
 
       isoform_specific <- TRUE
 
@@ -146,7 +146,7 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
 
         fractions_name <- fractions_name[grepl(paste0("_", quant_name), fractions_name)]
 
-      }else if(length(fraction_name) == 0){
+      }else if(length(fractions_name) == 0){
 
         stop("features do not have an associated fractions data frame!")
 

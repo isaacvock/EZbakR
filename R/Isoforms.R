@@ -109,10 +109,12 @@ EstimateIsoformFractions <- function(obj,
 
     possible_fraction_names <- names(ezbdo$fractions)
 
-    fraction_name <- possible_fraction_names[grepl(paste0(fractions_identifier, "_"),
+    fraction_name <- possible_fraction_names[(grepl(paste0(fractions_identifier, "_"),
                                                    possible_fraction_names) |
                                                grepl(paste0("_", fractions_identifier),
-                                                     possible_fraction_names)]
+                                                     possible_fraction_names)) &
+                                               !grepl("^isoforms_",
+                                                      possible_fraction_names)]
 
     if(length(fraction_name) > 1){
 
@@ -211,8 +213,7 @@ fit_beta_regression <- function(data){
 
 
   Fns_onegene <- data %>%
-    dplyr::mutate(nreads = n,
-                  fn = fraction_highTC) %>%
+    dplyr::mutate(nreads = n) %>%
     dplyr::select(fn, group, transcript_id, p, nreads) %>%
     tidyr::pivot_wider(names_from = transcript_id,
                        values_from = p,
@@ -258,8 +259,23 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
   # 3) What the 'set of transcripts' column is called
   # 4) Which quantification to use
 
+
+
+
   message(paste0("Analyzing sample ", sample_name, "..."))
 
+  # Determine which column is the fraction estimate of interest
+  fraction_cols <- colnames(obj$fractions[[fraction_name]])
+
+  fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
+
+  if(length(fraction_of_interest) > 1){
+    stop("There is more than one non-redundant fraction estimate. Isoform
+         deconvolution is currently only compatible with single-label data
+         (e.g., s4U-labeled or s6G-labeled, not dually labeled).")
+  }
+
+  # Filter for data from sample of interest
   Fns <- obj$fractions[[fraction_name]] %>%
     filter(sample == sample_name)
 
@@ -267,6 +283,9 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
     filter(sample == sample_name & expected_count > 0)
 
 
+  # Need to have one row for each transcript ID from a group of
+  # transcript IDs, and need to keep track of which reads came from
+  # which groups of transcript IDs
   Fns <- Fns %>%
     dplyr::mutate(group = 1:n()) %>%
     tidyr::separate_rows(!!transcript_colname, sep = "\\+") %>%
@@ -275,6 +294,7 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
     dplyr::inner_join(quant,
                by = c("transcript_id", "sample"))
 
+  # What fraction of the reads are expected to have come from each isoform?
   Fns <- Fns %>%
     dplyr::group_by(group) %>%
     dplyr::mutate(p = expected_count/effective_length/sum(expected_count/effective_length))
@@ -297,21 +317,31 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
                 dplyr::mutate(isoform_cnt = n) %>%
                 dplyr::select(-n),
               by = gene_colnames) %>%
-    dplyr::filter(is.na(isoform_cnt))
+    dplyr::filter(is.na(isoform_cnt) & !is.na(expected_count))
+
+  # Run beta regression model to infer isoform-specific fractions
+  logit_fraction_of_interest <- paste0("logit_", fraction_of_interest)
 
 
   Fns_multi <- Fns_multi %>%
+    dplyr::mutate(fn = !!sym(fraction_of_interest)) %>%
     dplyr::group_by(dplyr::across(dplyr::all_of(gene_colnames))) %>%
     tidyr::nest() %>%
     dplyr::mutate(fnest = lapply(data, fit_beta_regression)) %>%
     dplyr::select(!!gene_colnames, fnest) %>%
     tidyr::unnest(cols = c(fnest)) %>%
-    dplyr::select(-logit_fn)
+    dplyr::mutate(!!logit_fraction_of_interest := logit_fn,
+                  !!fraction_of_interest := inv_logit(logit_fn)) %>%
+    dplyr::select(-logit_fn) %>%
+    dplyr::inner_join(quant,
+                      by = c("transcript_id"))
 
+
+  # Combine single and multi-isoform gene estimates
 
   output <- Fns_single %>%
     ungroup() %>%
-    dplyr::select(sample, !!gene_colnames, transcript_id, fraction_highTC, logit_fraction_highTC,
+    dplyr::select(sample, !!gene_colnames, transcript_id, !!fraction_of_interest, !!logit_fraction_of_interest,
                   expected_count, effective_length) %>%
     dplyr::bind_rows(Fns_multi %>% dplyr::ungroup()) %>%
     dplyr::select(sample, !!gene_colnames, transcript_id, everything()) %>%
@@ -321,3 +351,4 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
 
 
 }
+

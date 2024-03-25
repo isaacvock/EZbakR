@@ -3,7 +3,8 @@
 ############################
 
 get_normalized_read_counts <- function(obj,
-                                       features_to_analyze){
+                                       features_to_analyze,
+                                       isoform_fraction_name = NULL){
 
   UseMethod("get_normalized_read_counts")
 
@@ -38,7 +39,8 @@ get_normalized_read_counts.EZbakRFractions <- function(obj,
 }
 
 get_normalized_read_counts.default <- function(obj,
-                                               features_to_analyze){
+                                               features_to_analyze,
+                                               isoform_fraction_name = NULL){
 
   ### Get normalized read counts
 
