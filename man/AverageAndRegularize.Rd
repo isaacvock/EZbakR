@@ -2,19 +2,60 @@
 % Please edit documentation in R/Comparisons.R
 \name{AverageAndRegularize}
 \alias{AverageAndRegularize}
-\title{Perform comparative analyses of kinetic parameter estimates}
+\title{Average parameter estimates across replicates, and regularize variance estimates}
 \usage{
 AverageAndRegularize(
   obj,
-  features = "all",
+  features = NULL,
   parameter = "log_kdeg",
   formula_mean = NULL,
   formula_sd = NULL,
   include_all_parameters = TRUE,
   sd_reg_factor = 10,
-  error_if_singular = TRUE
+  error_if_singular = TRUE,
+  min_reads = 10
 )
 }
+\arguments{
+\item{obj}{An \code{EZbakRFractions} object, which is an \code{EZbakRData} object on
+which \code{EstimateFractions()} has been run.}
+
+\item{features}{Character vector of the set of features you want to stratify
+reads by and estimate proportions of each RNA population. The default of "all"
+will use all feature columns in the \code{obj}'s cB.}
+
+\item{parameter}{Parameter to average across replicates of a given condition.}
+
+\item{formula_mean}{An R formula object specifying how the \code{parameter} of interest
+depends on the sample characteristics specified in \code{obj}'s metadf. The most formula
+will be \code{~ treatment} or \code{~ treatment + batch}, where \code{treatment} and \code{batch} would
+be replaced with whatever you called the main treatment and batch identifiers in
+your metadf.}
+
+\item{formula_sd}{Same as \code{formula_mean}, but this time specifying how the variance
+in the replicate estimates of \code{parameter} depends on the sample characteristics specified
+in \code{obj}'s metadf. Unlike standard linear modeling, this allows you to specify
+a heteroskedastic model. I suggest allowing a \code{parameter}'s variance to depend on
+the "treatment" condition, as changes in relative RNA abundance can impact \code{parameter} variance,
+so differential expression caused by your "treatment" could impact \code{parameter} variance.}
+
+\item{include_all_parameters}{If TRUE, an additional table will be saved with the prefix \code{fullfit_},
+which includes all of the parameters estimated throughout the course of linear modeling and
+regularization. This can be nice for visualizing the regularized mean-variance trend.}
+
+\item{sd_reg_factor}{Determines how strongly variance estimates are shrunk towards trend.
+Higher numbers lead to more regularization. Eventually, this will be replaced with estimation
+of how much variance there seems to be in the population of variances.}
+
+\item{error_if_singular}{If TRUE, linear model will throw an error if parameters
+cannot be uniquely identified. This is most often caused by parameters that cannot
+be estimated from the data, e.g., due to limited replicate numbers or correlated
+sample characteristics (i.e., all treatment As also correspond to batch As, and
+all treatment Bs correspond to batch Bs).}
+}
 \description{
-Perform comparative analyses of kinetic parameter estimates
+\code{AverageAndRegularize} uses a linear model to average estimates of a parameter
+of interest over replicates, and to get averages for all of a set of conditions
+specified by the user. This specification is done through formulas that will
+be used to create a design matrix for parameters to estimate.
 }

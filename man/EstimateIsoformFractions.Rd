@@ -6,11 +6,9 @@
 \usage{
 EstimateIsoformFractions(
   obj,
-  quantification,
-  quant_tool = c("none", "salmon", "sailfish", "alevin", "piscem", "kallisto", "rsem",
-    "stringtie"),
-  tx2gene = NULL,
-  cores = 1
+  fractions_identifier = "transcripts",
+  quant_name = NULL,
+  fraction_name = NULL
 )
 }
 \arguments{

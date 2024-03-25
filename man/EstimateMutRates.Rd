@@ -17,7 +17,7 @@ columns tracking T-to-C and G-to-A}
 Options include:
 \itemize{
 \item standard: Estimate a single new read and old read mutation rate for each
-sample. This is done via a binomial mixture model aggregating over
+sample. This is done via a binomial mixture model fit to all reads in a given sample.
 \item hierarchical (NOT YET IMPLEMENTED): Estimate feature-specific mutation
 rate with standard, regularizing the feature-specific
 estimate with a sample-wide prior.

@@ -10,7 +10,7 @@ EstimateFractions(
   mutrate_populations = "all",
   fraction_design = NULL,
   Poisson = TRUE,
-  strategy = "standard"
+  strategy = c("standard")
 )
 }
 \arguments{
@@ -18,7 +18,7 @@ EstimateFractions(
 
 \item{features}{Character vector of the set of features you want to stratify
 reads by and estimate proportions of each RNA population. The default of "all"
-will use all feature columns.}
+will use all feature columns in the \code{obj}'s cB.}
 
 \item{mutrate_populations}{Character vector of the set of mutational populations
 that you want to infer the rates of mutations for.}
@@ -76,7 +76,7 @@ with both high T-to-C and G-to-A mutational content should not exist. To see an 
 of what a TILAC \code{fraction_design} table could look like, see the lazily loaded
 \code{tilac_fraction_design} object.}
 
-\item{Poisson}{Use U-content adjusted Poisson mixture modeling strategy. Can see
+\item{Poisson}{If \code{TRUE}, use U-content adjusted Poisson mixture modeling strategy. Often provides
 significant performance gain without sacrificing accuracy.}
 
 \item{strategy}{String denoting which new read mutation rate estimation strategy to use.
