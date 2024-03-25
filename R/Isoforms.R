@@ -94,6 +94,12 @@ EstimateIsoformFractions <- function(obj,
            object! You need to tell EZbakR which one to use for the isoform-level
            analysis by specifying `quant_name`")
 
+    }else if(length(quant_name) == 0){
+
+      stop("There are no detected isoform quantification tables in your EZbakRData
+           object! Create one by running `ImportIsoformQuant()`, providing
+           paths to quantification files.")
+
     }
 
   }
@@ -113,23 +119,54 @@ EstimateIsoformFractions <- function(obj,
            EZbakRData object! You need to tell EZbakR which one to use for
            isoform-level analysis by specifying `fraction_name")
 
+    }else if(length(fraction_name) == 0){
+
+      stop("There are no detected transcripts fraction estimates table in your
+           EZbakRData object! EZbakR tried to auto-detect such a table by looking
+           for a table in the `fractions` list with a name that contained the
+           string 'transcripts_' or '_transcripts'. If a similar table with a different
+           naming convention exists, provide its name as the `fraction_name` parameter
+           for this function.")
+
     }
 
   }
 
 
+  ### Figure out what the gene name is
+
+  fraction <- obj$fractions[[fraction_name]]
+
+  features <- get_features(fraction, objtype = "fractions")
+
+  lens <- rep(0, times = length(features))
+  for(f in seq_along(features)){
+
+    lens[f] <- length(unique(fraction[[features[f]]]))
+
+  }
+
+  isoform_feature <- features[which(lens == max(lens))]
+
+  gene_colnames <- features[!(features %in% isoform_features)]
+
+
+
   ### Estimate fractions
   samp_names <- unique(obj[['fractions']][[fraction_name]]$sample)
+
 
   isoform_fit <- purrr::map(.x = samp_names,
                             .f = Isoform_Fraction_Disambiguation,
                             obj = obj,
                             quant_name = quant_name,
-                            fraction_name = fraction_name)
+                            fraction_name = fraction_name,
+                            gene_colnames = gene_colnames,
+                            transcript_colname = isoform_feature)
 
   isoform_fit <- dplyr::bind_rows(isoform_fit)
 
-  output_name <- paste0('isoforms_', unlist(strsplit(quant_name, "_"))[3])
+  output_name <- paste0(paste(gsub("_","",gene_colnames), collapse = "_"), paste0('isoforms_', unlist(strsplit(quant_name, "_"))[3]))
 
   obj[['fractions']][[output_name]] <- isoform_fit
 
@@ -203,17 +240,17 @@ fit_beta_regression <- function(data){
 # Process EZbakR data so as to fit beta regression model
 Isoform_Fraction_Disambiguation <- function(obj, sample_name,
                                             quant_name,
-                                            fraction_name){
+                                            fraction_name,
+                                            gene_colnames,
+                                            transcript_colname){
 
 
   ### THINGS THAT NEED TO BE INFERRED
   # 1) Which fractions to grab
-  # 2) What the gene ID column is called
   # 3) What the 'set of transcripts' column is called
   # 4) Which quantification to use
 
   message(paste0("Analyzing sample ", sample_name, "..."))
-
 
   Fns <- obj$fractions[[fraction_name]] %>%
     filter(sample == sample_name)
@@ -224,9 +261,9 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
 
   Fns <- Fns %>%
     dplyr::mutate(group = 1:n()) %>%
-    tidyr::separate_rows(transcripts, sep = "\\+") %>%
-    dplyr::mutate(transcript_id = transcripts) %>%
-    dplyr::select(-transcripts) %>%
+    tidyr::separate_rows(!!transcript_colname, sep = "\\+") %>%
+    dplyr::mutate(transcript_id = !!sym(transcript_colname)) %>%
+    dplyr::select(-!!transcript_colname) %>%
     dplyr::inner_join(quant,
                by = c("transcript_id", "sample"))
 
@@ -237,39 +274,39 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
   # Filter out genes that only have one isoform
   single_isoforms <- Fns %>%
     dplyr::ungroup() %>%
-    dplyr::select(GF, transcript_id) %>%
+    dplyr::select(!!gene_colnames, transcript_id) %>%
     dplyr::distinct() %>%
-    dplyr::group_by(GF) %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(gene_colnames))) %>%
     dplyr::count() %>%
     dplyr::filter(n == 1)
 
   Fns_single <- Fns %>%
     dplyr::inner_join(single_isoforms %>% dplyr::select(-n),
-                      by = c("GF"))
+                      by = gene_colnames)
 
   Fns_multi <- Fns %>%
     dplyr::left_join(single_isoforms %>%
                 dplyr::mutate(isoform_cnt = n) %>%
                 dplyr::select(-n),
-              by = "GF") %>%
+              by = gene_colnames) %>%
     dplyr::filter(is.na(isoform_cnt))
 
 
   Fns_multi <- Fns_multi %>%
-    dplyr::group_by(GF) %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(gene_colnames))) %>%
     tidyr::nest() %>%
     dplyr::mutate(fnest = lapply(data, fit_beta_regression)) %>%
-    dplyr::select(GF, fnest) %>%
+    dplyr::select(!!gene_colnames, fnest) %>%
     tidyr::unnest(cols = c(fnest)) %>%
     dplyr::select(-logit_fn)
 
 
   output <- Fns_single %>%
     ungroup() %>%
-    dplyr::select(sample, GF, transcript_id, fraction_highTC, logit_fraction_highTC,
+    dplyr::select(sample, !!gene_colnames, transcript_id, fraction_highTC, logit_fraction_highTC,
                   expected_count, effective_length) %>%
     dplyr::bind_rows(Fns_multi %>% dplyr::ungroup()) %>%
-    dplyr::select(sample, GF, transcript_id, everything())
+    dplyr::select(sample, !!gene_colnames, transcript_id, everything())
 
   return(output)
 
