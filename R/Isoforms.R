@@ -119,7 +119,7 @@ EstimateIsoformFractions <- function(obj,
 
 
   ### Estimate fractions
-  samp_names <- unique(obj$fractions_GF_transcripts$sample)
+  samp_names <- unique(obj[['fractions']][[fraction_name]]$sample)
 
   isoform_fit <- purrr::map(.x = samp_names,
                             .f = Isoform_Fraction_Disambiguation,
@@ -202,10 +202,9 @@ fit_beta_regression <- function(data){
 
 # Process EZbakR data so as to fit beta regression model
 Isoform_Fraction_Disambiguation <- function(obj, sample_name,
-                                            quant_name = NULL,
-                                            fraction_name = NULL){
+                                            quant_name,
+                                            fraction_name){
 
-  message(paste0("Analyzing sample ", sample_name, "..."))
 
   ### THINGS THAT NEED TO BE INFERRED
   # 1) Which fractions to grab
@@ -213,12 +212,8 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
   # 3) What the 'set of transcripts' column is called
   # 4) Which quantification to use
 
-  if(is.null(fraction_name)){
+  message(paste0("Analyzing sample ", sample_name, "..."))
 
-
-
-
-  }
 
   Fns <- obj$fractions[[fraction_name]] %>%
     filter(sample == sample_name)
