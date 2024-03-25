@@ -16,11 +16,10 @@ new_EZbakRFractions <- function(fractions, metadf){
   # Can't have '_' in feature names when naming the fractions object
   features <- gsub("_", "", features)
 
-  list_names <- c(paste0('fractions_', paste(features, collapse = "_")), "metadf")
-
   # Make output
-  struct_list <- list(fractions, metadf)
+  struct_list <- list(fractions = list(fractions), metadf = metadf)
   names(struct_list) <- list_names
+  names(struct_list[['fractions']]) <- paste(features, collapse = "_")
 
   structure(struct_list, class = "EZbakRFractions")
 }
@@ -49,8 +48,8 @@ validate_EZbakRFractions <- function(obj){
 
   vals <- unclass(obj)
 
-  fractions <- dplyr::as_tibble(vals[[1]])
-  metadf <- dplyr::as_tibble(vals[[2]])
+  fractions <- dplyr::as_tibble(vals[['fractions']][[1]])
+  metadf <- dplyr::as_tibble(vals[['metadf']])
 
   fraction_cols <- colnames(fractions)
   metadf_cols <- colnames(metadf)
