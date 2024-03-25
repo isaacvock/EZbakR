@@ -345,7 +345,9 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
                   expected_count, effective_length) %>%
     dplyr::bind_rows(Fns_multi %>% dplyr::ungroup()) %>%
     dplyr::select(sample, !!gene_colnames, transcript_id, everything()) %>%
-    dplyr::mutate(n = expected_count/(effective_length/1000))
+    dplyr::mutate(n = expected_count,
+                  RPK = expected_count/(effective_length/1000)) %>%
+    dplyr::select(-expected_count, -effective_length)
 
   return(output)
 

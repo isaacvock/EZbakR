@@ -93,76 +93,13 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
 
   ### Figure out which fraction new estimates to use
 
-  fnames <- names(obj[['fractions']])
+  table_info <- get_table_name(obj,
+                               features = features,
+                               tabletype = 'fractions')
 
-  if(is.null(features)){
+  fractions_name <- table_info$table_name
+  isoform_specific <- table_info$isoform_specific
 
-    ### Use the only available fractions; or throw an error if there
-    ### is more than one fractions and thus auto-detection is impossible
-
-    fractions_name <- names(fnames)
-
-    if(length(fractions_name) > 1){
-
-      stop("There is more than one fractions estimate data frame; therefore,
-           you need to explicit specify a `features` vector to let EZbakR
-           know which of these you would like to use!")
-
-    }
-
-    features_to_analyze <- unname(unlist(strsplit(fractions_name, "_")))
-
-    fractions_name <- paste(features_to_analyze, collapse = "_")
-
-
-  }else{
-
-    ### Look for features in the names of the fractions data frames,
-
-    supposed_fractions_name <- paste(gsub("_","",features), collapse = "_")
-
-    if(!(supposed_fractions_name %in% names(fnames))){
-
-      ### If that didn't work, check to see if one or more of the fractions
-      ### names contain the expected feature vector as part of an
-      ### isoform-specific fractions object
-
-      fractions_name <- fnames[grepl(supposed_fractions_name, fnames) & grepl("isoforms_", fnames)]
-
-      isoform_specific <- TRUE
-
-      if(length(fractions_name) > 1){
-
-        ### If there is more than one feature that matches the bill,
-        ### narrow down by grepping for the provided quant_name
-
-        if(is.null(quant_name)){
-
-          stop("You appear to be requesting isoform level kinetic analyses, but
-               have multiple isoform-level fraction estimates. Specify `quant_name`
-               to ")
-
-        }
-
-        fractions_name <- fractions_name[grepl(paste0("_", quant_name), fractions_name)]
-
-      }else if(length(fractions_name) == 0){
-
-        stop("features do not have an associated fractions data frame!")
-
-
-      }
-
-
-    }else{
-
-      features_to_analyze <- features
-
-      fractions_name <- paste(features_to_analyze, collapse = "_")
-
-    }
-
-  }
 
   # Get fractions
   kinetics <- obj[["fractions"]][[fractions_name]]
@@ -221,18 +158,20 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
   setkeyv(kinetics, c("sample", features_to_analyze))
 
   cols_to_keep <- c("sample", features_to_analyze, "normalized_reads")
+  kinetics_cols_to_keep <- c(cols_to_keep, "kdeg", "log_kdeg", "n")
 
-  kinetics <- kinetics[reads_norm[,..cols_to_keep], nomatch = NULL]
+  kinetics <- kinetics[reads_norm[,..cols_to_keep], ..kinetics_cols_to_keep, nomatch = NULL]
 
   # Estimate ksyn
   kinetics[, ksyn := normalized_reads*kdeg]
+  kinetics[, log_ksyn := log(ksyn)]
 
 
   # Figure out what to name output
   reads_name <- paste0("normalized_readcounts_", fractions_name)
 
   obj[["kinetics"]][[fractions_name]] <- kinetics %>%
-    dplyr::select(-!!fraction_of_interest, dplyr::everything(), n, normalized_reads, tl)
+    dplyr::select(sample, !!features_to_analyze, kdeg, log_kdeg, ksyn, log_ksyn, normalized_reads, n)
 
   # Eventually want to add count matrix output
   obj[["readcounts"]][[reads_name]] <- reads_norm %>%

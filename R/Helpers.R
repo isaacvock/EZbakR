@@ -99,7 +99,9 @@ get_features <- function(obj, objtype = "cB"){
 
     substrings <- fraction_cols[grepl("fraction_", fraction_cols)]
 
-    features <- fraction_cols[!(fraction_cols %in% c(substrings, "n", "sample"))]
+    features <- fraction_cols[!(fraction_cols %in% c(substrings, "n", "sample",
+                                                     "expected_count", "effective_length",
+                                                     "RPK"))]
 
     if(!(length(features) > 0)){
 
@@ -122,4 +124,86 @@ get_features <- function(obj, objtype = "cB"){
 
 
 }
+
+
+# What is the name of the table of fractions/kinetics/etc. to analyze?
+get_table_name <- function(obj, tabletype,
+                           features){
+
+  fnames <- names(obj[[tabletype]])
+  isoform_specific <- FALSE
+
+  if(is.null(features)){
+
+    ### Use the only available fractions; or throw an error if there
+    ### is more than one fractions and thus auto-detection is impossible
+
+    table_name <- names(fnames)
+
+    if(length(table_name) > 1){
+
+      stop("There is more than one fractions estimate data frame; therefore,
+           you need to explicit specify a `features` vector to let EZbakR
+           know which of these you would like to use!")
+
+    }
+
+    features_to_analyze <- unname(unlist(strsplit(table_name, "_")))
+
+    table_name <- paste(features_to_analyze, collapse = "_")
+
+
+  }else{
+
+    ### Look for features in the names of the fractions data frames,
+
+    supposed_table_name <- paste(gsub("_","",features), collapse = "_")
+
+    if(!(supposed_table_name %in% fnames)){
+
+      isoform_specific <- TRUE
+
+      ### If that didn't work, check to see if one or more of the fractions
+      ### names contain the expected feature vector as part of an
+      ### isoform-specific fractions object
+
+      table_name <- fnames[grepl(supposed_table_name, fnames)]
+
+
+      if(length(table_name) > 1){
+
+        ### If there is more than one feature that matches the bill,
+        ### narrow down by grepping for the provided quant_name
+
+        if(is.null(quant_name)){
+
+          stop("You appear to be requesting isoform level kinetic analyses, but
+               have multiple isoform-level fraction estimates. Specify `quant_name`
+               to ")
+
+        }
+
+        table_name <- table_name[grepl(paste0("_", quant_name), table_name)]
+
+      }else if(length(table_name) == 0){
+
+        stop("features do not have an associated fractions data frame!")
+
+
+      }
+
+
+    }else{
+
+      table_name <- paste(features, collapse = "_")
+
+    }
+
+  }
+
+  return(list(table_name = table_name,
+              isoform_specific = isoform_specific))
+
+}
+
 

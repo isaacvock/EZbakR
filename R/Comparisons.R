@@ -124,64 +124,59 @@ general_avg_and_reg <- function(obj, features, parameter,
                                 TILAC = FALSE, min_reads = 10){
 
 
+
   ### Extract kinetic parameters of interest
 
   # metadf for covariates
   metadf <- obj$metadf
 
-  # Need to determine which columns of the cB to group reads by
-  if(is.null(features)){
+  ### Figure out which fraction new estimates to use
 
-    kinetics_name <- names(obj[['kinetics']])
+  table_info <- get_table_name(obj,
+                               features = features,
+                               tabletype = 'kinetics')
 
-    if(length(kinetics_name) > 1){
+  kinetics_name <- table_info$table_name
 
-      stop("There is more than one kinetics estimate data frame; therefore,
-           you need to explicit specify a `features` vector to let EZbakR
-           know which of these you would like to use!")
-
-    }
-
-    features_to_analyze <- unname(unlist(strsplit(kinetics_name, "_")))
-    lf <- length(features_to_analyze)
-    features_to_analyze <- features_to_analyze[2:lf]
-
-  }else{
-
-    supposed_kinetics_name <- paste(gsub("_","",features), collapse = "_")
-
-    if(!(supposed_kinetics_name %in% names(obj[['kinetics']]))){
-
-      stop("features do not have an associated kinetics data frame!")
-
-    }else{
-
-      features_to_analyze <- features
-
-    }
-
-  }
 
   # Get the kinetic parameter data frame
-  kinetics_name <- paste(features_to_analyze, collapse = "_")
   kinetics <- obj[['kinetics']][[kinetics_name]]
   kinetics <- kinetics %>%
     dplyr::mutate(log_normalized_reads = log10(normalized_reads))
 
   # Get features to analyze
-  fractions_table_name <- paste(features_to_analyze, collapse = "_")
-
-  fractions <- obj[['fractions']][[fractions_table_name]]
+  fractions <- obj[['fractions']][[kinetics_name]]
 
   features_to_analyze <- get_features(fractions, objtype = "fractions")
 
   rm(fractions)
 
 
-  # Add kinetic parameter column to formula
+  # Add kinetic parameter column to formula\
+  condition_vars <- colnames(metadf)[!grepl("tl", colnames(metadf)) &
+                                       (colnames(metadf) != "sample")]
+
+
+  if(is.null(formula_mean)){
+
+    formula_mean <- as.formula(paste0("~", paste(condition_vars, collapse = "+")))
+
+  }
+
+
   formula_mean <- as.formula(paste0(paste(c(parameter, formula_mean), collapse = ""), "-1"))
-  formula_reads <- as.formula(paste0(paste(c("log_normalized_reads", formula_sd), collapse = ""), "-1"))
+
+
+  if(is.null(formula_sd)){
+
+    formula_sd <- as.formula(paste0("~", paste(condition_vars, collapse = "+")))
+
+  }
+
   formula_sd <- as.formula(paste0(paste(c(parameter, formula_sd), collapse = ""), "-1"))
+
+
+  formula_reads <- as.formula(paste0(paste(c("log_normalized_reads", formula_sd), collapse = ""), "-1"))
 
   ### Fit linear, potentially heteroskedastic model
   meta_cols <- colnames(metadf)
