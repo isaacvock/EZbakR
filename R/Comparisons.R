@@ -132,7 +132,7 @@ general_avg_and_reg <- function(obj, features, parameter,
   # Need to determine which columns of the cB to group reads by
   if(is.null(features)){
 
-    kinetics_name <- names(obj)[grepl("kinetics_", names(obj))]
+    kinetics_name <- names(obj[['kinetics']])
 
     if(length(kinetics_name) > 1){
 
@@ -150,7 +150,7 @@ general_avg_and_reg <- function(obj, features, parameter,
 
     supposed_kinetics_name <- paste0("kinetics_", paste(gsub("_","",features), collapse = "_"))
 
-    if(!(supposed_kinetics_name %in% names(obj))){
+    if(!(supposed_kinetics_name %in% names(obj[['kinetics']]))){
 
       stop("features do not have an associated kinetics data frame!")
 
@@ -164,14 +164,14 @@ general_avg_and_reg <- function(obj, features, parameter,
 
   # Get the kinetic parameter data frame
   kinetics_name <- paste(c("kinetics", features_to_analyze), collapse = "_")
-  kinetics <- obj[[kinetics_name]]
+  kinetics <- obj[['kinetics']][[kinetics_name]]
   kinetics <- kinetics %>%
     dplyr::mutate(log_normalized_reads = log10(normalized_reads))
 
   # Get features to analyze
   fractions_table_name <- paste(c("fractions", features_to_analyze), collapse = "_")
 
-  fractions <- obj[[fractions_table_name]]
+  fractions <- obj[['fractions']][[fractions_table_name]]
 
   features_to_analyze <- get_features(fractions, objtype = "fractions")
 
@@ -400,12 +400,12 @@ general_avg_and_reg <- function(obj, features, parameter,
   # Prep output
   output_name <- paste0("average_", parameter, "_", paste(gsub("_","",features_to_analyze), collapse = "_"))
 
-  obj[[output_name]] <- final_output
+  obj[['averages']][[output_name]] <- final_output
 
   if(include_all_parameters){
 
     output_name <- paste0("fullfit_average_", parameter, "_", paste(gsub("_","",features_to_analyze), collapse = "_"))
-    obj[[output_name]] <- model_fit
+    obj[['averages']][[output_name]] <- model_fit
 
   }
 

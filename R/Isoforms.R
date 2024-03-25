@@ -78,7 +78,44 @@ ImportIsoformQuant <- function(obj, files,
 #'  form of `quantification` is provided, then `quant_tool` must be specified so
 #'  that the quantification files can be properly interpreted
 #' }
-EstimateIsoformFractions <- function(obj){
+EstimateIsoformFractions <- function(obj,
+                                     quant_name = NULL,
+                                     fraction_name = NULL){
+
+  if(is.null(quant_name)){
+
+    possible_quant_names <- names(ezbdo$readcounts)
+
+    quant_name <- possible_quant_names[grepl("isoform_quant", possible_quant_names)]
+
+    if(length(quant_name) > 1){
+
+      stop("More than one isoform quantification table exists in your EZbakRData
+           object! You need to tell EZbakR which one to use for the isoform-level
+           analysis by specifying `quant_name`")
+
+    }
+
+  }
+
+  if(is.null(fraction_name)){
+
+    possible_fraction_names <- names(ezbdo$fractions)
+
+    fraction_name <- possible_fraction_names[grepl("transcripts_",
+                                                   possible_fraction_names) |
+                                               grepl("_transcripts",
+                                                     possible_fraction_names)]
+
+    if(length(fraction_name) > 1){
+
+      stop("More than one transcripts fraction estimates table exists in your
+           EZbakRData object! You need to tell EZbakR which one to use for
+           isoform-level analysis by specifying `fraction_name")
+
+    }
+
+  }
 
 
   ### Estimate fractions
@@ -86,11 +123,15 @@ EstimateIsoformFractions <- function(obj){
 
   isoform_fit <- purrr::map(.x = samp_names,
                             .f = Isoform_Fraction_Disambiguation,
-                            obj = obj)
+                            obj = obj,
+                            quant_name = quant_name,
+                            fraction_name = fraction_name)
 
   isoform_fit <- dplyr::bind_rows(isoform_fit)
 
-  obj[['fractions_isoforms']] <- isoform_fit
+  output_name <-
+
+  obj[['fractions']][['isoforms']] <- isoform_fit
 
   return(obj)
 
@@ -160,7 +201,9 @@ fit_beta_regression <- function(data){
 
 
 # Process EZbakR data so as to fit beta regression model
-Isoform_Fraction_Disambiguation <- function(obj, sample_name){
+Isoform_Fraction_Disambiguation <- function(obj, sample_name,
+                                            quant_name = NULL,
+                                            fraction_name = NULL){
 
   message(paste0("Analyzing sample ", sample_name, "..."))
 
@@ -170,11 +213,17 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name){
   # 3) What the 'set of transcripts' column is called
   # 4) Which quantification to use
 
+  if(is.null(fraction_name)){
 
-  Fns <- obj$fractions_GF_transcripts %>%
+
+
+
+  }
+
+  Fns <- obj$fractions[[fraction_name]] %>%
     filter(sample == sample_name)
 
-  quant <- obj$readcounts[['isoform_quant_rsem']] %>%
+  quant <- obj$readcounts[[quant_name]] %>%
     filter(sample == sample_name & expected_count > 0)
 
 

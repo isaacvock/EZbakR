@@ -353,7 +353,7 @@ EstimateFractions <- function(obj, features = "all",
   # What should output be named?
   fraction_vect <- paste(c("fractions", gsub("_","",features_to_analyze)), collapse = "_")
 
-  obj[[fraction_vect]] <- fns
+  obj[['fractions']][[fraction_vect]] <- fns
 
   # Add new class information
   if(!("EZbakRFractions" %in% class(obj))){

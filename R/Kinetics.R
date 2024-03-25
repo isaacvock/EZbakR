@@ -93,7 +93,7 @@ Standard_kinetic_estimation <- function(obj, features = NULL){
   # Need to determine which columns of the cB to group reads by
   if(is.null(features)){
 
-    fractions_name <- names(obj)[grepl("fractions_", names(obj))]
+    fractions_name <- names(obj[['fractions']])
 
     if(length(fractions_name) > 1){
 
@@ -111,7 +111,7 @@ Standard_kinetic_estimation <- function(obj, features = NULL){
 
     supposed_fractions_name <- paste0("fractions_", paste(gsub("_","",features), collapse = "_"))
 
-    if(!(supposed_fractions_name %in% names(obj))){
+    if(!(supposed_fractions_name %in% names(obj[['fractions']]))){
 
       stop("features do not have an associated fractions data frame!")
 
@@ -127,7 +127,7 @@ Standard_kinetic_estimation <- function(obj, features = NULL){
   fractions_table_name <- paste(c("fractions", features_to_analyze), collapse = "_")
 
   # Get fractions
-  kinetics <- obj[[fractions_table_name]]
+  kinetics <- obj[["fractions"]][[fractions_table_name]]
 
   features_to_analyze <- get_features(kinetics, objtype = "fractions")
 
@@ -182,11 +182,11 @@ Standard_kinetic_estimation <- function(obj, features = NULL){
   kinetics_name <- paste(c("kinetics", gsub("_","",features_to_analyze)), collapse = "_")
   reads_name <- paste(c("readcounts", gsub("_","",features_to_analyze)), collapse = "_")
 
-  obj[[kinetics_name]] <- kinetics %>%
+  obj[["kinetics"]][[kinetics_name]] <- kinetics %>%
     dplyr::select(-!!fraction_of_interest, dplyr::everything(), n, normalized_reads, tl)
 
   # Eventually want to add count matrix output
-  obj[[reads_name]] <- reads_norm %>%
+  obj[["readcounts"]][[reads_name]] <- reads_norm %>%
     dplyr::select(sample, !!features_to_analyze, n, normalized_reads, geom_mean, scale_factor)
 
   if(!is(obj, "EZbakRKinetics")){
