@@ -109,7 +109,7 @@ Standard_kinetic_estimation <- function(obj, features = NULL){
 
   }else{
 
-    supposed_fractions_name <- paste0("fractions_", paste(gsub("_","",features), collapse = "_"))
+    supposed_fractions_name <- paste(gsub("_","",features), collapse = "_")
 
     if(!(supposed_fractions_name %in% names(obj[['fractions']]))){
 
@@ -124,7 +124,7 @@ Standard_kinetic_estimation <- function(obj, features = NULL){
   }
 
   # Name of fractions table to use
-  fractions_table_name <- paste(c("fractions", features_to_analyze), collapse = "_")
+  fractions_table_name <- paste(features_to_analyze, collapse = "_")
 
   # Get fractions
   kinetics <- obj[["fractions"]][[fractions_table_name]]
@@ -309,13 +309,13 @@ tilac_ratio_estimation <- function(obj,
 
 
   # Figure out what to name output
-  kinetics_name <- paste(c("kinetics", features_to_analyze), collapse = "_")
+  kinetics_name <- paste(features_to_analyze, collapse = "_")
   reads_name <- paste(c("readcounts", features_to_analyze), collapse = "_")
 
-  obj[[kinetics_name]] <- kinetics
+  obj[['kinetics']][[kinetics_name]] <- kinetics
 
   # Eventually want to add count matrix output
-  obj[[reads_name]] <- list(reads_df = reads_norm)
+  obj[['readcounts']][[reads_name]] <- list(reads_df = reads_norm)
 
   if(!is(obj, "EZbakRKinetics")){
 

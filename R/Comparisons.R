@@ -148,7 +148,7 @@ general_avg_and_reg <- function(obj, features, parameter,
 
   }else{
 
-    supposed_kinetics_name <- paste0("kinetics_", paste(gsub("_","",features), collapse = "_"))
+    supposed_kinetics_name <- paste(gsub("_","",features), collapse = "_")
 
     if(!(supposed_kinetics_name %in% names(obj[['kinetics']]))){
 
@@ -163,13 +163,13 @@ general_avg_and_reg <- function(obj, features, parameter,
   }
 
   # Get the kinetic parameter data frame
-  kinetics_name <- paste(c("kinetics", features_to_analyze), collapse = "_")
+  kinetics_name <- paste(features_to_analyze, collapse = "_")
   kinetics <- obj[['kinetics']][[kinetics_name]]
   kinetics <- kinetics %>%
     dplyr::mutate(log_normalized_reads = log10(normalized_reads))
 
   # Get features to analyze
-  fractions_table_name <- paste(c("fractions", features_to_analyze), collapse = "_")
+  fractions_table_name <- paste(features_to_analyze, collapse = "_")
 
   fractions <- obj[['fractions']][[fractions_table_name]]
 
