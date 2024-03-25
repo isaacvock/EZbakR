@@ -129,9 +129,9 @@ EstimateIsoformFractions <- function(obj,
 
   isoform_fit <- dplyr::bind_rows(isoform_fit)
 
-  output_name <-
+  output_name <- paste0('isoforms_', unlist(strsplit(quant_name, "_"))[3])
 
-  obj[['fractions']][['isoforms']] <- isoform_fit
+  obj[['fractions']][[output_name]] <- isoform_fit
 
   return(obj)
 
