@@ -1,3 +1,46 @@
+#' Import transcript isoform quantification into EZbakRData object
+#'
+#' A convenient wrapper to \code{tximport()} for importing isoform quantification
+#' data into an EZbakRData object. This is necessary to run functions such as
+#' \code{EstimateIsoformFractions}.
+#'
+ImportIsoformQuant <- function(obj, files,
+                               quant_tool = c("none", "salmon", "sailfish",
+                                                   "alevin", "piscem", "kallisto",
+                                                   "rsem", "stringtie"),
+                               ...){
+
+  txi <- tximport::tximport(files, type = quant_tool, txIn = TRUE, txOut = TRUE)
+
+  counts_df <- dplyr::as_tibble(txi$counts, rownames = "transcript_id") %>%
+    tidyr::pivot_longer(names_to = "sample",
+                        values_to = "expected_count",
+                        cols = !transcript_id)
+
+  final_df <- dplyr::as_tibble(txi$length,
+                               rownames = "transcript_id") %>%
+    tidyr::pivot_longer(names_to = "sample",
+                        values_to = "effective_length",
+                        cols = !transcript_id) %>%
+    dplyr::inner_join(rsem_counts_df,
+                      by = c("sample", "transcript_id"))
+
+
+  if(quant_tool == "none"){
+
+    table_name <- "isoform_quant_custom"
+
+  }else{
+
+    table_name <- paste0("isoform_quant_", quant_tool)
+
+  }
+
+  obj[['readcounts']][table_name] <- final_df
+
+
+}
+
 #' Estimate isoform-specific fraction news (or more generally "fractions").
 #'
 #' Combines the output of \code{EstimateFractions} with transcript isoform
@@ -23,245 +66,152 @@ EstimateIsoformFractions <- function(obj, quantification,
                                      quant_tool = c("none", "salmon", "sailfish",
                                                     "alevin", "piscem", "kallisto",
                                                     "rsem", "stringtie"),
-                                     tx2gene = NULL,
-                                     cores = 1){
-
-
-  ### Import quantification data
-
-
+                                     tx2gene = NULL){
 
 
   ### Estimate fractions
-  if(cores > 1){
 
-    # Check if furrr is available
-    if (!rlang::is_installed("furrr")){
-      stop("You have specified a value of cores > 1. Isoform fraction new estimation
-           is only parallelized if the package `furrr` is installed. Either
-           install furrr (e.g., with `install.packages('furrr')` or set cores to 1.")
-
-    }
-
-    #
-    isoform_fit <- furrr::future_map(.x = samp_names,
-                              .f = Isoform_Fraction_Disambiguation,
-                              obj = obj,
-                              quantification = quantification)
-
-  }else{
-
-    isoform_fit <- purrr::map(.x = samp_names,
-                              .f = Isoform_Fraction_Disambiguation,
-                              obj = obj,
-                              quantification = quantification)
-
-  }
-
-
+  isoform_fit <- purrr::map(.x = samp_names,
+                            .f = Isoform_Fraction_Disambiguation,
+                            obj = obj,
+                            quantification = quantification)
 
 
 
 }
 
-# Calculate beta mean
-beta_mu <- function(plist, ILparam){
-
-  # Dot product of parameter vector (estimated transcript fns) with probabilities of
-  # each isoform being in the
-  mus <- sapply(plist, function(v) sum(v * ILparam))
-
-  return(mus)
-
-}
-
-# Calculate parameter prior penalization
-calc_prior <- function(ILparam, prior_a, prior_b){
-
-  priors <- dnorm(ILparam, prior_a, prior_b, log = TRUE)
-
-  return(sum(priors))
-
-}
+# Helper functions that I will use on multiple occasions
+logit <- function(x) log(x/(1-x))
+inv_logit <- function(x) exp(x)/(1+exp(x))
 
 
-# Beta regression likelihood
-beta_lik <- function(param, plist, v, fns, prior_a, prior_b){
+# Likelihood calculation for beta regression
+beta_r_likelihood <- function(data, design_matrix, v, par,
+                              prior_a, prior_b){
 
 
-  mus <- beta_mu(plist, inv_logit(param))
+
+  mus <- design_matrix %*% inv_logit(par)
 
   alphas <- mus*v
   betas <- v - alphas
 
-  logl <- sum((alphas - 1)*log(fns) + (betas - 1)*log(1 - fns) - lbeta(alphas, betas) )
-
-  logl <- logl + calc_prior(param, prior_a, prior_b)
+  logl <- sum(stats::dbeta(data, alphas, betas, log = TRUE)) + sum(stats::dnorm(par, prior_a, prior_b, log = TRUE))
 
   return(-logl)
 
+
 }
 
+# Infer mixture of isoform fractions using beta regression
+fit_beta_regression <- function(data){
+
+
+  Fns_onegene <- data %>%
+    dplyr::mutate(nreads = n,
+                  fn = fraction_highTC) %>%
+    dplyr::select(fn, group, transcript_id, p, nreads) %>%
+    tidyr::pivot_wider(names_from = transcript_id,
+                       values_from = p,
+                       values_fill = 0)
+
+  design_matrix <- as.matrix(Fns_onegene %>% dplyr::ungroup() %>%
+                               dplyr::select(-group, -fn, -nreads))
+
+
+  fns <- Fns_onegene$fn
+  v <- Fns_onegene$nreads
+
+
+  fit <- stats::optim(par = rep(0, times = ncol(design_matrix)),
+               beta_r_likelihood,
+               data = fns,
+               design_matrix = design_matrix,
+               v = v,
+               method = "L-BFGS-B",
+               upper = 5,
+               lower = -5,
+               prior_a = 0,
+               prior_b = 1)
+
+
+  return(tibble(transcript_id = colnames(design_matrix),
+                logit_fn = fit$par))
+
+
+}
+
+
+# Process EZbakR data so as to fit beta regression model
 Isoform_Fraction_Disambiguation <- function(obj, sample_name,
-                                            quantification){
+                          rsem_path = "G:/Shared drives/Matthew_Simon/IWV/Hogg_lab/fastq2bakR_runs/ac_betternb_transcripts/rsem/",
+                          debug = FALSE){
 
-  Fns <- bfo$Fast_Fit$Fn_Estimates %>%
-    filter(sample == sample_name) %>%
-    dplyr::select(logit_fn, logit_fn_se, XF, nreads) %>%
-    dplyr::mutate(fn = inv_logit(logit_fn))
+  message(paste0("Analyzing sample ", sample_name, "..."))
 
-  # RSEM quantification
-  setwd(rsem_path)
-  rsem_file <- paste0(sample_name, ".isoforms.results")
-  rsem <- as_tibble(fread(rsem_file)) %>%
-    filter(IsoPct > 0 & TPM >= 1)
+  ### THINGS THAT NEED TO BE INFERRED
+  # 1) Which fractions to grab
+  # 2) What the gene ID column is called
+  # 3) What the 'set of transcripts' column is called
+  # 4) Which quantification to use
 
 
-  # Add gene name to bakR output
+  Fns <- obj$fractions_GF_transcripts %>%
+    filter(sample == sample_name)
+
+  quant <- obj$readcounts[['rsem']] %>%
+    filter(sample == sample_name & expected_count > 0)
+
+
   Fns <- Fns %>%
-    mutate(group = 1:n()) %>%
-    separate_rows(XF, sep = "\\+") %>%
-    mutate(transcript_id = XF) %>%
-    dplyr::select(-XF) %>%
-    inner_join(rsem,
-               by = "transcript_id")
+    dplyr::mutate(group = 1:n()) %>%
+    tidyr::separate_rows(transcripts, sep = "\\+") %>%
+    dplyr::mutate(transcript_id = transcripts) %>%
+    dplyr::select(-transcripts) %>%
+    dplyr::inner_join(quant,
+               by = c("transcript_id", "sample"))
 
-  # Add coverage weights
   Fns <- Fns %>%
-    group_by(group) %>%
-    mutate(p = expected_count/effective_length/sum(expected_count/effective_length))
-
-
-  ### Beta regression
-
-  if(debug){
-    browser()
-  }
+    dplyr::group_by(group) %>%
+    dplyr::mutate(p = expected_count/effective_length/sum(expected_count/effective_length))
 
   # Filter out genes that only have one isoform
   single_isoforms <- Fns %>%
-    ungroup() %>%
-    dplyr::select(gene_id, transcript_id) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(GF, transcript_id) %>%
     dplyr::distinct() %>%
-    group_by(gene_id) %>%
+    dplyr::group_by(GF) %>%
     dplyr::count() %>%
-    filter(n == 1)
+    dplyr::filter(n == 1)
 
   Fns_single <- Fns %>%
-    filter(gene_id %in% single_isoforms$gene_id)
+    dplyr::inner_join(single_isoforms %>% dplyr::select(-n),
+                      by = c("GF"))
 
   Fns_multi <- Fns %>%
-    filter(!(gene_id %in% single_isoforms$gene_id))
+    dplyr::left_join(single_isoforms %>%
+                dplyr::mutate(isoform_cnt = n) %>%
+                dplyr::select(-n),
+              by = "GF") %>%
+    dplyr::filter(is.na(isoform_cnt))
 
 
-  # Ugly for loop over each gene to estimate fraction news of all its components
-  genes <- unique(Fns_multi$gene_id)
+  Fns_multi <- Fns_multi %>%
+    dplyr::group_by(GF) %>%
+    tidyr::nest() %>%
+    dplyr::mutate(fnest = lapply(data, fit_beta_regression)) %>%
+    dplyr::select(GF, fnest) %>%
+    tidyr::unnest(cols = c(fnest))
 
 
+  output <- Fns_single %>%
+    ungroup() %>%
+    dplyr::select(sample, GF, transcript_id, fraction_highTC, logit_fraction_highTC,
+                  expected_count, effective_length) %>%
+    dplyr::bind_rows(Fns_multi %>% dplyr::ungroup()) %>%
+    dplyr::select(sample, GF, transcript_id, everything())
 
-  # Effective prior reads
-  prior_reads <- 20
-
-  for(g in seq_along(genes)){
-
-
-    ### Construct list of vectors of proportions of reads coming from each isoform
-
-    Fns_gene <- Fns_multi %>%
-      filter(gene_id == genes[g])
-
-    transcripts <- unique(Fns_gene$transcript_id)
-    sets <- unique(Fns_gene$group)
-
-    plist <- vector(mode = "list", length = length(sets))
-
-    for(s in seq_along(sets)){
-
-      Fns_set <- Fns_gene %>% filter(group == sets[s])
-
-
-      tset <- Fns_set$transcript_id
-
-      pvect <- rep(0, times = length(transcripts))
-      ps <- Fns_set$p
-      count <- 1
-      for(t in seq_along(transcripts)){
-
-        if(transcripts[t] %in% tset){
-          pvect[t] <- Fns_set$p[Fns_set$transcript_id == transcripts[t]]
-          count <- count + 1
-        }else{
-          pvect[t] <- 0
-        }
-
-
-      }
-      plist[[s]] <- pvect
-
-
-
-    }
-
-    nt <- length(transcripts)
-
-    low_ps <- rep(-7, times = nt)
-    high_ps <- rep(7, times = nt)
-
-    Fns_group <- Fns_gene %>%
-      dplyr::select(fn, nreads, group) %>%
-      dplyr::distinct()
-
-    ### Estimate prior
-    prior <- Fns_group %>%
-      ungroup() %>%
-      summarise(fn_gene = sum(fn*nreads)/sum(nreads)) %>%
-      unlist() %>%
-      unname()
-
-    # prior_a <- prior*(prior_reads)
-    # prior_b <- prior_reads - prior_a
-
-    # logit_normal prior instead
-    prior_a <- logit(prior)
-    prior_b <- 1
-
-
-    ### Fit model
-
-    fit <- stats::optim(par=rep(0, times = nt),
-                        fn = beta_lik,
-                        plist = plist, v = Fns_group$nreads, fns = Fns_group$fn,
-                        prior_a = prior_a, prior_b = prior_b,
-                        method = "L-BFGS-B",
-                        lower = low_ps, upper = high_ps)
-
-    fns <- fit$par
-
-    if(g == 1){
-
-      final_df <- data.frame(transcript_id = transcripts,
-                             logit_fn = fit$par) %>%
-        mutate(fn = inv_logit(logit_fn))
-
-    }else{
-
-      estimate_df <- tibble(transcript_id = transcripts,
-                            logit_fn = fit$par) %>%
-        mutate(fn = inv_logit(logit_fn))
-
-
-      final_df <- rbind(final_df, estimate_df)
-
-
-    }
-
-
-
-  }
-
-
-  return(list(multi_isoforms = final_df,
-              single_isoforms = Fns_single))
+  return(output)
 
 
 }
