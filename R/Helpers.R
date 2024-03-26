@@ -128,10 +128,12 @@ get_features <- function(obj, objtype = "cB"){
 
 # What is the name of the table of fractions/kinetics/etc. to analyze?
 get_table_name <- function(obj, tabletype,
-                           features){
+                           features, quant_name = NULL){
+
 
   fnames <- names(obj[[tabletype]])
-  isoform_specific <- FALSE
+
+
 
   if(is.null(features)){
 
@@ -155,51 +157,105 @@ get_table_name <- function(obj, tabletype,
 
   }else{
 
-    ### Look for features in the names of the fractions data frames,
 
-    supposed_table_name <- paste(gsub("_","",features), collapse = "_")
+    ### Look for features in the names of the fractions data frames
 
-    if(!(supposed_table_name %in% fnames)){
-
-      isoform_specific <- TRUE
-
-      ### If that didn't work, check to see if one or more of the fractions
-      ### names contain the expected feature vector as part of an
-      ### isoform-specific fractions object
-
-      table_name <- fnames[grepl(supposed_table_name, fnames)]
+    # Feature names will show up with '_'s removed
+    features <- gsub("_","",features)
 
 
-      if(length(table_name) > 1){
+    # Don't search for fullfit output
+    if(tabletype = 'averages'){
 
-        ### If there is more than one feature that matches the bill,
-        ### narrow down by grepping for the provided quant_name
+      fnames <- fnames[!grepl('fullfit', fnames)]
 
-        if(is.null(quant_name)){
+    }
 
-          stop(paste0("You appear to be requesting isoform level kinetic analyses, but
-               have multiple isoform-level ", tabletype," tables! Specify `quant_name`
-               to tell EZbakR which of these to use."))
-
-        }
-
-        table_name <- table_name[grepl(paste0("_", quant_name), table_name)]
-
-      }else if(length(table_name) == 0){
-
-        stop(paste0("features do not have an associated ", tabletype," data frame!"))
+    features_in_fnames <- strsplit(fnames, split = "_")
 
 
-      }
+
+
+    # Determine whether or not to search for quantification tool name
+    if(is.null(quant_name)){
+
+      # Remove quantification tool name if present
+      features_in_fnames <- features_in_fnames[!(features_in_fnames %in%
+                                                 c("custom", "salmon", "sailfish",
+                                                   "alevin", "piscem", "kallisto",
+                                                   "rsem", "stringtie"))]
+
+      present <- unlist(lapply(features_in_fnames, function(x) {
+        return(all(features %in% x ) & all(x %in% features))
+      })
+      )
 
 
     }else{
 
-      table_name <- paste(features, collapse = "_")
+      present <- unlist(lapply(features_in_fnames, function(x) {
+        return(all(c(features, quant_name) %in% x ) & all(x %in% c(features, quant_name)))
+      })
+      )
+
 
     }
 
+
+
+
+    if(length(present) == 0){
+
+
+      # Remove quantification tool name if present
+      features_in_fnames <- features_in_fnames[!(features_in_fnames %in%
+                                                   c("custom", "salmon", "sailfish",
+                                                     "alevin", "piscem", "kallisto",
+                                                     "rsem", "stringtie"))]
+
+      # Print out the allowed features
+      features_allowed <- lapply(features_in_fnames, function(x){
+              return(paste0('c(',paste(paste0("'",x,"'"), collapse = ', '), ')'))
+            })
+
+      message(paste(c("`features` should be one of the following (unordered) vectors: ",
+                      unlist(features_allowed)),
+                    collapse = '\n'))
+
+      stop(paste0("features do not match any of the ", tabletype," tables present!"))
+
+    }
+
+    if(length(present) > 1){
+
+      if(is.null(quant_name)){
+
+        stop(paste0("Features match more than one ", tabletype, " table! If you
+                    are trying to specify an isoform-specific analysis table,
+                    and you have multiple such tables, make sure to specify
+                    `quant_name`"))
+
+
+      }
+
+      stop(paste0("Features match more than one ", tabletype, " table!
+                  Alert the developer by posting an Issues on the EZbakR,
+                  Github as this edge case should not ever happen."))
+
+
+    }
+
+
   }
+
+  table_name <- fnames[present]
+
+  if("isoforms" %in% features){
+    isoform_specific <- TRUE
+  }else{
+    isoform_specific <- FALSE
+  }
+
 
   return(list(table_name = table_name,
               isoform_specific = isoform_specific))
