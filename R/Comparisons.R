@@ -39,7 +39,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                             formula_mean = NULL, formula_sd = NULL,
                             include_all_parameters = TRUE,
                             sd_reg_factor = 10,
-                            error_if_singular = TRUE,
+                            error_if_singular = TRUE, quant_name = NULL,
                             min_reads = 10){
 
 
@@ -50,7 +50,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                              formula_mean = formula_mean, formula_sd = formula_sd,
                              include_all_parameters = include_all_parameters,
                              sd_reg_factor = sd_reg_factor,
-                             error_if_singular = error_if_singular,
+                             error_if_singular = error_if_singular, quant_name = quant_name,
                              TILAC = TRUE, min_reads = min_reads)
 
   }else{
@@ -58,7 +58,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     obj <- general_avg_and_reg(obj = obj, features = features, parameter = parameter,
                         formula_mean = formula_mean, formula_sd = formula_sd,
                         include_all_parameters = include_all_parameters,
-                        sd_reg_factor = sd_reg_factor,
+                        sd_reg_factor = sd_reg_factor, quant_name = quant_name,
                         error_if_singular = error_if_singular, min_reads = min_reads)
 
   }
@@ -120,7 +120,7 @@ general_avg_and_reg <- function(obj, features, parameter,
                                 formula_mean, formula_sd,
                                 include_all_parameters,
                                 sd_reg_factor,
-                                error_if_singular,
+                                error_if_singular, quant_name = NULL,
                                 TILAC = FALSE, min_reads = 10){
 
 
@@ -134,7 +134,8 @@ general_avg_and_reg <- function(obj, features, parameter,
 
   table_info <- get_table_name(obj,
                                features = features,
-                               tabletype = 'kinetics')
+                               tabletype = 'kinetics',
+                               quant_name = quant_name)
 
   kinetics_name <- table_info$table_name
 

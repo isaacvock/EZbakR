@@ -95,7 +95,8 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
 
   table_info <- get_table_name(obj,
                                features = features,
-                               tabletype = 'fractions')
+                               tabletype = 'fractions',
+                               quant_name = quant_name)
 
   fractions_name <- table_info$table_name
   isoform_specific <- table_info$isoform_specific
