@@ -128,8 +128,9 @@ EstimateIsoformFractions <- function(obj,
            EZbakRData object! EZbakR tried to auto-detect such a table by looking
            for a table in the `fractions` list with a name that contained the
            string 'transcripts_' or '_transcripts'. If a similar table with a different
-           naming convention exists, provide its name as the `fraction_name` parameter
-           for this function.")
+           naming convention exists, provide the identifier as the `fractions_identifier` parameter
+           for this function. Alternatively, specify the full table name as the
+           `fraction_name` parameter.")
 
     }
 
@@ -211,6 +212,10 @@ beta_r_likelihood <- function(data, design_matrix, v, par,
 # Infer mixture of isoform fractions using beta regression
 fit_beta_regression <- function(data){
 
+
+  if(any(data$transcript_id == "CHS.4998.5")){
+    browser()
+  }
 
   Fns_onegene <- data %>%
     dplyr::mutate(nreads = n) %>%
