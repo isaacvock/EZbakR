@@ -213,10 +213,6 @@ beta_r_likelihood <- function(data, design_matrix, v, par,
 fit_beta_regression <- function(data){
 
 
-  if(any(data$transcript_id == "CHS.4998.5")){
-    browser()
-  }
-
   Fns_onegene <- data %>%
     dplyr::mutate(nreads = n) %>%
     dplyr::select(fn, group, transcript_id, p, nreads) %>%
