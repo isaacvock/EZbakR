@@ -301,7 +301,7 @@ EstimateFractions <- function(obj, features = "all",
 
     fns <- dplyr::as_tibble(cB) %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
-      dplyr::summarise(!!col_name := inv_logit(optim(0,
+      dplyr::summarise(!!col_name := optim(0,
                                            fn = two_comp_likelihood,
                                            muts = !!dplyr::sym(pops_to_analyze),
                                            nucs = !!dplyr::sym(necessary_basecounts),
@@ -311,7 +311,7 @@ EstimateFractions <- function(obj, features = "all",
                                            n = n,
                                            lower = -7,
                                            upper = 7,
-                                           method = "L-BFGS-B")$par[1]),
+                                           method = "L-BFGS-B")$par[1],
                        n = sum(n)) %>%
       dplyr::ungroup() %>%
       dplyr::mutate(!!natural_col_name := inv_logit(!!dplyr::sym(col_name))) %>%
