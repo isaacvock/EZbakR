@@ -187,7 +187,7 @@ get_table_name <- function(obj, tabletype,
 
 
     # Don't search for fullfit output
-    if(tabletype = 'averages'){
+    if(tabletype == 'averages'){
 
       fnames <- fnames[!grepl('fullfit', fnames)]
 

@@ -427,7 +427,7 @@ general_avg_and_reg <- function(obj, features, parameter,
 #' @param parameter Parameter to average across replicates of a given condition.
 #' @import data.table
 #' @importFrom magrittr %>%
-CompareParameters <- function(obj, features = "all", parameter = "log_kdeg",
+CompareParameters <- function(obj, features = NULL, parameter = "log_kdeg",
                               condition, reference, experimental){
 
   ### Extract kinetic parameters of interest
