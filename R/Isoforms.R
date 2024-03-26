@@ -24,7 +24,7 @@ ImportIsoformQuant <- function(obj, files,
     tidyr::pivot_longer(names_to = "sample",
                         values_to = "effective_length",
                         cols = !transcript_id) %>%
-    dplyr::inner_join(rsem_counts_df,
+    dplyr::inner_join(counts_df,
                       by = c("sample", "transcript_id"))
 
 

@@ -393,13 +393,13 @@ general_avg_and_reg <- function(obj, features, parameter,
 
 
   # Prep output
-  output_name <- paste0("average_", parameter, "_", paste(gsub("_","",features_to_analyze), collapse = "_"))
+  output_name <- paste0(parameter, "_", table_info$table_name)
 
   obj[['averages']][[output_name]] <- final_output
 
   if(include_all_parameters){
 
-    output_name <- paste0("fullfit_average_", parameter, "_", paste(gsub("_","",features_to_analyze), collapse = "_"))
+    output_name <- paste0("fullfit_", parameter, "_", table_info$table_name)
     obj[['averages']][[output_name]] <- model_fit
 
   }
@@ -449,7 +449,7 @@ CompareParameters <- function(obj, features = "all", parameter = "log_kdeg",
                                              basecounts_in_cB,
                                              "sample", "n"))]
 
-  # Need to determine which columns of the cB to group reads by
+  # Need to determine which data frame to grab
   if(features == "all"){
 
     features_to_analyze <- features_in_cB

@@ -142,9 +142,9 @@ get_table_name <- function(obj, tabletype,
 
     if(length(table_name) > 1){
 
-      stop("There is more than one fractions estimate data frame; therefore,
+      stop(paste0("There is more than one ", tabletype," data frame; therefore,
            you need to explicit specify a `features` vector to let EZbakR
-           know which of these you would like to use!")
+           know which of these you would like to use!"))
 
     }
 
@@ -177,9 +177,9 @@ get_table_name <- function(obj, tabletype,
 
         if(is.null(quant_name)){
 
-          stop("You appear to be requesting isoform level kinetic analyses, but
-               have multiple isoform-level fraction estimates. Specify `quant_name`
-               to ")
+          stop(paste0("You appear to be requesting isoform level kinetic analyses, but
+               have multiple isoform-level ", tabletype," tables! Specify `quant_name`
+               to tell EZbakR which of these to use."))
 
         }
 
@@ -187,7 +187,7 @@ get_table_name <- function(obj, tabletype,
 
       }else if(length(table_name) == 0){
 
-        stop("features do not have an associated fractions data frame!")
+        stop(paste0("features do not have an associated ", tabletype," data frame!"))
 
 
       }
