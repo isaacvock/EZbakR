@@ -473,10 +473,9 @@ CompareParameters <- function(obj, features = "all", parameter = "log_kdeg",
 
   ### Add output to object
 
-  output_name <- paste0(paste(features_to_analyze, collapse = "_"), "_",
-                        parameter, "_", condition, "_", experimental, "_vs_", reference)
+  output_name <- paste0(condition, "_", experimental, "_vs_", reference)
 
-  obj[["comparisons"]][[output_name]] <- comparison
+  obj[["comparisons"]][[parameter_name]][[output_name]] <- comparison
 
 
   if(!is(obj, "EZbakRCompare")){
