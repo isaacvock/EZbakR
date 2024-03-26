@@ -203,9 +203,6 @@ get_table_name <- function(obj, tabletype,
 
     if(!is.null(quant_name)){
 
-
-
-
       features <- c(features, quant_name)
 
     }else{
@@ -223,6 +220,14 @@ get_table_name <- function(obj, tabletype,
     if(!is.null(parameter)){
 
       features <- c(features, gsub("_", "",parameter))
+
+    }else{
+
+      # Remove quantification tool name if present
+      features_in_fnames <- lapply(features_in_fnames,
+                                   function(x){
+                                     return(x[!(x %in% gsub("_", "",parameter))])
+                                   })
 
     }
 
@@ -243,13 +248,28 @@ get_table_name <- function(obj, tabletype,
     if(sum(present) == 0){
 
 
-      # Remove quantification tool name if present
-      features_in_fnames <- lapply(features_in_fnames,
-                                   function(x){
-                                     return(x[!(x %in% c("custom", "salmon", "sailfish",
-                                                         "alevin", "piscem", "kallisto",
-                                                         "rsem", "stringtie"))])
-                                   })
+      if(!is.null(parameter)){
+
+        # Remove quantification tool name if present
+        features_in_fnames <- lapply(features_in_fnames,
+                                     function(x){
+                                       return(x[!(x %in% c("custom", "salmon", "sailfish",
+                                                           "alevin", "piscem", "kallisto",
+                                                           "rsem", "stringtie", gsub("_","",parameter)))])
+                                     })
+
+      }else{
+
+        # Remove quantification tool name if present
+        features_in_fnames <- lapply(features_in_fnames,
+                                     function(x){
+                                       return(x[!(x %in% c("custom", "salmon", "sailfish",
+                                                           "alevin", "piscem", "kallisto",
+                                                           "rsem", "stringtie"))])
+                                     })
+
+      }
+
 
       # Print out the allowed features
       features_allowed <- lapply(features_in_fnames, function(x){
