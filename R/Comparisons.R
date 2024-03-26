@@ -428,6 +428,7 @@ general_avg_and_reg <- function(obj, features, parameter,
 #' @import data.table
 #' @importFrom magrittr %>%
 CompareParameters <- function(obj, features = NULL, parameter = "log_kdeg",
+                              quant_name = NULL,
                               condition, reference, experimental){
 
   ### Extract kinetic parameters of interest
@@ -448,6 +449,11 @@ CompareParameters <- function(obj, features = NULL, parameter = "log_kdeg",
 
   # Get the kinetic parameter data frame
   parameter_est <- obj[['averages']][[parameter_name]]
+
+
+  # Get features to analyze
+  features_to_analyze <- get_features(parameter_est, objtype = "averages")
+
 
 
   ### Perform comparative analysis of interest

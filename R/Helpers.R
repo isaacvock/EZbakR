@@ -115,6 +115,33 @@ get_features <- function(obj, objtype = "cB"){
 
     return(features)
 
+  }else if(objtype == 'averages'){
+
+    averages <- obj
+
+    ### What are the features?
+
+    avg_cols <- colnames(averages)
+
+    substrings <- avg_cols[grepl("^mean_", avg_cols) |
+                             grepl("^sd_", avg_cols) |
+                             grepl("^coverage_", avg_cols)]
+
+    features <- avg_cols[!(avg_cols %in% substrings)]
+
+    if(!(length(features) > 0)){
+
+      rlang::abort(
+        "No features are defined in your averages data frame!",
+        class = "no_averages_features"
+      )
+
+    }
+
+
+    return(features)
+
+
   }else{
 
     stop("objtype is undefined!")
