@@ -394,13 +394,13 @@ general_avg_and_reg <- function(obj, features, parameter,
 
 
   # Prep output
-  output_name <- paste0(parameter, "_", table_info$table_name)
+  output_name <- paste0(gsub("_", "",parameter), "_", table_info$table_name)
 
   obj[['averages']][[output_name]] <- final_output
 
   if(include_all_parameters){
 
-    output_name <- paste0("fullfit_", parameter, "_", table_info$table_name)
+    output_name <- paste0("fullfit_", gsub("_", "",parameter), "_", table_info$table_name)
     obj[['averages']][[output_name]] <- model_fit
 
   }
@@ -435,43 +435,19 @@ CompareParameters <- function(obj, features = "all", parameter = "log_kdeg",
   # metadf for covariates
   metadf <- obj$metadf
 
-  # cB columns
-  cB <- obj$cB
-  cB_cols <- colnames(cB)
 
-  # Mutation columns in cB
-  mutcounts_in_cB <- find_mutcounts(obj)
+  # Which table to use?
 
-  # Base count columns in cB
-  basecounts_in_cB <- paste0("n", substr(mutcounts_in_cB, start = 1, stop = 1))
+  table_info <- get_table_name(obj,
+                               features = features,
+                               tabletype = 'averages',
+                               quant_name = quant_name,
+                               parameter = parameter)
 
-  # feature columns
-  features_in_cB <- cB_cols[!(cB_cols %in% c(mutcounts_in_cB,
-                                             basecounts_in_cB,
-                                             "sample", "n"))]
-
-  # Need to determine which data frame to grab
-  if(features == "all"){
-
-    features_to_analyze <- features_in_cB
-
-  }else{
-
-    if(!all(features %in% features_in_cB)){
-
-      stop("features includes columns that do not exist in your cB!")
-
-    }else{
-
-      features_to_analyze <- features
-
-    }
-
-  }
+  parameter_name <- table_info$table_name
 
   # Get the kinetic parameter data frame
-  parameter_name <- paste(c("average", parameter, features_to_analyze), collapse = "_")
-  parameter_est <- obj[[parameter_name]]
+  parameter_est <- obj[['averages']][[parameter_name]]
 
 
   ### Perform comparative analysis of interest

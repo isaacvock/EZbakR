@@ -128,7 +128,8 @@ get_features <- function(obj, objtype = "cB"){
 
 # What is the name of the table of fractions/kinetics/etc. to analyze?
 get_table_name <- function(obj, tabletype,
-                           features, quant_name = NULL){
+                           features, quant_name = NULL,
+                           parameter = NULL){
 
 
   fnames <- names(obj[[tabletype]])
@@ -162,6 +163,27 @@ get_table_name <- function(obj, tabletype,
 
     # Feature names will show up with '_'s removed
     features <- gsub("_","",features)
+    features_in_fnames <- strsplit(fnames, split = "_")
+
+
+    if(!is.null(quant_name)){
+
+      # Remove quantification tool name if present
+      features_in_fnames <- features_in_fnames[!(features_in_fnames %in%
+                                                   c("custom", "salmon", "sailfish",
+                                                     "alevin", "piscem", "kallisto",
+                                                     "rsem", "stringtie"))]
+
+
+      features <- c(features, quant_name)
+
+    }
+
+    if(!is.null(parameter)){
+
+      features <- c(features, gsub("_", "",parameter))
+
+    }
 
 
     # Don't search for fullfit output
@@ -171,35 +193,13 @@ get_table_name <- function(obj, tabletype,
 
     }
 
-    features_in_fnames <- strsplit(fnames, split = "_")
 
 
-
-
-    # Determine whether or not to search for quantification tool name
-    if(is.null(quant_name)){
-
-      # Remove quantification tool name if present
-      features_in_fnames <- features_in_fnames[!(features_in_fnames %in%
-                                                 c("custom", "salmon", "sailfish",
-                                                   "alevin", "piscem", "kallisto",
-                                                   "rsem", "stringtie"))]
-
-      present <- unlist(lapply(features_in_fnames, function(x) {
-        return(all(features %in% x ) & all(x %in% features))
-      })
-      )
-
-
-    }else{
-
-      present <- unlist(lapply(features_in_fnames, function(x) {
-        return(all(c(features, quant_name) %in% x ) & all(x %in% c(features, quant_name)))
-      })
-      )
-
-
-    }
+    # Look for table of interest
+    present <- unlist(lapply(features_in_fnames, function(x) {
+      return(all(features %in% x ) & all(x %in% features))
+    })
+    )
 
 
 
@@ -227,6 +227,7 @@ get_table_name <- function(obj, tabletype,
     }
 
     if(length(present) > 1){
+
 
       if(is.null(quant_name)){
 
