@@ -109,9 +109,9 @@ EstimateIsoformFractions <- function(obj,
 
     possible_fraction_names <- names(ezbdo$fractions)
 
-    fraction_name <- possible_fraction_names[(grepl(paste0(fractions_identifier, "_"),
+    fraction_name <- possible_fraction_names[(grepl(paste0(gsub("_","",fractions_identifier), "_"),
                                                    possible_fraction_names) |
-                                               grepl(paste0("_", fractions_identifier),
+                                               grepl(paste0("_", gsub("_","",fractions_identifier)),
                                                      possible_fraction_names)) &
                                                !grepl("^isoforms_",
                                                       possible_fraction_names)]
@@ -328,7 +328,26 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
   logit_fraction_of_interest <- paste0("logit_", fraction_of_interest)
 
 
+  # # WAY I WANT TO DO IT
+  # Fns_multi <- Fns_multi %>%
+  #   dplyr::mutate(fn = !!sym(fraction_of_interest)) %>%
+  #   dplyr::group_by(dplyr::across(dplyr::all_of(gene_colnames))) %>%
+  #   tidyr::nest() %>%
+  #   dplyr::mutate(fnest = lapply(data, fit_beta_regression)) %>%
+  #   dplyr::select(!!gene_colnames, fnest) %>%
+  #   tidyr::unnest(cols = c(fnest)) %>%
+  #   dplyr::mutate(!!logit_fraction_of_interest := logit_fn,
+  #                 !!fraction_of_interest := inv_logit(logit_fn)) %>%
+  #   dplyr::select(-logit_fn) %>%
+  #   dplyr::inner_join(quant,
+  #                     by = c("transcript_id"))
+
+  # CHESS-specific hack for right now
   Fns_multi <- Fns_multi %>%
+    dplyr::ungroup() %>%
+    dplyr::rowwise() %>%
+    dplyr::filter(grepl(paste0(GF, "\\."), transcript_id)) %>%
+    dplyr::ungroup() %>%
     dplyr::mutate(fn = !!sym(fraction_of_interest)) %>%
     dplyr::group_by(dplyr::across(dplyr::all_of(gene_colnames))) %>%
     tidyr::nest() %>%
