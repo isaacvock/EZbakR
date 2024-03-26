@@ -163,19 +163,33 @@ get_table_name <- function(obj, tabletype,
 
     # Feature names will show up with '_'s removed
     features <- gsub("_","",features)
+
+    # Don't search for fullfit output
+    if(tabletype == 'averages'){
+
+      fnames <- fnames[!grepl('fullfit', fnames)]
+
+    }
+
     features_in_fnames <- strsplit(fnames, split = "_")
 
 
     if(!is.null(quant_name)){
 
-      # Remove quantification tool name if present
-      features_in_fnames <- features_in_fnames[!(features_in_fnames %in%
-                                                   c("custom", "salmon", "sailfish",
-                                                     "alevin", "piscem", "kallisto",
-                                                     "rsem", "stringtie"))]
+
 
 
       features <- c(features, quant_name)
+
+    }else{
+
+      # Remove quantification tool name if present
+      features_in_fnames <- lapply(features_in_fnames,
+                                   function(x){
+                                     return(x[!(x %in% c("custom", "salmon", "sailfish",
+                                                         "alevin", "piscem", "kallisto",
+                                                         "rsem", "stringtie"))])
+                                   })
 
     }
 
@@ -186,12 +200,7 @@ get_table_name <- function(obj, tabletype,
     }
 
 
-    # Don't search for fullfit output
-    if(tabletype == 'averages'){
 
-      fnames <- fnames[!grepl('fullfit', fnames)]
-
-    }
 
 
 
@@ -204,14 +213,16 @@ get_table_name <- function(obj, tabletype,
 
 
 
-    if(length(present) == 0){
+    if(sum(present) == 0){
 
 
       # Remove quantification tool name if present
-      features_in_fnames <- features_in_fnames[!(features_in_fnames %in%
-                                                   c("custom", "salmon", "sailfish",
-                                                     "alevin", "piscem", "kallisto",
-                                                     "rsem", "stringtie"))]
+      features_in_fnames <- lapply(features_in_fnames,
+                                   function(x){
+                                     return(x[!(x %in% c("custom", "salmon", "sailfish",
+                                                         "alevin", "piscem", "kallisto",
+                                                         "rsem", "stringtie"))])
+                                   })
 
       # Print out the allowed features
       features_allowed <- lapply(features_in_fnames, function(x){
@@ -226,7 +237,7 @@ get_table_name <- function(obj, tabletype,
 
     }
 
-    if(length(present) > 1){
+    if(sum(present) > 1){
 
 
       if(is.null(quant_name)){
