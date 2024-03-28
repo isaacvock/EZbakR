@@ -6,8 +6,9 @@
 \usage{
 CompareParameters(
   obj,
-  features = "all",
+  features = NULL,
   parameter = "log_kdeg",
+  quant_name = NULL,
   condition,
   reference,
   experimental

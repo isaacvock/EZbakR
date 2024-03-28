@@ -13,6 +13,7 @@ AverageAndRegularize(
   include_all_parameters = TRUE,
   sd_reg_factor = 10,
   error_if_singular = TRUE,
+  quant_name = NULL,
   min_reads = 10
 )
 }
