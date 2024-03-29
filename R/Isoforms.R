@@ -88,7 +88,7 @@ EstimateIsoformFractions <- function(obj,
 
   if(is.null(quant_name)){
 
-    possible_quant_names <- names(ezbdo$readcounts)
+    possible_quant_names <- names(obj$readcounts)
 
     quant_name <- possible_quant_names[grepl("isoform_quant", possible_quant_names)]
 
@@ -110,7 +110,7 @@ EstimateIsoformFractions <- function(obj,
 
   if(is.null(fraction_name)){
 
-    possible_fraction_names <- names(ezbdo$fractions)
+    possible_fraction_names <- names(obj$fractions)
 
     fraction_name <- possible_fraction_names[(grepl(paste0(gsub("_","",fractions_identifier), "_"),
                                                    possible_fraction_names) |
