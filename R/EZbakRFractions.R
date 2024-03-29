@@ -18,7 +18,6 @@ new_EZbakRFractions <- function(fractions, metadf){
 
   # Make output
   struct_list <- list(fractions = list(fractions), metadf = metadf)
-  names(struct_list) <- list_names
   names(struct_list[['fractions']]) <- paste(features, collapse = "_")
 
   structure(struct_list, class = "EZbakRFractions")
@@ -31,6 +30,7 @@ new_EZbakRFractions <- function(fractions, metadf){
 #' @param obj An object of class `EZbakRFractions`
 validate_EZbakRFractions <- function(obj){
 
+  browser()
 
   ### Vector of potential mutational populations
 
@@ -63,7 +63,7 @@ validate_EZbakRFractions <- function(obj){
   # a substring of the feature column would have to include 'high' or 'low'
   # to screw things up. Even then, I will probably add a filter for valid
   # mutation types to catch this crazy edge case (or a misnamed fraction).
-  substrings <- unlist(strsplit(fraction_cols[grepl("fraction_", fraction_cols)], "_"))
+  substrings <- unlist(strsplit(fraction_cols[grepl("^fraction_", fraction_cols)], "_"))
   pops <- substrings[grepl("high", substrings) | grepl("low", substrings)]
   mutations_in_fractions <- substr(pops, nchar(pops) - 1, nchar(pops))
 
