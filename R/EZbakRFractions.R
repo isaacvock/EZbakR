@@ -30,7 +30,6 @@ new_EZbakRFractions <- function(fractions, metadf){
 #' @param obj An object of class `EZbakRFractions`
 validate_EZbakRFractions <- function(obj){
 
-  browser()
 
   ### Vector of potential mutational populations
 
