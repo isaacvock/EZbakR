@@ -14,13 +14,15 @@ ImportIsoformQuant <- function(obj, files,
 
   txi <- tximport::tximport(files, type = quant_tool, txIn = TRUE, txOut = TRUE)
 
-  counts_df <- dplyr::as_tibble(txi$counts, rownames = "transcript_id") %>%
+  counts_df <- dplyr::as_tibble(txi$counts, rownames = "transcript_id",
+                                .name_repair = "unique") %>%
     tidyr::pivot_longer(names_to = "sample",
                         values_to = "expected_count",
                         cols = !transcript_id)
 
   final_df <- dplyr::as_tibble(txi$length,
-                               rownames = "transcript_id") %>%
+                               rownames = "transcript_id",
+                               .name_repair = "unique") %>%
     tidyr::pivot_longer(names_to = "sample",
                         values_to = "effective_length",
                         cols = !transcript_id) %>%
