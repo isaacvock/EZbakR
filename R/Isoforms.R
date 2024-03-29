@@ -86,6 +86,7 @@ EstimateIsoformFractions <- function(obj,
                                      fraction_name = NULL,
                                      gene_to_transcript = NULL){
 
+
   if(is.null(quant_name)){
 
     possible_quant_names <- names(obj$readcounts)
@@ -160,7 +161,10 @@ EstimateIsoformFractions <- function(obj,
 
 
   ### Estimate fractions
-  samp_names <- unique(obj[['fractions']][[fraction_name]]$sample)
+  metadf <- obj$metadf
+  # TO-DO; GENERALIZE FOR PULSE-CHASE
+  samp_names <- metadf[['sample']][metadf$tl > 0]
+
 
 
   isoform_fit <- purrr::map(.x = samp_names,
