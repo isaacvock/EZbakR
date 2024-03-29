@@ -2,6 +2,7 @@
 ### READ COUNT NORMALIZATION
 ############################
 
+#' @export
 get_normalized_read_counts <- function(obj,
                                        features_to_analyze,
                                        isoform_fraction_name = NULL){
@@ -10,6 +11,7 @@ get_normalized_read_counts <- function(obj,
 
 }
 
+#' @export
 get_normalized_read_counts.EZbakRFractions <- function(obj,
                                                        features_to_analyze,
                                                        isoform_fraction_name = NULL){
@@ -38,6 +40,7 @@ get_normalized_read_counts.EZbakRFractions <- function(obj,
 
 }
 
+#' @export
 get_normalized_read_counts.default <- function(obj,
                                                features_to_analyze,
                                                isoform_fraction_name = NULL){

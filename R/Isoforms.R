@@ -81,7 +81,8 @@ ImportIsoformQuant <- function(obj, files,
 EstimateIsoformFractions <- function(obj,
                                      fractions_identifier = "transcripts",
                                      quant_name = NULL,
-                                     fraction_name = NULL){
+                                     fraction_name = NULL,
+                                     gene_to_transcript = NULL){
 
   if(is.null(quant_name)){
 
@@ -166,7 +167,8 @@ EstimateIsoformFractions <- function(obj,
                             quant_name = quant_name,
                             fraction_name = fraction_name,
                             gene_colnames = gene_colnames,
-                            transcript_colname = isoform_feature)
+                            transcript_colname = isoform_feature,
+                            gene_to_transcript = gene_to_transcript)
 
   isoform_fit <- dplyr::bind_rows(isoform_fit)
 
@@ -252,7 +254,8 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
                                             quant_name,
                                             fraction_name,
                                             gene_colnames,
-                                            transcript_colname){
+                                            transcript_colname,
+                                            gene_to_transcript){
 
 
   ### THINGS THAT NEED TO BE INFERRED
@@ -287,13 +290,32 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
   # Need to have one row for each transcript ID from a group of
   # transcript IDs, and need to keep track of which reads came from
   # which groups of transcript IDs
-  Fns <- Fns %>%
-    dplyr::mutate(group = 1:n()) %>%
-    tidyr::separate_rows(!!transcript_colname, sep = "\\+") %>%
-    dplyr::mutate(transcript_id = !!sym(transcript_colname)) %>%
-    dplyr::select(-!!transcript_colname) %>%
-    dplyr::inner_join(quant,
-               by = c("transcript_id", "sample"))
+  # Also includes a hack to fix issue where a read gets assigned to a transcript
+  # isoform on the opposite strand from which the read's RNA originated.
+  if(is.null(gene_to_transcript)){
+
+    Fns <- Fns %>%
+      dplyr::mutate(group = 1:n()) %>%
+      tidyr::separate_rows(!!transcript_colname, sep = "\\+") %>%
+      dplyr::mutate(transcript_id = !!sym(transcript_colname)) %>%
+      dplyr::select(-!!transcript_colname) %>%
+      dplyr::inner_join(quant,
+                        by = c("transcript_id", "sample"))
+
+  }else{
+
+    Fns <- Fns %>%
+      dplyr::mutate(group = 1:n()) %>%
+      tidyr::separate_rows(!!transcript_colname, sep = "\\+") %>%
+      dplyr::mutate(transcript_id = !!sym(transcript_colname)) %>%
+      dplyr::select(-!!transcript_colname) %>%
+      dplyr::inner_join(gene_to_transcript,
+                        by = c("transcript_id", gene_colnames)) %>%
+      dplyr::inner_join(quant,
+                        by = c("transcript_id", "sample"))
+
+  }
+
 
   # What fraction of the reads are expected to have come from each isoform?
   Fns <- Fns %>%
@@ -324,26 +346,8 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
   logit_fraction_of_interest <- paste0("logit_", fraction_of_interest)
 
 
-  # # WAY I WANT TO DO IT
-  # Fns_multi <- Fns_multi %>%
-  #   dplyr::mutate(fn = !!sym(fraction_of_interest)) %>%
-  #   dplyr::group_by(dplyr::across(dplyr::all_of(gene_colnames))) %>%
-  #   tidyr::nest() %>%
-  #   dplyr::mutate(fnest = lapply(data, fit_beta_regression)) %>%
-  #   dplyr::select(!!gene_colnames, fnest) %>%
-  #   tidyr::unnest(cols = c(fnest)) %>%
-  #   dplyr::mutate(!!logit_fraction_of_interest := logit_fn,
-  #                 !!fraction_of_interest := inv_logit(logit_fn)) %>%
-  #   dplyr::select(-logit_fn) %>%
-  #   dplyr::inner_join(quant,
-  #                     by = c("transcript_id"))
-
-  # CHESS-specific hack for right now
+  # WAY I WANT TO DO IT
   Fns_multi <- Fns_multi %>%
-    dplyr::ungroup() %>%
-    dplyr::rowwise() %>%
-    dplyr::filter(grepl(paste0(GF, "\\."), transcript_id)) %>%
-    dplyr::ungroup() %>%
     dplyr::mutate(fn = !!sym(fraction_of_interest)) %>%
     dplyr::group_by(dplyr::across(dplyr::all_of(gene_colnames))) %>%
     tidyr::nest() %>%
@@ -355,6 +359,24 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
     dplyr::select(-logit_fn) %>%
     dplyr::inner_join(quant,
                       by = c("transcript_id"))
+
+  # # CHESS-specific hack for right now
+  # Fns_multi <- Fns_multi %>%
+  #   dplyr::ungroup() %>%
+  #   dplyr::rowwise() %>%
+  #   dplyr::filter(grepl(paste0(GF, "\\."), transcript_id)) %>%
+  #   dplyr::ungroup() %>%
+  #   dplyr::mutate(fn = !!sym(fraction_of_interest)) %>%
+  #   dplyr::group_by(dplyr::across(dplyr::all_of(gene_colnames))) %>%
+  #   tidyr::nest() %>%
+  #   dplyr::mutate(fnest = lapply(data, fit_beta_regression)) %>%
+  #   dplyr::select(!!gene_colnames, fnest) %>%
+  #   tidyr::unnest(cols = c(fnest)) %>%
+  #   dplyr::mutate(!!logit_fraction_of_interest := logit_fn,
+  #                 !!fraction_of_interest := inv_logit(logit_fn)) %>%
+  #   dplyr::select(-logit_fn) %>%
+  #   dplyr::inner_join(quant,
+  #                     by = c("transcript_id"))
 
 
   # Combine single and multi-isoform gene estimates
