@@ -162,6 +162,7 @@ get_table_name <- function(obj, tabletype,
                            parameter = NULL){
 
 
+
   fnames <- names(obj[[tabletype]])
 
 
@@ -171,9 +172,8 @@ get_table_name <- function(obj, tabletype,
     ### Use the only available fractions; or throw an error if there
     ### is more than one fractions and thus auto-detection is impossible
 
-    table_name <- names(fnames)
 
-    if(length(table_name) > 1){
+    if(length(fnames) > 1){
 
       stop(paste0("There is more than one ", tabletype," data frame; therefore,
            you need to explicit specify a `features` vector to let EZbakR
@@ -181,7 +181,7 @@ get_table_name <- function(obj, tabletype,
 
     }
 
-    features_to_analyze <- unname(unlist(strsplit(table_name, "_")))
+    features_to_analyze <- unname(unlist(strsplit(fnames, "_")))
 
     table_name <- paste(features_to_analyze, collapse = "_")
 
@@ -308,11 +308,13 @@ get_table_name <- function(obj, tabletype,
     }
 
 
+    table_name <- fnames[present]
+
+
   }
 
-  table_name <- fnames[present]
 
-  if("isoforms" %in% features){
+  if(grepl("^isoforms", table_name)){
     isoform_specific <- TRUE
   }else{
     isoform_specific <- FALSE

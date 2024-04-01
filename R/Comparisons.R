@@ -174,10 +174,12 @@ general_avg_and_reg <- function(obj, features, parameter,
 
   }
 
+  formula_reads <- as.formula(paste0(paste(c("log_normalized_reads", formula_sd), collapse = ""), "-1"))
+
+
   formula_sd <- as.formula(paste0(paste(c(parameter, formula_sd), collapse = ""), "-1"))
 
 
-  formula_reads <- as.formula(paste0(paste(c("log_normalized_reads", formula_sd), collapse = ""), "-1"))
 
   ### Fit linear, potentially heteroskedastic model
   meta_cols <- colnames(metadf)
@@ -547,6 +549,7 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
 
 
   if(opt$convergence != 0) {
+    browser()
     stop("Model did not converge!")
   }
 
