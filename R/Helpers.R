@@ -165,6 +165,12 @@ get_table_name <- function(obj, tabletype,
 
   fnames <- names(obj[[tabletype]])
 
+  # Don't search for fullfit output
+  if(tabletype == 'averages'){
+
+    fnames <- fnames[!grepl('fullfit', fnames)]
+
+  }
 
 
   if(is.null(features)){
@@ -194,12 +200,7 @@ get_table_name <- function(obj, tabletype,
     # Feature names will show up with '_'s removed
     features <- gsub("_","",features)
 
-    # Don't search for fullfit output
-    if(tabletype == 'averages'){
 
-      fnames <- fnames[!grepl('fullfit', fnames)]
-
-    }
 
     features_in_fnames <- strsplit(fnames, split = "_")
 

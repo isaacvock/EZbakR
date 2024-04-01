@@ -346,7 +346,13 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
 
   Fns_single <- Fns %>%
     dplyr::inner_join(single_isoforms %>% dplyr::select(-n),
-                      by = gene_colnames)
+                      by = gene_colnames) %>%
+    dplyr::group_by(across(all_of(c(gene_colnames, "transcript_id")))) %>%
+    dplyr::summarise(!!fraction_of_interest := sum(n*(!!sym(fraction_of_interest)))/sum(n),
+                     effective_length = mean(effective_length),
+                     expected_count = mean(expected_count)) %>%
+    dplyr::mutate(!!logit_fraction_of_interest := logit(!!sym(fraction_of_interest)))
+
 
   Fns_multi <- Fns %>%
     dplyr::left_join(single_isoforms %>%

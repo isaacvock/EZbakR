@@ -238,6 +238,7 @@ general_avg_and_reg <- function(obj, features, parameter,
 
     }
 
+    ### TO-DO; DEAL WITH THIS EDGE-CASE EFFECTIVELY; IMPORTANT FOR TILAC
     model_fit <- kinetics %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
       dplyr::summarise()
@@ -282,7 +283,27 @@ general_avg_and_reg <- function(obj, features, parameter,
                            values_from = c(mean, logsd, coverage, se_mean, se_logsd),
                            names_sep = paste0("_", mean_vars[2]))
 
-    }else{
+    }else if(interaction_only(formula_mean) & interaction_only(formula_sd) & length(mean_vars) == length(sd_vars)){
+
+      ### CURRENTLY A SLIGHT OVERSIMPLIFICATION THAT ASSUMES A USER WILL HAVE THE
+      ### SAME MEAN AND SD FORMULAS
+
+      # It's much faster this way
+      model_fit <- kinetics %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2:length(mean_vars)], features_to_analyze)))) %>%
+        dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
+                         logsd = log(sd(!!dplyr::sym(parameter))),
+                         coverage = mean(log_normalized_reads)) %>%
+        dplyr::mutate(se_mean = exp(logsd)/sqrt(dplyr::n()),
+                      se_logsd = (1/(2*exp(logsd)^2)) * sqrt((2*exp(logsd)^4)/(dplyr::n() - 1)) ) %>%
+        tidyr::pivot_wider(names_from = !!mean_vars[2:length(mean_vars)],
+                           values_from = c(mean, logsd, coverage, se_mean, se_logsd),
+                           names_glue = paste0("{.value}_", paste(paste0(mean_vars[2:length(mean_vars)],
+                                                                         "{", mean_vars[2:length(mean_vars)],"}"),
+                                                                  collapse = ":") ))
+
+    }
+    else{
 
       model_fit <- kinetics %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
@@ -319,14 +340,14 @@ general_avg_and_reg <- function(obj, features, parameter,
   # Step 1: Filter column names for relevant patterns
   sd_columns <- names(model_fit)[grepl("^logsd_", names(model_fit))]
   covariate_names <- substring(sd_columns, 7)
-  coverage_columns <- names(df)[grepl("^coverage_", names(model_fit))]
+  coverage_columns <- names(model_fit)[grepl("^coverage_", names(model_fit))]
   relevant_columns <- union(sd_columns, coverage_columns)
 
   # Step 2: Iterate and perform regression
   regression_results <- purrr::map(covariate_names, ~ {
 
     # Dynamically create formula
-    formula_str <- paste("logsd_", .x, " ~ coverage_", .x, sep = "")
+    formula_str <- paste("`logsd_", .x, "`", " ~ `coverage_", .x, "`", sep = "")
     formula <- as.formula(formula_str)
 
     # Perform linear regression
@@ -499,7 +520,12 @@ CompareParameters <- function(obj, features = NULL, parameter = "log_kdeg",
 
 
 # Define the likelihood function
-heteroskedastic_likelihood <- function(params, y, X_mean, X_sd) {
+heteroskedastic_likelihood <- function(params, y, X_mean, X_sd, debug = FALSE) {
+
+  if(debug){
+    browser()
+  }
+
   n <- length(y)
   beta <- params[1:ncol(X_mean)]
   log_sigma <- params[(ncol(X_mean) + 1):length(params)]
@@ -516,6 +542,7 @@ heteroskedastic_likelihood <- function(params, y, X_mean, X_sd) {
 fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
                                              dependent_var,
                                              error_if_singular = TRUE) {
+
 
   # Parse formula objects into model matrices
   designMatrix_mean <- model.matrix(formula_mean, data)
@@ -535,10 +562,11 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
   }
 
 
-  # Initial parameter guesses
-  startParams <- rep(0, ncol(designMatrix_mean) + ncol(designMatrix_sd))
+  # Initial parameter guesses; keeping it realistic to hopefully increase odds of convergence
+  startParams <- c(rep(mean(data[[dependent_var]]), times = ncol(designMatrix_mean)),
+                   rep(log(sd(data[[dependent_var]]) + 0.001), times = ncol(designMatrix_sd)))
 
-  # Optimization
+  # Try BFGS
   opt <- optim(startParams, heteroskedastic_likelihood,
                y = data[[dependent_var]],
                X_mean = designMatrix_mean,
@@ -549,8 +577,36 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
 
 
   if(opt$convergence != 0) {
+
     browser()
-    stop("Model did not converge!")
+
+
+    # Sometimes L-BFGS-B converges when BFGS doesn't, just out of pure luck
+    # of it being a rougher approximation I guess.
+    # The reason I try BFGS first is because I found that it was far more
+    # likely to converge on any given data subset. Kinda surprised by how often
+    # L-BFGS-B doesn't converge, but these are some quasi-non-trivial models I am
+    # fitting.
+    # I will note that "failed convergence" almost always meant that the
+    # max number of iterations was hit (code 1).
+    opt <- optim(startParams, heteroskedastic_likelihood,
+                 y = data[[dependent_var]],
+                 X_mean = designMatrix_mean,
+                 X_sd = designMatrix_sd,
+                 method = "L-BFGS-B",
+                 upper = rep(7, times = length(startParams)),
+                 lower = rep(-7, times = length(startParams)),
+                 hessian = TRUE)
+
+
+    if(opt$convergence != 0){
+
+      warning("Model did not converge for one feature set!")
+
+      browser()
+
+    }
+
   }
 
   if(error_if_singular){
@@ -596,4 +652,22 @@ calc_avg_coverage <- function(data, formula){
 
   return(as.list(estimates))
 
+}
+
+
+# Are there only interaction terms in a formula?
+interaction_only <- function(formula) {
+
+  # Extract terms information
+  terms_info <- terms(formula)
+
+  # Convert to character for easier handling
+  terms_char <- attr(terms_info, "term.labels")
+
+  # Check if all terms are interaction terms or '-1'
+  all_interactions_or_no_intercept <- all(sapply(terms_char, function(term) {
+    grepl("[:*]", term) || term == "-1"
+  }))
+
+  return(all_interactions_or_no_intercept)
 }
