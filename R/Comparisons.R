@@ -109,7 +109,7 @@ checkSingleLevelFactors <- function(formula, data) {
 get_sd_posterior <- function(n = 1, sd_est, sd_var,
                              fit_var, fit_mean){
 
-  ifelse(sd_est > fit_mean){
+  if(sd_est > fit_mean){
 
     denom <- (n/sd_var + 1/fit_var)
     num <- sd_est/sd_var + fit_mean/fit_var
