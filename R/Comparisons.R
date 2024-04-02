@@ -101,16 +101,29 @@ checkSingleLevelFactors <- function(formula, data) {
 
 
 # Function to get normal distribution posterior mean
-# This is on log-scale, so have to return on natural
-# scale to make it usable in downstream test statistic
-# calculations.
+# This is log-scale standard deviation regularization
+# Currently have implemented a conservative strategy where
+# standard deviations less than the trend are regularized
+# all the way up to the trend, and standard deviations above the
+# trend are regularized as normal.
 get_sd_posterior <- function(n = 1, sd_est, sd_var,
                              fit_var, fit_mean){
 
-  denom <- (n/sd_var + 1/fit_var)
-  num <- sd_est/sd_var + fit_mean/fit_var
+  ifelse(sd_est > fit_mean){
 
-  return(num/denom)
+    denom <- (n/sd_var + 1/fit_var)
+    num <- sd_est/sd_var + fit_mean/fit_var
+
+    output <- denom/num
+
+  }else{
+
+    output <- fit_mean
+
+  }
+
+
+  return(output)
 
 }
 

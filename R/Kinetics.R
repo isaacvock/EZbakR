@@ -88,7 +88,6 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
                                         quant_name = NULL){
 
 
-  browser()
 
   `.` <- list
 
