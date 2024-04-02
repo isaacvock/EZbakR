@@ -88,6 +88,8 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
                                         quant_name = NULL){
 
 
+  browser()
+
   `.` <- list
 
 
@@ -130,7 +132,7 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
   kinetics <- kinetics[tl > 0]
 
 
-  kinetics[, kdeg := -log(1 - inv_logit(get(fraction_of_interest)))/tl]
+  kinetics[, kdeg := -log(1 - get(fraction_of_interest))/tl]
   kinetics[, log_kdeg := log(kdeg)]
 
 
