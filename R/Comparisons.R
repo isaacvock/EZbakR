@@ -113,9 +113,9 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
   denom <- (n/sd_var + 1/fit_var)
   num <- sd_est/sd_var + fit_mean/fit_var
 
-  ifelse(sd_est > fit_mean,
-         output = denom/num,
-         output = fit_mean)
+  output <- ifelse(sd_est > fit_mean,
+                   num/denom,
+                   fit_mean)
 
   return(output)
 
@@ -264,9 +264,11 @@ general_avg_and_reg <- function(obj, features, parameter,
         dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
         dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
                          logsd = log(sd(!!dplyr::sym(parameter))),
-                         coverage = mean(log_normalized_reads)) %>%
-        dplyr::mutate(se_mean = exp(logsd)/sqrt(dplyr::n()),
-                      se_logsd = (1/(2*exp(logsd)^2)) * sqrt((2*exp(logsd)^4)/(dplyr::n() - 1)) ) %>%
+                         coverage = mean(log_normalized_reads),
+                         replicates = dplyr::n()) %>%
+        dplyr::mutate(se_mean = exp(logsd)/sqrt(replicates),
+                      se_logsd = (1/(2*exp(logsd)^2)) * sqrt((2*exp(logsd)^4)/(replicates - 1)) ) %>%
+        dplyr::select(-replicates) %>%
         tidyr::pivot_wider(names_from = !!mean_vars[2],
                            values_from = c(mean, logsd, coverage, se_mean, se_logsd),
                            names_sep = paste0("_", mean_vars[2]))
@@ -300,9 +302,11 @@ general_avg_and_reg <- function(obj, features, parameter,
         dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2:length(mean_vars)], features_to_analyze)))) %>%
         dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
                          logsd = log(sd(!!dplyr::sym(parameter))),
-                         coverage = mean(log_normalized_reads)) %>%
-        dplyr::mutate(se_mean = exp(logsd)/sqrt(dplyr::n()),
-                      se_logsd = (1/(2*exp(logsd)^2)) * sqrt((2*exp(logsd)^4)/(dplyr::n() - 1)) ) %>%
+                         coverage = mean(log_normalized_reads),
+                         replicates = dplyr::n()) %>%
+        dplyr::mutate(se_mean = exp(logsd)/sqrt(replicates),
+                      se_logsd = (1/(2*exp(logsd)^2)) * sqrt((2*exp(logsd)^4)/(replicates - 1)) ) %>%
+        dplyr::select(-replicates) %>%
         tidyr::pivot_wider(names_from = !!mean_vars[2:length(mean_vars)],
                            values_from = c(mean, logsd, coverage, se_mean, se_logsd),
                            names_glue = paste0("{.value}_", paste(paste0(mean_vars[2:length(mean_vars)],
@@ -401,8 +405,10 @@ general_avg_and_reg <- function(obj, features, parameter,
     fit_mean_name <- paste0("logsd_", c, "_fit")
     sd_mean_name <- paste0("se_mean_", c)
 
+
     # Regularize
     model_fit <- model_fit %>%
+      dplyr::ungroup() %>%
       dplyr::mutate(!!col_name := get_sd_posterior(sd_est = !!dplyr::sym(sd_est_name),
                                                    sd_var = (!!dplyr::sym(sd_var_name)) ^ 2,
                                                    fit_var = var(regression_results[[c]]$lm_result$residuals) / sd_reg_factor,
