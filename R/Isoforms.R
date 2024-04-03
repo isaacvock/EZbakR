@@ -20,6 +20,12 @@ ImportIsoformQuant <- function(obj, files,
                         values_to = "expected_count",
                         cols = !transcript_id)
 
+  tpm_df <- dplyr::as_tibble(txi$abundance, rownames = "transcript_id",
+                             .name_repair = "unique") %>%
+    tidyr::pivot_longer(names_to = "sample",
+                        values_to = "TPM",
+                        cols = !transcript_id)
+
   final_df <- dplyr::as_tibble(txi$length,
                                rownames = "transcript_id",
                                .name_repair = "unique") %>%
@@ -27,7 +33,10 @@ ImportIsoformQuant <- function(obj, files,
                         values_to = "effective_length",
                         cols = !transcript_id) %>%
     dplyr::inner_join(counts_df,
+                      by = c("sample", "transcript_id")) %>%
+    dplyr::inner_join(tpm_df,
                       by = c("sample", "transcript_id"))
+
 
 
   if(quant_tool == "none"){
@@ -277,14 +286,13 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
   # 4) Which quantification to use
 
 
-
-
   message(paste0("Analyzing sample ", sample_name, "..."))
 
   # Determine which column is the fraction estimate of interest
   fraction_cols <- colnames(obj$fractions[[fraction_name]])
 
   fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
+  logit_fraction_of_interest <- paste0("logit_", fraction_of_interest)
 
   if(length(fraction_of_interest) > 1){
     stop("There is more than one non-redundant fraction estimate. Isoform
@@ -297,7 +305,7 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
     filter(sample == sample_name)
 
   quant <- obj$readcounts[[quant_name]] %>%
-    filter(sample == sample_name & expected_count > 0)
+    filter(sample == sample_name & expected_count > 10 & TPM > 1)
 
 
   # Need to have one row for each transcript ID from a group of
@@ -347,7 +355,7 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
   Fns_single <- Fns %>%
     dplyr::inner_join(single_isoforms %>% dplyr::select(-n),
                       by = gene_colnames) %>%
-    dplyr::group_by(across(all_of(c(gene_colnames, "transcript_id")))) %>%
+    dplyr::group_by(across(all_of(c("sample", gene_colnames, "transcript_id")))) %>%
     dplyr::summarise(!!fraction_of_interest := sum(n*(!!sym(fraction_of_interest)))/sum(n),
                      effective_length = mean(effective_length),
                      expected_count = mean(expected_count)) %>%
