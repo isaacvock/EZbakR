@@ -591,7 +591,6 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
 
   if(opt$convergence != 0) {
 
-    browser()
 
 
     # Sometimes L-BFGS-B converges when BFGS doesn't, just out of pure luck
@@ -616,7 +615,6 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
 
       warning("Model did not converge for one feature set!")
 
-      browser()
 
     }
 
