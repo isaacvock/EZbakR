@@ -230,12 +230,6 @@ beta_r_likelihood <- function(data, design_matrix, v, par,
 fit_beta_regression <- function(data){
 
 
-  if("ENST00000318238" %in% data$transcript_id){
-
-    browser()
-
-  }
-
 
   Fns_onegene <- data %>%
     dplyr::mutate(nreads = n) %>%
@@ -306,7 +300,6 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
 
   quant <- obj$readcounts[[quant_name]] %>%
     filter(sample == sample_name & expected_count > 10 & TPM > 1)
-
 
   # Need to have one row for each transcript ID from a group of
   # transcript IDs, and need to keep track of which reads came from
@@ -385,7 +378,8 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
                   !!fraction_of_interest := inv_logit(logit_fn)) %>%
     dplyr::select(-logit_fn) %>%
     dplyr::inner_join(quant,
-                      by = c("transcript_id"))
+                      by = c("transcript_id")) %>%
+    dplyr::select(-TPM)
 
   # # CHESS-specific hack for right now
   # Fns_multi <- Fns_multi %>%
@@ -414,8 +408,13 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
                   expected_count, effective_length) %>%
     dplyr::bind_rows(Fns_multi %>% dplyr::ungroup()) %>%
     dplyr::select(sample, !!gene_colnames, transcript_id, everything()) %>%
+    dplyr::rowwise() %>%
     dplyr::mutate(n = expected_count,
-                  RPK = expected_count/(effective_length/1000)) %>%
+                  RPK = expected_count/(effective_length/1000),
+                  !!logit_fraction_of_interest := ifelse(abs(!!sym(logit_fraction_of_interest)) >= 5,
+                                                  rnorm(1, !!sym(logit_fraction_of_interest), 0.25),
+                                                  !!sym(logit_fraction_of_interest)),
+                  !!fraction_of_interest := inv_logit(!!sym(logit_fraction_of_interest))) %>%
     dplyr::select(-expected_count, -effective_length)
 
   return(output)
