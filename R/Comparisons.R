@@ -693,7 +693,6 @@ interaction_only <- function(formula) {
 # Heteroskedastic regression log-likelihood gradient
 heteroskedastic_gradient <- function(params, y, X_mean, X_sd){
 
-  browser()
 
   n <- length(y)
   beta <- params[1:ncol(X_mean)]
@@ -702,17 +701,33 @@ heteroskedastic_gradient <- function(params, y, X_mean, X_sd){
   mu <- X_mean %*% beta
   sigma <- exp(X_sd %*% log_sigma)
 
-  # 0 if design matrix is 0, otherwise equal to the derivative of a normal log-likelihood
-  dlldlb <- t(((y - mu)/(sigma^2))) %*% X_mean
-  dlldls <- t(((y - mu)^2)/(sigma^3)) %*% X_sd
+  # Vectors to be Hadamard multiplied with desigm matrices
+  b_vects <- ((y - mu)/(sigma^2))
+  s_vects <- ((y - mu)^2)/(sigma^3)
+
+  # Hadamard product for betas
+    # Because derivative is 0 if design matrix is 0 and derivative of
+    # normal log-likelihood otherwise
+  nr <- nrow(X_mean)
+  ncb <- ncol(X_mean)
+  ncs <- ncol(X_sd)
+
+  dprod_beta <- matrix(0,ncol=ncb, nrow=nr)
+  dprod_sigma <- matrix(0,ncol=ncs, nrow=nr)
+  for(i in 1:nr){
+
+    dprod_beta[i,] <- X_mean[i,1:ncb]*b_vects[i]
+    dprod_sigma[i,] <- X_sd[i,1:ncs]*b_vects[i]
+
+  }
+
 
   # Sum derivatives of each data point to get total log-likelihood derivatives
-  dlldlb <- rowSums(dlldlb)
-  dlldls <- rowSums(dlldls)
-
-  return(c(dlldlb, dlldls))
+  dlldlb <- colSums(dprod_beta)
+  dlldls <- colSums(dprod_sigma)
 
 
+  return(c(-dlldlb, -dlldls))
 
 
 

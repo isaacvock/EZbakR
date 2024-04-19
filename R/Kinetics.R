@@ -122,6 +122,7 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
   # Add label time info
   metadf <- obj$metadf
 
+  metadf <- setDT(metadf)
   setkey(metadf, sample)
   setkey(kinetics, sample)
 
@@ -261,6 +262,7 @@ tilac_ratio_estimation <- function(obj,
   metadf <- obj$metadf
   metacols <- colnames(metadf)
 
+  metadf <- setDT(metadf)
   setkey(metadf, sample)
   setkey(kinetics, sample)
 
