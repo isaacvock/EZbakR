@@ -581,6 +581,7 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
 
   # Try BFGS
   opt <- optim(startParams, heteroskedastic_likelihood,
+               gr = heteroskedastic_gradient,
                y = data[[dependent_var]],
                X_mean = designMatrix_mean,
                X_sd = designMatrix_sd,
@@ -602,6 +603,7 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
     # I will note that "failed convergence" almost always meant that the
     # max number of iterations was hit (code 1).
     opt <- optim(startParams, heteroskedastic_likelihood,
+                 gr = heteroskedastic_gradient,
                  y = data[[dependent_var]],
                  X_mean = designMatrix_mean,
                  X_sd = designMatrix_sd,
@@ -682,3 +684,34 @@ interaction_only <- function(formula) {
 
   return(all_interactions_or_no_intercept)
 }
+
+
+# Heteroskedastic regression log-likelihood gradient
+heteroskedastic_gradient <- function(params, y, X_mean, X_sd){
+
+  n <- length(y)
+  beta <- params[1:ncol(X_mean)]
+  log_sigma <- params[(ncol(X_mean) + 1):length(params)]
+
+  mu <- X_mean %*% beta
+  sigma <- exp(X_sd %*% log_sigma)
+
+  # 0 if design matrix is 0, otherwise equal to the derivative of a normal log-likelihood
+  dlldlb <- ((y - mu)/(sigma^2)) %*% X_mean
+  dlldls <- (((y - mu)^2)/(sigma^3)) %*% X_sd
+
+  # Sum derivatives of each data point to get total log-likelihood derivatives
+  dlldlb <- rowSums(dlldlb)
+  dlldls <- rowSums(dlldls)
+
+  return(c(dlldlb, dlldls))
+
+
+
+
+
+}
+
+
+
+
