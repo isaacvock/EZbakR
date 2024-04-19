@@ -276,7 +276,7 @@ validate_EZbakRData <- function(obj){
 
   metadf[cols_to_convert] <- lapply(metadf[cols_to_convert], as.factor)
 
-  metadf <- setDT(metadf)
+  metadf <- dplyr::as_tibble(metadf)
 
   obj$metadf <- metadf
 
