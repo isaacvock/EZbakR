@@ -268,6 +268,18 @@ validate_EZbakRData <- function(obj){
   ### Make sure there is at least one feature column in cB
 
 
+  ### Convert all other metadf columns to factors
+
+  cols_to_convert <- metadf_cols[!(metadf_cols %in% c(tl_cols, "sample"))]
+
+  metadf <- as.data.frame(metadf)
+
+  metadf[cols_to_convert] <- lapply(metadf[cols_to_convert], as.factor)
+
+  metadf <- setDT(metadf)
+
+  obj$metadf <- metadf
+
   return(obj)
 
 
