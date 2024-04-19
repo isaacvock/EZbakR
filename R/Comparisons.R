@@ -40,7 +40,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                             include_all_parameters = TRUE,
                             sd_reg_factor = 10,
                             error_if_singular = TRUE, quant_name = NULL,
-                            min_reads = 10){
+                            min_reads = 10,
+                            force_optim = FALSE){
 
 
 
@@ -51,7 +52,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                              include_all_parameters = include_all_parameters,
                              sd_reg_factor = sd_reg_factor,
                              error_if_singular = error_if_singular, quant_name = quant_name,
-                             TILAC = TRUE, min_reads = min_reads)
+                             TILAC = TRUE, min_reads = min_reads,
+                             force_optim = force_optim)
 
   }else{
 
@@ -59,7 +61,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                         formula_mean = formula_mean, formula_sd = formula_sd,
                         include_all_parameters = include_all_parameters,
                         sd_reg_factor = sd_reg_factor, quant_name = quant_name,
-                        error_if_singular = error_if_singular, min_reads = min_reads)
+                        error_if_singular = error_if_singular, min_reads = min_reads,
+                        force_optim = force_optim)
 
   }
 
@@ -128,7 +131,8 @@ general_avg_and_reg <- function(obj, features, parameter,
                                 include_all_parameters,
                                 sd_reg_factor,
                                 error_if_singular, quant_name = NULL,
-                                TILAC = FALSE, min_reads = 10){
+                                TILAC = FALSE, min_reads = 10,
+                                force_optim = FALSE){
 
 
 
@@ -257,7 +261,7 @@ general_avg_and_reg <- function(obj, features, parameter,
     mean_vars <- all.vars(formula_mean)
     sd_vars <- all.vars(formula_sd)
 
-    if(length(mean_vars) == 2 & length(sd_vars) == 2){
+    if(length(mean_vars) == 2 & length(sd_vars) == 2 & !force_optim){
 
       # It's much faster this way
       model_fit <- kinetics %>%
@@ -274,7 +278,7 @@ general_avg_and_reg <- function(obj, features, parameter,
                            names_sep = paste0("_", mean_vars[2]))
 
 
-    }else if(length(mean_vars) == 2 & length(sd_vars) == 1){
+    }else if(length(mean_vars) == 2 & length(sd_vars) == 1 & !force_optim){
 
       # It's much faster this way
       model_fit <- kinetics %>%
@@ -292,7 +296,7 @@ general_avg_and_reg <- function(obj, features, parameter,
                            values_from = c(mean, logsd, coverage, se_mean, se_logsd),
                            names_sep = paste0("_", mean_vars[2]))
 
-    }else if(interaction_only(formula_mean) & interaction_only(formula_sd) & length(mean_vars) == length(sd_vars)){
+    }else if(interaction_only(formula_mean) & interaction_only(formula_sd) & length(mean_vars) == length(sd_vars) & !force_optim){
 
       ### CURRENTLY A SLIGHT OVERSIMPLIFICATION THAT ASSUMES A USER WILL HAVE THE
       ### SAME MEAN AND SD FORMULAS
@@ -689,6 +693,8 @@ interaction_only <- function(formula) {
 # Heteroskedastic regression log-likelihood gradient
 heteroskedastic_gradient <- function(params, y, X_mean, X_sd){
 
+  browser()
+
   n <- length(y)
   beta <- params[1:ncol(X_mean)]
   log_sigma <- params[(ncol(X_mean) + 1):length(params)]
@@ -697,8 +703,8 @@ heteroskedastic_gradient <- function(params, y, X_mean, X_sd){
   sigma <- exp(X_sd %*% log_sigma)
 
   # 0 if design matrix is 0, otherwise equal to the derivative of a normal log-likelihood
-  dlldlb <- ((y - mu)/(sigma^2)) %*% X_mean
-  dlldls <- (((y - mu)^2)/(sigma^3)) %*% X_sd
+  dlldlb <- t(((y - mu)/(sigma^2))) %*% X_mean
+  dlldls <- t(((y - mu)^2)/(sigma^3)) %*% X_sd
 
   # Sum derivatives of each data point to get total log-likelihood derivatives
   dlldlb <- rowSums(dlldlb)
