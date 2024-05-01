@@ -190,6 +190,39 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 #'  \item readlength
 #'  \item Ucont
 #' }
+#' @param mean_formula A formula object that specifies the linear model used to
+#' relate the factors in the <details> columns of `metadf` to average log(kdegs) and
+#' log(ksyns) in each sample.
+#' @param param_details A data frame with one row for each column of the design matrix
+#' obtained from `model.matrix(mean_formula, metadf)` that describes how to simulate
+#' the linear model parameters. The columns of this data frame are:
+#' \itemize{
+#'  \item param: Name of linear model parameter as it appears in the column names of the
+#'  design matrix from `model.matrix(mean_formula, metadf)`.
+#'  \item reference: Boolean; TRUE if you want to treat that parameter as a "reference". This
+#'  means that all other parameter values that aren't global parameters are set equal to this
+#'  unless otherwise determined (see `pdiff_*` parameters for how it is determined if a parameter
+#'  will differ from the reference).
+#'  \item global: Boolean; TRUE if you want to treat that parameter as a global parameter. This means
+#'  that a single value is used for all features.
+#'  \item logkdeg_mean: If parameter is the reference, then its value for the log(kdeg) linear model
+#'  will be drawn from a normal distribution with this mean. If it is a global parameter, then this
+#'  value will be used. If it is neither of these, then its value in the log(kdeg) linear model will
+#'  either be the reference (if there is no difference between this condition's value and the reference)
+#'  or the reference's value + a normally distributed random variable centered on this value.
+#'  \item logkdeg_sd: sd used for draws from normal distribution as described for `logkdeg_mean`.
+#'  \item logksyn_mean: Same as `logkdeg_mean` but for log(ksyn) linear model.
+#'  \item logksyn_sd: Same as `logkdeg_sd` but for log(kdeg) linear model.
+#'  \item pdiff_ks: Proportion of features whose value of this parameter in the log(ksyn) linear model
+#'  will differ from the reference's. Should be a number between 0 and 1, inclusive. For example, if
+#'  `pdiff_ks` is 0.1, then for 10% of features, this parameter will equal the reference parameter +
+#'  a normally distributed random variable with mean `logksyn_mean` and sd `logksyn_sd`. For the other
+#'  90% of features, this parameter will equal the reference.
+#'  \item pdiff_kd: Same as `pdiff_ks` but for log(kdeg) linear model.
+#'  \item pdiff_both: Proportion of features whose value for this parameter in BOTH the
+#'  log(kdeg) and log(ksyn) linear models will differ from the reference. Value must be
+#'  between 0 and min(c(pdiff_kd, pdiff_ks)) in that row.
+#' }
 #' @param seqdepth Only relevant if `read_vect` is not provided; in that case, this is
 #' the total number of reads to simulate.
 #' @param label_time Length of s^{4}U feed to simulate.
@@ -202,7 +235,7 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 #' @importFrom magrittr %>%
 #' @export
 SimulateMultiCondition <- function(nfeatures, metadf,
-                                   param_details, mean_formula,
+                                   mean_formula, param_details,
                                    seqdepth = 10000000, label_time = 2,
                                    pnew = 0.05, pold = 0.001,
                                    readlength = 200, Ucont = 0.25,
@@ -215,6 +248,13 @@ SimulateMultiCondition <- function(nfeatures, metadf,
 
 
   `.` <- list
+
+  ### Check validity of input
+
+  args <- c(as.list(environment()))
+
+  check_SimulateMultiCondition_input(args)
+
 
   ### Fill metadf with parameters that are only specified as single value
 
@@ -657,6 +697,180 @@ check_SimulateOneRep_input <- function(args){
   if(lks_sd <= 0){
 
     stop("logksyn_sd must be >= 0")
+
+  }
+
+
+  ### seqdepth
+  sdep <- args$seqdepth
+
+  if(!is.numeric(sdep)){
+
+    stop("seqdepth must be numeric")
+
+  }
+
+  if(sdep <= 0){
+
+    stop("seqdepth must be > 0")
+
+  }
+
+  if(round(sdep) != sdep){
+
+    stop("seqdepth must be an integer!")
+
+  }
+
+
+  ### pnew and old
+  pnew <- args$pnew
+  pold <- args$pold
+
+  if(!is.numeric(pnew)){
+
+    stop("pnew must be numeric!")
+
+  }
+
+  if(!is.numeric(pold)){
+
+    stop("pold must be numeric!")
+
+  }
+
+  if(pnew <= 0){
+
+    stop("pnew must be > 0")
+
+  }
+
+  if(pold < 0){
+
+    stop("pnew must be >= 0")
+
+  }
+
+  if(pnew > 1){
+    stop("pnew must be <= 1")
+  }
+
+  if(pold >= 1){
+    stop("pold must be < 1")
+  }
+
+  if(pnew <= pold){
+    stop("pnew must be strictly greater than pnew!")
+  }
+
+
+
+  ### Ucont
+  Ucont <- args$Ucont
+
+  if(!is.numeric(Ucont)){
+
+    stop("Ucont must be numeric!")
+
+  }
+
+  if(Ucont <= 0){
+
+    stop("Ucont must be > 0")
+
+  }
+
+  if(Ucont > 1){
+
+    stop("Ucont must be <= 1")
+
+  }
+
+
+}
+
+
+
+check_SimulateMultiCondition_input <- function(args){
+
+  metadf <- args$metadf
+  pd <- args$param_details
+
+  ### nfeatures
+
+  NF <- args$nfeatures
+
+  if(!is.numeric(NF)){
+
+    stop("nfeatures must be numeric!")
+
+  }
+
+  if(NF < 1){
+    stop("nfeatures must be >= 1!")
+  }
+
+  if(round(NF) != NF){
+
+    stop("nfeatures must be an integer!")
+
+  }
+
+
+  ### label_time
+  tl <- args$label_time
+
+  if(!is.numeric(tl)){
+
+    stop("label_time must be numeric")
+
+  }
+
+  if(tl < 0){
+
+    stop("label_time must be >= 0!")
+
+  }
+
+
+  ### sample_name
+  sname <- args$metadf$sample
+
+  if(!all(is.character(sname))){
+
+    stop("All elements of metadf column `sample` must be strings!")
+
+  }
+
+
+  ### feature_prefix
+  fp <- args$feature_prefix
+
+  if(!is.character(fp)){
+
+    stop("feature_prefix should be a string!")
+
+  }
+
+  if(length(fp) > 1){
+
+    stop("feature_prefix should be a single string!")
+
+  }
+
+
+  ### logkdeg_sd
+  lkd_sd <- args$logkdeg_sd
+
+  if(!is.numeric(lkd_sd)){
+
+    stop("logkdeg_mean must be numeric!")
+
+  }
+
+  if(lkd_sd <= 0){
+
+    stop("logkdeg_sd must be >= 0")
 
   }
 
