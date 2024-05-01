@@ -82,7 +82,7 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 
     if(is.null(kdeg_vect)){
 
-      kdeg_vect <- rlnorm(nfeatures,
+      kdeg_vect <- stats::rlnorm(nfeatures,
                           logkdeg_mean,
                           logkdeg_sd)
 
@@ -100,7 +100,7 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 
     if(is.null(ksyn_vect)){
 
-      ksyn_vect <- rlnorm(nfeatures,
+      ksyn_vect <- stats::rlnorm(nfeatures,
                           logksyn_mean,
                           logksyn_sd)
 
@@ -126,19 +126,19 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 
   totreads <- sum(read_vect)
 
-  read_status <- rbinom(n = totreads,
+  read_status <- stats::rbinom(n = totreads,
                         size = 1,
                         prob = rep(fn_vect, times = read_vect))
 
-  nT_count <- rbinom(n = totreads,
+  nT_count <- stats::rbinom(n = totreads,
                      size = readlength,
                      prob = Ucont)
 
-  TC_count <- rbinom(n = totreads,
+  TC_count <- stats::rbinom(n = totreads,
                      size = nT_count,
                      prob = read_status*pnew + (1 - read_status)*pold)
 
-  cB <- data.table(
+  cB <- data.table::data.table(
     sample = sample_name,
     feature = rep(paste0(feature_prefix, 1:nfeatures),
                   times = read_vect),
@@ -149,7 +149,7 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 
   ### Save ground truth
 
-  truth <- data.table(sample = sample_name,
+  truth <- data.table::data.table(sample = sample_name,
                       feature = paste0(feature_prefix, 1:nfeatures),
                       true_fraction_highTC = fn_vect,
                       true_kdeg = kdeg_vect,
@@ -287,7 +287,7 @@ SimulateMultiCondition <- function(nfeatures, metadf,
 
   ### Create param_details if not provided
 
-  mean_design <- model.matrix(mean_formula, metadf)
+  mean_design <- stats::model.matrix(mean_formula, metadf)
 
   mean_design_cols <- colnames(mean_design)
 
@@ -359,15 +359,15 @@ SimulateMultiCondition <- function(nfeatures, metadf,
 
   # Reference log(kdegs)
   pdref <- param_details %>%
-    filter(reference)
+    dplyr::filter(reference)
 
-  logkdeg_ref <- rnorm(nfeatures,
+  logkdeg_ref <- stats::rnorm(nfeatures,
                        mean = pdref$logkdeg_mean,
                        sd = pdref$logkdeg_sd)
 
 
   # Reference log(ksyns)
-  logksyn_ref <- rnorm(nfeatures,
+  logksyn_ref <- stats::rnorm(nfeatures,
                        mean = pdref$logksyn_mean,
                        sd = pdref$logksyn_sd)
 
@@ -385,7 +385,7 @@ SimulateMultiCondition <- function(nfeatures, metadf,
   for(p in seq_along(mean_design_cols)){
 
     pd <- param_details %>%
-      filter(param == mean_design_cols[p])
+      dplyr::filter(param == mean_design_cols[p])
 
     if(pd$reference){
 
@@ -425,12 +425,12 @@ SimulateMultiCondition <- function(nfeatures, metadf,
                                              ndiff_ks,
                                              nfeatures - diff_ks_start - ndiff_ks))
 
-      logkdeg_params[[p]] <- is_kdeg_param_nonzero*rnorm(nfeatures,
+      logkdeg_params[[p]] <- is_kdeg_param_nonzero*stats::rnorm(nfeatures,
                                                          pd$logkdeg_mean,
                                                          pd$logkdeg_sd) +
         logkdeg_ref
 
-      logksyn_params[[p]] <- is_ksyn_param_nonzero*rnorm(nfeatures,
+      logksyn_params[[p]] <- is_ksyn_param_nonzero*stats::rnorm(nfeatures,
                                                          pd$logksyn_mean,
                                                          pd$logksyn_sd) +
         logksyn_ref
@@ -536,15 +536,15 @@ SimulateMultiCondition <- function(nfeatures, metadf,
                          logksynsdtrend_slope)
 
 
-    logkdegs[[i]] <- rnorm(n = nsamp,
+    logkdegs[[i]] <- stats::rnorm(n = nsamp,
                            mean = feature_logkdegs,
                            sd = logkdeg_sds)
 
-    logksyns[[i]] <- rnorm(n = nsamp,
+    logksyns[[i]] <- stats::rnorm(n = nsamp,
                            mean = feature_logksyns,
                            sd = logksyn_sds)
 
-    reads[[i]] <- rnbinom(n = nsamp,
+    reads[[i]] <- stats::rnbinom(n = nsamp,
                           mu = feature_readavgs,
                           size = 1/(dispslope/feature_readavgs + dispint))
 
@@ -570,7 +570,7 @@ SimulateMultiCondition <- function(nfeatures, metadf,
   names_to_bind <- names(simdata[[1]])
 
   final_simdata <- lapply(names_to_bind, function(name) {
-    bind_rows(lapply(simdata, function(inner_list) inner_list[[name]]))
+    dplyr::bind_rows(lapply(simdata, function(inner_list) inner_list[[name]]))
   })
 
   names(final_simdata) <- names_to_bind

@@ -8,7 +8,7 @@ SimulateMultiCondition(
   nfeatures,
   metadf,
   mean_formula,
-  param_details,
+  param_details = NULL,
   seqdepth = 1e+07,
   label_time = 2,
   pnew = 0.05,
@@ -21,7 +21,18 @@ SimulateMultiCondition(
   logkdegsdtrend_slope = -0.3,
   logkdegsdtrend_intercept = -1.5,
   logksynsdtrend_slope = -0.3,
-  logksynsdtrend_intercept = -1.5
+  logksynsdtrend_intercept = -1.5,
+  logkdeg_mean = -1.9,
+  logkdeg_sd = 0.7,
+  logksyn_mean = 2.3,
+  logksyn_sd = 0.7,
+  logkdeg_diff_avg = 0,
+  logksyn_diff_avg = 0,
+  logkdeg_diff_sd = 0.5,
+  logksyn_diff_sd = 0.5,
+  pdiff_kd = 0.1,
+  pdiff_ks = 0,
+  pdiff_both = 0
 )
 }
 \arguments{
@@ -78,7 +89,14 @@ a normally distributed random variable with mean \code{logksyn_mean} and sd \cod
 \item pdiff_both: Proportion of features whose value for this parameter in BOTH the
 log(kdeg) and log(ksyn) linear models will differ from the reference. Value must be
 between 0 and min(c(pdiff_kd, pdiff_ks)) in that row.
-}}
+}
+If param_details is not specified by the user, the first column of the design matrix
+is assumed to represent the reference parameter, all parameters are assumed to be
+non-global, logkdeg_mean and logksyn_mean are set to the equivalently named parameter values
+described below for the reference and \code{logkdeg_diff_avg} and \code{logksyn_diff_avg} for all other parameters,
+logkdeg_sd and logksyn_sd are set to the equivalently named parameter values
+described below for the reference and \code{logkdeg_diff_sd} and \code{logksyn_diff_sd} for all other parameters,
+and pdiff_kd, pdiff_ks, and pdiff_both are all set to the equivalently named parameter values.}
 
 \item{seqdepth}{Only relevant if \code{read_vect} is not provided; in that case, this is
 the total number of reads to simulate.}
@@ -93,6 +111,40 @@ the total number of reads to simulate.}
 are simulated as being exactly this length.}
 
 \item{Ucont}{Probability that a nucleotide in a simulated read is a U.}
+
+\item{logkdeg_mean}{Mean of normal distribution from which reference log(kdeg)
+linear model parameter is drawn from for each feature if \code{param_details} is not provided.}
+
+\item{logkdeg_sd}{Standard deviation of normal distribution from which reference log(kdeg)
+linear model parameter is drawn from for each feature if \code{param_details} is not provided.}
+
+\item{logksyn_mean}{Mean of normal distribution from which reference log(ksyn)
+linear model parameter is drawn from for each feature if \code{param_details} is not provided.}
+
+\item{logksyn_sd}{Standard deviation of normal distribution from which reference log(ksyn)
+linear model parameter is drawn from for each feature if \code{param_details} is not provided.}
+
+\item{logkdeg_diff_avg}{Mean of normal distribution from which non-reference log(kdeg)
+linear model parameters are drawn from for each feature if \code{param_details} is not provided.}
+
+\item{logksyn_diff_avg}{Mean of normal distribution from which reference log(ksyn)
+linear model parameter are drawn from for each feature if \code{param_details} is not provided.}
+
+\item{logkdeg_diff_sd}{Standard deviation of normal distribution from which reference log(kdeg)
+linear model parameter are drawn from for each feature if \code{param_details} is not provided.}
+
+\item{logksyn_diff_sd}{Standard deviation of normal distribution from which reference log(ksyn)
+linear model parameter are drawn from for each feature if \code{param_details} is not provided.}
+
+\item{pdiff_kd}{Proportion of features for which non-reference log(kdeg) linear model parameters
+differ from the reference.}
+
+\item{pdiff_ks}{Proportion of features for which non-reference log(ksyn) linear model parameters
+differ from the reference.}
+
+\item{pdiff_both}{Proportion of features for which BOTH non-reference log(kdeg) and log(ksyn) linear model parameters
+differ from the reference.
+ksyns are simulated}
 }
 \description{
 \code{SimulateMultiCondition} is a highly flexibly simulator that combines linear modeling
