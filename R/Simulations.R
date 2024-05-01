@@ -1,3 +1,4 @@
+#' 
 SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
                            sample_name = "sampleA",
                            feature_prefix = "Gene",

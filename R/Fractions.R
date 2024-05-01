@@ -5,6 +5,7 @@
 #' @return A `fraction_design` table that assumes that every possible combination of
 #' mutational populations listed in `mutrate_populations` are present in your data.
 #' The `present` column can be modified if this assumption is incorrect
+#' @export
 create_fraction_design <- function(mutrate_populations){
 
   fraction_design <- dplyr::tibble(present = rep(TRUE,

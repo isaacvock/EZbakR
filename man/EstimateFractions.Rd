@@ -10,7 +10,8 @@ EstimateFractions(
   mutrate_populations = "all",
   fraction_design = NULL,
   Poisson = TRUE,
-  strategy = c("standard")
+  strategy = c("standard"),
+  column_to_reorder = NULL
 )
 }
 \arguments{

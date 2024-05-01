@@ -14,7 +14,8 @@ AverageAndRegularize(
   sd_reg_factor = 10,
   error_if_singular = TRUE,
   quant_name = NULL,
-  min_reads = 10
+  min_reads = 10,
+  force_optim = FALSE
 )
 }
 \arguments{

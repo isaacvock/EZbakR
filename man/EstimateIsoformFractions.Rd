@@ -8,7 +8,8 @@ EstimateIsoformFractions(
   obj,
   fractions_identifier = "transcripts",
   quant_name = NULL,
-  fraction_name = NULL
+  fraction_name = NULL,
+  gene_to_transcript = NULL
 )
 }
 \arguments{

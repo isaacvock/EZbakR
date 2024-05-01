@@ -5,6 +5,8 @@
 \title{Estimate mutation rates}
 \usage{
 EstimateMutRates(obj, populations = "all", strategy = "standard")
+
+EstimateMutRates(obj, populations = "all", strategy = "standard")
 }
 \arguments{
 \item{obj}{EZbakRDataobject}
@@ -28,5 +30,7 @@ to avoid overestimating the fraction of new reads
 }}
 }
 \description{
+Estimate mutation rates
+
 Estimate mutation rates
 }
