@@ -64,13 +64,14 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
                            seqdepth = 10000000, readlength = 200,
                            Ucont = 0.25){
 
+  `.` <- list
+
+
   ### Check validity of input
 
   args <- c(as.list(environment()))
 
   check_SimulateOneRep_input(args)
-
-
 
 
   ### Simulate kinetic parameters as necesary
@@ -164,19 +165,56 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 
 
 
-
+#' Simulate NR-seq data for multiple replicates of multiple biological conditions
+#'
+#' `SimulateMultiCondition` is a highly flexibly simulator that combines linear modeling
+#' of log(kdeg)'s with `SimulateOneRep` to simulate an NR-seq dataset. The linear model
+#' allows you to simulate multiple distinct treatments, batch effects, interaction effects,
+#' etc.
+#'
+#' @param nfeatures Number of "features" (e.g., genes) to simulate data for
+#' @param metadf A data frame with the following columns:
+#' \itemize{
+#'  \item sample: Names given to samples to simulate.
+#'  \item <details>: Any number of columns with any names (not taken by other metadf columns)
+#'  storing factors by which the samples can be stratified. These can be referenced
+#'  in `mean_formula`, described below.
+#' }
+#' These parameters (described more below) can also be included in metadf to specify sample-specific simulation
+#' parameter:
+#' \itemize{
+#'  \item seqdepth
+#'  \item label_time
+#'  \item pnew
+#'  \item pold
+#'  \item readlength
+#'  \item Ucont
+#' }
+#' @param seqdepth Only relevant if `read_vect` is not provided; in that case, this is
+#' the total number of reads to simulate.
+#' @param label_time Length of s^{4}U feed to simulate.
+#' @param pnew Probability that a T is mutated to a C if a read is new.
+#' @param pold Probability that a T is mutated to a C if a read is old.
+#' @param readlength Length of simulated reads. In this simple simulation, all reads
+#' are simulated as being exactly this length.
+#' @param Ucont Probability that a nucleotide in a simulated read is a U.
+#' @import data.table
+#' @importFrom magrittr %>%
+#' @export
 SimulateMultiCondition <- function(nfeatures, metadf,
                                    param_details, mean_formula,
+                                   seqdepth = 10000000, label_time = 2,
+                                   pnew = 0.05, pold = 0.001,
+                                   readlength = 200, Ucont = 0.25,
+                                   feature_prefix = "Gene",
                                    dispslope = 5, dispint = 0.01,
                                    logkdegsdtrend_slope = -0.3,
                                    logkdegsdtrend_intercept = -1.5,
                                    logksynsdtrend_slope = -0.3,
-                                   logksynsdtrend_intercept = -1.5,
-                                   seqdepth = 10000000, label_time = 2,
-                                   pnew = 0.05, pold = 0.001,
-                                   feature_prefix = "Gene"){
+                                   logksynsdtrend_intercept = -1.5){
 
 
+  `.` <- list
 
   ### Fill metadf with parameters that are only specified as single value
 
