@@ -223,6 +223,13 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 #'  log(kdeg) and log(ksyn) linear models will differ from the reference. Value must be
 #'  between 0 and min(c(pdiff_kd, pdiff_ks)) in that row.
 #' }
+#' If param_details is not specified by the user, the first column of the design matrix
+#' is assumed to represent the reference parameter, all parameters are assumed to be
+#' non-global, logkdeg_mean and logksyn_mean are set to the equivalently named parameter values
+#' described below for the reference and `logkdeg_diff_avg` and `logksyn_diff_avg` for all other parameters,
+#' logkdeg_sd and logksyn_sd are set to the equivalently named parameter values
+#' described below for the reference and `logkdeg_diff_sd` and `logksyn_diff_sd` for all other parameters,
+#' and pdiff_kd, pdiff_ks, and pdiff_both are all set to the equivalently named parameter values.
 #' @param seqdepth Only relevant if `read_vect` is not provided; in that case, this is
 #' the total number of reads to simulate.
 #' @param label_time Length of s^{4}U feed to simulate.
@@ -231,11 +238,34 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 #' @param readlength Length of simulated reads. In this simple simulation, all reads
 #' are simulated as being exactly this length.
 #' @param Ucont Probability that a nucleotide in a simulated read is a U.
+#' @param logkdeg_mean Mean of normal distribution from which reference log(kdeg)
+#' linear model parameter is drawn from for each feature if `param_details` is not provided.
+#' @param logkdeg_sd Standard deviation of normal distribution from which reference log(kdeg)
+#' linear model parameter is drawn from for each feature if `param_details` is not provided.
+#' @param logksyn_mean Mean of normal distribution from which reference log(ksyn)
+#' linear model parameter is drawn from for each feature if `param_details` is not provided.
+#' @param logksyn_sd Standard deviation of normal distribution from which reference log(ksyn)
+#' linear model parameter is drawn from for each feature if `param_details` is not provided.
+#' @param logkdeg_diff_avg Mean of normal distribution from which non-reference log(kdeg)
+#' linear model parameters are drawn from for each feature if `param_details` is not provided.
+#' @param logkdeg_diff_sd Standard deviation of normal distribution from which reference log(kdeg)
+#' linear model parameter are drawn from for each feature if `param_details` is not provided.
+#' @param logksyn_diff_avg Mean of normal distribution from which reference log(ksyn)
+#' linear model parameter are drawn from for each feature if `param_details` is not provided.
+#' @param logksyn_diff_sd Standard deviation of normal distribution from which reference log(ksyn)
+#' linear model parameter are drawn from for each feature if `param_details` is not provided.
+#' @param pdiff_kd Proportion of features for which non-reference log(kdeg) linear model parameters
+#' differ from the reference.
+#' @param pdiff_ks Proportion of features for which non-reference log(ksyn) linear model parameters
+#' differ from the reference.
+#' @param pdiff_both Proportion of features for which BOTH non-reference log(kdeg) and log(ksyn) linear model parameters
+#' differ from the reference.
+#' ksyns are simulated
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
 SimulateMultiCondition <- function(nfeatures, metadf,
-                                   mean_formula, param_details,
+                                   mean_formula, param_details = NULL,
                                    seqdepth = 10000000, label_time = 2,
                                    pnew = 0.05, pold = 0.001,
                                    readlength = 200, Ucont = 0.25,
@@ -244,10 +274,44 @@ SimulateMultiCondition <- function(nfeatures, metadf,
                                    logkdegsdtrend_slope = -0.3,
                                    logkdegsdtrend_intercept = -1.5,
                                    logksynsdtrend_slope = -0.3,
-                                   logksynsdtrend_intercept = -1.5){
+                                   logksynsdtrend_intercept = -1.5,
+                                   logkdeg_mean = -1.9, logkdeg_sd = 0.7,
+                                   logksyn_mean = 2.3, logksyn_sd = 0.7,
+                                   logkdeg_diff_avg = 0, logksyn_diff_avg = 0,
+                                   logkdeg_diff_sd = 0.5, logksyn_diff_sd = 0.5,
+                                   pdiff_kd = 0.1, pdiff_ks = 0, pdiff_both = 0){
 
 
   `.` <- list
+
+
+  ### Create param_details if not provided
+
+  mean_design <- model.matrix(mean_formula, metadf)
+
+  mean_design_cols <- colnames(mean_design)
+
+
+  if(is.null(param_details)){
+
+    lmdc <- length(mean_design_cols)
+
+    param_details <- dplyr::tibble(
+      param = mean_design_cols,
+      reference = rep(c(TRUE, FALSE), times = c(1, lmdc - 1)),
+      global = FALSE,
+      logkdeg_mean = rep(c(logkdeg_mean, logkdeg_diff_avg), times = c(1, lmdc - 1)),
+      logkdeg_sd = rep(c(logkdeg_sd, logkdeg_diff_sd), times = c(1, lmdc - 1)),
+      logksyn_mean = rep(c(logksyn_mean, logksyn_diff_avg), times = c(1, lmdc - 1)),
+      logksyn_sd = rep(c(logksyn_sd, logksyn_diff_sd), times = c(1, lmdc - 1)),
+      pdiff_kd = pdiff_kd,
+      pdiff_ks = pdiff_ks,
+      pdiff_both = pdiff_both
+    )
+
+  }
+
+
 
   ### Check validity of input
 
@@ -291,11 +355,6 @@ SimulateMultiCondition <- function(nfeatures, metadf,
 
 
   ### Need to simulate linear model parameter values for all parameters specified
-
-
-  mean_design <- model.matrix(mean_formula, metadf)
-
-  mean_design_cols <- colnames(mean_design)
 
 
   # Reference log(kdegs)
