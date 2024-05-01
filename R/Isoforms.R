@@ -4,6 +4,7 @@
 #' data into an EZbakRData object. This is necessary to run functions such as
 #' \code{EstimateIsoformFractions}.
 #'
+#' @export
 ImportIsoformQuant <- function(obj, files,
                                quant_tool = c("none", "salmon", "sailfish",
                                                    "alevin", "piscem", "kallisto",
@@ -89,6 +90,7 @@ ImportIsoformQuant <- function(obj, files,
 #'  form of `quantification` is provided, then `quant_tool` must be specified so
 #'  that the quantification files can be properly interpreted
 #' }
+#' @export
 EstimateIsoformFractions <- function(obj,
                                      fractions_identifier = "transcripts",
                                      quant_name = NULL,

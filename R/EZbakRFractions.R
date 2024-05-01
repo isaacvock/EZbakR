@@ -5,7 +5,7 @@
 #' @param fractions Data frame containing information about the fraction of reads
 #' from each mutational population of interest.
 #' @param metadf Data frame tracking features of each of the samples included
-#' in `fractions`.
+#' in `fractions`
 new_EZbakRFractions <- function(fractions, metadf){
   stopifnot(is.data.frame(fractions))
   stopifnot(is.data.frame(metadf))

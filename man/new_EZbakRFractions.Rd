@@ -11,7 +11,7 @@ new_EZbakRFractions(fractions, metadf)
 from each mutational population of interest.}
 
 \item{metadf}{Data frame tracking features of each of the samples included
-in \code{fractions}.}
+in \code{fractions}}
 }
 \description{
 \code{new_EZbakRData} efficiently creates an object of class \code{EZbakRData}.

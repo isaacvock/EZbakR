@@ -35,6 +35,7 @@
 #' all treatment Bs correspond to batch Bs).
 #' @import data.table
 #' @importFrom magrittr %>%
+#' @export
 AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                             formula_mean = NULL, formula_sd = NULL,
                             include_all_parameters = TRUE,
@@ -467,6 +468,7 @@ general_avg_and_reg <- function(obj, features, parameter,
 #' @param parameter Parameter to average across replicates of a given condition.
 #' @import data.table
 #' @importFrom magrittr %>%
+#' @export
 CompareParameters <- function(obj, features = NULL, parameter = "log_kdeg",
                               quant_name = NULL,
                               condition, reference, experimental){
