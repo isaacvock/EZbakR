@@ -561,8 +561,8 @@ SimulateMultiCondition <- function(nfeatures, metadf,
                                    sample_name = as.character(metadf[s, "sample"]),
                                    kdeg_vect = exp(extract_ith(logkdegs, s)),
                                    ksyn_vect = exp(extract_ith(logksyns, s)),
-                                   pnew = metadf[s, "pnew"],
-                                   pold = metadf[s, "pold"])
+                                   pnew = as.numeric(metadf[s, "pnew"]),
+                                   pold = as.numeric(metadf[s, "pold"]))
 
   }
 
@@ -583,7 +583,7 @@ SimulateMultiCondition <- function(nfeatures, metadf,
 
   feature_prefix <- "Gene"
 
-  kinetic_parameters <- bind_cols(list(logkdeg_params, logksyn_params))
+  kinetic_parameters <- dplyr::bind_cols(list(logkdeg_params, logksyn_params))
   kinetic_parameters[['feature']] <- paste0(feature_prefix, 1:nfeatures)
 
 

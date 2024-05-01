@@ -563,6 +563,7 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
                                              error_if_singular = TRUE) {
 
 
+
   # Parse formula objects into model matrices
   designMatrix_mean <- model.matrix(formula_mean, data)
   designMatrix_sd <- model.matrix(formula_sd, data)
@@ -587,7 +588,7 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
 
   # Try BFGS
   opt <- optim(startParams, heteroskedastic_likelihood,
-               gr = heteroskedastic_gradient,
+               #gr = heteroskedastic_gradient,
                y = data[[dependent_var]],
                X_mean = designMatrix_mean,
                X_sd = designMatrix_sd,
@@ -609,7 +610,7 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
     # I will note that "failed convergence" almost always meant that the
     # max number of iterations was hit (code 1).
     opt <- optim(startParams, heteroskedastic_likelihood,
-                 gr = heteroskedastic_gradient,
+                 #gr = heteroskedastic_gradient,
                  y = data[[dependent_var]],
                  X_mean = designMatrix_mean,
                  X_sd = designMatrix_sd,
@@ -719,7 +720,7 @@ heteroskedastic_gradient <- function(params, y, X_mean, X_sd){
   for(i in 1:nr){
 
     dprod_beta[i,] <- X_mean[i,1:ncb]*b_vects[i]
-    dprod_sigma[i,] <- X_sd[i,1:ncs]*b_vects[i]
+    dprod_sigma[i,] <- X_sd[i,1:ncs]*s_vects[i]*sigma[i]
 
   }
 
