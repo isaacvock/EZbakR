@@ -51,6 +51,14 @@
 #' @param readlength Length of simulated reads. In this simple simulation, all reads
 #' are simulated as being exactly this length.
 #' @param Ucont Probability that a nucleotide in a simulated read is a U.
+#' @param feature_pnew Boolean; if TRUE, simulate a different pnew for each feature
+#' @param pnew_kdeg_corr Boolean; only relevant if `feature_pnew` is TRUE. If so, then
+#' setting `pnew_kdeg_corr` to TRUE will ensure that higher kdeg transcripts have a higher
+#' pnew.
+#' @param logit_pnew_mean If `feature_pnew` is TRUE, then the logit(pnew) for each feature
+#' will be drawn from a normal distribution with this mean.
+#' @param logit_pnew_sd If `feature_pnew` is TRUE, then the logit(pnew) for each feature
+#' will be drawn from a normal distribution with this standard deviation.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
@@ -62,7 +70,9 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
                            logkdeg_mean = -1.9, logkdeg_sd = 0.7,
                            logksyn_mean = 2.3, logksyn_sd = 0.7,
                            seqdepth = 10000000, readlength = 200,
-                           Ucont = 0.25){
+                           Ucont = 0.25, feature_pnew = FALSE,
+                           pnew_kdeg_corr = FALSE,
+                           logit_pnew_mean = -2.5, logit_pnew_sd = 0.1){
 
   `.` <- list
 
@@ -72,6 +82,18 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
   args <- c(as.list(environment()))
 
   check_SimulateOneRep_input(args)
+
+
+  ### Simulate feature-specific pnew and pold as necessary
+
+  if(feature_pnew){
+
+    pnew <- inv_logit(stats::rnorm(nfeatures,
+                                   logit_pnew_mean,
+                                   logit_pnew_sd))
+
+  }
+
 
 
   ### Simulate kinetic parameters as necesary
@@ -134,9 +156,36 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
                      size = readlength,
                      prob = Ucont)
 
-  TC_count <- stats::rbinom(n = totreads,
-                     size = nT_count,
-                     prob = read_status*pnew + (1 - read_status)*pold)
+  if(feature_pnew){
+
+    if(kdeg_pnew_corr){
+
+      pnew <- pnew[order(pnew)]
+
+      TC_count <- stats::rbinom(n = totreads,
+                                size = nT_count,
+                                prob = read_status*rep(pnew[rank(kdeg_vect)], times = read_vect) + (1 - read_status)*pold)
+
+
+    }else{
+
+      TC_count <- stats::rbinom(n = totreads,
+                                size = nT_count,
+                                prob = read_status*rep(pnew, times = read_vect) + (1 - read_status)*pold)
+
+
+    }
+
+
+
+  }else{
+
+    TC_count <- stats::rbinom(n = totreads,
+                              size = nT_count,
+                              prob = read_status*pnew + (1 - read_status)*pold)
+
+  }
+
 
   cB <- data.table::data.table(
     sample = sample_name,
