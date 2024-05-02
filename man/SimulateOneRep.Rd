@@ -21,7 +21,11 @@ SimulateOneRep(
   logksyn_sd = 0.7,
   seqdepth = 1e+07,
   readlength = 200,
-  Ucont = 0.25
+  Ucont = 0.25,
+  feature_pnew = FALSE,
+  pnew_kdeg_corr = FALSE,
+  logit_pnew_mean = -2.5,
+  logit_pnew_sd = 0.1
 )
 }
 \arguments{
@@ -81,6 +85,18 @@ the total number of reads to simulate.}
 are simulated as being exactly this length.}
 
 \item{Ucont}{Probability that a nucleotide in a simulated read is a U.}
+
+\item{feature_pnew}{Boolean; if TRUE, simulate a different pnew for each feature}
+
+\item{pnew_kdeg_corr}{Boolean; only relevant if \code{feature_pnew} is TRUE. If so, then
+setting \code{pnew_kdeg_corr} to TRUE will ensure that higher kdeg transcripts have a higher
+pnew.}
+
+\item{logit_pnew_mean}{If \code{feature_pnew} is TRUE, then the logit(pnew) for each feature
+will be drawn from a normal distribution with this mean.}
+
+\item{logit_pnew_sd}{If \code{feature_pnew} is TRUE, then the logit(pnew) for each feature
+will be drawn from a normal distribution with this standard deviation.}
 }
 \description{
 In \code{SimulateOneRep}, users have the option to either provide vectors of feature-specific

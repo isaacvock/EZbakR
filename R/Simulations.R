@@ -198,11 +198,40 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 
   ### Save ground truth
 
-  truth <- data.table::data.table(sample = sample_name,
-                      feature = paste0(feature_prefix, 1:nfeatures),
-                      true_fraction_highTC = fn_vect,
-                      true_kdeg = kdeg_vect,
-                      true_ksyn = ksyn_vect)
+  if(feature_pnew){
+
+    if(pnew_kdeg_corr){
+
+      truth <- data.table::data.table(sample = sample_name,
+                                      feature = paste0(feature_prefix, 1:nfeatures),
+                                      true_fraction_highTC = fn_vect,
+                                      true_kdeg = kdeg_vect,
+                                      true_ksyn = ksyn_vect,
+                                      pnew = pnew[rank(kdeg_vect)])
+
+    }else{
+
+      truth <- data.table::data.table(sample = sample_name,
+                                      feature = paste0(feature_prefix, 1:nfeatures),
+                                      true_fraction_highTC = fn_vect,
+                                      true_kdeg = kdeg_vect,
+                                      true_ksyn = ksyn_vect,
+                                      pnew = pnew)
+
+    }
+
+
+  }else{
+
+    truth <- data.table::data.table(sample = sample_name,
+                                    feature = paste0(feature_prefix, 1:nfeatures),
+                                    true_fraction_highTC = fn_vect,
+                                    true_kdeg = kdeg_vect,
+                                    true_ksyn = ksyn_vect)
+
+  }
+
+
 
 
   return(list(cB = cB,
