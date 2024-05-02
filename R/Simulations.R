@@ -158,7 +158,7 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 
   if(feature_pnew){
 
-    if(kdeg_pnew_corr){
+    if(pnew_kdeg_corr){
 
       pnew <- pnew[order(pnew)]
 
