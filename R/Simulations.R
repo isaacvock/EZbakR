@@ -144,6 +144,7 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 
   }
 
+
   ### Simulate mutational data
 
   totreads <- sum(read_vect)
@@ -339,6 +340,9 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 #' @param pdiff_both Proportion of features for which BOTH non-reference log(kdeg) and log(ksyn) linear model parameters
 #' differ from the reference.
 #' ksyns are simulated
+#' @param pdo Dropout rate; think of this as the probability that a s4U containing
+#' molecule is lost during library preparation and sequencing. If `pdo` is 0 (default)
+#' then there is not dropout.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
@@ -357,7 +361,8 @@ SimulateMultiCondition <- function(nfeatures, metadf,
                                    logksyn_mean = 2.3, logksyn_sd = 0.7,
                                    logkdeg_diff_avg = 0, logksyn_diff_avg = 0,
                                    logkdeg_diff_sd = 0.5, logksyn_diff_sd = 0.5,
-                                   pdiff_kd = 0.1, pdiff_ks = 0, pdiff_both = 0){
+                                   pdiff_kd = 0.1, pdiff_ks = 0, pdiff_both = 0,
+                                   pdo = 0){
 
 
   `.` <- list
@@ -404,26 +409,32 @@ SimulateMultiCondition <- function(nfeatures, metadf,
 
   if(!('seqdepth' %in% mcols)){
 
-    metadf$seqdepth = seqdepth
+    metadf$seqdepth <- seqdepth
 
   }
 
   if(!('label_time' %in% mcols)){
 
-    metadf$label_time = label_time
+    metadf$label_time <- label_time
 
   }
 
   if(!('pnew' %in% mcols)){
 
-    metadf$pnew = pnew
+    metadf$pnew <- pnew
 
   }
 
 
   if(!('pold' %in% mcols)){
 
-    metadf$pold = pold
+    metadf$pold <- pold
+
+  }
+
+  if(!('pdo' %in% mcols)){
+
+    metadf$pdo <- pdo
 
   }
 
@@ -528,6 +539,8 @@ SimulateMultiCondition <- function(nfeatures, metadf,
   # in each sample.
   compute_kinetics <- function(X, logkdeg_params,
                                logksyn_params,
+                               pdo,
+                               tl,
                                n = nfeatures) {
     abundance <- vector("list", n)
     logkdeg <- abundance
@@ -539,7 +552,11 @@ SimulateMultiCondition <- function(nfeatures, metadf,
 
       logkdeg[[i]] <- logkdeg_i
       logksyn[[i]] <- logksyn_i
-      abundance[[i]] <- exp(logksyn_i)/exp(logkdeg_i)
+
+      # Compute dropout adjusted abundance; just ksyn/kdeg if no dropout
+      fn <- 1 - exp(-exp(logkdeg_i)*tl)
+      abundance[[i]] <- (exp(logksyn_i)/exp(logkdeg_i))*((1 - fn) + (1 - pdo)*fn)
+
     }
 
     return(list(abundance = abundance,
@@ -561,6 +578,9 @@ SimulateMultiCondition <- function(nfeatures, metadf,
     for(i in 1:n){
 
       abundances_i <- extract_ith(abundances, i)
+
+
+
       sums[i] <- sum(abundances_i)
       means[i] <- mean(abundances_i)
       sds[i] <- sd(abundances_i)
@@ -581,7 +601,9 @@ SimulateMultiCondition <- function(nfeatures, metadf,
   ### Determine sample-specific averages to simulate from
 
   kinetics <- compute_kinetics(mean_design, logkdeg_params,
-                               logksyn_params)
+                               logksyn_params,
+                               pdo = metadf$pdo,
+                               tl = metadf$label_time)
 
 
   reads <- compute_readcounts(kinetics$abundance,
@@ -633,10 +655,27 @@ SimulateMultiCondition <- function(nfeatures, metadf,
   simdata <- vector(mode = "list", length = nrow(metadf))
   for(s in 1:nrow(metadf)){
 
+    pdo <- metadf$pdo[s]
+
+    kdeg_vect <- exp(extract_ith(logkdegs, s))
+    fn_vect <- 1 - exp(-kdeg_vect*metadf$label_time[s])
+
+    # Dropout adjusted
+    fn_vect <- (fn_vect*(1 - pdo))/(fn_vect*(1 - pdo) + (1 - fn_vect))
+    kdeg_vect <- -log(1 - fn_vect)/metadf$label_time[s]
+
+
+    # A bit unclear just from the interface (so suboptimal function design)
+    # but the key here is that if there is dropout, fn_vect will represent
+    # the dropout biased fraction new, and kdeg_vect will represent the
+    # kdeg that would be estimated from the true, unbiased fraction new.
+    # This ensures that the ground_truth table from this function contains
+    # both the biased and unbaised fraction new estimates in it.
     simdata[[s]] <- SimulateOneRep(nfeatures = nfeatures,
                                    read_vect = extract_ith(reads, s),
                                    label_time = as.numeric(metadf[s,"label_time"]),
                                    sample_name = as.character(metadf[s, "sample"]),
+                                   fn_vect = fn_vect,
                                    kdeg_vect = exp(extract_ith(logkdegs, s)),
                                    ksyn_vect = exp(extract_ith(logksyns, s)),
                                    pnew = as.numeric(metadf[s, "pnew"]),
