@@ -32,7 +32,8 @@ SimulateMultiCondition(
   logksyn_diff_sd = 0.5,
   pdiff_kd = 0.1,
   pdiff_ks = 0,
-  pdiff_both = 0
+  pdiff_both = 0,
+  pdo = 0
 )
 }
 \arguments{
@@ -145,6 +146,10 @@ differ from the reference.}
 \item{pdiff_both}{Proportion of features for which BOTH non-reference log(kdeg) and log(ksyn) linear model parameters
 differ from the reference.
 ksyns are simulated}
+
+\item{pdo}{Dropout rate; think of this as the probability that a s4U containing
+molecule is lost during library preparation and sequencing. If \code{pdo} is 0 (default)
+then there is not dropout.}
 }
 \description{
 \code{SimulateMultiCondition} is a highly flexibly simulator that combines linear modeling
