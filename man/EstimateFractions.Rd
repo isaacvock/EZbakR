@@ -11,7 +11,11 @@ EstimateFractions(
   fraction_design = NULL,
   Poisson = TRUE,
   strategy = c("standard"),
-  column_to_reorder = NULL
+  column_to_reorder = NULL,
+  pnew_prior_mean = -2.94,
+  pnew_prior_sd = 0.3,
+  pold_prior_mean = -6.5,
+  pold_prior_sd = 0.5
 )
 }
 \arguments{
@@ -93,6 +97,14 @@ Smalec et al., 2023. Idea is that alignment artifacts can give rise to a
 high mutation rate old read population that should be accounted for
 to avoid overestimating the fraction of new reads
 }}
+
+\item{pnew_prior_mean}{logit-Normal mean for logit(pnew) prior.}
+
+\item{pnew_prior_sd}{logit-Normal sd for logit(pnew) prior.}
+
+\item{pold_prior_mean}{logit-Normal mean for logit(pold) prior.}
+
+\item{pold_prior_sd}{logit-Normal sd for logit(pold) prior.}
 }
 \description{
 Estimate fractions of each RNA population
