@@ -102,6 +102,10 @@ create_fraction_design <- function(mutrate_populations){
 #'  high mutation rate old read population that should be accounted for
 #'  to avoid overestimating the fraction of new reads
 #' }
+#' @param pnew_prior_mean logit-Normal mean for logit(pnew) prior.
+#' @param pnew_prior_sd logit-Normal sd for logit(pnew) prior.
+#' @param pold_prior_mean logit-Normal mean for logit(pold) prior.
+#' @param pold_prior_sd logit-Normal sd for logit(pold) prior.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
@@ -110,7 +114,11 @@ EstimateFractions <- function(obj, features = "all",
                               fraction_design = NULL,
                               Poisson = TRUE,
                               strategy = c("standard"),
-                              column_to_reorder = NULL){
+                              column_to_reorder = NULL,
+                              pnew_prior_mean = -2.94,
+                              pnew_prior_sd = 0.3,
+                              pold_prior_mean = -6.5,
+                              pold_prior_sd = 0.5){
 
 
   UseMethod("EstimateFractions")
@@ -128,7 +136,11 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                               fraction_design = NULL,
                               Poisson = TRUE,
                               strategy = c("standard"),
-                              column_to_reorder = NULL){
+                              column_to_reorder = NULL,
+                              pnew_prior_mean = -2.94,
+                              pnew_prior_sd = 0.3,
+                              pold_prior_mean = -6.5,
+                              pold_prior_sd = 0.5){
 
   `.` <- list
 
@@ -158,7 +170,11 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   message("Estimating mutation rates")
   obj <- EstimateMutRates(obj,
                            populations = mutrate_populations,
-                           strategy = strategy)
+                           strategy = strategy,
+                          pnew_prior_mean = pnew_prior_mean,
+                          pnew_prior_sd = pnew_prior_sd,
+                          pold_prior_mean = pold_prior_mean,
+                          pold_prior_sd = pold_prior_sd)
 
   mutation_rates <- obj$mutation_rates
 
@@ -407,7 +423,11 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                          fraction_design = NULL,
                                          Poisson = TRUE,
                                          strategy = c("standard"),
-                                         column_to_reorder = NULL){
+                                         column_to_reorder = NULL,
+                                         pnew_prior_mean = -2.94,
+                                         pnew_prior_sd = 0.3,
+                                         pold_prior_mean = -6.5,
+                                         pold_prior_sd = 0.5){
 
   `.` <- list
 
@@ -436,7 +456,11 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
   message("Estimating mutation rates")
   obj <- EstimateMutRates(obj,
                           populations = mutrate_populations,
-                          strategy = strategy)
+                          strategy = strategy,
+                          pnew_prior_mean = pnew_prior_mean,
+                          pnew_prior_sd = pnew_prior_sd,
+                          pold_prior_mean = pold_prior_mean,
+                          pold_prior_sd = pold_prior_sd)
 
   mutation_rates <- obj$mutation_rates
 
@@ -727,130 +751,34 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
 
 
-#' Estimate mutation rates
-#'
-#' @param obj EZbakRDataobject
-#' @param populations Character vector of the set of mutational populations
-#' that you want to infer the fractions of. For example, say your cB file contains
-#' columns tracking T-to-C and G-to-A
-#' @param strategy String denoting which new read mutation rate estimation strategy to use.
-#' Options include:
-#' \itemize{
-#'  \item standard: Estimate a single new read and old read mutation rate for each
-#'  sample. This is done via a binomial mixture model fit to all reads in a given sample.
-#'  \item hierarchical (NOT YET IMPLEMENTED): Estimate feature-specific mutation
-#'  rate with standard, regularizing the feature-specific
-#'  estimate with a sample-wide prior.
-#'  \item smalec (NOT YET IMPLEMENTED): Estimate two old read mutation rates, as was done in
-#'  Smalec et al., 2023. Idea is that alignment artifacts can give rise to a
-#'  high mutation rate old read population that should be accounted for
-#'  to avoid overestimating the fraction of new reads
-#' }
-#' @import data.table
-#' @export
-EstimateMutRates <- function(obj,
-                             populations = "all",
-                             strategy = "standard"
-){
 
-  `.` <- list
+# Simple binomial mixture likelihood
+standard_binom_mix <- function(param, muts, nucs, n,
+                               pnew_prior_mean = -2.94,
+                               pnew_prior_sd = 0.3,
+                               pold_prior_mean = -6.5,
+                               pold_prior_sd = 0.5){
 
 
-  cB <- obj$cB
-  cB <- data.table::setDT(cB)
+  if(param[2] > param[3]){
 
-  # Figure out which mutation counts are in the cB
-  mutcounts_in_cB <- find_mutcounts(obj)
-
-  basecounts_in_cB <- paste0("n", substr(mutcounts_in_cB, start = 1, stop = 1))
-
-  # Which populations to analyze?
-  if(populations == "all"){
-
-    muts_analyze <- mutcounts_in_cB
+    p2_prior <- dnorm(param[2], pnew_prior_mean, pnew_prior_sd,
+                     log = TRUE)
+    p3_prior <- dnorm(param[3], pold_prior_mean, pold_prior_sd,
+                     log = TRUE)
 
   }else{
 
-    muts_analyze <- populations
+    p2_prior <- dnorm(param[2], pold_prior_mean, pold_prior_sd,
+                     log = TRUE)
+    p3_prior <- dnorm(param[3], pnew_prior_mean, pnew_prior_sd,
+                     log = TRUE)
 
   }
-
-  nucs_analyze <- basecounts_in_cB[which(mutcounts_in_cB %in% muts_analyze)]
-
-  # Helper function to run optim and organize output
-  estimate_ps <- function(muts, nucs, n){
-
-    fit <- stats::optim(par = c(0, -2, -4), fn = standard_binom_mix, muts = muts, nucs = nucs, n = n,
-                        method = "L-BFGS-B", lower = c(-7, -7, -7), upper = c(7, 7, 7))
-    return(list(p1 = fit$par[1], p2 = fit$par[2], p3 = fit$par[3]))
-
-  }
-
-
-  # Infer proportion of each population
-  mutest <- vector(mode = "list", length = length(muts_analyze))
-
-  for(i in seq_along(muts_analyze)){
-
-    group_cols <- c("sample", muts_analyze[i], nucs_analyze[i])
-
-    mutest_dt <- cB[,.(n = sum(n)),
-                    by = group_cols]
-
-    mutest_temp <- mutest_dt[,.(params = list(estimate_ps(muts = get(muts_analyze[i]),
-                                                          nucs = get(nucs_analyze[i]),
-                                                          n = n))), by = sample]
-
-    mutest_temp[, c("p1", "p2") := .(inv_logit(sapply(params, `[[`, 2)),
-                                     inv_logit(sapply(params, `[[`, 3)))]
-
-    mutest_temp[,c("pold",
-                   "pnew") := .(min(c(p1, p2)),
-                                max(c(p1, p2))), by = 1:nrow(mutest_temp)]
-
-    mutest_temp[,c("p1", "p2") := .(NULL, NULL)]
-
-    mutest[[i]] <- mutest_temp
-
-  }
-
-  names(mutest) <- muts_analyze
-
-
-  obj$mutation_rates <- mutest
-
-
-  # Add new class information
-  if(!("EZbakRMutrates" %in% class(obj))){
-
-    class(obj) <- c("EZbakRMutrates", class(obj))
-
-  }
-
-
-  return(obj)
-
-}
-
-
-# Logit and sigmoid functions that I use a lot
-logit <- function(x) log(x/(1-x))
-inv_logit <- function(x) exp(x)/(1+exp(x))
-
-
-# Simple binomial mixture likelihood
-standard_binom_mix <- function(param, muts, nucs, n){
 
   logl <- sum(n*log( inv_logit(param[1])*dbinom(muts, nucs, inv_logit(param[2]))
                      + (1 - inv_logit(param[1]))*dbinom(muts, nucs, inv_logit(param[3])) ) ) +
-    dnorm(param[2],
-          -2.94,
-          0.3,
-          log = TRUE) +
-    dnorm(param[3],
-          -6.5,
-          0.5,
-          log = TRUE)
+    p2_prior + p3_prior
 
 
   return(-logl)
@@ -860,7 +788,6 @@ standard_binom_mix <- function(param, muts, nucs, n){
 
 
 
-
 #' Estimate mutation rates
 #'
 #' @param obj EZbakRDataobject
@@ -880,11 +807,19 @@ standard_binom_mix <- function(param, muts, nucs, n){
 #'  high mutation rate old read population that should be accounted for
 #'  to avoid overestimating the fraction of new reads
 #' }
+#' @param pnew_prior_mean logit-Normal mean for logit(pnew) prior.
+#' @param pnew_prior_sd logit-Normal sd for logit(pnew) prior.
+#' @param pold_prior_mean logit-Normal mean for logit(pold) prior.
+#' @param pold_prior_sd logit-Normal sd for logit(pold) prior.
 #' @import data.table
 #' @export
 EstimateMutRates <- function(obj,
                              populations = "all",
-                             strategy = "standard"
+                             strategy = "standard",
+                             pnew_prior_mean = -2.94,
+                             pnew_prior_sd = 0.3,
+                             pold_prior_mean = -6.5,
+                             pold_prior_sd = 0.5
                              ){
 
   `.` <- list
@@ -912,9 +847,17 @@ EstimateMutRates <- function(obj,
   nucs_analyze <- basecounts_in_cB[which(mutcounts_in_cB %in% muts_analyze)]
 
   # Helper function to run optim and organize output
-  estimate_ps <- function(muts, nucs, n){
+  estimate_ps <- function(muts, nucs, n,
+                          pnew_prior_mean = -2.94,
+                          pnew_prior_sd = 0.3,
+                          pold_prior_mean = -6.5,
+                          pold_prior_sd = 0.5){
 
     fit <- stats::optim(par = c(0, -2, -4), fn = standard_binom_mix, muts = muts, nucs = nucs, n = n,
+                        pnew_prior_mean = pnew_prior_mean,
+                        pnew_prior_sd = pnew_prior_sd,
+                        pold_prior_mean = pold_prior_mean,
+                        pold_prior_sd = pold_prior_sd,
                  method = "L-BFGS-B", lower = c(-7, -7, -7), upper = c(7, 7, 7))
     return(list(p1 = fit$par[1], p2 = fit$par[2], p3 = fit$par[3]))
 
@@ -933,7 +876,11 @@ EstimateMutRates <- function(obj,
 
     mutest_temp <- mutest_dt[,.(params = list(estimate_ps(muts = get(muts_analyze[i]),
                                                          nucs = get(nucs_analyze[i]),
-                                                         n = n))), by = sample]
+                                                         n = n,
+                                                         pnew_prior_mean = pnew_prior_mean,
+                                                         pnew_prior_sd = pnew_prior_sd,
+                                                         pold_prior_mean = pold_prior_mean,
+                                                         pold_prior_sd = pold_prior_sd))), by = sample]
 
     mutest_temp[, c("p1", "p2") := .(inv_logit(sapply(params, `[[`, 2)),
                                      inv_logit(sapply(params, `[[`, 3)))]
@@ -966,10 +913,6 @@ EstimateMutRates <- function(obj,
 
 }
 
-
-# Logit and sigmoid functions that I use a lot
-logit <- function(x) log(x/(1-x))
-inv_logit <- function(x) exp(x)/(1+exp(x))
 
 
 # Simple binomial mixture likelihood

@@ -1,6 +1,22 @@
+
+############################
+### MISCELLANEOUS
+############################
+
+
+
+# Logit and sigmoid functions that I use a lot
+logit <- function(x) log(x/(1-x))
+inv_logit <- function(x) exp(x)/(1+exp(x))
+
+
+
+
 ############################
 ### READ COUNT NORMALIZATION
 ############################
+
+
 
 #' @export
 get_normalized_read_counts <- function(obj,
