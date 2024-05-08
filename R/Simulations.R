@@ -208,7 +208,7 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
                                       true_fraction_highTC = fn_vect,
                                       true_kdeg = kdeg_vect,
                                       true_ksyn = ksyn_vect,
-                                      pnew = pnew[rank(kdeg_vect)])
+                                      true_pnew = pnew[rank(kdeg_vect)])
 
     }else{
 
