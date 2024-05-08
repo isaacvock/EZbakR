@@ -915,25 +915,6 @@ EstimateMutRates <- function(obj,
 
 
 
-# Simple binomial mixture likelihood
-standard_binom_mix <- function(param, muts, nucs, n){
-
-  logl <- sum(n*log( inv_logit(param[1])*dbinom(muts, nucs, inv_logit(param[2]))
-                     + (1 - inv_logit(param[1]))*dbinom(muts, nucs, inv_logit(param[3])) ) ) +
-    dnorm(param[2],
-          -2.94,
-          0.3,
-          log = TRUE) +
-    dnorm(param[3],
-          -6.5,
-          0.5,
-          log = TRUE)
-
-
-  return(-logl)
-
-}
-
 
 # Find the mutation count columns in the cB
 find_mutcounts <- function(obj){
