@@ -285,7 +285,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
   # Keep only feature of interest
   cols_to_group <- c(necessary_basecounts, pops_to_analyze, "sample", features_to_analyze)
-  cB <- cB[!(sample %in% samples_with_no_label),.(n = sum(n)), by = cols_to_group]
+  cB <- cB[,.(n = sum(n)), by = cols_to_group]
 
   # Pair down design matrix
   fraction_design <- dplyr::as_tibble(fraction_design)
@@ -345,17 +345,19 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
     fns <- dplyr::as_tibble(cB) %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
-      dplyr::summarise(!!col_name := optim(0,
-                                           fn = two_comp_likelihood,
-                                           muts = !!dplyr::sym(pops_to_analyze),
-                                           nucs = !!dplyr::sym(necessary_basecounts),
-                                           pnew = pnew,
-                                           pold = pold,
-                                           Poisson = Poisson,
-                                           n = n,
-                                           lower = -7,
-                                           upper = 7,
-                                           method = "L-BFGS-B")$par[1],
+      dplyr::summarise(!!col_name := ifelse(!(unique(sample) %in% samples_with_no_label),
+                                            optim(0,
+                                             fn = two_comp_likelihood,
+                                             muts = !!dplyr::sym(pops_to_analyze),
+                                             nucs = !!dplyr::sym(necessary_basecounts),
+                                             pnew = pnew,
+                                             pold = pold,
+                                             Poisson = Poisson,
+                                             n = n,
+                                             lower = -7,
+                                             upper = 7,
+                                             method = "L-BFGS-B")$par[1],
+                                            -Inf),
                        n = sum(n)) %>%
       dplyr::ungroup() %>%
       dplyr::mutate(!!natural_col_name := inv_logit(!!dplyr::sym(col_name))) %>%
