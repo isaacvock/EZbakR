@@ -16,12 +16,19 @@
 #'  \item custom (NOT YET IMPLEMENTED): Provide a custom function that takes
 #'  fraction estimates as input and produces as output kinetic parameter estimates.
 #' }
-#' @return `EZbakRKinetics` object
+#' @param quant_name Name of quantification tool appended to table name of interest.
+#' This is only relevant if you are providing isoform-specific estimates, in which
+#' case the isoform quantification tool's name may need to be provided in order
+#' for EZbakR to uniquely identify the table of interest. Even in that case though,
+#' this should only have to be non-null in the case where you have performed isoform-specific
+#' fraction estimation with more than one quantification tool's output.
+#' @return `EZbakRKinetics` object.
 #' @import data.table
 #' @export
 EstimateKinetics <- function(obj,
                              features = NULL,
-                             strategy = c("standard", "tilac")){
+                             strategy = c("standard", "tilac"),
+                             quant_name = NULL){
 
   ### Check that input is valid
 
@@ -64,7 +71,8 @@ EstimateKinetics <- function(obj,
   if(strategy == "standard"){
 
     obj <- Standard_kinetic_estimation(obj,
-                                features = features)
+                                features = features,
+                                quant_name = quant_name)
 
 
   }else if(strategy == "tilac"){
@@ -82,7 +90,8 @@ EstimateKinetics <- function(obj,
 
 # kdeg = -log(1 - fn)/tl
 # ksyn = (normalized read count)*kdeg
-Standard_kinetic_estimation <- function(obj, features = NULL){
+Standard_kinetic_estimation <- function(obj, features = NULL,
+                                        quant_name = NULL){
 
 
 
@@ -94,7 +103,8 @@ Standard_kinetic_estimation <- function(obj, features = NULL){
   # Function is in Helpers.R
   table_info <- get_table_name(obj,
                                features = features,
-                               tabletype = 'fractions')
+                               tabletype = 'fractions',
+                               quant_name = quant_name)
 
   fractions_name <- table_info$table_name
   isoform_specific <- table_info$isoform_specific

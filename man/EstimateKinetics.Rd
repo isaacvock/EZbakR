@@ -4,7 +4,12 @@
 \alias{EstimateKinetics}
 \title{Generic function for estimating kinetic parameters.}
 \usage{
-EstimateKinetics(obj, features = NULL, strategy = c("standard", "tilac"))
+EstimateKinetics(
+  obj,
+  features = NULL,
+  strategy = c("standard", "tilac"),
+  quant_name = NULL
+)
 }
 \arguments{
 \item{obj}{An \code{EZbakRFractions} object, which is an \code{EZbakRData} object on
@@ -25,9 +30,16 @@ as well as all samples including a chase after the pulse.
 \item custom (NOT YET IMPLEMENTED): Provide a custom function that takes
 fraction estimates as input and produces as output kinetic parameter estimates.
 }}
+
+\item{quant_name}{Name of quantification tool appended to table name of interest.
+This is only relevant if you are providing isoform-specific estimates, in which
+case the isoform quantification tool's name may need to be provided in order
+for EZbakR to uniquely identify the table of interest. Even in that case though,
+this should only have to be non-null in the case where you have performed isoform-specific
+fraction estimation with more than one quantification tool's output.}
 }
 \value{
-\code{EZbakRKinetics} object
+\code{EZbakRKinetics} object.
 }
 \description{
 Generic function for estimating kinetic parameters.

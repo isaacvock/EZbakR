@@ -33,6 +33,12 @@
 #' be estimated from the data, e.g., due to limited replicate numbers or correlated
 #' sample characteristics (i.e., all treatment As also correspond to batch As, and
 #' all treatment Bs correspond to batch Bs).
+#' @param quant_name Name of quantification tool appended to table name of interest.
+#' This is only relevant if you are providing isoform-specific estimates, in which
+#' case the isoform quantification tool's name may need to be provided in order
+#' for EZbakR to uniquely identify the table of interest. Even in that case though,
+#' this should only have to be non-null in the case where you have performed isoform-specific
+#' fraction estimation with more than one quantification tool's output.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
