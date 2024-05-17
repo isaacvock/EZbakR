@@ -4,12 +4,7 @@
 \alias{EstimateKinetics}
 \title{Generic function for estimating kinetic parameters.}
 \usage{
-EstimateKinetics(
-  obj,
-  features = NULL,
-  strategy = c("standard", "tilac"),
-  quant_name = NULL
-)
+EstimateKinetics(obj, features = NULL, strategy = c("standard", "tilac"))
 }
 \arguments{
 \item{obj}{An \code{EZbakRFractions} object, which is an \code{EZbakRData} object on
@@ -32,7 +27,7 @@ fraction estimates as input and produces as output kinetic parameter estimates.
 }}
 }
 \value{
-\code{EZbakRKinetics} object.
+\code{EZbakRKinetics} object
 }
 \description{
 Generic function for estimating kinetic parameters.

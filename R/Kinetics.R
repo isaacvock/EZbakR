@@ -16,13 +16,12 @@
 #'  \item custom (NOT YET IMPLEMENTED): Provide a custom function that takes
 #'  fraction estimates as input and produces as output kinetic parameter estimates.
 #' }
-#' @return `EZbakRKinetics` object.
+#' @return `EZbakRKinetics` object
 #' @import data.table
 #' @export
 EstimateKinetics <- function(obj,
                              features = NULL,
-                             strategy = c("standard", "tilac"),
-                             quant_name = NULL){
+                             strategy = c("standard", "tilac")){
 
   ### Check that input is valid
 
@@ -65,8 +64,7 @@ EstimateKinetics <- function(obj,
   if(strategy == "standard"){
 
     obj <- Standard_kinetic_estimation(obj,
-                                features = features,
-                                quant_name = quant_name)
+                                features = features)
 
 
   }else if(strategy == "tilac"){
@@ -84,8 +82,7 @@ EstimateKinetics <- function(obj,
 
 # kdeg = -log(1 - fn)/tl
 # ksyn = (normalized read count)*kdeg
-Standard_kinetic_estimation <- function(obj, features = NULL,
-                                        quant_name = NULL){
+Standard_kinetic_estimation <- function(obj, features = NULL){
 
 
 
@@ -97,8 +94,7 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
   # Function is in Helpers.R
   table_info <- get_table_name(obj,
                                features = features,
-                               tabletype = 'fractions',
-                               quant_name = quant_name)
+                               tabletype = 'fractions')
 
   fractions_name <- table_info$table_name
   isoform_specific <- table_info$isoform_specific

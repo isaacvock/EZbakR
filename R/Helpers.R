@@ -319,7 +319,7 @@ get_table_name <- function(obj, tabletype,
 
       stop(paste0("Features match more than one ", tabletype, " table!
                   Alert the developer by posting an Issues on the EZbakR,
-                  Github as this edge case should not ever happen."))
+                  Github as this edge case should never happen."))
 
 
     }
