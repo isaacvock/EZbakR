@@ -354,9 +354,9 @@ SimulateMultiCondition <- function(nfeatures, metadf,
                                    feature_prefix = "Gene",
                                    dispslope = 5, dispint = 0.01,
                                    logkdegsdtrend_slope = -0.3,
-                                   logkdegsdtrend_intercept = -1.5,
+                                   logkdegsdtrend_intercept = -2.25,
                                    logksynsdtrend_slope = -0.3,
-                                   logksynsdtrend_intercept = -1.5,
+                                   logksynsdtrend_intercept = -2.25,
                                    logkdeg_mean = -1.9, logkdeg_sd = 0.7,
                                    logksyn_mean = 2.3, logksyn_sd = 0.7,
                                    logkdeg_diff_avg = 0, logksyn_diff_avg = 0,
@@ -366,6 +366,7 @@ SimulateMultiCondition <- function(nfeatures, metadf,
 
 
   `.` <- list
+
 
 
   ### Create param_details if not provided
@@ -542,6 +543,7 @@ SimulateMultiCondition <- function(nfeatures, metadf,
                                pdo,
                                tl,
                                n = nfeatures) {
+
     abundance <- vector("list", n)
     logkdeg <- abundance
     logksyn <- abundance
@@ -582,15 +584,15 @@ SimulateMultiCondition <- function(nfeatures, metadf,
 
 
       sums[i] <- sum(abundances_i)
-      means[i] <- mean(abundances_i)
-      sds[i] <- sd(abundances_i)
+      means[i] <- mean(log10(abundances_i))
+      sds[i] <- sd(log10(abundances_i))
 
     }
 
     readcounts <- lapply(abundances,
                          function(vector) (vector/sums)*seqdepths)
     zscores <- lapply(abundances,
-                      function(vector) (vector - means)/sds)
+                      function(vector) (log10(vector) - means)/sds)
     return(list(readcounts = readcounts,
                 read_zscores = zscores))
 
@@ -630,10 +632,11 @@ SimulateMultiCondition <- function(nfeatures, metadf,
     feature_readavgs <- kinetics_and_reads$readcounts[[i]]
 
     logkdeg_sds <- exp(kinetics_and_reads$read_zscores[[i]]*logkdegsdtrend_slope +
-                         logkdegsdtrend_slope)
+                         logkdegsdtrend_intercept)
 
     logksyn_sds <- exp(kinetics_and_reads$read_zscores[[i]]*logksynsdtrend_slope +
-                         logksynsdtrend_slope)
+                         logksynsdtrend_intercept)
+
 
 
     logkdegs[[i]] <- stats::rnorm(n = nsamp,
@@ -648,12 +651,14 @@ SimulateMultiCondition <- function(nfeatures, metadf,
                           mu = feature_readavgs,
                           size = 1/(dispslope/feature_readavgs + dispint))
 
+
   }
 
 
   ### Simulate data for each replicate
   simdata <- vector(mode = "list", length = nrow(metadf))
   for(s in 1:nrow(metadf)){
+
 
     pdo <- metadf$pdo[s]
 
@@ -663,6 +668,7 @@ SimulateMultiCondition <- function(nfeatures, metadf,
     # Dropout adjusted
     fn_vect <- (fn_vect*(1 - pdo))/(fn_vect*(1 - pdo) + (1 - fn_vect))
     kdeg_vect <- -log(1 - fn_vect)/metadf$label_time[s]
+
 
 
     # A bit unclear just from the interface (so suboptimal function design)

@@ -94,6 +94,7 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
 
   ### Figure out which fraction new estimates to use
 
+  # Function is in Helpers.R
   table_info <- get_table_name(obj,
                                features = features,
                                tabletype = 'fractions',

@@ -127,7 +127,8 @@ EstimateIsoformFractions <- function(obj,
     fraction_name <- possible_fraction_names[(grepl(paste0(gsub("_","",fractions_identifier), "_"),
                                                    possible_fraction_names) |
                                                grepl(paste0("_", gsub("_","",fractions_identifier)),
-                                                     possible_fraction_names)) &
+                                                     possible_fraction_names) |
+                                                possible_fraction_names == gsub("_","",fractions_identifier)) &
                                                !grepl("^isoforms_",
                                                       possible_fraction_names)]
 
