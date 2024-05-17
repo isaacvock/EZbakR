@@ -272,7 +272,7 @@ general_avg_and_reg <- function(obj, features, parameter,
                          coverage = mean(log_normalized_reads),
                          replicates = dplyr::n()) %>%
         dplyr::mutate(se_mean = exp(logsd)/sqrt(replicates),
-                      se_logsd = (1/(2*exp(logsd)^2)) * sqrt((2*exp(logsd)^4)/(replicates - 1)) ) %>%
+                      se_logsd = 1/sqrt(2*(replicates - 1)) ) %>%
         dplyr::select(-replicates) %>%
         tidyr::pivot_wider(names_from = !!mean_vars[2],
                            values_from = c(mean, logsd, coverage, se_mean, se_logsd),
@@ -286,7 +286,7 @@ general_avg_and_reg <- function(obj, features, parameter,
         dplyr::group_by(dplyr::across(dplyr::all_of(c(features_to_analyze)))) %>%
         dplyr::mutate(logsd = log(sd(!!dplyr::sym(parameter))),
                       coverage = mean(log_normalized_reads)) %>%
-        dplyr::mutate(se_logsd = (1/(2*exp(logsd)^2)) * sqrt((2*exp(logsd)^4)/(dplyr::n() - 1))) %>%
+        dplyr::mutate(se_logsd = 1/sqrt(2*(dplyr::n() - 1))) %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
         dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
                          logsd = mean(logsd),
@@ -310,7 +310,7 @@ general_avg_and_reg <- function(obj, features, parameter,
                          coverage = mean(log_normalized_reads),
                          replicates = dplyr::n()) %>%
         dplyr::mutate(se_mean = exp(logsd)/sqrt(replicates),
-                      se_logsd = (1/(2*exp(logsd)^2)) * sqrt((2*exp(logsd)^4)/(replicates - 1)) ) %>%
+                      se_logsd = 1/sqrt(2*(replicates - 1)) ) %>%
         dplyr::select(-replicates) %>%
         tidyr::pivot_wider(names_from = !!mean_vars[2:length(mean_vars)],
                            values_from = c(mean, logsd, coverage, se_mean, se_logsd),
@@ -610,7 +610,7 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
     # I will note that "failed convergence" almost always meant that the
     # max number of iterations was hit (code 1).
     opt <- optim(startParams, heteroskedastic_likelihood,
-                 #gr = heteroskedastic_gradient,
+                 #\gr = heteroskedastic_gradient,
                  y = data[[dependent_var]],
                  X_mean = designMatrix_mean,
                  X_sd = designMatrix_sd,
