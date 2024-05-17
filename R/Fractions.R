@@ -341,12 +341,13 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
     ### Estimate fraction new
 
     col_name <- paste0("logit_fraction_high", pops_to_analyze)
+    uncertainty_col <- paste0("se_logit_fraction_high", pops_to_analyze)
     natural_col_name <- paste0("fraction_high", pops_to_analyze)
 
     fns <- dplyr::as_tibble(cB) %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
-      dplyr::summarise(!!col_name := ifelse(!(unique(sample) %in% samples_with_no_label),
-                                            optim(0,
+      dplyr::summarise(fit = ifelse(!(unique(sample) %in% samples_with_no_label),
+                                            list(I(optim(0,
                                              fn = two_comp_likelihood,
                                              muts = !!dplyr::sym(pops_to_analyze),
                                              nucs = !!dplyr::sym(necessary_basecounts),
@@ -354,15 +355,22 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                                              pold = pold,
                                              Poisson = Poisson,
                                              n = n,
-                                             lower = -7,
-                                             upper = 7,
-                                             method = "L-BFGS-B")$par[1],
-                                            -Inf),
+                                             lower = -9,
+                                             upper = 9,
+                                             method = "L-BFGS-B",
+                                             hessian = TRUE))),
+                                            list(I(list(par = -Inf,
+                                                        hessian = Inf)))),
                        n = sum(n)) %>%
       dplyr::ungroup() %>%
+      dplyr::mutate(
+        !!col_name := purrr::map_dbl(fit, ~ .x$par[1]),
+        !!uncertainty_col := purrr::map_dbl(fit, ~ sqrt(solve(.x$hessian)[1]))
+      ) %>%
+      dplyr::select(-fit) %>%
       dplyr::mutate(!!natural_col_name := inv_logit(!!dplyr::sym(col_name))) %>%
       dplyr::select(sample, !!features_to_analyze, !!natural_col_name,
-                    !!col_name, n)
+                    !!col_name, !!uncertainty_col, n)
 
 
 
@@ -675,26 +683,37 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
       ### Estimate fraction new
 
       col_name <- paste0("logit_fraction_high", pops_to_analyze)
+      uncertainty_col <- paste0("se_logit_fraction_high", pops_to_analyze)
       natural_col_name <- paste0("fraction_high", pops_to_analyze)
 
-      sample_fns <- dplyr::as_tibble(sample_cB) %>%
+      fns <- dplyr::as_tibble(sample_cB) %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
-        dplyr::summarise(!!col_name := optim(0,
-                                             fn = two_comp_likelihood,
-                                             muts = !!dplyr::sym(pops_to_analyze),
-                                             nucs = !!dplyr::sym(necessary_basecounts),
-                                             pnew = pnew,
-                                             pold = pold,
-                                             Poisson = Poisson,
-                                             n = n,
-                                             lower = -7,
-                                             upper = 7,
-                                             method = "L-BFGS-B")$par[1],
+        dplyr::summarise(fit := list(I(ifelse(!(unique(sample) %in% samples_with_no_label),
+                                              optim(0,
+                                                    fn = two_comp_likelihood,
+                                                    muts = !!dplyr::sym(pops_to_analyze),
+                                                    nucs = !!dplyr::sym(necessary_basecounts),
+                                                    pnew = pnew,
+                                                    pold = pold,
+                                                    Poisson = Poisson,
+                                                    n = n,
+                                                    lower = -9,
+                                                    upper = 9,
+                                                    method = "L-BFGS-B",
+                                                    hessian = TRUE),
+                                              list(par = -Inf)))),
                          n = sum(n)) %>%
         dplyr::ungroup() %>%
+        dplyr::mutate(
+          !!col_name := purrr::map_dbl(fit, ~ .x$par[1]),
+          !!uncertainty_col := ifelse(!(unique(sample) %in% samples_with_no_label),
+                                      purrr::map_dbl(fit, ~ sqrt(solve(.x$hessian)[1])),
+                                      0)
+        ) %>%
+        dplyr::select(-fit) %>%
         dplyr::mutate(!!natural_col_name := inv_logit(!!dplyr::sym(col_name))) %>%
         dplyr::select(sample, !!features_to_analyze, !!natural_col_name,
-                      !!col_name, n)
+                      !!col_name, !!uncertainty_col, n)
 
 
 
