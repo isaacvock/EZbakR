@@ -6,23 +6,39 @@
 \usage{
 CompareParameters(
   obj,
-  features = NULL,
-  parameter = "log_kdeg",
-  quant_name = NULL,
   condition,
   reference,
-  experimental
+  experimental,
+  features = NULL,
+  parameter = "log_kdeg",
+  quant_name = NULL
 )
 }
 \arguments{
 \item{obj}{An \code{EZbakRFit} object, which is an \code{EZbakRFractions} object on
 which \code{AverageAndRegularize()} has been run.}
 
+\item{condition}{Name of factor from \code{metadf} whose parameter estimates at
+different factor values you would like to compare.}
+
+\item{reference}{Name of reference \code{condition} factor level value. Difference
+will be calculated as \code{experimental} - \code{reference}.}
+
+\item{experimental}{Name of \code{condition} factor level value to compare to reference.
+Difference will be calculated as \code{experimental} - \code{reference}.}
+
 \item{features}{Character vector of the set of features you want to stratify
 reads by and estimate proportions of each RNA population. The default of "all"
 will use all feature columns in the \code{obj}'s cB.}
 
 \item{parameter}{Parameter to average across replicates of a given condition.}
+
+\item{quant_name}{Name of quantification tool appended to table name of interest.
+This is only relevant if you are providing isoform-specific estimates, in which
+case the isoform quantification tool's name may need to be provided in order
+for EZbakR to uniquely identify the table of interest. Even in that case though,
+this should only have to be non-null in the case where you have performed isoform-specific
+fraction estimation with more than one quantification tool's output.}
 }
 \description{
 Get contrasts of estimated parameters

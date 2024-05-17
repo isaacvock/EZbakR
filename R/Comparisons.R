@@ -39,6 +39,9 @@
 #' for EZbakR to uniquely identify the table of interest. Even in that case though,
 #' this should only have to be non-null in the case where you have performed isoform-specific
 #' fraction estimation with more than one quantification tool's output.
+#' @param min_reads Minimum number of reads in all samples for a feature to be kept.
+#' @param force_optim Perform numerical likelihood estimation, even if a more efficient,
+#' approximate, analytical strategy is possible given `formula_mean` and `formula_sd`.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
@@ -498,16 +501,28 @@ general_avg_and_reg <- function(obj, features, parameter,
 #'
 #' @param obj An `EZbakRFit` object, which is an `EZbakRFractions` object on
 #' which `AverageAndRegularize()` has been run.
+#' @param condition Name of factor from `metadf` whose parameter estimates at
+#' different factor values you would like to compare.
+#' @param reference Name of reference `condition` factor level value. Difference
+#' will be calculated as `experimental` - `reference`.
+#' @param experimental Name of `condition` factor level value to compare to reference.
+#' Difference will be calculated as `experimental` - `reference`.
 #' @param features Character vector of the set of features you want to stratify
 #' reads by and estimate proportions of each RNA population. The default of "all"
 #' will use all feature columns in the `obj`'s cB.
 #' @param parameter Parameter to average across replicates of a given condition.
+#' @param quant_name Name of quantification tool appended to table name of interest.
+#' This is only relevant if you are providing isoform-specific estimates, in which
+#' case the isoform quantification tool's name may need to be provided in order
+#' for EZbakR to uniquely identify the table of interest. Even in that case though,
+#' this should only have to be non-null in the case where you have performed isoform-specific
+#' fraction estimation with more than one quantification tool's output.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
-CompareParameters <- function(obj, features = NULL, parameter = "log_kdeg",
-                              quant_name = NULL,
-                              condition, reference, experimental){
+CompareParameters <- function(obj, condition, reference, experimental,
+                              features = NULL, parameter = "log_kdeg",
+                              quant_name = NULL){
 
   ### Extract kinetic parameters of interest
 

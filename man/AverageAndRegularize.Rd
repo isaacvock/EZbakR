@@ -61,6 +61,11 @@ case the isoform quantification tool's name may need to be provided in order
 for EZbakR to uniquely identify the table of interest. Even in that case though,
 this should only have to be non-null in the case where you have performed isoform-specific
 fraction estimation with more than one quantification tool's output.}
+
+\item{min_reads}{Minimum number of reads in all samples for a feature to be kept.}
+
+\item{force_optim}{Perform numerical likelihood estimation, even if a more efficient,
+approximate, analytical strategy is possible given \code{formula_mean} and \code{formula_sd}.}
 }
 \description{
 \code{AverageAndRegularize} uses a linear model to average estimates of a parameter
