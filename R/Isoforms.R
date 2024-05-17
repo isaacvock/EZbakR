@@ -4,6 +4,20 @@
 #' data into an EZbakRData object. This is necessary to run functions such as
 #' \code{EstimateIsoformFractions}.
 #'
+#' @param obj An `EZbakRData` object.
+#' @param files A named vector of paths to all transcript quantification files that you would like
+#' to import. This will be passed as the first argument of `tximport::tximport()` (also named `files`).
+#' The names of this vector should be the same as the sample names as they appear in the
+#' metadf of the `EZbakRData` object.
+#' @param quant_tool String denoting the type of software used to generate the abundances. Will
+#' get passed to the `type` argument of `tximport::tximport()`. As described in the documentation for
+#' `tximport` 'Options are "salmon", "sailfish", "alevin", "piscem", "kallisto", "rsem", "stringtie",
+#' or "none". This argument is used to autofill the arguments below (geneIdCol, etc.) "none" means
+#' that the user will specify these columns. Be aware that specifying type other than "none" will
+#' ignore the arguments below (geneIdCol, etc.)'. Referenced 'arguments below' can be specified
+#' as part of `...`.
+#' @param ... Additional arguments to be passed to `tximport::tximport()`. Especially relevant if
+#' you set `quant_tool` to "none".
 #' @export
 ImportIsoformQuant <- function(obj, files,
                                quant_tool = c("none", "salmon", "sailfish",
@@ -76,20 +90,23 @@ ImportIsoformQuant <- function(obj, files,
 #' to infer transcript isoform-specific fraction news (or more generally fraction
 #' of reads coming from a particular mutation population).
 #' @param obj An `EZbakRData` object
-#' @param quantification Transcript isoform quantification information. This
-#' can be provided in multiple formats:
-#' \itemize{
-#'  \item A data frame with the columns `sample`, `TPM`, `transcript_id`, and `gene_id`.
-#'  The `sample` column should contain the names of all samples present in the cB in
-#'  the `EZbakRData` object for which fractions have been estimated. `TPM` represents
-#'  the transcripts per million estimated by the quantification tool of your choice.
-#'  \item A data frame with two columns, one named `sample` and another named `path`.
-#'  The `sample` column should contain the names of all samples present in the cB in
-#'  the `EZbakRData` object for which fractions have been estimated. The `path`
-#'  column should be a path to a transcript isoform quantification file. **If this
-#'  form of `quantification` is provided, then `quant_tool` must be specified so
-#'  that the quantification files can be properly interpreted
-#' }
+#' @param fraction_identifier String that identifies the name of the fractions table
+#' with fraction new/high mutation type estimates for reads assigned to the set of
+#' isoforms with which they were compatible.
+#' @param quant_name Name of transcript isoform quantification table to use. Should be stored
+#' in the obj$readcounts list under this name. Use `ImportIsoformQuant()` to create
+#' this table. If `quant_name` is `NULL`, it will search for tables containing the string
+#' "isoform_quant" in their name, as that is the naming convention used by `ImportIsoformQuant()`.
+#' If more than one such table exists, an error will be thrown and you will have to specify
+#' the exact name in `quant_name`.
+#' @param fraction_name Name of fractions table to use. Should represent the table
+#' stored in obj$fractions with fraction new/high mutation type estimates for reads
+#' assigned to the set of isoforms with which they were fully compatible.
+#' @param gene_to_transcript Table with columns `transcript_id` and all feature related
+#' columns that appear in the relevant fractions table. This is only relevant as a hack to
+#' to deal with the case where STAR includes in its transcriptome alignment transcripts
+#' on the opposite strand from where the RNA actually originated. This table will be used
+#' to filter out such transcript-feature combinations that should not exist.
 #' @export
 EstimateIsoformFractions <- function(obj,
                                      fractions_identifier = "transcripts",
@@ -279,8 +296,8 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
 
   ### THINGS THAT NEED TO BE INFERRED
   # 1) Which fractions to grab
-  # 3) What the 'set of transcripts' column is called
-  # 4) Which quantification to use
+  # 2) What the 'set of transcripts' column is called
+  # 3) Which quantification to use
 
 
   message(paste0("Analyzing sample ", sample_name, "..."))
@@ -366,10 +383,9 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
     dplyr::filter(is.na(isoform_cnt) & !is.na(expected_count))
 
   # Run beta regression model to infer isoform-specific fractions
+
   logit_fraction_of_interest <- paste0("logit_", fraction_of_interest)
 
-
-  # WAY I WANT TO DO IT
   Fns_multi <- Fns_multi %>%
     dplyr::mutate(fn = !!sym(fraction_of_interest)) %>%
     dplyr::group_by(dplyr::across(dplyr::all_of(gene_colnames))) %>%
@@ -383,24 +399,6 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
     dplyr::inner_join(quant,
                       by = c("transcript_id")) %>%
     dplyr::select(-TPM)
-
-  # # CHESS-specific hack for right now
-  # Fns_multi <- Fns_multi %>%
-  #   dplyr::ungroup() %>%
-  #   dplyr::rowwise() %>%
-  #   dplyr::filter(grepl(paste0(GF, "\\."), transcript_id)) %>%
-  #   dplyr::ungroup() %>%
-  #   dplyr::mutate(fn = !!sym(fraction_of_interest)) %>%
-  #   dplyr::group_by(dplyr::across(dplyr::all_of(gene_colnames))) %>%
-  #   tidyr::nest() %>%
-  #   dplyr::mutate(fnest = lapply(data, fit_beta_regression)) %>%
-  #   dplyr::select(!!gene_colnames, fnest) %>%
-  #   tidyr::unnest(cols = c(fnest)) %>%
-  #   dplyr::mutate(!!logit_fraction_of_interest := logit_fn,
-  #                 !!fraction_of_interest := inv_logit(logit_fn)) %>%
-  #   dplyr::select(-logit_fn) %>%
-  #   dplyr::inner_join(quant,
-  #                     by = c("transcript_id"))
 
 
   # Combine single and multi-isoform gene estimates

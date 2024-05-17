@@ -15,20 +15,26 @@ EstimateIsoformFractions(
 \arguments{
 \item{obj}{An \code{EZbakRData} object}
 
-\item{quantification}{Transcript isoform quantification information. This
-can be provided in multiple formats:
-\itemize{
-\item A data frame with the columns \code{sample}, \code{TPM}, \code{transcript_id}, and \code{gene_id}.
-The \code{sample} column should contain the names of all samples present in the cB in
-the \code{EZbakRData} object for which fractions have been estimated. \code{TPM} represents
-the transcripts per million estimated by the quantification tool of your choice.
-\item A data frame with two columns, one named \code{sample} and another named \code{path}.
-The \code{sample} column should contain the names of all samples present in the cB in
-the \code{EZbakRData} object for which fractions have been estimated. The \code{path}
-column should be a path to a transcript isoform quantification file. **If this
-form of \code{quantification} is provided, then \code{quant_tool} must be specified so
-that the quantification files can be properly interpreted
-}}
+\item{quant_name}{Name of transcript isoform quantification table to use. Should be stored
+in the obj$readcounts list under this name. Use \code{ImportIsoformQuant()} to create
+this table. If \code{quant_name} is \code{NULL}, it will search for tables containing the string
+"isoform_quant" in their name, as that is the naming convention used by \code{ImportIsoformQuant()}.
+If more than one such table exists, an error will be thrown and you will have to specify
+the exact name in \code{quant_name}.}
+
+\item{fraction_name}{Name of fractions table to use. Should represent the table
+stored in obj$fractions with fraction new/high mutation type estimates for reads
+assigned to the set of isoforms with which they were fully compatible.}
+
+\item{gene_to_transcript}{Table with columns \code{transcript_id} and all feature related
+columns that appear in the relevant fractions table. This is only relevant as a hack to
+to deal with the case where STAR includes in its transcriptome alignment transcripts
+on the opposite strand from where the RNA actually originated. This table will be used
+to filter out such transcript-feature combinations that should not exist.}
+
+\item{fraction_identifier}{String that identifies the name of the fractions table
+with fraction new/high mutation type estimates for reads assigned to the set of
+isoforms with which they were compatible.}
 }
 \description{
 Combines the output of \code{EstimateFractions} with transcript isoform

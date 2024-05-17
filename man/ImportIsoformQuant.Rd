@@ -12,6 +12,25 @@ ImportIsoformQuant(
   ...
 )
 }
+\arguments{
+\item{obj}{An \code{EZbakRData} object.}
+
+\item{files}{A named vector of paths to all transcript quantification files that you would like
+to import. This will be passed as the first argument of \code{tximport::tximport()} (also named \code{files}).
+The names of this vector should be the same as the sample names as they appear in the
+metadf of the \code{EZbakRData} object.}
+
+\item{quant_tool}{String denoting the type of software used to generate the abundances. Will
+get passed to the \code{type} argument of \code{tximport::tximport()}. As described in the documentation for
+\code{tximport} 'Options are "salmon", "sailfish", "alevin", "piscem", "kallisto", "rsem", "stringtie",
+or "none". This argument is used to autofill the arguments below (geneIdCol, etc.) "none" means
+that the user will specify these columns. Be aware that specifying type other than "none" will
+ignore the arguments below (geneIdCol, etc.)'. Referenced 'arguments below' can be specified
+as part of \code{...}.}
+
+\item{...}{Additional arguments to be passed to \code{tximport::tximport()}. Especially relevant if
+you set \code{quant_tool} to "none".}
+}
 \description{
 A convenient wrapper to \code{tximport()} for importing isoform quantification
 data into an EZbakRData object. This is necessary to run functions such as

@@ -136,6 +136,10 @@ general_avg_and_reg <- function(obj, features, parameter,
                                 force_optim = FALSE){
 
 
+  ### Get name of standard error column
+
+  parameter_se <- paste0("se_", parameter)
+
 
   ### Extract kinetic parameters of interest
 
@@ -269,8 +273,14 @@ general_avg_and_reg <- function(obj, features, parameter,
         dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
         dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
                          logsd = log(sd(!!dplyr::sym(parameter))),
+                         logsd_from_uncert = log(mean(!!dplyr::sym(parameter_se))),
                          coverage = mean(log_normalized_reads),
                          replicates = dplyr::n()) %>%
+        dplyr::mutate(logsd = dplyr::case_when(
+          logsd < logsd_from_uncert ~ logsd_from_uncert,
+          .default = logsd
+        )) %>%
+        dplyr::select(-logsd_from_uncert) %>%
         dplyr::mutate(se_mean = exp(logsd)/sqrt(replicates),
                       se_logsd = 1/sqrt(2*(replicates - 1)) ) %>%
         dplyr::select(-replicates) %>%
@@ -281,17 +291,31 @@ general_avg_and_reg <- function(obj, features, parameter,
 
     }else if(length(mean_vars) == 2 & length(sd_vars) == 1 & !force_optim){
 
-      # It's much faster this way
+      # It's faster this way
+      # Bit tricky as you have to:
+        # 1) Estimate mean of sd in each group
+        # 2) Average sd across groups
+          # Can't just do sd across all groups, as this will be a function of both
+          # replicate variability and difference across groups. So will overestimate sd.
+        # 3) Calculate se of sd based on number of replicates across all groups
+        # 4) Calculate se of mean based on number of replicates within a group
       model_fit <- kinetics %>%
-        dplyr::group_by(dplyr::across(dplyr::all_of(c(features_to_analyze)))) %>%
-        dplyr::mutate(logsd = log(sd(!!dplyr::sym(parameter))),
-                      coverage = mean(log_normalized_reads)) %>%
-        dplyr::mutate(se_logsd = 1/sqrt(2*(dplyr::n() - 1))) %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
         dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
-                         logsd = mean(logsd),
+                         logsd = log(sd(!!dplyr::sym(parameter))),
                          coverage = mean(coverage),
                          se_logsd = mean(se_logsd)) %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(c(features_to_analyze)))) %>%
+        dplyr::mutate(logsd = mean(logsd),
+                      logsd_from_uncert = log(mean(!!dplyr::sym(parameter_se))),
+                      coverage = mean(log_normalized_reads)) %>%
+        dplyr::mutate(logsd = dplyr::case_when(
+          logsd < logsd_from_uncert ~ logsd_from_uncert,
+          .default = logsd
+        )) %>%
+        dplyr::select(-logsd_from_uncert) %>%
+        dplyr::mutate(se_logsd = 1/sqrt(2*(dplyr::n() - 1))) %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
         dplyr::mutate(se_mean = exp(logsd)/sqrt(dplyr::n())) %>%
         tidyr::pivot_wider(names_from = !!mean_vars[2],
                            values_from = c(mean, logsd, coverage, se_mean, se_logsd),
@@ -307,8 +331,14 @@ general_avg_and_reg <- function(obj, features, parameter,
         dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2:length(mean_vars)], features_to_analyze)))) %>%
         dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
                          logsd = log(sd(!!dplyr::sym(parameter))),
+                         logsd_from_uncert = log(mean(!!dplyr::sym(parameter_se))),
                          coverage = mean(log_normalized_reads),
                          replicates = dplyr::n()) %>%
+        dplyr::mutate(logsd = dplyr::case_when(
+          logsd < logsd_from_uncert ~ logsd_from_uncert,
+          .default = logsd
+        )) %>%
+        dplyr::select(-logsd_from_uncert) %>%
         dplyr::mutate(se_mean = exp(logsd)/sqrt(replicates),
                       se_logsd = 1/sqrt(2*(replicates - 1)) ) %>%
         dplyr::select(-replicates) %>%
