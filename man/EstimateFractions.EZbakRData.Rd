@@ -10,12 +10,14 @@
   mutrate_populations = "all",
   fraction_design = NULL,
   Poisson = TRUE,
-  strategy = c("standard"),
+  strategy = c("standard", "hierarchical"),
   column_to_reorder = NULL,
   pnew_prior_mean = -2.94,
   pnew_prior_sd = 0.3,
   pold_prior_mean = -6.5,
-  pold_prior_sd = 0.5
+  pold_prior_sd = 0.5,
+  hier_readcutoff = 300,
+  init_pnew_prior_sd = 0.8
 )
 }
 \description{

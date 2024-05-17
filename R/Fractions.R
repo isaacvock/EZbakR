@@ -94,9 +94,9 @@ create_fraction_design <- function(mutrate_populations){
 #' \itemize{
 #'  \item standard: Estimate a single new read and old read mutation rate for each
 #'  sample. This is done via a binomial mixture model aggregating over
-#'  \item hierarchical (NOT YET IMPLEMENTED): Estimate feature-specific mutation
-#'  rate with standard, regularizing the feature-specific
-#'  estimate with a sample-wide prior.
+#'  \item hierarchical (NOT YET IMPLEMENTED): Estimate feature-specific new read mutation
+#'  rate, regularizing the feature-specific estimate with a sample-wide prior. Currently
+#'  only compatible with single mutation type mixture modeling.
 #'  \item smalec (NOT YET IMPLEMENTED): Estimate two old read mutation rates, as was done in
 #'  Smalec et al., 2023. Idea is that alignment artifacts can give rise to a
 #'  high mutation rate old read population that should be accounted for
@@ -106,6 +106,10 @@ create_fraction_design <- function(mutrate_populations){
 #' @param pnew_prior_sd logit-Normal sd for logit(pnew) prior.
 #' @param pold_prior_mean logit-Normal mean for logit(pold) prior.
 #' @param pold_prior_sd logit-Normal sd for logit(pold) prior.
+#' @param hier_readcutoff If `strategy` == `hierarchical`, only features with this many reads
+#' are used to infer the distribution of feature-specific labeled read mutation rates.
+#' @param init_pnew_prior_sd If `strategy` == `hierarchical`, this is the initial logit(pnew)
+#' prior standard deviation to regularize feature-specific labeled read mutation rate estimates.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
@@ -113,12 +117,15 @@ EstimateFractions <- function(obj, features = "all",
                               mutrate_populations = "all",
                               fraction_design = NULL,
                               Poisson = TRUE,
-                              strategy = c("standard"),
+                              strategy = c("standard", "hierarchical"),
                               column_to_reorder = NULL,
                               pnew_prior_mean = -2.94,
                               pnew_prior_sd = 0.3,
                               pold_prior_mean = -6.5,
-                              pold_prior_sd = 0.5){
+                              pold_prior_sd = 0.5,
+                              hier_readcutoff = 300,
+                              init_pnew_prior_sd = 0.8,
+                              pnew_prior_sd_min = 0.01){
 
 
   UseMethod("EstimateFractions")
@@ -135,12 +142,14 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                               mutrate_populations = "all",
                               fraction_design = NULL,
                               Poisson = TRUE,
-                              strategy = c("standard"),
+                              strategy = c("standard", "hierarchical"),
                               column_to_reorder = NULL,
                               pnew_prior_mean = -2.94,
                               pnew_prior_sd = 0.3,
                               pold_prior_mean = -6.5,
-                              pold_prior_sd = 0.5){
+                              pold_prior_sd = 0.5,
+                              hier_readcutoff = 300,
+                              init_pnew_prior_sd = 0.8){
 
   `.` <- list
 
@@ -344,33 +353,125 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
     uncertainty_col <- paste0("se_logit_fraction_high", pops_to_analyze)
     natural_col_name <- paste0("fraction_high", pops_to_analyze)
 
-    fns <- dplyr::as_tibble(cB) %>%
-      dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
-      dplyr::summarise(fit = ifelse(!(unique(sample) %in% samples_with_no_label),
-                                            list(I(optim(0,
-                                             fn = two_comp_likelihood,
-                                             muts = !!dplyr::sym(pops_to_analyze),
-                                             nucs = !!dplyr::sym(necessary_basecounts),
-                                             pnew = pnew,
-                                             pold = pold,
-                                             Poisson = Poisson,
-                                             n = n,
-                                             lower = -9,
-                                             upper = 9,
-                                             method = "L-BFGS-B",
-                                             hessian = TRUE))),
-                                            list(I(list(par = -Inf,
-                                                        hessian = Inf)))),
-                       n = sum(n)) %>%
-      dplyr::ungroup() %>%
-      dplyr::mutate(
-        !!col_name := purrr::map_dbl(fit, ~ .x$par[1]),
-        !!uncertainty_col := purrr::map_dbl(fit, ~ sqrt(solve(.x$hessian)[1]))
-      ) %>%
-      dplyr::select(-fit) %>%
-      dplyr::mutate(!!natural_col_name := inv_logit(!!dplyr::sym(col_name))) %>%
-      dplyr::select(sample, !!features_to_analyze, !!natural_col_name,
-                    !!col_name, !!uncertainty_col, n)
+    if(strategy == "hierarchical"){
+
+
+      message("FITTING HIERARCHICAL TWO-COMPONENT MIXTURE MODEL:")
+
+      ### Get coverages to filter by; only want high coverage for feature-specific
+      ### pnew estimation
+
+      coverages <- cB[,.(coverage = sum(n)),
+                      by = c("sample", features_to_analyze)]
+      coverages <- coverages[coverage > hier_readcutoff][, c("coverage") := .(NULL)]
+
+
+      ### Get feature-specific pnew estimates
+
+      message("Estimating distribution of feature-specific pnews")
+
+      keyvector <- c("sample", features_to_analyze)
+      setkeyv(coverages, keyvector)
+      setkeyv(cB, keyvector)
+
+      feature_specific <- cB[
+        coverages, nomatch = NULL
+      ][,
+        .(params = list(two_comp_mm_hier(TC = get(pops_to_analyze),
+                                      nT = get(necessary_basecounts),
+                                      n = n,
+                                      pold = unique(pold),
+                                      pnew_prior = unique(pnew),
+                                      pnew_prior_sd = init_pnew_prior_sd)),
+          pold = unique(pold)),
+        by = c("sample", features_to_analyze)
+      ]
+
+
+      feature_specific[, c("pnew", "lpnew_uncert") := .( inv_logit(sapply(params, `[[`, 2)),
+                                         sapply(params, `[[`, 4))]
+
+
+      ### Hierarchical model
+
+      message("Estimating fractions with feature-specific pnews")
+
+      global_est <- feature_specific[,.(pnew_prior = mean(logit(pnew)),
+                                    pnew_prior_sd = sd(logit(pnew)) - mean(lpnew_uncert),
+                                    pold = mean(pold)),
+                                 by = sample]
+
+      global_est[, pnew_prior_sd := ifelse(pnew_prior_sd < 0,
+                                           pnew_prior_sd_min,
+                                           pnew_prior_sd)
+      ]
+
+      global_est[, pnew_prior_sd := min(pnew_prior_sd)]
+
+      setkey(global_est, sample)
+      setkey(cB, sample)
+
+      feature_specific <- cB[global_est, nomatch = NULL][,
+                                                     .(params = list(two_comp_mm_hier(TC = TC,
+                                                                                   nT = nT,
+                                                                                   n = n,
+                                                                                   pold = unique(pold),
+                                                                                   pnew_prior = unique(pnew_prior),
+                                                                                   pnew_prior_sd = unique(pnew_prior_sd))),
+                                                       n = sum(n)),
+                                                     by = c("sample", features_to_analyze)
+      ]
+
+
+      feature_specific[, c(col_name, "pnew",
+                           uncertainty_col) := .(sapply(params, `[[`, 1),
+                                               inv_logit(sapply(params, `[[`, 2)),
+                                               sapply(params, `[[`, 3))]
+
+
+
+      fns <- dplyr::as_tibble(feature_specific) %>%
+        dplyr::mutate(!!natural_col_name := inv_logit(!!dplyr::sym(col_name))) %>%
+        dplyr::select(sample, !!features_to_analyze, !!natural_col_name,
+                      !!col_name, !!uncertainty_col, n)
+
+
+      ### TO-DO: SAVE FEATURE-SPECIFIC PNEWS
+
+
+    }else{
+
+      fns <- dplyr::as_tibble(cB) %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
+        dplyr::summarise(fit = ifelse(!(unique(sample) %in% samples_with_no_label),
+                                      list(I(optim(0,
+                                                   fn = two_comp_likelihood,
+                                                   muts = !!dplyr::sym(pops_to_analyze),
+                                                   nucs = !!dplyr::sym(necessary_basecounts),
+                                                   pnew = pnew,
+                                                   pold = pold,
+                                                   Poisson = Poisson,
+                                                   n = n,
+                                                   lower = -9,
+                                                   upper = 9,
+                                                   method = "L-BFGS-B",
+                                                   hessian = TRUE))),
+                                      list(I(list(par = -Inf,
+                                                  hessian = Inf)))),
+                         n = sum(n)) %>%
+        dplyr::ungroup() %>%
+        dplyr::mutate(
+          !!col_name := purrr::map_dbl(fit, ~ .x$par[1]),
+          !!uncertainty_col := purrr::map_dbl(fit, ~ sqrt(solve(.x$hessian)[1]))
+        ) %>%
+        dplyr::select(-fit) %>%
+        dplyr::mutate(!!natural_col_name := inv_logit(!!dplyr::sym(col_name))) %>%
+        dplyr::select(sample, !!features_to_analyze, !!natural_col_name,
+                      !!col_name, !!uncertainty_col, n)
+
+    }
+
+
 
 
 
@@ -432,7 +533,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                          mutrate_populations = "all",
                                          fraction_design = NULL,
                                          Poisson = TRUE,
-                                         strategy = c("standard"),
+                                         strategy = c("standard", "hierarchical"),
                                          column_to_reorder = NULL,
                                          pnew_prior_mean = -2.94,
                                          pnew_prior_sd = 0.3,
@@ -974,6 +1075,152 @@ softmax <- function(vect){
   return(exp(vect)/sum(exp(vect)))
 
 }
+
+
+
+#####################################
+# HIERARCHICAL MODEL HELPER FUNCTIONS
+#####################################
+
+
+
+# Two-component mixture model likelihood
+tcmml <- function(param, TC, nT, n,
+                   pnew = NULL,
+                   pold = NULL,
+                   pnew_prior = NULL,
+                   pnew_prior_sd = NULL,
+                  Poisson = TRUE){
+
+
+  ### Parse relevant parameters to make later code cleaner
+
+  fn <- inv_logit(param[1])
+
+  count <- 2
+  if(is.null(pnew)){
+
+    pnew <- inv_logit(param[count])
+    count <- count + 1
+
+  }
+
+
+  if(is.null(pold)){
+
+    pold <- inv_logit(param[count])
+
+  }
+
+
+  ### Likelihoods
+
+  if(Poisson){
+
+    ll <- fn*dpois(TC, nT*pnew) + (1 - fn)*dpois(TC, nT*pold)
+
+  }else{
+
+    ll <- fn*dbinom(TC, nT, pnew) + (1 - fn)*dbinom(TC, nT, pold)
+
+  }
+
+
+  ### Add prior weights if necessary
+
+  if(is.null(pnew_prior) &
+     is.null(pnew_prior_sd)){
+
+    ll <- -n*log(ll)
+
+    return(sum(ll) - dnorm(param[1], log = TRUE))
+
+  }else{
+
+    ll <- -n*log(ll)
+
+    return(sum(ll) - dnorm(param[1], log = TRUE)
+           - dnorm(param[2], mean = pnew_prior, sd = pnew_prior_sd, log = TRUE))
+
+
+  }
+
+
+
+
+}
+
+
+
+# Two-componenet mixture model for hierarchical model
+two_comp_mm_hier <- function(TC, nT, n, pnew = NULL, pold = NULL,
+                          pnew_prior = NULL,
+                          pnew_prior_sd = NULL,
+                          Poisson = TRUE){
+
+
+  init <- 0
+  upper_bound <- 9
+  lower_bound <- -9
+
+  if(is.null(pnew)){
+
+    init <- append(init, -2)
+    upper_bound <- append(upper_bound, 0)
+    lower_bound <- append(lower_bound, -9)
+
+  }
+
+  if(is.null(pold)){
+
+    init <- append(init, -6.5)
+    upper_bound <- append(upper_bound, 0)
+    lower_bound <- append(lower_bound, -9)
+
+  }
+
+
+
+  fit <- stats::optim(par = init, fn = tcmml,
+                      TC = TC,
+                      nT = nT,
+                      n = n,
+                      pnew = pnew,
+                      pold = pold,
+                      pnew_prior = pnew_prior,
+                      pnew_prior_sd = pnew_prior_sd,
+                      Poisson = Poisson,
+                      hessian = TRUE,
+                      method = "L-BFGS-B", lower = lower_bound, upper = upper_bound)
+
+  uncertainty <- sqrt(diag(solve(fit$hessian)))
+
+  if(is.null(pold)){
+
+    return(list(p1 = fit$par[1], p2 = fit$par[2], p3 = fit$par[3],
+                p1_u = uncertainty[1], p2_u = uncertainty[2], p3_u = uncertainty[3]))
+
+  }else{
+
+    return(list(p1 = fit$par[1], p2 = fit$par[2],
+                p1_u = uncertainty[1], p2_u = uncertainty[2]))
+
+  }
+
+}
+
+
+
+
+
+
+##############################################################
+# HELPER FUNCTIONS FOR STANDARD TWO-COMPONENT MIXTURE MODELING
+##############################################################
+
+
+
+
 
 # Two-component mixture model; optimized for simplest use-case
 two_comp_likelihood <- function(param, muts, nucs, Poisson = TRUE,

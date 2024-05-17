@@ -10,12 +10,15 @@ EstimateFractions(
   mutrate_populations = "all",
   fraction_design = NULL,
   Poisson = TRUE,
-  strategy = c("standard"),
+  strategy = c("standard", "hierarchical"),
   column_to_reorder = NULL,
   pnew_prior_mean = -2.94,
   pnew_prior_sd = 0.3,
   pold_prior_mean = -6.5,
-  pold_prior_sd = 0.5
+  pold_prior_sd = 0.5,
+  hier_readcutoff = 300,
+  init_pnew_prior_sd = 0.8,
+  pnew_prior_sd_min = 0.01
 )
 }
 \arguments{
@@ -89,9 +92,9 @@ Options include:
 \itemize{
 \item standard: Estimate a single new read and old read mutation rate for each
 sample. This is done via a binomial mixture model aggregating over
-\item hierarchical (NOT YET IMPLEMENTED): Estimate feature-specific mutation
-rate with standard, regularizing the feature-specific
-estimate with a sample-wide prior.
+\item hierarchical (NOT YET IMPLEMENTED): Estimate feature-specific new read mutation
+rate, regularizing the feature-specific estimate with a sample-wide prior. Currently
+only compatible with single mutation type mixture modeling.
 \item smalec (NOT YET IMPLEMENTED): Estimate two old read mutation rates, as was done in
 Smalec et al., 2023. Idea is that alignment artifacts can give rise to a
 high mutation rate old read population that should be accounted for
@@ -105,6 +108,12 @@ to avoid overestimating the fraction of new reads
 \item{pold_prior_mean}{logit-Normal mean for logit(pold) prior.}
 
 \item{pold_prior_sd}{logit-Normal sd for logit(pold) prior.}
+
+\item{hier_readcutoff}{If \code{strategy} == \code{hierarchical}, only features with this many reads
+are used to infer the distribution of feature-specific labeled read mutation rates.}
+
+\item{init_pnew_prior_sd}{If \code{strategy} == \code{hierarchical}, this is the initial logit(pnew)
+prior standard deviation to regularize feature-specific labeled read mutation rate estimates.}
 }
 \description{
 Estimate fractions of each RNA population
