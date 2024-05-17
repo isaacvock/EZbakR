@@ -155,14 +155,32 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
   }
 
 
+  ### Estimate uncertainty in log(kdeg)
+
+  lkdeg_uncert <- function(fn, se_lfn){
+
+    deriv <- (1/log(1 - fn)) * (1 / (1 - fn)) * (fn*(1 - fn))
+
+    uncert <- abs(deriv)*se_lfn
+
+    return(uncert)
+
+  }
+
+  se_of_interest <- paste0("se_logit_", fraction_of_interest)
+
+  kinetics[, se_log_kdeg := lkdeg_uncert(fn = get(fraction_of_interest),
+                                         se_lfn = get(se_of_interest))]
+
+
   ### Estimate ksyn
 
   # Merge with kinetics
   setkeyv(reads_norm, c("sample", features_to_analyze))
   setkeyv(kinetics, c("sample", features_to_analyze))
 
-  cols_to_keep <- c("sample", features_to_analyze, "normalized_reads")
-  kinetics_cols_to_keep <- c(cols_to_keep, "kdeg", "log_kdeg", "n")
+  cols_to_keep <- c("sample", features_to_analyze, "normalized_reads", "scale_factor")
+  kinetics_cols_to_keep <- c(cols_to_keep, "kdeg", "log_kdeg", "se_log_kdeg", "n")
 
   kinetics <- kinetics[reads_norm[,..cols_to_keep], ..kinetics_cols_to_keep, nomatch = NULL]
 
@@ -170,12 +188,15 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
   kinetics[, ksyn := normalized_reads*kdeg]
   kinetics[, log_ksyn := log(ksyn)]
 
+  # Estimate uncertainty (assuming normalized_reads ~ Poisson(normalized_reads)/scale_factor)
+  kinetics[, se_log_ksyn := sqrt( (1/(normalized_reads*scale_factor)) + se_log_kdeg^2)]
+
 
   # Figure out what to name output
   reads_name <- paste0("normalized_readcounts_", fractions_name)
 
   obj[["kinetics"]][[fractions_name]] <- kinetics %>%
-    dplyr::select(sample, !!features_to_analyze, kdeg, log_kdeg, ksyn, log_ksyn, normalized_reads, n)
+    dplyr::select(sample, !!features_to_analyze, kdeg, log_kdeg, se_log_kdeg, ksyn, log_ksyn, se_log_ksyn, normalized_reads, n)
 
   # Eventually want to add count matrix output
   obj[["readcounts"]][[reads_name]] <- reads_norm %>%
