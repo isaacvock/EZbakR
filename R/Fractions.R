@@ -436,7 +436,18 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                       !!col_name, !!uncertainty_col, n)
 
 
-      ### TO-DO: SAVE FEATURE-SPECIFIC PNEWS
+      ### Save feature-specific pnews
+
+      mutrates[, pnew := NULL]
+
+      colvect <- c("sample", features_to_analyze, "pnew")
+
+      feature_mutrates <- feature_specific[,..colvect][
+             mutrates, on = "sample", nomatch = NULL
+        ]
+
+      obj$mutation_rates[[1]] <- feature_mutrates
+
 
 
     }else{
