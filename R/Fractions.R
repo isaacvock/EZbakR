@@ -1155,7 +1155,7 @@ fit_tcmm <- function(muts, nucs, n, pnew = NULL, pold = NULL,
                      Poisson = TRUE,
                      fraction_prior_mean = 0,
                      fraction_prior_sd = 1,
-                     return_fit = TRUE){
+                     return_fit = FALSE){
 
 
   init <- 0
