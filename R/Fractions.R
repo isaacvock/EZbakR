@@ -373,11 +373,11 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
       feature_specific <- cB[
         coverages, nomatch = NULL
       ][,
-        .(params = list(two_comp_mm_hier(TC = get(pops_to_analyze),
-                                      nT = get(necessary_basecounts),
+        .(params = list(fit_tcmm(muts = get(pops_to_analyze),
+                                      nucs = get(necessary_basecounts),
                                       n = n,
                                       pold = unique(pold),
-                                      pnew_prior = unique(pnew),
+                                      pnew_prior_mean = unique(pnew),
                                       pnew_prior_sd = init_pnew_prior_sd)),
           pold = unique(pold)),
         by = c("sample", features_to_analyze)
@@ -408,11 +408,11 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
       setkey(cB, sample)
 
       feature_specific <- cB[global_est, nomatch = NULL][,
-                                                     .(params = list(two_comp_mm_hier(TC = TC,
-                                                                                   nT = nT,
+                                                     .(params = list(fit_tcmm(TC = get(pops_to_analyze),
+                                                                                   nucs = get(necessary_basecounts),
                                                                                    n = n,
                                                                                    pold = unique(pold),
-                                                                                   pnew_prior = unique(pnew_prior),
+                                                                                   pnew_prior_mean = unique(pnew_prior),
                                                                                    pnew_prior_sd = unique(pnew_prior_sd))),
                                                        n = sum(n)),
                                                      by = c("sample", features_to_analyze)
@@ -452,11 +452,15 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
         dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
         dplyr::summarise(fit = ifelse(!(unique(sample) %in% samples_with_no_label),
                                       list(I(optim(0,
-                                                   fn = two_comp_likelihood,
+                                                   fn = tcmml,
                                                    muts = !!dplyr::sym(pops_to_analyze),
                                                    nucs = !!dplyr::sym(necessary_basecounts),
                                                    pnew = pnew,
                                                    pold = pold,
+                                                   pnew_prior_mean = pnew_prior_mean,
+                                                   pnew_prior_sd = pnew_prior_sd,
+                                                   pold_prior_mean = pold_prior_mean,
+                                                   pold_prior_sd = pold_prior_sd,
                                                    Poisson = Poisson,
                                                    n = n,
                                                    lower = -9,
@@ -734,7 +738,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
     sample_cB <- setDT(sample_cB)
 
     ### If using older versions of featureCounts, then assignment of reads to
-    ### transcripts can lead to different variations of
+    ### transcripts can lead to different variations of strings
     if(reorder_col){
 
       unique_strings <- unique(sample_cB[[column_to_reorder]])
@@ -798,7 +802,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
         dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
         dplyr::summarise(fit := list(I(ifelse(!(unique(sample) %in% samples_with_no_label),
                                               optim(0,
-                                                    fn = two_comp_likelihood,
+                                                    fn = fit_tcmm,
                                                     muts = !!dplyr::sym(pops_to_analyze),
                                                     nucs = !!dplyr::sym(necessary_basecounts),
                                                     pnew = pnew,
@@ -881,41 +885,6 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
 
 
-# Simple binomial mixture likelihood
-standard_binom_mix <- function(param, muts, nucs, n,
-                               pnew_prior_mean = -2.94,
-                               pnew_prior_sd = 0.3,
-                               pold_prior_mean = -6.5,
-                               pold_prior_sd = 0.5){
-
-
-  if(param[2] > param[3]){
-
-    p2_prior <- dnorm(param[2], pnew_prior_mean, pnew_prior_sd,
-                     log = TRUE)
-    p3_prior <- dnorm(param[3], pold_prior_mean, pold_prior_sd,
-                     log = TRUE)
-
-  }else{
-
-    p2_prior <- dnorm(param[2], pold_prior_mean, pold_prior_sd,
-                     log = TRUE)
-    p3_prior <- dnorm(param[3], pnew_prior_mean, pnew_prior_sd,
-                     log = TRUE)
-
-  }
-
-  logl <- sum(n*log( inv_logit(param[1])*dbinom(muts, nucs, inv_logit(param[2]))
-                     + (1 - inv_logit(param[1]))*dbinom(muts, nucs, inv_logit(param[3])) ) ) +
-    p2_prior + p3_prior
-
-
-  return(-logl)
-
-}
-
-
-
 
 #' Estimate mutation rates
 #'
@@ -975,23 +944,6 @@ EstimateMutRates <- function(obj,
 
   nucs_analyze <- basecounts_in_cB[which(mutcounts_in_cB %in% muts_analyze)]
 
-  # Helper function to run optim and organize output
-  estimate_ps <- function(muts, nucs, n,
-                          pnew_prior_mean = -2.94,
-                          pnew_prior_sd = 0.3,
-                          pold_prior_mean = -6.5,
-                          pold_prior_sd = 0.5){
-
-    fit <- stats::optim(par = c(0, -2, -4), fn = standard_binom_mix, muts = muts, nucs = nucs, n = n,
-                        pnew_prior_mean = pnew_prior_mean,
-                        pnew_prior_sd = pnew_prior_sd,
-                        pold_prior_mean = pold_prior_mean,
-                        pold_prior_sd = pold_prior_sd,
-                 method = "L-BFGS-B", lower = c(-7, -7, -7), upper = c(7, 7, 7))
-    return(list(p1 = fit$par[1], p2 = fit$par[2], p3 = fit$par[3]))
-
-  }
-
 
   # Infer proportion of each population
   mutest <- vector(mode = "list", length = length(muts_analyze))
@@ -1003,7 +955,7 @@ EstimateMutRates <- function(obj,
     mutest_dt <- cB[,.(n = sum(n)),
                     by = group_cols]
 
-    mutest_temp <- mutest_dt[,.(params = list(estimate_ps(muts = get(muts_analyze[i]),
+    mutest_temp <- mutest_dt[,.(params = list(fit_tcmm(muts = get(muts_analyze[i]),
                                                          nucs = get(nucs_analyze[i]),
                                                          n = n,
                                                          pnew_prior_mean = pnew_prior_mean,
@@ -1085,18 +1037,22 @@ softmax <- function(vect){
 
 
 
-#####################################
-# HIERARCHICAL MODEL HELPER FUNCTIONS
-#####################################
+################################################
+# TWO COMPONENT MIXTURE MODELING HELPER FUNCTIONS
+#################################################
 
 
 
 # Two-component mixture model likelihood
-tcmml <- function(param, TC, nT, n,
-                   pnew = NULL,
-                   pold = NULL,
-                   pnew_prior = NULL,
-                   pnew_prior_sd = NULL,
+tcmml <- function(param, muts, nucs, n,
+                  pnew = NULL,
+                  pold = NULL,
+                  pnew_prior_mean = -2.94,
+                  pnew_prior_sd = 0.3,
+                  pold_prior_mean = -6.5,
+                  pold_prior_sd = 0.5,
+                  fraction_prior_mean = 0,
+                  fraction_prior_sd = 1,
                   Poisson = TRUE){
 
 
@@ -1109,6 +1065,7 @@ tcmml <- function(param, TC, nT, n,
 
     pnew <- inv_logit(param[count])
     count <- count + 1
+    estimate_pnew <- TRUE
 
   }
 
@@ -1116,6 +1073,7 @@ tcmml <- function(param, TC, nT, n,
   if(is.null(pold)){
 
     pold <- inv_logit(param[count])
+    estimate_pold <- TRUE
 
   }
 
@@ -1124,46 +1082,80 @@ tcmml <- function(param, TC, nT, n,
 
   if(Poisson){
 
-    ll <- fn*dpois(TC, nT*pnew) + (1 - fn)*dpois(TC, nT*pold)
+    ll <- fn*dpois(muts, nucs*pnew) + (1 - fn)*dpois(muts, nucs*pold)
 
   }else{
 
-    ll <- fn*dbinom(TC, nT, pnew) + (1 - fn)*dbinom(TC, nT, pold)
+    ll <- fn*dbinom(muts, nucs, pnew) + (1 - fn)*dbinom(muts, nucs, pold)
 
   }
 
 
   ### Add prior weights if necessary
 
-  if(is.null(pnew_prior) &
-     is.null(pnew_prior_sd)){
+  if(estimate_pnew & estimate_pold){
 
-    ll <- -n*log(ll)
+    if(pold > pnew){
 
-    return(sum(ll) - dnorm(param[1], log = TRUE))
+      prior <- dnorm(param[2], pnew_prior_mean, pnew_prior_sd,
+                        log = TRUE) +
+        dnorm(param[3], pold_prior_mean, pold_prior_sd,
+                        log = TRUE) +
+        dnorm(param[1], fraction_prior_mean, fraction_prior_sd,
+                        log = TRUE)
 
-  }else{
+    }else{
 
-    ll <- -n*log(ll)
+      prior <- dnorm(param[2], pold_prior_mean, pold_prior_sd,
+                        log = TRUE) +
+        dnorm(param[3], pnew_prior_mean, pnew_prior_sd,
+                        log = TRUE) +
+        dnorm(param[1], fraction_prior_mean, fraction_prior_sd,
+              log = TRUE)
 
-    return(sum(ll) - dnorm(param[1], log = TRUE)
-           - dnorm(param[2], mean = pnew_prior, sd = pnew_prior_sd, log = TRUE))
 
+    }
+
+
+  }else if(estimate_pnew){
+
+    prior <- dnorm(param[2], pnew_prior_mean, pnew_prior_sd,
+                        log = TRUE) +
+      dnorm(param[1], fraction_prior_mean, fraction_prior_sd,
+            log = TRUE)
+
+
+  }else if(estimate_pold){
+
+    prior <- dnorm(param[2], pold_prior_mean, pold_prior_sd,
+                    log = TRUE) +
+      dnorm(param[1], fraction_prior_mean, fraction_prior_sd,
+            log = TRUE)
 
   }
 
 
 
 
+  ll <- -(sum(n*log(ll)) + prior)
+
+  return(ll)
+
+
 }
 
 
 
-# Two-componenet mixture model for hierarchical model
-two_comp_mm_hier <- function(TC, nT, n, pnew = NULL, pold = NULL,
-                          pnew_prior = NULL,
-                          pnew_prior_sd = NULL,
-                          Poisson = TRUE){
+# Fit all two-componenet mixture model variations
+fit_tcmm <- function(muts, nucs, n, pnew = NULL, pold = NULL,
+                     pnew_prior_mean = -2.94,
+                     pnew_prior_sd = 0.3,
+                     pold_prior_mean = -6.5,
+                     pold_prior_sd = 0.5,
+                     Poisson = TRUE,
+                     fraction_prior_mean = 0,
+                     fraction_prior_sd = 1,
+                     return_fit = TRUE){
 
 
   init <- 0
@@ -1175,6 +1167,7 @@ two_comp_mm_hier <- function(TC, nT, n, pnew = NULL, pold = NULL,
     init <- append(init, -2)
     upper_bound <- append(upper_bound, 0)
     lower_bound <- append(lower_bound, -9)
+    estimate_pnew <- TRUE
 
   }
 
@@ -1183,36 +1176,55 @@ two_comp_mm_hier <- function(TC, nT, n, pnew = NULL, pold = NULL,
     init <- append(init, -6.5)
     upper_bound <- append(upper_bound, 0)
     lower_bound <- append(lower_bound, -9)
+    estimate_pold <- TRUE
 
   }
 
 
 
   fit <- stats::optim(par = init, fn = tcmml,
-                      TC = TC,
-                      nT = nT,
+                      muts = muts,
+                      nucs = nucs,
                       n = n,
                       pnew = pnew,
                       pold = pold,
-                      pnew_prior = pnew_prior,
+                      pnew_prior_mean = pnew_prior_mean,
                       pnew_prior_sd = pnew_prior_sd,
+                      pold_prior_mean = pold_prior_mean,
+                      pold_prior_sd = pold_prior_sd,
+                      fraction_prior_mean = fraction_prior_mean,
+                      fraction_prior_sd = fraction_prior_sd,
                       Poisson = Poisson,
                       hessian = TRUE,
                       method = "L-BFGS-B", lower = lower_bound, upper = upper_bound)
 
-  uncertainty <- sqrt(diag(solve(fit$hessian)))
 
-  if(is.null(pold)){
+  if(return_fit){
 
-    return(list(p1 = fit$par[1], p2 = fit$par[2], p3 = fit$par[3],
-                p1_u = uncertainty[1], p2_u = uncertainty[2], p3_u = uncertainty[3]))
+    return(fit)
 
   }else{
 
-    return(list(p1 = fit$par[1], p2 = fit$par[2],
-                p1_u = uncertainty[1], p2_u = uncertainty[2]))
+    uncertainty <- sqrt(diag(solve(fit$hessian)))
+
+    if(estimate_pnew & estimate_pold){
+
+      return(list(p1 = fit$par[1], p2 = fit$par[2], p3 = fit$par[3],
+                  p1_u = uncertainty[1], p2_u = uncertainty[2], p3_u = uncertainty[3]))
+
+    }else if(estimate_pnew | estimate_pold){
+
+      return(list(p1 = fit$par[1], p2 = fit$par[2],
+                  p1_u = uncertainty[1], p2_u = uncertainty[2]))
+
+    }else{
+
+      return(list(p1 = fit$par[1], p1_u = uncertainty[1]))
+
+    }
 
   }
+
 
 }
 
@@ -1221,9 +1233,9 @@ two_comp_mm_hier <- function(TC, nT, n, pnew = NULL, pold = NULL,
 
 
 
-##############################################################
-# HELPER FUNCTIONS FOR STANDARD TWO-COMPONENT MIXTURE MODELING
-##############################################################
+###################################################
+# HELPER FUNCTIONS FOR MULTI LABEL MIXTURE MODELING
+###################################################
 
 
 
