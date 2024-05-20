@@ -408,7 +408,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
       setkey(cB, sample)
 
       feature_specific <- cB[global_est, nomatch = NULL][,
-                                                     .(params = list(fit_tcmm(TC = get(pops_to_analyze),
+                                                     .(params = list(fit_tcmm(muts = get(pops_to_analyze),
                                                                                    nucs = get(necessary_basecounts),
                                                                                    n = n,
                                                                                    pold = unique(pold),
@@ -1037,7 +1037,7 @@ softmax <- function(vect){
 
 
 
-################################################
+#################################################
 # TWO COMPONENT MIXTURE MODELING HELPER FUNCTIONS
 #################################################
 
@@ -1061,6 +1061,8 @@ tcmml <- function(param, muts, nucs, n,
   fn <- inv_logit(param[1])
 
   count <- 2
+  estimate_pnew <- FALSE
+  estimate_pold <- FALSE
   if(is.null(pnew)){
 
     pnew <- inv_logit(param[count])
@@ -1132,6 +1134,11 @@ tcmml <- function(param, muts, nucs, n,
       dnorm(param[1], fraction_prior_mean, fraction_prior_sd,
             log = TRUE)
 
+  }else{
+
+    prior <- dnorm(param[1], fraction_prior_mean, fraction_prior_sd,
+                   log = TRUE)
+
   }
 
 
@@ -1162,6 +1169,8 @@ fit_tcmm <- function(muts, nucs, n, pnew = NULL, pold = NULL,
   upper_bound <- 9
   lower_bound <- -9
 
+  estimate_pnew <- FALSE
+  estimate_pold <- FALSE
   if(is.null(pnew)){
 
     init <- append(init, -2)
