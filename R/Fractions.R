@@ -82,7 +82,7 @@ create_fraction_design <- function(mutrate_populations){
 #' (or similar chemistry) and s^6G is recoded to an adenine analog. Thus, `fraction_design` includes
 #' columns called `TC` and `GA`. A unique aspect of the TILAC `fraction_design` table is that
 #' one of the possible populations, `TC` and `GA` both `TRUE`, is denoted as not present (`present` = `FALSE`).
-#' This is because there is no RNA was exposed to both s^4U and s^6G, thus a population of reads
+#' This is because there is no RNA that was exposed to both s^4U and s^6G, thus a population of reads
 #' with both high T-to-C and G-to-A mutational content should not exist. To see an example
 #' of what a TILAC `fraction_design` table could look like, see the lazily loaded
 #' `tilac_fraction_design` object.
@@ -94,14 +94,10 @@ create_fraction_design <- function(mutrate_populations){
 #' \itemize{
 #'  \item standard: Estimate a single new read and old read mutation rate for each
 #'  sample. This is done via a binomial mixture model aggregating over
-#'  \item hierarchical (NOT YET IMPLEMENTED): Estimate feature-specific new read mutation
+#'  \item hierarchical: Estimate feature-specific new read mutation
 #'  rate, regularizing the feature-specific estimate with a sample-wide prior. Currently
 #'  only compatible with single mutation type mixture modeling.
-#'  \item smalec (NOT YET IMPLEMENTED): Estimate two old read mutation rates, as was done in
-#'  Smalec et al., 2023. Idea is that alignment artifacts can give rise to a
-#'  high mutation rate old read population that should be accounted for
-#'  to avoid overestimating the fraction of new reads
-#' }
+#'  }
 #' @param pnew_prior_mean logit-Normal mean for logit(pnew) prior.
 #' @param pnew_prior_sd logit-Normal sd for logit(pnew) prior.
 #' @param pold_prior_mean logit-Normal mean for logit(pold) prior.
