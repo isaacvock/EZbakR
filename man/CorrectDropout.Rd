@@ -4,11 +4,20 @@
 \alias{CorrectDropout}
 \title{Correct for experimental/bioinformatic dropout of labeled RNA.}
 \usage{
-CorrectDropout(obj, features = NULL, quant_name = NULL)
+CorrectDropout(
+  obj,
+  grouping_factors = NULL,
+  features = NULL,
+  quant_name = NULL
+)
 }
 \arguments{
 \item{obj}{An EZbakRFractions object, which is an EZbakRData object on which
 you have run \code{EstimateFractions()}.}
+
+\item{grouping_factors}{Which sample-detail columns in the metadf should be used
+to group -s4U samples by for calculating the average -s4U RPM? The default value of
+\code{NULL} will cause all sample-detail columns to be used.}
 
 \item{features}{Character vector of the set of features you want to stratify
 reads by and estimate proportions of each RNA population. The default of \code{NULL}

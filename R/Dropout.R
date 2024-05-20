@@ -3,6 +3,9 @@
 #'
 #' @param obj An EZbakRFractions object, which is an EZbakRData object on which
 #' you have run `EstimateFractions()`.
+#' @param grouping_factors Which sample-detail columns in the metadf should be used
+#' to group -s4U samples by for calculating the average -s4U RPM? The default value of
+#' `NULL` will cause all sample-detail columns to be used.
 #' @param features Character vector of the set of features you want to stratify
 #' reads by and estimate proportions of each RNA population. The default of `NULL`
 #' will expect there to be only one fractions table in the EZbakRFractions object.
@@ -13,6 +16,7 @@
 #' this should only have to be non-null in the case where you have performed isoform-specific
 #' fraction estimation with more than one quantification tool's output.
 CorrectDropout <- function(obj,
+                           grouping_factors = NULL,
                            features = NULL,
                            quant_name = NULL){
 
@@ -54,9 +58,22 @@ CorrectDropout <- function(obj,
   logit_se <- paste0("se_", logit_fraction)
 
 
-  ### Quantify and correct for dropout
+  ### Which columns should -s4U samples be grouped by?
 
   metadf <- obj$metadf
+
+
+  if(is.null(grouping_factors)){
+
+    grouping_factors <- colnames(metadf)[!grepl("tl", colnames(metadf)) &
+                                           (colnames(metadf) != "sample")]
+
+
+  }
+
+
+  ### Quantify and correct for dropout
+
 
   # Necessary generalizations:
   # 1) Metadf column used (e.g., pulse-chase)
@@ -74,12 +91,12 @@ CorrectDropout <- function(obj,
 
     ### CALCULATE DROPOUT:
     dplyr::inner_join(metadf %>% dplyr::filter(tl > 0) %>%
-                        dplyr::select(sample, !!grouping_fractions),
+                        dplyr::select(sample, !!grouping_factors),
                       by = "sample") %>%
     dplyr::group_by(sample) %>%
     dplyr::mutate(rpm = n/(sum(n)/1000000)) %>%
     dplyr::inner_join(nolabel_data,
-                      by = c(grouping_fractions, features_to_analyze)) %>%
+                      by = c(grouping_factors, features_to_analyze)) %>%
     dplyr::mutate(dropout = rpm / nolabel_rpm) %>%
 
     ### ESTIMATE DROPOUT PARAMETERS:
@@ -91,6 +108,9 @@ CorrectDropout <- function(obj,
     dplyr::mutate(
       pdo := purrr::map_dbl(fit, ~ .x$coefficients[2,1]),
       scale := purrr::map_dbl(fit, ~ .x$coefficients[1,1]),
+    ) %>%
+    dplyr::mutate(
+      pdo = ifelse(pdo < 0, 0, pdo)
     ) %>%
     dplyr::select(-fit) %>%
 
@@ -135,7 +155,8 @@ CorrectDropout <- function(obj,
 
 
   ### Overwrite uncorrected data
-  obj[["fractions"]][[fractions_name]] <- corrected
+  obj[["fractions"]][[fractions_name]] <- corrected %>%
+    dplyr::select(-pdo, -scale)
 
   obj[["dropout_params"]][[fractions_name]] <- dropout_params
 

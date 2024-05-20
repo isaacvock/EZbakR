@@ -572,9 +572,15 @@ CompareParameters <- function(obj, condition, reference, experimental,
 
   ### Add output to object
 
-  output_name <- paste0(condition, "_", experimental, "_vs_", reference)
+  num_comparisons <- length(obj[['comparisons']][[parameter]])
 
-  obj[["comparisons"]][[parameter_name]][[output_name]] <- comparison
+  output_name <- paste0("comparison_", num_comparisons + 1)
+
+  obj[["comparisons"]][[parameter]][[output_name]] <- list(comparison = comparison,
+                                                           condition = condition,
+                                                           reference = reference,
+                                                           experimental = experimental,
+                                                           features = features_to_analyze)
 
 
   if(!is(obj, "EZbakRCompare")){

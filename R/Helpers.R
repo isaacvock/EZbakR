@@ -344,3 +344,101 @@ get_table_name <- function(obj, tabletype,
 }
 
 
+
+# What comparative analysis table do you want?
+get_comparison <- function(obj,
+               condition,
+               reference,
+               experimental,
+               features){
+
+  # Function to get rid of the comparison data frame
+  remove_comparison <- function(input_list) {
+
+    input_list <- input_list[names(input_list) != "comparison"]
+
+    return(input_list)
+  }
+
+
+  metadata <- lapply(obj, remove_comparison)
+
+  if(length(metadata) == 1){
+
+    # Index of list of interest is the only list of interest
+    index <- 1
+
+  }else{
+
+    # Function to find particular metadata
+    check_meta <- function(input_list, element, value){
+
+      if(input_list[[element]] == value){
+
+        return(TRUE)
+
+      }else{
+
+        return(FALSE)
+
+      }
+
+    }
+
+
+    if(!is.null(condition)){
+
+      condition_check <- check_meta(metadata, "condition", condition)
+
+    }else{
+
+      condition_check <- rep(TRUE, times = length(metadata))
+
+    }
+
+    if(!is.null(reference)){
+
+      reference_check <- check_meta(metadata, "reference", reference)
+
+    }else{
+
+      reference_check <- rep(TRUE, times = length(metadata))
+
+    }
+
+    if(!is.null(experimental)){
+
+      experimental_check <- check_meta(metadata, "experimental", experimental)
+
+    }else{
+
+      experimental_check <- rep(TRUE, times = length(metadata))
+
+    }
+
+    if(!is.null(feature)){
+
+      features_check <- check_meta(metadata, "features", features)
+
+    }else{
+
+      features_check <- rep(TRUE, times = length(metadata))
+
+    }
+
+
+    index <- condition_check &
+      reference_check &
+      experimental_check &
+      features_check
+
+
+
+  }
+
+
+
+  return(obj[[index]])
+
+
+}
