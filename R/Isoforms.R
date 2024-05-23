@@ -272,14 +272,17 @@ fit_beta_regression <- function(data){
                design_matrix = design_matrix,
                v = v,
                method = "L-BFGS-B",
-               upper = 5,
-               lower = -5,
+               upper = 9,
+               lower = -9,
                prior_a = 0,
-               prior_b = 1)
+               prior_b = 1,
+               hessian = TRUE)
 
+  uncertainty <- diag(sqrt(solve(fit$hessian)))
 
   return(tibble(transcript_id = colnames(design_matrix),
-                logit_fn = fit$par))
+                logit_fn = fit$par,
+                se_logit_fn = uncertainty))
 
 
 }
@@ -307,6 +310,7 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
 
   fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
   logit_fraction_of_interest <- paste0("logit_", fraction_of_interest)
+  logit_fraction_se <- paste0("se_logit_", fraction_of_interest)
 
   if(length(fraction_of_interest) > 1){
     stop("There is more than one non-redundant fraction estimate. Isoform
@@ -372,7 +376,8 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
     dplyr::summarise(!!fraction_of_interest := sum(n*(!!sym(fraction_of_interest)))/sum(n),
                      effective_length = mean(effective_length),
                      expected_count = mean(expected_count)) %>%
-    dplyr::mutate(!!logit_fraction_of_interest := logit(!!sym(fraction_of_interest)))
+    dplyr::mutate(!!logit_fraction_of_interest := logit(!!sym(fraction_of_interest)),
+                  !!logit_fraction_se := mean(!!sym(logit_fraction_se)))
 
 
   Fns_multi <- Fns %>%
@@ -394,6 +399,7 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
     dplyr::select(!!gene_colnames, fnest) %>%
     tidyr::unnest(cols = c(fnest)) %>%
     dplyr::mutate(!!logit_fraction_of_interest := logit_fn,
+                  !!logit_fraction_se := se_logit_fn,
                   !!fraction_of_interest := inv_logit(logit_fn)) %>%
     dplyr::select(-logit_fn) %>%
     dplyr::inner_join(quant,
@@ -406,13 +412,13 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
   output <- Fns_single %>%
     ungroup() %>%
     dplyr::select(sample, !!gene_colnames, transcript_id, !!fraction_of_interest, !!logit_fraction_of_interest,
-                  expected_count, effective_length) %>%
+                  !!logit_fraction_se, expected_count, effective_length) %>%
     dplyr::bind_rows(Fns_multi %>% dplyr::ungroup()) %>%
     dplyr::select(sample, !!gene_colnames, transcript_id, everything()) %>%
     dplyr::rowwise() %>%
     dplyr::mutate(n = expected_count,
                   RPK = expected_count/(effective_length/1000),
-                  !!logit_fraction_of_interest := ifelse(abs(!!sym(logit_fraction_of_interest)) >= 5,
+                  !!logit_fraction_of_interest := ifelse(abs(!!sym(logit_fraction_of_interest)) >= 9,
                                                   rnorm(1, !!sym(logit_fraction_of_interest), 0.25),
                                                   !!sym(logit_fraction_of_interest)),
                   !!fraction_of_interest := inv_logit(!!sym(logit_fraction_of_interest))) %>%
