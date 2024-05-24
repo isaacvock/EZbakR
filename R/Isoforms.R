@@ -218,6 +218,8 @@ EstimateIsoformFractions <- function(obj,
 
   obj[['fractions']][[output_name]] <- isoform_fit
 
+  browser()
+
   return(obj)
 
 
@@ -278,7 +280,7 @@ fit_beta_regression <- function(data){
                prior_b = 1,
                hessian = TRUE)
 
-  uncertainty <- diag(sqrt(solve(fit$hessian)))
+  uncertainty <- sqrt(diag(solve(fit$hessian)))
 
   return(tibble(transcript_id = colnames(design_matrix),
                 logit_fn = fit$par,
@@ -375,9 +377,9 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
     dplyr::group_by(across(all_of(c("sample", gene_colnames, "transcript_id")))) %>%
     dplyr::summarise(!!fraction_of_interest := sum(n*(!!sym(fraction_of_interest)))/sum(n),
                      effective_length = mean(effective_length),
-                     expected_count = mean(expected_count)) %>%
-    dplyr::mutate(!!logit_fraction_of_interest := logit(!!sym(fraction_of_interest)),
-                  !!logit_fraction_se := mean(!!sym(logit_fraction_se)))
+                     expected_count = mean(expected_count),
+                     !!logit_fraction_se := mean(!!sym(logit_fraction_se))) %>%
+    dplyr::mutate(!!logit_fraction_of_interest := logit(!!sym(fraction_of_interest)))
 
 
   Fns_multi <- Fns %>%
@@ -401,7 +403,7 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
     dplyr::mutate(!!logit_fraction_of_interest := logit_fn,
                   !!logit_fraction_se := se_logit_fn,
                   !!fraction_of_interest := inv_logit(logit_fn)) %>%
-    dplyr::select(-logit_fn) %>%
+    dplyr::select(-logit_fn, -se_logit_fn) %>%
     dplyr::inner_join(quant,
                       by = c("transcript_id")) %>%
     dplyr::select(-TPM)
