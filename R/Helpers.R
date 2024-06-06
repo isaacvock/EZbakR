@@ -17,6 +17,7 @@
 #' populations that must have been analyzed to generate the table of interest.
 #' @param fraction_design Only relevant if `type` == "fractions". Fraction design
 #' table used to generate the table of interest.
+#' @param isoforms If the relevant table is the result of isoform deconvolution
 #' @param parameter Only relevant if `type` == "averages" or "comparisons". Which
 #' parameter was being averaged or compared?
 #' @param returnNameOnly If TRUE, then only the names of tables that passed your

@@ -6,12 +6,14 @@
 \usage{
 EZget(
   obj,
-  type = c("fractions", "kinetics", "averages", "comparisons"),
+  type = c("fractions", "kinetics", "readcounts", "averages", "comparisons"),
   features = NULL,
   populations = NULL,
   fraction_design = NULL,
+  isoforms = NULL,
   parameter = NULL,
   returnNameOnly = FALSE,
+  counttype = NULL,
   exactMatch = FALSE,
   alwaysCheck = FALSE
 )
@@ -32,6 +34,8 @@ populations that must have been analyzed to generate the table of interest.}
 
 \item{fraction_design}{Only relevant if \code{type} == "fractions". Fraction design
 table used to generate the table of interest.}
+
+\item{isoforms}{If the relevant table is the result of isoform deconvolution}
 
 \item{parameter}{Only relevant if \code{type} == "averages" or "comparisons". Which
 parameter was being averaged or compared?}
