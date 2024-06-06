@@ -17,7 +17,9 @@
   pold_prior_mean = -6.5,
   pold_prior_sd = 0.5,
   hier_readcutoff = 300,
-  init_pnew_prior_sd = 0.8
+  init_pnew_prior_sd = 0.8,
+  character_limit = 20,
+  overwrite = TRUE
 )
 }
 \description{

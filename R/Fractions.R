@@ -106,6 +106,15 @@ create_fraction_design <- function(mutrate_populations){
 #' are used to infer the distribution of feature-specific labeled read mutation rates.
 #' @param init_pnew_prior_sd If `strategy` == `hierarchical`, this is the initial logit(pnew)
 #' prior standard deviation to regularize feature-specific labeled read mutation rate estimates.
+#' @param character_limit Maximum number of characters for naming out fractions output. EZbakR
+#' will try to name this as a "_" separated character vector of all of the features analyzed.
+#' If this name is greater than `character_limit`, then it will default to "fraction#", where
+#' "#" represents a simple numerical ID for the table.
+#' @param overwrite If TRUE and an fractions estimate output already exists that
+#' would possess the same metadata (features analyzed, populations analyzed,
+#' and fraction_design), then it will get overwritten with the new output. Else,
+#' it will be saved as a separate output with the same name + "_#" where "#" is a
+#' numerical ID to distinguish the similar outputs.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
@@ -121,7 +130,9 @@ EstimateFractions <- function(obj, features = "all",
                               pold_prior_sd = 0.5,
                               hier_readcutoff = 300,
                               init_pnew_prior_sd = 0.8,
-                              pnew_prior_sd_min = 0.01){
+                              pnew_prior_sd_min = 0.01,
+                              character_limit = 20,
+                              overwrite = TRUE){
 
 
   UseMethod("EstimateFractions")
@@ -145,7 +156,9 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                               pold_prior_mean = -6.5,
                               pold_prior_sd = 0.5,
                               hier_readcutoff = 300,
-                              init_pnew_prior_sd = 0.8){
+                              init_pnew_prior_sd = 0.8,
+                              character_limit = 20,
+                              overwrite = TRUE){
 
   `.` <- list
 
@@ -511,6 +524,8 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
 
 
+  ##### PROCESS OUTPUT AND RETURN
+
 
   message("Processing output")
 
@@ -519,7 +534,100 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   # What should output be named?
   fraction_vect <- paste(gsub("_","",features_to_analyze), collapse = "_")
 
-  obj[['fractions']][[fraction_vect]] <- fns
+  if(nchar(fraction_vect) > character_limit){
+
+    num_fractions <- length(obj[['fractions']])
+    fraction_vect <- paste0("fraction_", num_fractions + 1)
+
+  }
+
+
+  ### Does same analysis output already exist?
+  existing_fraction <- EZget(obj,
+                             type = "fractions",
+                             features = features_to_analyze,
+                             populations = pops_to_analyze,
+                             fraction_design = fraction_design,
+                             returnNameOnly = TRUE,
+                             exactMatch = TRUE)
+
+  if(is.null(existing_fraction)){
+
+    # Have to find a name that doesn't exist
+    if(fraction_vect %in% names(obj[['fractions']])){
+
+      need_new_name <- TRUE
+      num_repeats <- 2
+
+      while(need_new_name){
+
+        test_fraction_vect <- paste0(fraction_vect, "_", num_repeats)
+
+        if(test_fraction_vect %in% names(obj[['fractions']])){
+
+          num_repeats <- num_repeats + 1
+
+        }else{
+
+          fraction_vect <- test_fraction_vect
+          need_new_name <- FALSE
+
+        }
+
+      }
+
+
+    }
+
+    obj[['fractions']][[fraction_vect]] <- fns
+
+    obj[['metadata_estimates']][['fractions']][[fraction_vect]] <- list(features = features_to_analyze,
+                                                                        populations = pops_to_analyze,
+                                                                        fraction_design = fraction_design)
+
+
+  }else if(overwrite){
+
+    # Overwrite existing
+    obj[['fractions']][[existing_fraction]] <- fns
+
+
+  }else{
+
+    # Create overwrite name
+    need_new_name <- TRUE
+    num_repeats <- 2
+
+    while(need_new_name){
+
+      test_fraction_vect <- paste0(existing_name, "_", num_repeats)
+
+      if(test_fraction_vect %in% names(obj[['fractions']])){
+
+        num_repeats <- num_repeats + 1
+
+      }else{
+
+        fraction_vect <- test_fraction_vect
+        need_new_name <- FALSE
+
+      }
+
+    }
+
+    # Save
+    obj[['fractions']][[fraction_vect]] <- fns
+
+    # Save metadata
+    obj[['metadata']][['fractions']][[fraction_vect]] <- list(features = features_to_analyze,
+                                                              populations = pops_to_analyze,
+                                                              fraction_design = fraction_design)
+
+
+  }
+
+
+
 
   # Add new class information
   if(!("EZbakRFractions" %in% class(obj))){

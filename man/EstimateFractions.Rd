@@ -18,7 +18,9 @@ EstimateFractions(
   pold_prior_sd = 0.5,
   hier_readcutoff = 300,
   init_pnew_prior_sd = 0.8,
-  pnew_prior_sd_min = 0.01
+  pnew_prior_sd_min = 0.01,
+  character_limit = 20,
+  overwrite = TRUE
 )
 }
 \arguments{
@@ -110,6 +112,17 @@ are used to infer the distribution of feature-specific labeled read mutation rat
 
 \item{init_pnew_prior_sd}{If \code{strategy} == \code{hierarchical}, this is the initial logit(pnew)
 prior standard deviation to regularize feature-specific labeled read mutation rate estimates.}
+
+\item{character_limit}{Maximum number of characters for naming out fractions output. EZbakR
+will try to name this as a "_" separated character vector of all of the features analyzed.
+If this name is greater than \code{character_limit}, then it will default to "fraction#", where
+"#" represents a simple numerical ID for the table.}
+
+\item{overwrite}{If TRUE and an fractions estimate output already exists that
+would possess the same metadata (features analyzed, populations analyzed,
+and fraction_design), then it will get overwritten with the new output. Else,
+it will be saved as a separate output with the same name + "_#" where "#" is a
+numerical ID to distinguish the similar outputs.}
 }
 \description{
 Estimate fractions of each RNA population

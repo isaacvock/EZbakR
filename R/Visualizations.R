@@ -16,6 +16,7 @@
 #' a point size is automatically chosen.
 #' @import ggplot2
 #' @importFrom magrittr %>%
+#' @export
 EZbakRVolcanoPlot <- function(obj,
                               parameter = "log_kdeg",
                               condition = NULL,
@@ -136,6 +137,7 @@ EZbakRVolcanoPlot <- function(obj,
 #' a point size is automatically chosen.
 #' @import ggplot2
 #' @importFrom magrittr %>%
+#' @export
 EZbakRMAPlot <- function(obj,
                          parameter = "log_kdeg",
                          condition = NULL,

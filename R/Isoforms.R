@@ -218,7 +218,6 @@ EstimateIsoformFractions <- function(obj,
 
   obj[['fractions']][[output_name]] <- isoform_fit
 
-  browser()
 
   return(obj)
 

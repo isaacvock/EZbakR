@@ -1,4 +1,250 @@
 
+
+############################
+### DATA GETTER
+############################
+
+#' Easily get EZbakR table of estimates of interest
+#'
+#' @param obj EZbakRData object
+#' @param type The class of EZbakR outputs would you like to search through.
+#' Equivalent to the name of the list in the EZbakRData object that contains
+#' the tables of interest.
+#' @param features Features that must be present in the table of interest.
+#' If `exactMatch` is TRUE, then these features must also be the only features
+#' present in the table.
+#' @param populations Only relevant if `type` == "fractions". Mutational
+#' populations that must have been analyzed to generate the table of interest.
+#' @param fraction_design Only relevant if `type` == "fractions". Fraction design
+#' table used to generate the table of interest.
+#' @param parameter Only relevant if `type` == "averages" or "comparisons". Which
+#' parameter was being averaged or compared?
+#' @param returnNameOnly If TRUE, then only the names of tables that passed your
+#' search criteria will be returned. Else, the single table passing your search
+#' criteria will be returned. If there is more than one table that passes your
+#' search criteria and `returnNameOnly` == `FALSE`, an error will be thrown.
+#' @param exactMatch If TRUE, then for `features` and `populations`, which can be vectors,
+#' ensure that provided vectors of features and populations exactly match the relevant metadata
+#' vectors.
+#' @param alwaysCheck If TRUE, then even if there is only a single table for the `type`
+#' of interest, still run all checks against queries.
+#' @export
+EZget <- function(obj,
+                  type = c("fractions", "kinetics",
+                           "averages", "comparisons"),
+                  features = NULL,
+                  populations = NULL,
+                  fraction_design = NULL,
+                  parameter = NULL,
+                  returnNameOnly = FALSE,
+                  exactMatch = FALSE,
+                  alwaysCheck = FALSE){
+
+
+  type = match.arg(type)
+
+  metadata <- obj[['metadata']][[type]]
+
+
+  table_of_interest <- NULL
+
+
+  # If only one table is present, that's the one you want
+  if(length(metadata) == 1 & !alwaysCheck){
+
+    table_of_interest <- names(metadata)
+
+    if(returnNameOnly){
+
+      return(table_of_interest)
+
+    }else{
+
+      return(obj[[type]][[table_of_interest]])
+
+    }
+
+    break
+
+  }
+
+  ### DESIGN IDEA
+  # For each searchable metadata element, there are different
+  # search strategies:
+  # 1) features and populations: Either check for exact vector
+  # equality (if exactMatch == TRUE) or check that all elements
+  # in provided vector are in relevant metadata vector.
+  # 2) fraction_design: make sure data frame is identical through anti_join
+  # 3) parameters: exact string match
+
+  possible_tables <- names(metadata)
+
+  if(!is.null(features)){
+
+    possible_tables_f <- vector_ezsearch(metadata,
+                                         features,
+                                         "features")
+
+    possible_tables <- intersect(possible_tables, possible_tables_f)
+
+
+  }
+
+
+  if(!is.null(populations)){
+
+    possible_tables_p <- vector_ezsearch(metadata,
+                                         populations,
+                                         "populations")
+
+    possible_tables <- intersect(possible_tables, possible_tables_p)
+
+
+
+  }
+
+
+  if(!is.null(fraction_design)){
+
+    lm <- length(metadata)
+    possible_tables_fd <- c()
+
+    for(m in 1:lm){
+
+      fd_subject <- metadata[[m]][['fraction_design']]
+
+
+      cnames <- colnames(fd_subject)
+
+      if(all(cnames %in% colnames(fraction_design))){
+
+        aj_test <- dplyr::anti_join(fd_subject,
+                                    fraction_design,
+                                    by = cnames)
+
+
+      }else{
+
+        aj_test <- data.frame(dummy = 1)
+
+      }
+
+      if(nrow(aj_test) == 0){
+
+        possible_tables_fd <- c(possible_tables_fd, names(metadata)[m])
+
+      }
+
+
+
+    }
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_fd)
+
+
+
+  }
+
+
+  if(!is.null(parameter)){
+
+    lm <- length(metadata)
+    possible_tables_par <- c()
+
+
+    for(m in 1:lm){
+
+      par_subject <- metadata[[m]][['parameter']]
+
+      if(par_subject == parameter){
+
+        possible_tables_par <- c(possible_tables_par, names(metadata)[m])
+
+      }
+
+    }
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_par)
+
+
+  }
+
+
+  # Can return multiple names of candidate tables, but can
+  # only return one table
+  if(returnNameOnly){
+
+    if(length(possible_tables) > 1){
+
+      warning("More than one table fits your search criterion!")
+
+    }
+
+    return(possible_tables)
+
+  }else{
+
+    if(length(possible_tables) > 1){
+
+      stop("More than one table fits your search criterion!")
+
+    }
+
+    return(obj[[type]][[possible_tables]])
+
+  }
+
+
+
+}
+
+
+
+vector_ezsearch <- function(metadata,
+                                    queries,
+                                    object = c("features", "populations")){
+
+
+  potential_tables <- c()
+
+  object <- match.arg(object)
+  lmeta <- length(metadata)
+
+  for(m in 1:lmeta){
+
+    subjects <- metadata[[m]][[object]]
+
+    if(exactMatch){
+
+      if(all(queries %in% subjects) &
+         all(subjects %in% queries)){
+
+        potential_tables <- c(potential_tables, names(metadata)[m])
+
+      }
+
+
+    }else{
+
+      if(all(queries %in% subjects)){
+
+        potential_tables <- c(potential_tables, names(metadata)[m])
+
+      }
+
+
+    }
+
+  }
+
+  return(potential_tables)
+
+
+}
+
+
 ############################
 ### MISCELLANEOUS
 ############################
