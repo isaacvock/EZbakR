@@ -542,90 +542,27 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   }
 
 
-  ### Does same analysis output already exist?
-  existing_fraction <- EZget(obj,
-                             type = "fractions",
-                             features = features_to_analyze,
-                             populations = pops_to_analyze,
-                             fraction_design = fraction_design,
-                             returnNameOnly = TRUE,
-                             exactMatch = TRUE)
+  # Are there any metadata or fractions objects at this point?
+  if(length(obj[['metadata']]) > 0){
 
-  if(is.null(existing_fraction)){
-
-    # Have to find a name that doesn't exist
-    if(fraction_vect %in% names(obj[['fractions']])){
-
-      need_new_name <- TRUE
-      num_repeats <- 2
-
-      while(need_new_name){
-
-        test_fraction_vect <- paste0(fraction_vect, "_", num_repeats)
-
-        if(test_fraction_vect %in% names(obj[['fractions']])){
-
-          num_repeats <- num_repeats + 1
-
-        }else{
-
-          fraction_vect <- test_fraction_vect
-          need_new_name <- FALSE
-
-        }
-
-      }
-
-
-    }
-
-    obj[['fractions']][[fraction_vect]] <- fns
-
-    obj[['metadata_estimates']][['fractions']][[fraction_vect]] <- list(features = features_to_analyze,
-                                                                        populations = pops_to_analyze,
-                                                                        fraction_design = fraction_design)
-
-
-  }else if(overwrite){
-
-    # Overwrite existing
-    obj[['fractions']][[existing_fraction]] <- fns
-
-
-  }else{
-
-    # Create overwrite name
-    need_new_name <- TRUE
-    num_repeats <- 2
-
-    while(need_new_name){
-
-      test_fraction_vect <- paste0(existing_name, "_", num_repeats)
-
-      if(test_fraction_vect %in% names(obj[['fractions']])){
-
-        num_repeats <- num_repeats + 1
-
-      }else{
-
-        fraction_vect <- test_fraction_vect
-        need_new_name <- FALSE
-
-      }
-
-    }
-
-    # Save
-    obj[['fractions']][[fraction_vect]] <- fns
-
-    # Save metadata
-    obj[['metadata']][['fractions']][[fraction_vect]] <- list(features = features_to_analyze,
-                                                              populations = pops_to_analyze,
-                                                              fraction_design = fraction_design)
-
+    fraction_vect <- decide_output(obj,
+                                   proposed_name = fraction_vect,
+                                   type = "fractions",
+                                   features = features_to_analyze,
+                                   populations = pops_to_analyze,
+                                   fraction_design = fraction_design,
+                                   overwrite = overwrite)
 
   }
 
+
+  # Save
+  obj[['fractions']][[fraction_vect]] <- fns
+
+  # Save metadata
+  obj[['metadata']][['fractions']][[fraction_vect]] <- list(features = features_to_analyze,
+                                                            populations = pops_to_analyze,
+                                                            fraction_design = fraction_design)
 
 
 

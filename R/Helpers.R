@@ -83,7 +83,8 @@ EZget <- function(obj,
 
     possible_tables_f <- vector_ezsearch(metadata,
                                          features,
-                                         "features")
+                                         "features",
+                                         exactMatch = exactMatch)
 
     possible_tables <- intersect(possible_tables, possible_tables_f)
 
@@ -95,7 +96,8 @@ EZget <- function(obj,
 
     possible_tables_p <- vector_ezsearch(metadata,
                                          populations,
-                                         "populations")
+                                         "populations",
+                                         exactMatch = exactMatch)
 
     possible_tables <- intersect(possible_tables, possible_tables_p)
 
@@ -204,7 +206,8 @@ EZget <- function(obj,
 
 vector_ezsearch <- function(metadata,
                                     queries,
-                                    object = c("features", "populations")){
+                                    object = c("features", "populations"),
+                            exactMatch){
 
 
   potential_tables <- c()
@@ -243,6 +246,94 @@ vector_ezsearch <- function(metadata,
 
 
 }
+
+
+
+###########################
+### DETERMINE OUTPUT NAME
+###########################
+
+decide_output <- function(obj, proposed_name,
+                          type = c("fractions"),
+                          features = NULL,
+                          populations = NULL,
+                          fraction_design = NULL,
+                          parameter = NULL,
+                          overwrite = TRUE){
+
+  ### Does same analysis output already exist?
+  existing_output <- EZget(obj,
+                             type = "fractions",
+                             features = features,
+                             populations = populations,
+                             fraction_design = fraction_design,
+                             parameter = parameter,
+                             returnNameOnly = TRUE,
+                             exactMatch = TRUE)
+
+  if(is.null(existing_output)){
+
+    # Have to find a name that doesn't exist
+    if(proposed_name %in% names(obj[[type]])){
+
+      need_new_name <- TRUE
+      num_repeats <- 2
+
+      while(need_new_name){
+
+        test_proposed_name <- paste0(proposed_name, "_", num_repeats)
+
+        if(test_proposed_name %in% names(obj[[type]])){
+
+          num_repeats <- num_repeats + 1
+
+        }else{
+
+          proposed_name <- test_proposed_name
+          need_new_name <- FALSE
+
+        }
+
+      }
+
+
+    }
+
+
+  }else if(overwrite){
+
+    return(existing_output)
+
+
+  }else{
+
+    # Create overwrite name
+    need_new_name <- TRUE
+    num_repeats <- 2
+
+    while(need_new_name){
+
+      test_proposed_name <- paste0(existing_output, "_", num_repeats)
+
+      if(test_proposed_name %in% names(obj[[type]])){
+
+        num_repeats <- num_repeats + 1
+
+      }else{
+
+        proposed_name <- test_proposed_name
+        need_new_name <- FALSE
+
+      }
+
+    }
+
+  }
+
+}
+
+
+
 
 
 ############################
