@@ -241,11 +241,11 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
 
   }
 
-  obj[["kinetics"]][[kinetics_vect]] <- kinetics %>%
+  obj[["kinetics"]][[kinetics_vect]] <- dplyr::as_tibble(kinetics) %>%
     dplyr::select(sample, !!features_to_analyze, kdeg, log_kdeg, se_log_kdeg, ksyn, log_ksyn, se_log_ksyn, normalized_reads, n)
 
   # Eventually want to add count matrix output
-  obj[["readcounts"]][[readcount_vect]] <- reads_norm %>%
+  obj[["readcounts"]][[readcount_vect]] <- dplyr::as_tibble(reads_norm) %>%
     dplyr::select(sample, !!features_to_analyze, n, normalized_reads, geom_mean, scale_factor)
 
 

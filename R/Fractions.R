@@ -563,7 +563,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
 
   # Save
-  obj[['fractions']][[fraction_vect]] <- fns
+  obj[['fractions']][[fraction_vect]] <- dplyr::as_tibble(fns)
 
   # Save metadata
   obj[['metadata']][['fractions']][[fraction_vect]] <- list(features = features_to_analyze,
