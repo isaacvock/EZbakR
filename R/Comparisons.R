@@ -530,23 +530,22 @@ CompareParameters <- function(obj, condition, reference, experimental,
   metadf <- obj$metadf
 
 
-  # Which table to use?
+  # Function is in Helpers.R
+  averages_name <- EZget(obj,
+                         type = "averages",
+                         features = features,
+                         kstrat = strategy,
+                         returnNameOnly = TRUE)
 
-  table_info <- get_table_name(obj,
-                               features = features,
-                               tabletype = 'averages',
-                               quant_name = quant_name,
-                               parameter = parameter)
 
-  parameter_name <- table_info$table_name
+  # Get fractions
+  averages_name <- obj[["averages"]][[averages_name]]
+
+  features_to_analyze <- obj[["metadata"]][["averages"]][[averages_name]][["features"]]
+
 
   # Get the kinetic parameter data frame
-  parameter_est <- obj[['averages']][[parameter_name]]
-
-
-  # Get features to analyze
-  features_to_analyze <- get_features(parameter_est, objtype = "averages")
-
+  parameter_est <- obj[['averages']][[averages_name]]
 
 
   ### Perform comparative analysis of interest
@@ -572,15 +571,16 @@ CompareParameters <- function(obj, condition, reference, experimental,
 
   ### Add output to object
 
-  num_comparisons <- length(obj[['comparisons']][[parameter]])
+  num_comparisons <- length(obj[['comparisons']])
 
-  output_name <- paste0("comparison_", num_comparisons + 1)
+  output_name <- paste0("comparison", num_comparisons + 1)
 
-  obj[["comparisons"]][[parameter]][[output_name]] <- list(comparison = comparison,
-                                                           condition = condition,
-                                                           reference = reference,
-                                                           experimental = experimental,
-                                                           features = features_to_analyze)
+  obj[["comparisons"]][[output_name]] <- comparison
+
+  obj[["metadata"]][["comparisons"]][[output_name]] <- list(condition = condition,
+                                                            reference = reference,
+                                                            experimental = experimental,
+                                                            features = features_to_analyze)
 
 
   if(!is(obj, "EZbakRCompare")){
