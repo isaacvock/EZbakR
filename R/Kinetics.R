@@ -198,15 +198,63 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
   kinetics[, se_log_ksyn := sqrt( (1/(normalized_reads*scale_factor)) + se_log_kdeg^2)]
 
 
-  # Figure out what to name output
-  reads_name <- paste0("normalized_readcounts_", fractions_name)
 
-  obj[["kinetics"]][[fractions_name]] <- kinetics %>%
+  ##### PROCESS OUTPUT AND RETURN
+
+  # What should output be named?
+  kinetics_vect <- fractions_name
+
+  if(nchar(kinetics_vect) > character_limit){
+
+    num_kinetics <- length(obj[['kinetics']])
+    kinetics_vect <- paste0("kinetics", num_fractions + 1)
+
+  }
+
+
+  # Are there any metadata objects
+  if(length(obj[['metadata']][['kinetics']]) > 0){
+
+    kinetics_vect <- decide_output(obj,
+                                   proposed_name = kinetics_vect,
+                                   type = "kinetics",
+                                   features = features_to_analyze,
+                                   overwrite = overwrite)
+
+  }
+
+
+  readcount_vect <- kinetics_vect
+
+  if(length(obj[['metadata']][['readcounts']]) > 0){
+
+    readcount_vect <- decide_output(obj,
+                                   proposed_name = readcount_vect,
+                                   type = "readcounts",
+                                   features = features_to_analyze,
+                                   readtype = "normalized",
+                                   overwrite = overwrite)
+
+  }
+
+
+  ### PROBLEMS
+  # 1) Don't have a readcounts ezget yet
+  # 2) Possible for there to be readcounts naming clash that I miss
+
+
+  obj[["kinetics"]][[kinetics_vect]] <- kinetics %>%
     dplyr::select(sample, !!features_to_analyze, kdeg, log_kdeg, se_log_kdeg, ksyn, log_ksyn, se_log_ksyn, normalized_reads, n)
 
   # Eventually want to add count matrix output
-  obj[["readcounts"]][[reads_name]] <- reads_norm %>%
+  obj[["readcounts"]][[readcount_vect]] <- reads_norm %>%
     dplyr::select(sample, !!features_to_analyze, n, normalized_reads, geom_mean, scale_factor)
+
+
+  obj[["metadata"]][["kinetics"]][[kinetics_vect]] <- list(features = features_to_analyze)
+  obj[["metadata"]][["readcounts"]][[readcount_vect]] <- list(features = features_to_analyze,
+                                                             readtype = "normalized")
+
 
   if(!is(obj, "EZbakRKinetics")){
 
