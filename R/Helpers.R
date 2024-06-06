@@ -412,7 +412,7 @@ inv_logit <- function(x) exp(x)/(1+exp(x))
 #' @export
 get_normalized_read_counts <- function(obj,
                                        features_to_analyze,
-                                       isoform_fraction_name = NULL){
+                                       fraction_name){
 
   UseMethod("get_normalized_read_counts")
 
@@ -421,28 +421,13 @@ get_normalized_read_counts <- function(obj,
 #' @export
 get_normalized_read_counts.EZbakRFractions <- function(obj,
                                                        features_to_analyze,
-                                                       isoform_fraction_name = NULL){
+                                                       fractions_name){
 
-  if(!is.null(isoform_fraction_name)){
+  reads <- data.table::copy(data.table::setDT(obj[['fractions']][[fractions_name]]))
 
-    reads <- data.table::copy(data.table::setDT(obj[['fractions']][[isoform_fraction_name]]))
+  reads <- normalize_reads(reads, features_to_analyze)
 
-    reads <- normalize_reads(reads, features_to_analyze)
-
-    return(reads)
-
-  }else{
-
-    fraction_name <-  paste(gsub("_","",features_to_analyze), collapse = "_")
-
-    reads <- data.table::copy(data.table::setDT(obj[['fractions']][[fraction_name]]))
-
-    reads <- normalize_reads(reads, features_to_analyze)
-
-    return(reads)
-
-  }
-
+  return(reads)
 
 
 }

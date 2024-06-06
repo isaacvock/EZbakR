@@ -102,12 +102,10 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
 
   # Function is in Helpers.R
   fractions_name <- EZget(obj,
-                             features = features,
-                             populations = populations,
-                             fraction_design = fraction_design)
-
-
-  isoform_specific <- obj[['metadata']][['fractions']][[fractions_name]][['isoforms']]
+                          features = features,
+                          populations = populations,
+                          fraction_design = fraction_design,
+                          returnNameOnly = TRUE)
 
 
   # Get fractions
@@ -143,22 +141,14 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
   kinetics[, log_kdeg := log(kdeg)]
 
 
-  ### Get normalized read counts
-
-  if(isoform_specific){
-
-    reads_norm <- get_normalized_read_counts(obj = obj,
-                                             features_to_analyze = features_to_analyze,
-                                             isoform_fraction_name = fractions_name)
+  ### Normalize read counts
 
 
-  }else{
+  # TO-DO: ALLOW USERS TO JUST USE THE TPM FROM ISOFORM QUANTIFICATION
+  reads_norm <- get_normalized_read_counts(obj = obj,
+                                           features_to_analyze = features_to_analyze,
+                                           fractions_name = fractions_name)
 
-    reads_norm <- get_normalized_read_counts(obj = obj,
-                                             features_to_analyze = features_to_analyze)
-
-
-  }
 
 
   ### Estimate uncertainty in log(kdeg)
@@ -236,12 +226,6 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
                                    overwrite = overwrite)
 
   }
-
-
-  ### PROBLEMS
-  # 1) Don't have a readcounts ezget yet
-  # 2) Possible for there to be readcounts naming clash that I miss
-
 
   obj[["kinetics"]][[kinetics_vect]] <- kinetics %>%
     dplyr::select(sample, !!features_to_analyze, kdeg, log_kdeg, se_log_kdeg, ksyn, log_ksyn, se_log_ksyn, normalized_reads, n)
