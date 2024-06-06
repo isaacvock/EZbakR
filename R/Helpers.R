@@ -30,18 +30,26 @@
 #' of interest, still run all checks against queries.
 #' @export
 EZget <- function(obj,
-                  type = c("fractions", "kinetics",
+                  type = c("fractions", "kinetics", "readcounts",
                            "averages", "comparisons"),
                   features = NULL,
                   populations = NULL,
                   fraction_design = NULL,
+                  isoforms = NULL,
                   parameter = NULL,
                   returnNameOnly = FALSE,
+                  counttype = NULL,
                   exactMatch = FALSE,
                   alwaysCheck = FALSE){
 
 
-  type = match.arg(type)
+  type <- match.arg(type)
+
+  if(!is.null(counttype)){
+
+    counttype <- match.arg(counttype, c("TMM_normalized", "transcript", "matrix"))
+
+  }
 
   metadata <- obj[['metadata']][[type]]
 
@@ -148,27 +156,40 @@ EZget <- function(obj,
 
   }
 
+  if(!is.null(isoforms)){
+
+    possible_talbes_iso <- exact_ezsearch(metadata,
+                                          query = isoforms,
+                                          object = "isoforms")
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_iso)
+
+
+  }
+
 
   if(!is.null(parameter)){
 
-    lm <- length(metadata)
-    possible_tables_par <- c()
-
-
-    for(m in 1:lm){
-
-      par_subject <- metadata[[m]][['parameter']]
-
-      if(par_subject == parameter){
-
-        possible_tables_par <- c(possible_tables_par, names(metadata)[m])
-
-      }
-
-    }
+    possible_talbes_par <- exact_ezsearch(metadata,
+                                          query = parameter,
+                                          object = "parameter")
 
 
     possible_tables <- intersect(possible_tables, possible_tables_par)
+
+
+  }
+
+
+  if(!is.null(counttype)){
+
+    possible_talbes_cnt <- exact_ezsearch(metadata,
+                                          query = counttype,
+                                          object = "counttype")
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_cnt)
 
 
   }
@@ -197,6 +218,7 @@ EZget <- function(obj,
     return(obj[[type]][[possible_tables]])
 
   }
+
 
 
 
@@ -248,22 +270,54 @@ vector_ezsearch <- function(metadata,
 }
 
 
+exact_ezsearch <- function(metadata,
+                           query,
+                           object = c("isoforms", "parameter", "counttype")){
+
+  object <- match.args(object)
+
+  lm <- length(metadata)
+  possible_tables <- c()
+
+
+  for(m in 1:lm){
+
+    subject <- metadata[[m]][[object]]
+
+    if(subject == query){
+
+      possible_tables <- c(possible_tables, names(metadata)[m])
+
+    }
+
+  }
+
+  return(possible_tables)
+
+
+}
+
+
 
 ###########################
 ### DETERMINE OUTPUT NAME
 ###########################
 
 decide_output <- function(obj, proposed_name,
-                          type = c("fractions"),
+                          type = c("fractions", "kinetics",
+                                   "readcounts", "averages",
+                                   "comparison"),
                           features = NULL,
                           populations = NULL,
                           fraction_design = NULL,
                           parameter = NULL,
                           overwrite = TRUE){
 
+  type = match.args(type)
+
   ### Does same analysis output already exist?
   existing_output <- EZget(obj,
-                             type = "fractions",
+                             type = type,
                              features = features,
                              populations = populations,
                              fraction_design = fraction_design,

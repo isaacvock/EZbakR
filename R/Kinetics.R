@@ -101,19 +101,19 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
   ### Figure out which fraction new estimates to use
 
   # Function is in Helpers.R
-  table_info <- get_table_name(obj,
-                               features = features,
-                               tabletype = 'fractions',
-                               quant_name = quant_name)
+  fractions_name <- EZget(obj,
+                             features = features,
+                             populations = populations,
+                             fraction_design = fraction_design)
 
-  fractions_name <- table_info$table_name
-  isoform_specific <- table_info$isoform_specific
+
+  isoform_specific <- obj[['metadata']][['fractions']][[fractions_name]][['isoforms']]
 
 
   # Get fractions
   kinetics <- obj[["fractions"]][[fractions_name]]
 
-  features_to_analyze <- get_features(kinetics, objtype = "fractions")
+  features_to_analyze <- obj[["metadata"]][["fractions"]][[fractions_name]][["features"]]
 
 
 
@@ -232,7 +232,7 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
                                    proposed_name = readcount_vect,
                                    type = "readcounts",
                                    features = features_to_analyze,
-                                   readtype = "normalized",
+                                   counttype = "TMM_normalized",
                                    overwrite = overwrite)
 
   }
@@ -253,7 +253,7 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
 
   obj[["metadata"]][["kinetics"]][[kinetics_vect]] <- list(features = features_to_analyze)
   obj[["metadata"]][["readcounts"]][[readcount_vect]] <- list(features = features_to_analyze,
-                                                             readtype = "normalized")
+                                                             counttype = "TMM_normalized")
 
 
   if(!is(obj, "EZbakRKinetics")){

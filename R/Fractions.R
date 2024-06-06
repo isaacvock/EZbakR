@@ -562,7 +562,8 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   # Save metadata
   obj[['metadata']][['fractions']][[fraction_vect]] <- list(features = features_to_analyze,
                                                             populations = pops_to_analyze,
-                                                            fraction_design = fraction_design)
+                                                            fraction_design = fraction_design,
+                                                            isoforms = FALSE)
 
 
 
