@@ -18,6 +18,8 @@
 #' @param fraction_design Only relevant if `type` == "fractions". Fraction design
 #' table used to generate the table of interest.
 #' @param isoforms If the relevant table is the result of isoform deconvolution
+#' @param kstrat Only relevant if `type` == "kinetics". Short for "kinetics strategy";
+#' the strategy used to infer kinetic parameters.
 #' @param parameter Only relevant if `type` == "averages" or "comparisons". Which
 #' parameter was being averaged or compared?
 #' @param returnNameOnly If TRUE, then only the names of tables that passed your
@@ -37,6 +39,7 @@ EZget <- function(obj,
                   populations = NULL,
                   fraction_design = NULL,
                   isoforms = NULL,
+                  kstrat = NULL,
                   parameter = NULL,
                   returnNameOnly = FALSE,
                   counttype = NULL,
@@ -49,6 +52,12 @@ EZget <- function(obj,
   if(!is.null(counttype)){
 
     counttype <- match.arg(counttype, c("TMM_normalized", "transcript", "matrix"))
+
+  }
+
+  if(!is.null(kstrat)){
+
+    kstrat <- match.arg(kstrat, c("standard", "tilac", "subcellular"))
 
   }
 
@@ -170,6 +179,19 @@ EZget <- function(obj,
   }
 
 
+  if(!is.null(kstrat)){
+
+    possible_talbes_ks <- exact_ezsearch(metadata,
+                                          query = kstrat,
+                                          object = "kstrat")
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_ks)
+
+
+  }
+
+
   if(!is.null(parameter)){
 
     possible_talbes_par <- exact_ezsearch(metadata,
@@ -275,7 +297,7 @@ exact_ezsearch <- function(metadata,
                            query,
                            object = c("isoforms", "parameter", "counttype")){
 
-  object <- match.args(object)
+  object <- match.arg(object)
 
   lm <- length(metadata)
   possible_tables <- c()
@@ -311,10 +333,12 @@ decide_output <- function(obj, proposed_name,
                           features = NULL,
                           populations = NULL,
                           fraction_design = NULL,
+                          counttype = NULL,
+                          kstrat = NULL,
                           parameter = NULL,
                           overwrite = TRUE){
 
-  type = match.args(type)
+  type = match.arg(type)
 
   ### Does same analysis output already exist?
   existing_output <- EZget(obj,
@@ -323,6 +347,8 @@ decide_output <- function(obj, proposed_name,
                              populations = populations,
                              fraction_design = fraction_design,
                              parameter = parameter,
+                             kstrat = kstrat,
+                             counttype = counttype,
                              returnNameOnly = TRUE,
                              exactMatch = TRUE)
 
@@ -413,7 +439,7 @@ inv_logit <- function(x) exp(x)/(1+exp(x))
 #' @export
 get_normalized_read_counts <- function(obj,
                                        features_to_analyze,
-                                       fraction_name){
+                                       fractions_name = NULL){
 
   UseMethod("get_normalized_read_counts")
 
@@ -422,7 +448,7 @@ get_normalized_read_counts <- function(obj,
 #' @export
 get_normalized_read_counts.EZbakRFractions <- function(obj,
                                                        features_to_analyze,
-                                                       fractions_name){
+                                                       fractions_name = NULL){
 
   reads <- data.table::copy(data.table::setDT(obj[['fractions']][[fractions_name]]))
 
@@ -436,7 +462,7 @@ get_normalized_read_counts.EZbakRFractions <- function(obj,
 #' @export
 get_normalized_read_counts.default <- function(obj,
                                                features_to_analyze,
-                                               isoform_fraction_name = NULL){
+                                               fractions_name = NULL){
 
   ### Get normalized read counts
 

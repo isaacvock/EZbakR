@@ -542,6 +542,12 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   }
 
 
+  ### CONCERN: Worried about what happens if `character_limit`
+  ### changes from run to run.
+  ### ALLAYED: Behavior of `decide_output()` is such that
+  ### it checks if there are identical existing output, and changes
+  ### its name to that output rather than using the proposed name
+
   # Are there any metadata or fractions objects at this point?
   if(length(obj[['metadata']]) > 0){
 

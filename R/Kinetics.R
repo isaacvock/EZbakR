@@ -26,9 +26,12 @@
 #' @import data.table
 #' @export
 EstimateKinetics <- function(obj,
-                             features = NULL,
                              strategy = c("standard", "tilac"),
-                             quant_name = NULL){
+                             features = NULL,
+                             populations = NULL,
+                             fraction_design = NULL,
+                             character_limit = 20,
+                             overwrite = TRUE){
 
   ### Check that input is valid
 
@@ -72,13 +75,20 @@ EstimateKinetics <- function(obj,
 
     obj <- Standard_kinetic_estimation(obj,
                                 features = features,
-                                quant_name = quant_name)
+                                populations = populations,
+                                fraction_design = fraction_design,
+                                character_limit = character_limit,
+                                overwrite = overwrite)
 
 
   }else if(strategy == "tilac"){
 
     obj <- tilac_ratio_estimation(obj,
-                           features = features)
+                                  features = features,
+                                  populations = populations,
+                                  fraction_design = fraction_design,
+                                  character_limit = character_limit,
+                                  overwrite = overwrite)
 
   }
 
@@ -91,7 +101,10 @@ EstimateKinetics <- function(obj,
 # kdeg = -log(1 - fn)/tl
 # ksyn = (normalized read count)*kdeg
 Standard_kinetic_estimation <- function(obj, features = NULL,
-                                        quant_name = NULL){
+                                        populations = NULL,
+                                        fraction_design = NULL,
+                                        character_limit = 20,
+                                        overwrite = TRUE){
 
 
 
@@ -192,7 +205,7 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
   ##### PROCESS OUTPUT AND RETURN
 
   # What should output be named?
-  kinetics_vect <- fractions_name
+  kinetics_vect <- paste(gsub("_","",features_to_analyze), collapse = "_")
 
   if(nchar(kinetics_vect) > character_limit){
 
@@ -209,6 +222,7 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
                                    proposed_name = kinetics_vect,
                                    type = "kinetics",
                                    features = features_to_analyze,
+                                   kstrat = "standard",
                                    overwrite = overwrite)
 
   }
@@ -235,7 +249,8 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
     dplyr::select(sample, !!features_to_analyze, n, normalized_reads, geom_mean, scale_factor)
 
 
-  obj[["metadata"]][["kinetics"]][[kinetics_vect]] <- list(features = features_to_analyze)
+  obj[["metadata"]][["kinetics"]][[kinetics_vect]] <- list(features = features_to_analyze,
+                                                           kstrat = "standard")
   obj[["metadata"]][["readcounts"]][[readcount_vect]] <- list(features = features_to_analyze,
                                                              counttype = "TMM_normalized")
 
@@ -254,7 +269,10 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
 
 # Estimate TILAC ratio
 tilac_ratio_estimation <- function(obj,
-                                   features){
+                                   features = features,
+                                   populations = populations,
+                                   fraction_design = fraction_design,
+                                   character_limit = character_limit){
 
 
   `.` <- list
