@@ -42,6 +42,9 @@
 #' @param min_reads Minimum number of reads in all samples for a feature to be kept.
 #' @param force_optim Perform numerical likelihood estimation, even if a more efficient,
 #' approximate, analytical strategy is possible given `formula_mean` and `formula_sd`.
+#' @param character_limit Limit on the number of characters of the name given to the
+#' output table. Will attempt to concatenate the parameter name with the names of all
+#' of the features. If this is too long, only the parameter name will be used.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
@@ -51,7 +54,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                             sd_reg_factor = 10,
                             error_if_singular = TRUE, quant_name = NULL,
                             min_reads = 10,
-                            force_optim = FALSE){
+                            force_optim = FALSE,
+                            character_limit = 20){
 
 
 
@@ -63,7 +67,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                              sd_reg_factor = sd_reg_factor,
                              error_if_singular = error_if_singular, quant_name = quant_name,
                              TILAC = TRUE, min_reads = min_reads,
-                             force_optim = force_optim)
+                             force_optim = force_optim,
+                             character_limit = character_limit)
 
   }else{
 
@@ -72,7 +77,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                         include_all_parameters = include_all_parameters,
                         sd_reg_factor = sd_reg_factor, quant_name = quant_name,
                         error_if_singular = error_if_singular, min_reads = min_reads,
-                        force_optim = force_optim)
+                        force_optim = force_optim,
+                        character_limit = character_limit)
 
   }
 
@@ -137,12 +143,14 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 
 
 general_avg_and_reg <- function(obj, features, parameter,
+                                type = "kinetics",
                                 formula_mean, formula_sd,
                                 include_all_parameters,
                                 sd_reg_factor,
                                 error_if_singular, quant_name = NULL,
                                 TILAC = FALSE, min_reads = 10,
-                                force_optim = FALSE){
+                                force_optim = FALSE,
+                                character_limit = 20){
 
 
   ### Get name of standard error column
@@ -157,25 +165,33 @@ general_avg_and_reg <- function(obj, features, parameter,
 
   ### Figure out which fraction new estimates to use
 
-  table_info <- get_table_name(obj,
-                               features = features,
-                               tabletype = 'kinetics',
-                               quant_name = quant_name)
+  if(parameter %in% c("log_kdeg", "log_ksyn")){
+    kstrat <- "standard"
+  }else if(TILAC){
+    kstrat <- "tilac"
+  }else{
+    kstrat <- NULL
+  }
 
-  kinetics_name <- table_info$table_name
+
+  # Function is in Helpers.R
+  param_name <- EZget(obj,
+                         type = type,
+                         features = features,
+                         kstrat = kstrat,
+                         returnNameOnly = TRUE)
+
+
+  # Get fractions
+  kinetics <- obj[[type]][[param_name]]
+
+  features_to_analyze <- obj[["metadata"]][[type]][[param_name]][["features"]]
 
 
   # Get the kinetic parameter data frame
-  kinetics <- obj[['kinetics']][[kinetics_name]]
   kinetics <- kinetics %>%
     dplyr::mutate(log_normalized_reads = log10(normalized_reads))
 
-  # Get features to analyze
-  fractions <- obj[['fractions']][[kinetics_name]]
-
-  features_to_analyze <- get_features(fractions, objtype = "fractions")
-
-  rm(fractions)
 
 
   # Add kinetic parameter column to formula\
@@ -473,15 +489,44 @@ general_avg_and_reg <- function(obj, features, parameter,
 
 
 
-  # Prep output
-  output_name <- paste0(gsub("_", "",parameter), "_", table_info$table_name)
+  # What should output be named?
+  avg_vect <- paste(gsub("_","",features_to_analyze), collapse = "_")
+  avg_vect <- paste0(gsub("_","", parameter), "_", avg_vect)
 
-  obj[['averages']][[output_name]] <- final_output
+  if(nchar(avg_vect) > character_limit){
+
+    psearch <- paste0("^", gsub("_", "", parameter), "[1-9]")
+
+    num_avgs <- sum(grepl(psearch, names(obj[['averages']])))
+    avg_vect <- paste0("averages", num_avgs + 1)
+
+  }
+
+  # Are there any metadata or fractions objects at this point?
+  if(length(obj[['metadata']][['averages']]) > 0){
+
+    avg_vect <- decide_output(obj,
+                                   proposed_name = avg_vect,
+                                   type = "averages",
+                                   features = features_to_analyze,
+                                   parameter = parameter,
+                                   overwrite = overwrite)
+
+  }
+
+
+  # Save
+  obj[['averages']][[avg_vect]] <- dplyr::as_tibble(final_output)
+
+  # Save metadata
+  obj[['metadata']][['averages']][[avg_vect]] <- list(features = features_to_analyze,
+                                                      parameter = parameter)
+
 
   if(include_all_parameters){
 
-    output_name <- paste0("fullfit_", gsub("_", "",parameter), "_", table_info$table_name)
-    obj[['averages']][[output_name]] <- model_fit
+    output_name <- paste0("fullfit_", avg_vect)
+    obj[['averages']][[output_name]] <- dplyr::as_tibble(model_fit)
 
   }
 
