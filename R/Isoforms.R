@@ -176,6 +176,8 @@ EstimateIsoformFractions <- function(obj,
 
   features <- obj[['metadata']][['fractions']][[fraction_name]][['features']]
 
+  fraction <- setDT(fraction)
+
   lens <- rep(0, times = length(features))
   for(f in seq_along(features)){
 
@@ -206,6 +208,9 @@ EstimateIsoformFractions <- function(obj,
                             gene_to_transcript = gene_to_transcript)
 
   isoform_fit <- dplyr::bind_rows(isoform_fit)
+
+
+  ##### DETERMINE OUTPUT NAME AND RETURN
 
   output_name <- paste0(paste(gsub("_","",gene_colnames), collapse = "_"), paste0('_isoforms_', unlist(strsplit(quant_name, "_"))[3]))
 
