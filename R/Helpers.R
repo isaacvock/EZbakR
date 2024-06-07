@@ -453,7 +453,7 @@ get_normalized_read_counts.EZbakRFractions <- function(obj,
                                                        features_to_analyze,
                                                        fractions_name = NULL){
 
-  reads <- data.table::copy(data.table::setDT(obj[['fractions']][[fractions_name]]))
+  reads <- data.table::setDT(data.table::copy(obj[['fractions']][[fractions_name]]))
 
   reads <- normalize_reads(reads, features_to_analyze)
 
@@ -469,7 +469,7 @@ get_normalized_read_counts.default <- function(obj,
 
   ### Get normalized read counts
 
-  cB <- obj$cB
+  cB <- data.table::setDT(data.table::copy(obj$cB))
 
   # Calc read counts for each feature
   reads <- cB[,.(n = sum(n)), by = c("sample", features_to_analyze)]
