@@ -31,14 +31,15 @@ EZbakRVolcanoPlot <- function(obj,
   ### Find the object you want to get
 
   # Function in Helpers.R
-  comparison_list <- get_comparison(obj[['comparisons']][[parameter]],
-                                           condition = condition,
-                                           reference = reference,
-                                           experimental = experimental,
-                                           features = features)
+  comparson_name <- EZget(obj, type = "comparisons",
+                          condition = condition,
+                          reference = reference,
+                          experimental = experimental,
+                          features = features,
+                          returnNameOnly = TRUE)
 
-  comparison <- comparison_list[['comparison']]
-  metadata <- comparison_list[names(comparison_list) != "comparison"]
+  comparison <- obj[['comparisons']][[comparison_name]]
+  metadata <- obj[['metadata']][['comparisons']][[comparison_name]]
 
   # Infer x-axis scale and label
   if(plotlog2){
@@ -151,14 +152,15 @@ EZbakRMAPlot <- function(obj,
   ### Find the object you want to get
 
   # Function in Helpers.R
-  comparison_list <- get_comparison(obj[['comparisons']][[parameter]],
-                                    condition = condition,
-                                    reference = reference,
-                                    experimental = experimental,
-                                    features = features)
+  comparson_name <- EZget(obj, type = "comparisons",
+                          condition = condition,
+                          reference = reference,
+                          experimental = experimental,
+                          features = features,
+                          returnNameOnly = TRUE)
 
-  comparison <- comparison_list[['comparison']]
-  metadata <- comparison_list[names(comparison_list) != "comparison"]
+  comparison <- obj[['comparisons']][[comparison_name]]
+  metadata <- obj[['metadata']][['comparisons']][[comparison_name]]
 
   # Infer x-axis scale and label
   if(plotlog2){

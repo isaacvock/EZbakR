@@ -43,6 +43,9 @@ EZget <- function(obj,
                   parameter = NULL,
                   returnNameOnly = FALSE,
                   counttype = NULL,
+                  condition = NULL,
+                  experimental = NULL,
+                  reference = NULL,
                   exactMatch = FALSE,
                   alwaysCheck = FALSE){
 
@@ -168,7 +171,7 @@ EZget <- function(obj,
 
   if(!is.null(isoforms)){
 
-    possible_talbes_iso <- exact_ezsearch(metadata,
+    possible_tables_iso <- exact_ezsearch(metadata,
                                           query = isoforms,
                                           object = "isoforms")
 
@@ -181,7 +184,7 @@ EZget <- function(obj,
 
   if(!is.null(kstrat)){
 
-    possible_talbes_ks <- exact_ezsearch(metadata,
+    possible_tables_ks <- exact_ezsearch(metadata,
                                           query = kstrat,
                                           object = "kstrat")
 
@@ -194,7 +197,7 @@ EZget <- function(obj,
 
   if(!is.null(parameter)){
 
-    possible_talbes_par <- exact_ezsearch(metadata,
+    possible_tables_par <- exact_ezsearch(metadata,
                                           query = parameter,
                                           object = "parameter")
 
@@ -207,7 +210,7 @@ EZget <- function(obj,
 
   if(!is.null(counttype)){
 
-    possible_talbes_cnt <- exact_ezsearch(metadata,
+    possible_tables_cnt <- exact_ezsearch(metadata,
                                           query = counttype,
                                           object = "counttype")
 
@@ -217,6 +220,41 @@ EZget <- function(obj,
 
   }
 
+  if(!is.null(condition)){
+
+    possible_tables_c <- exact_ezsearch(metadata,
+                                          query = condition,
+                                          object = "condition")
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_c)
+
+
+  }
+
+  if(!is.null(experimental)){
+
+    possible_tables_e <- exact_ezsearch(metadata,
+                                          query = experimental,
+                                          object = "experimental")
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_e)
+
+
+  }
+
+  if(!is.null(reference)){
+
+    possible_tables_r <- exact_ezsearch(metadata,
+                                          query = reference,
+                                          object = "reference")
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_r)
+
+
+  }
 
   # Can return multiple names of candidate tables, but can
   # only return one table
