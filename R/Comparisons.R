@@ -622,7 +622,7 @@ CompareParameters <- function(obj, condition, reference, experimental,
                                  overwrite = overwrite)
   }
 
-  obj[["comparisons"]][[output_name]] <- comparison
+  obj[["comparisons"]][[output_name]] <- dplyr::as_tibble(comparison)
 
   obj[["metadata"]][["comparisons"]][[output_name]] <- list(condition = condition,
                                                             reference = reference,

@@ -135,12 +135,12 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
 
   fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
 
-  setDT(kinetics)
+  setDT(data.table::copy(kinetics))
 
   # Add label time info
   metadf <- obj$metadf
 
-  metadf <- setDT(metadf)
+  metadf <- setDT(data.table::copy(metadf))
   setkey(metadf, sample)
   setkey(kinetics, sample)
 
@@ -334,13 +334,13 @@ tilac_ratio_estimation <- function(obj,
 
   }
 
-  setDT(kinetics)
+  setDT(data.table::copy(kinetics))
 
   # Add label time info
   metadf <- obj$metadf
   metacols <- colnames(metadf)
 
-  metadf <- setDT(metadf)
+  metadf <- setDT(data.table::copy(metadf))
   setkey(metadf, sample)
   setkey(kinetics, sample)
 
@@ -382,7 +382,7 @@ tilac_ratio_estimation <- function(obj,
   kinetics_name <- paste(features_to_analyze, collapse = "_")
   reads_name <- paste(c("readcounts", features_to_analyze), collapse = "_")
 
-  obj[['kinetics']][[kinetics_name]] <- kinetics
+  obj[['kinetics']][[kinetics_name]] <- dplyr::as_tibble(kinetics)
 
   # Eventually want to add count matrix output
   obj[['readcounts']][[reads_name]] <- list(reads_df = reads_norm)
