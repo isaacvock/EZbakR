@@ -338,6 +338,7 @@ decide_output <- function(obj, proposed_name,
                           parameter = NULL,
                           overwrite = TRUE){
 
+
   type = match.arg(type)
 
   ### Does same analysis output already exist?
@@ -383,7 +384,7 @@ decide_output <- function(obj, proposed_name,
 
   }else if(overwrite){
 
-    return(existing_output)
+    proposed_name <- existing_output
 
 
   }else{
@@ -410,6 +411,8 @@ decide_output <- function(obj, proposed_name,
     }
 
   }
+
+  return(proposed_name)
 
 }
 

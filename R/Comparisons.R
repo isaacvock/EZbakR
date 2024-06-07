@@ -45,6 +45,7 @@
 #' @param character_limit Limit on the number of characters of the name given to the
 #' output table. Will attempt to concatenate the parameter name with the names of all
 #' of the features. If this is too long, only the parameter name will be used.
+#' @param overwrite If TRUE, identical, existing output will be overwritten.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
@@ -55,7 +56,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                             error_if_singular = TRUE, quant_name = NULL,
                             min_reads = 10,
                             force_optim = FALSE,
-                            character_limit = 20){
+                            character_limit = 20,
+                            overwrite = TRUE){
 
 
 
@@ -68,7 +70,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                              error_if_singular = error_if_singular, quant_name = quant_name,
                              TILAC = TRUE, min_reads = min_reads,
                              force_optim = force_optim,
-                             character_limit = character_limit)
+                             character_limit = character_limit,
+                             overwrite = overwrite)
 
   }else{
 
@@ -78,7 +81,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                         sd_reg_factor = sd_reg_factor, quant_name = quant_name,
                         error_if_singular = error_if_singular, min_reads = min_reads,
                         force_optim = force_optim,
-                        character_limit = character_limit)
+                        character_limit = character_limit,
+                        overwrite = overwrite)
 
   }
 
@@ -150,7 +154,8 @@ general_avg_and_reg <- function(obj, features, parameter,
                                 error_if_singular, quant_name = NULL,
                                 TILAC = FALSE, min_reads = 10,
                                 force_optim = FALSE,
-                                character_limit = 20){
+                                character_limit = 20,
+                                overwrite = TRUE){
 
 
   ### Get name of standard error column
@@ -556,18 +561,12 @@ general_avg_and_reg <- function(obj, features, parameter,
 #' reads by and estimate proportions of each RNA population. The default of "all"
 #' will use all feature columns in the `obj`'s cB.
 #' @param parameter Parameter to average across replicates of a given condition.
-#' @param quant_name Name of quantification tool appended to table name of interest.
-#' This is only relevant if you are providing isoform-specific estimates, in which
-#' case the isoform quantification tool's name may need to be provided in order
-#' for EZbakR to uniquely identify the table of interest. Even in that case though,
-#' this should only have to be non-null in the case where you have performed isoform-specific
-#' fraction estimation with more than one quantification tool's output.
+#' @param overwrite If TRUE, then identical output will be overwritten if it exists.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
 CompareParameters <- function(obj, condition, reference, experimental,
-                              features = NULL, parameter = "log_kdeg",
-                              quant_name = NULL){
+                              features = NULL, overwrite = TRUE, parameter = "log_kdeg"){
 
   ### Extract kinetic parameters of interest
 
@@ -579,18 +578,14 @@ CompareParameters <- function(obj, condition, reference, experimental,
   averages_name <- EZget(obj,
                          type = "averages",
                          features = features,
-                         kstrat = strategy,
+                         parameter = parameter,
                          returnNameOnly = TRUE)
 
 
   # Get fractions
-  averages_name <- obj[["averages"]][[averages_name]]
+  parameter_est <- obj[["averages"]][[averages_name]]
 
   features_to_analyze <- obj[["metadata"]][["averages"]][[averages_name]][["features"]]
-
-
-  # Get the kinetic parameter data frame
-  parameter_est <- obj[['averages']][[averages_name]]
 
 
   ### Perform comparative analysis of interest
@@ -620,12 +615,20 @@ CompareParameters <- function(obj, condition, reference, experimental,
 
   output_name <- paste0("comparison", num_comparisons + 1)
 
+
+  if(length(obj[['comparisons']]) > 0){
+    output_name <- decide_output(obj, output_name, type = "comparison",
+                                 features = features, parameter = parameter,
+                                 overwrite = overwrite)
+  }
+
   obj[["comparisons"]][[output_name]] <- comparison
 
   obj[["metadata"]][["comparisons"]][[output_name]] <- list(condition = condition,
                                                             reference = reference,
                                                             experimental = experimental,
-                                                            features = features_to_analyze)
+                                                            features = features_to_analyze,
+                                                            parameter = parameter)
 
 
   if(!is(obj, "EZbakRCompare")){
