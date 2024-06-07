@@ -537,7 +537,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   if(nchar(fraction_vect) > character_limit){
 
     num_fractions <- length(obj[['fractions']])
-    fraction_vect <- paste0("fraction", num_fractions + 1)
+    fraction_vect <- paste0("fractions", num_fractions + 1)
 
   }
 

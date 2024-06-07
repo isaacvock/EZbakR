@@ -210,7 +210,7 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
   if(nchar(kinetics_vect) > character_limit){
 
     num_kinetics <- length(obj[['kinetics']])
-    kinetics_vect <- paste0("kinetics", num_fractions + 1)
+    kinetics_vect <- paste0("kinetics", num_kinetics + 1)
 
   }
 

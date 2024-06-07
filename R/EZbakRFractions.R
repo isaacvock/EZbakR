@@ -6,7 +6,7 @@
 #' from each mutational population of interest.
 #' @param metadf Data frame tracking features of each of the samples included
 #' in `fractions`
-new_EZbakRFractions <- function(fractions, metadf){
+new_EZbakRFractions <- function(fractions, metadf, character_limit = 20){
   stopifnot(is.data.frame(fractions))
   stopifnot(is.data.frame(metadf))
 
@@ -16,9 +16,23 @@ new_EZbakRFractions <- function(fractions, metadf){
   # Can't have '_' in feature names when naming the fractions object
   features <- gsub("_", "", features)
 
+  # Name for output
+  fraction_name <- paste(features, collapse = "_")
+
+  if(nchar(fraction_name) > character_limit){
+
+    fraction_name <- "fractions1"
+
+  }
+
   # Make output
-  struct_list <- list(fractions = list(fractions), metadf = metadf)
-  names(struct_list[['fractions']]) <- paste(features, collapse = "_")
+  struct_list <- list(fractions = list(fractions),
+                      metadf = metadf)
+  names(struct_list[['fractions']]) <- fraction_name
+
+  struct_list[['metadata']][['fractions']][[fraction_name]] <- list(features = NULL,
+                                                                    populations = NULL,
+                                                                    fraction_design = NULL)
 
   structure(struct_list, class = "EZbakRFractions")
 }
@@ -68,6 +82,14 @@ validate_EZbakRFractions <- function(obj){
 
   mutations_in_fractions <- mutations_in_fractions[mutations_in_fractions %in% mutcounts]
 
+
+
+  ### What are the feature columns?
+
+  fraction_features <- fraction_cols[!grepl("^fraction_", fraction_cols) &
+                                       !grepl("^logit_fraction_", fraction_cols) &
+                                       !(fraction_cols %in% c("sample", "n")) &
+                                       !grepl("^se_logit_fraction_", fraction_cols)]
 
 
 
@@ -246,6 +268,13 @@ validate_EZbakRFractions <- function(obj){
 
   obj$metadf <- metadf
 
+
+  fraction_name <- names(obj[['metadata']][['fractions']])
+
+  obj[['metadata']][['fractions']][[fraction_name]] <- list(features = fraction_features,
+                                                            populations = mutations_in_fractions,
+                                                            fraction_design = NULL)
+
   return(obj)
 
 
@@ -348,11 +377,12 @@ validate_EZbakRFractions <- function(obj){
 #' @return An EZbakRData object. This is simply a list of the provide `fractions` and
 #' `metadf` with class `EZbakRData`
 #' @export
-EZbakRFractions <- function(fractions, metadf){
+EZbakRFractions <- function(fractions, metadf, character_limit = 20){
 
   fractions <- setDT(fractions)
   metadf <- setDT(metadf)
 
-  validate_EZbakRFractions(new_EZbakRFractions(fractions, metadf))
+  validate_EZbakRFractions(new_EZbakRFractions(fractions, metadf,
+                                               character_limit = character_limit))
 
 }
