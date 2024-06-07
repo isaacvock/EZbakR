@@ -109,10 +109,12 @@ ImportIsoformQuant <- function(obj, files,
 #' to filter out such transcript-feature combinations that should not exist.
 #' @export
 EstimateIsoformFractions <- function(obj,
-                                     fractions_identifier = "transcripts",
+                                     features = NULL,
+                                     populations = NULL,
+                                     fraction_design = NULL,
                                      quant_name = NULL,
-                                     fraction_name = NULL,
-                                     gene_to_transcript = NULL){
+                                     gene_to_transcript = NULL,
+                                     overwrite = TRUE){
 
 
   if(is.null(quant_name)){
@@ -139,34 +141,11 @@ EstimateIsoformFractions <- function(obj,
 
   if(is.null(fraction_name)){
 
-    possible_fraction_names <- names(obj$fractions)
-
-    fraction_name <- possible_fraction_names[(grepl(paste0(gsub("_","",fractions_identifier), "_"),
-                                                   possible_fraction_names) |
-                                               grepl(paste0("_", gsub("_","",fractions_identifier)),
-                                                     possible_fraction_names) |
-                                                possible_fraction_names == gsub("_","",fractions_identifier)) &
-                                               !grepl("^isoforms_",
-                                                      possible_fraction_names)]
-
-    if(length(fraction_name) > 1){
-
-      stop("More than one transcripts fraction estimates table exists in your
-           EZbakRData object! You need to tell EZbakR which one to use for
-           isoform-level analysis by specifying `fraction_name")
-
-    }else if(length(fraction_name) == 0){
-
-      stop("There are no detected transcripts fraction estimates table in your
-           EZbakRData object! EZbakR tried to auto-detect such a table by looking
-           for a table in the `fractions` list with a name that contained the
-           string 'transcripts_' or '_transcripts'. If a similar table with a different
-           naming convention exists, provide the identifier as the `fractions_identifier` parameter
-           for this function. Alternatively, specify the full table name as the
-           `fraction_name` parameter.")
-
-    }
-
+    fraction_name <- EZget(obj = obj,
+                           features = features,
+                           populations = populations,
+                           fraction_design = fraction_design,
+                           returnNameOnly = TRUE)
   }
 
 
@@ -178,6 +157,7 @@ EstimateIsoformFractions <- function(obj,
 
   fraction <- setDT(fraction)
 
+  # Cute strat: transcript set should have the most unique elements
   lens <- rep(0, times = length(features))
   for(f in seq_along(features)){
 
@@ -212,16 +192,26 @@ EstimateIsoformFractions <- function(obj,
 
   ##### DETERMINE OUTPUT NAME AND RETURN
 
-  output_name <- paste0(paste(gsub("_","",gene_colnames), collapse = "_"), paste0('_isoforms_', unlist(strsplit(quant_name, "_"))[3]))
+  metadata_list <- obj[['metadata']][['fractions']][[fraction_name]]
+  fd <- metadata_list[['fraction_design']]
+  pops <- metadata_list[['populations']]
 
-  output_name <- paste0("isoforms_",
-                        paste(gsub("_", "", gene_colnames), collapse = "_"),
-                        "_",
-                        gsub("_", "", isoform_feature),
-                        "_",
-                        unlist(strsplit(quant_name, "_"))[3])
+  output_name <- "isoforms"
+
+  output_name <- decide_output(obj, output_name,
+                                type = "fractions",
+                                features = c(gene_colnames, "transcript_id"),
+                                populations = pops,
+                                fraction_design = fd,
+                                overwrite = overwrite)
+
 
   obj[['fractions']][[output_name]] <- isoform_fit
+
+
+  obj[['metadata']][['fractions']][[output_name]] <- list(features = c(gene_colnames, "transcript_id"),
+                                                          populations = pops,
+                                                          fraction_design = fd)
 
 
   return(obj)

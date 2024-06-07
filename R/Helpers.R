@@ -363,7 +363,7 @@ decide_output <- function(obj, proposed_name,
 
       while(need_new_name){
 
-        test_proposed_name <- paste0(proposed_name, "_", num_repeats)
+        test_proposed_name <- paste0(proposed_name, num_repeats)
 
         if(test_proposed_name %in% names(obj[[type]])){
 
