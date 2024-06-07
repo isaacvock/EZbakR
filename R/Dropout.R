@@ -31,20 +31,15 @@ CorrectDropout <- function(obj,
 
   ### Figure out which fraction new estimates to use
 
-  # Function is in Helpers.R
-  table_info <- get_table_name(obj,
-                               features = features,
-                               tabletype = 'fractions',
-                               quant_name = quant_name)
-
-  fractions_name <- table_info$table_name
-  isoform_specific <- table_info$isoform_specific
-
+  # Function in Helpers.R
+  fractions_name <- EZget(obj, type = "fractions",
+                          features = features,
+                          returnNameOnly = TRUE)
 
   # Get fractions
   fractions <- obj[["fractions"]][[fractions_name]]
 
-  features_to_analyze <- get_features(fractions, objtype = "fractions")
+  features_to_analyze <- obj[['metadata']][['fractions']][[fractions_name]][['features']]
 
 
   ### Figure out column names to operate on
