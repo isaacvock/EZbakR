@@ -211,6 +211,8 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
 
     num_kinetics <- length(obj[['kinetics']])
     kinetics_vect <- paste0("kinetics", num_kinetics + 1)
+    num_reads <- sum(grepl("^readcount_df", names(obj[['readcounts']])))
+    readcount_vect <- paste0("readcount_df", num_reads + 1)
 
   }
 
@@ -227,8 +229,6 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
 
   }
 
-
-  readcount_vect <- kinetics_vect
 
   if(length(obj[['metadata']][['readcounts']]) > 0){
 
