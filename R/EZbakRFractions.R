@@ -379,8 +379,8 @@ validate_EZbakRFractions <- function(obj){
 #' @export
 EZbakRFractions <- function(fractions, metadf, character_limit = 20){
 
-  fractions <- setDT(fractions)
-  metadf <- setDT(metadf)
+  fractions <- dplyr::as_tibble(fractions)
+  metadf <- dplyr::as_tibble(metadf)
 
   validate_EZbakRFractions(new_EZbakRFractions(fractions, metadf,
                                                character_limit = character_limit))

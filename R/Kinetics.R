@@ -135,7 +135,7 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
 
   fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
 
-  setDT(data.table::copy(kinetics))
+  kinetics <- setDT(data.table::copy(kinetics))
 
   # Add label time info
   metadf <- obj$metadf
@@ -334,7 +334,7 @@ tilac_ratio_estimation <- function(obj,
 
   }
 
-  setDT(data.table::copy(kinetics))
+  kinetics <- setDT(data.table::copy(kinetics))
 
   # Add label time info
   metadf <- obj$metadf
