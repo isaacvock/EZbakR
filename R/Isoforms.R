@@ -174,7 +174,7 @@ EstimateIsoformFractions <- function(obj,
 
   fraction <- obj$fractions[[fraction_name]]
 
-  features <- get_features(fraction, objtype = "fractions")
+  features <- obj[['metadata']][['fractions']][[fraction_name]][['features']]
 
   lens <- rep(0, times = length(features))
   for(f in seq_along(features)){
