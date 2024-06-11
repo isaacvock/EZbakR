@@ -15,7 +15,9 @@ AverageAndRegularize(
   error_if_singular = TRUE,
   quant_name = NULL,
   min_reads = 10,
-  force_optim = FALSE
+  force_optim = FALSE,
+  character_limit = 20,
+  overwrite = TRUE
 )
 }
 \arguments{
@@ -66,6 +68,12 @@ fraction estimation with more than one quantification tool's output.}
 
 \item{force_optim}{Perform numerical likelihood estimation, even if a more efficient,
 approximate, analytical strategy is possible given \code{formula_mean} and \code{formula_sd}.}
+
+\item{character_limit}{Limit on the number of characters of the name given to the
+output table. Will attempt to concatenate the parameter name with the names of all
+of the features. If this is too long, only the parameter name will be used.}
+
+\item{overwrite}{If TRUE, identical, existing output will be overwritten.}
 }
 \description{
 \code{AverageAndRegularize} uses a linear model to average estimates of a parameter

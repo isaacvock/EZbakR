@@ -11,9 +11,13 @@ EZget(
   populations = NULL,
   fraction_design = NULL,
   isoforms = NULL,
+  kstrat = NULL,
   parameter = NULL,
   returnNameOnly = FALSE,
   counttype = NULL,
+  condition = NULL,
+  experimental = NULL,
+  reference = NULL,
   exactMatch = FALSE,
   alwaysCheck = FALSE
 )
@@ -36,6 +40,9 @@ populations that must have been analyzed to generate the table of interest.}
 table used to generate the table of interest.}
 
 \item{isoforms}{If the relevant table is the result of isoform deconvolution}
+
+\item{kstrat}{Only relevant if \code{type} == "kinetics". Short for "kinetics strategy";
+the strategy used to infer kinetic parameters.}
 
 \item{parameter}{Only relevant if \code{type} == "averages" or "comparisons". Which
 parameter was being averaged or compared?}

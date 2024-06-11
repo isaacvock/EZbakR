@@ -6,10 +6,12 @@
 \usage{
 EstimateIsoformFractions(
   obj,
-  fractions_identifier = "transcripts",
+  features = NULL,
+  populations = NULL,
+  fraction_design = NULL,
   quant_name = NULL,
-  fraction_name = NULL,
-  gene_to_transcript = NULL
+  gene_to_transcript = NULL,
+  overwrite = TRUE
 )
 }
 \arguments{
@@ -22,10 +24,6 @@ this table. If \code{quant_name} is \code{NULL}, it will search for tables conta
 If more than one such table exists, an error will be thrown and you will have to specify
 the exact name in \code{quant_name}.}
 
-\item{fraction_name}{Name of fractions table to use. Should represent the table
-stored in obj$fractions with fraction new/high mutation type estimates for reads
-assigned to the set of isoforms with which they were fully compatible.}
-
 \item{gene_to_transcript}{Table with columns \code{transcript_id} and all feature related
 columns that appear in the relevant fractions table. This is only relevant as a hack to
 to deal with the case where STAR includes in its transcriptome alignment transcripts
@@ -35,6 +33,10 @@ to filter out such transcript-feature combinations that should not exist.}
 \item{fraction_identifier}{String that identifies the name of the fractions table
 with fraction new/high mutation type estimates for reads assigned to the set of
 isoforms with which they were compatible.}
+
+\item{fraction_name}{Name of fractions table to use. Should represent the table
+stored in obj$fractions with fraction new/high mutation type estimates for reads
+assigned to the set of isoforms with which they were fully compatible.}
 }
 \description{
 Combines the output of \code{EstimateFractions} with transcript isoform

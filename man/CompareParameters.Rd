@@ -10,8 +10,8 @@ CompareParameters(
   reference,
   experimental,
   features = NULL,
-  parameter = "log_kdeg",
-  quant_name = NULL
+  overwrite = TRUE,
+  parameter = "log_kdeg"
 )
 }
 \arguments{
@@ -31,14 +31,9 @@ Difference will be calculated as \code{experimental} - \code{reference}.}
 reads by and estimate proportions of each RNA population. The default of "all"
 will use all feature columns in the \code{obj}'s cB.}
 
-\item{parameter}{Parameter to average across replicates of a given condition.}
+\item{overwrite}{If TRUE, then identical output will be overwritten if it exists.}
 
-\item{quant_name}{Name of quantification tool appended to table name of interest.
-This is only relevant if you are providing isoform-specific estimates, in which
-case the isoform quantification tool's name may need to be provided in order
-for EZbakR to uniquely identify the table of interest. Even in that case though,
-this should only have to be non-null in the case where you have performed isoform-specific
-fraction estimation with more than one quantification tool's output.}
+\item{parameter}{Parameter to average across replicates of a given condition.}
 }
 \description{
 Get contrasts of estimated parameters

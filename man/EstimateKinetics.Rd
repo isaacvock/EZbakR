@@ -6,18 +6,17 @@
 \usage{
 EstimateKinetics(
   obj,
-  features = NULL,
   strategy = c("standard", "tilac"),
-  quant_name = NULL
+  features = NULL,
+  populations = NULL,
+  fraction_design = NULL,
+  character_limit = 20,
+  overwrite = TRUE
 )
 }
 \arguments{
 \item{obj}{An \code{EZbakRFractions} object, which is an \code{EZbakRData} object on
 which \code{EstimateFractions()} has been run.}
-
-\item{features}{Character vector of the set of features you want to stratify
-reads by and estimate proportions of each RNA population. The default of "all"
-will use all feature columns in the \code{obj}'s cB.}
 
 \item{strategy}{Kinetic parameter estimation strategy.
 Options include:
@@ -30,6 +29,10 @@ as well as all samples including a chase after the pulse.
 \item custom (NOT YET IMPLEMENTED): Provide a custom function that takes
 fraction estimates as input and produces as output kinetic parameter estimates.
 }}
+
+\item{features}{Character vector of the set of features you want to stratify
+reads by and estimate proportions of each RNA population. The default of "all"
+will use all feature columns in the \code{obj}'s cB.}
 
 \item{quant_name}{Name of quantification tool appended to table name of interest.
 This is only relevant if you are providing isoform-specific estimates, in which
