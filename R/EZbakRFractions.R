@@ -6,24 +6,34 @@
 #' from each mutational population of interest.
 #' @param metadf Data frame tracking features of each of the samples included
 #' in `fractions`
-new_EZbakRFractions <- function(fractions, metadf, character_limit = 20){
+new_EZbakRFractions <- function(fractions, metadf,
+                                name = NULL, character_limit = 20){
   stopifnot(is.data.frame(fractions))
   stopifnot(is.data.frame(metadf))
 
-  # What should list elements be named?
-  features <- get_features(fractions, objtype = 'fractions')
+  if(is.null(name)){
 
-  # Can't have '_' in feature names when naming the fractions object
-  features <- gsub("_", "", features)
+    # What should list elements be named?
+    features <- get_features(fractions, objtype = 'fractions')
 
-  # Name for output
-  fraction_name <- paste(features, collapse = "_")
+    # Can't have '_' in feature names when naming the fractions object
+    features <- gsub("_", "", features)
 
-  if(nchar(fraction_name) > character_limit){
+    # Name for output
+    fraction_name <- paste(features, collapse = "_")
 
-    fraction_name <- "fractions1"
+    if(nchar(fraction_name) > character_limit){
+
+      fraction_name <- "fractions1"
+
+    }
+
+  }else{
+
+    fraction_name <- name
 
   }
+
 
   # Make output
   struct_list <- list(fractions = list(fractions),
@@ -429,12 +439,14 @@ validate_EZbakRFractions <- function(obj){
 #' @return An EZbakRData object. This is simply a list of the provide `fractions` and
 #' `metadf` with class `EZbakRData`
 #' @export
-EZbakRFractions <- function(fractions, metadf, character_limit = 20){
+EZbakRFractions <- function(fractions, metadf,
+                            name = NULL, character_limit = 20){
 
   fractions <- dplyr::as_tibble(fractions)
   metadf <- dplyr::as_tibble(metadf)
 
   validate_EZbakRFractions(new_EZbakRFractions(fractions, metadf,
+                                               name = name,
                                                character_limit = character_limit))
 
 }
