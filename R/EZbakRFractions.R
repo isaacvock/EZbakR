@@ -92,6 +92,58 @@ validate_EZbakRFractions <- function(obj){
                                        !grepl("^se_logit_fraction_", fraction_cols)]
 
 
+  ### Infer uncertainty if not provided
+
+
+  fraction_est_cols <- fraction_cols[!grepl("^fraction_", fraction_cols) &
+                                       !grepl("^logit_fraction_", fraction_cols) &
+                                       !(fraction_cols %in% c("sample", "n")) &
+                                       !grepl("^se_logit_fraction_", fraction_cols)]
+
+
+  se_cols <- param_cols[grepl("^se_logit_fraction_", fraction_est_cols)]
+  est_cols <- param_cols[grepl("^logit_fraction_", fraction_est_cols)]
+
+  expected_ests <- gsub("^se_", "", se_cols)
+
+  if(expected_ests > est_cols){
+
+    stop("There are more se_* columns than there are parameter estimation
+         columns. Each parameter estimate column should have a corresponding
+         se_* column, named identically to the parameter estimate column but
+         with 'se_' appended to the front. Make sure to not start any parameter
+         estimate columns with the substring 'se_'.")
+
+  }
+
+  missing_ses <- est_cols[!(est_cols %in% expected_ests)]
+
+  if(length(missing_ses) > 0){
+
+    message("Fraction estimates missing corresponding uncertainty
+            quantification will have an imputed uncertanity derived
+            from a simple Bayesian binomial model. This will be at
+            least a slight underestimation of the true uncertainty")
+
+    for(m in missing_ses){
+
+      new_col <- paste0("se_", missing_ses)
+
+      fs <- inv_logit(fractions[[m]])
+      ns <- fractions[['n']]
+
+      alpha <- fs*ns + 1
+      beta <- ns + 2
+      se_nat <- sqrt(alpha*beta/( ((alpha + beta)^2) * (alpha + beta + 1) ))
+
+      se_logit <- se_nat*abs(1/fs + 1/(1 - fs))
+
+      fractions[[new_col]] <- se_logit
+
+    }
+
+  }
+
 
   ### Does fractions data frame contain columns named "sample" and "n"?
   if(!("sample" %in% fraction_cols & "n" %in% fraction_cols)){
