@@ -211,6 +211,15 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
 
     num_kinetics <- length(obj[['kinetics']])
     kinetics_vect <- paste0("kinetics", num_kinetics + 1)
+
+  }
+
+
+  readcount_vect <- paste0(paste(gsub("_", "", features_to_analyze), collapse = "_"),
+                           "_readcount_df")
+
+  if(nchar(readcount_vect) > character_limit){
+
     num_reads <- sum(grepl("^readcount_df", names(obj[['readcounts']])))
     readcount_vect <- paste0("readcount_df", num_reads + 1)
 

@@ -60,11 +60,14 @@ CorrectDropout <- function(obj,
 
   if(is.null(grouping_factors)){
 
-    grouping_factors <- colnames(metadf)[!grepl("tl", colnames(metadf)) &
-                                           (colnames(metadf) != "sample")]
+    grouping_factors <- colnames(metadf)[!grepl("^tl", colnames(metadf)) &
+                                           (colnames(metadf) != "sample") &
+                                           !grepl("^tpulse", colnames(metadf)) &
+                                           !grepl("^tchase", colnames(metadf))]
 
 
   }
+
 
 
   ### Quantify and correct for dropout
@@ -82,6 +85,7 @@ CorrectDropout <- function(obj,
     dplyr::select(!!grouping_factors, !!features_to_analyze, nolabel_rpm)
 
 
+
   corrected <- fractions %>%
 
     ### CALCULATE DROPOUT:
@@ -97,7 +101,7 @@ CorrectDropout <- function(obj,
     ### ESTIMATE DROPOUT PARAMETERS:
     dplyr::group_by(sample) %>%
     dplyr::mutate(
-      fit = I(list(summary(stats::nls(log(dropout) ~ log((-(scale*pdo)*fraction_highTC)/((1-pdo) + fraction_highTC*pdo) + scale),
+      fit = I(list(summary(stats::nls(log(dropout) ~ log((-(scale*pdo)*!!dplyr::sym(fraction_of_interest))/((1-pdo) + !!dplyr::sym(fraction_of_interest)*pdo) + scale),
                                       start = list(scale = 1, pdo = 0.2)))))
     ) %>%
     dplyr::mutate(
@@ -116,14 +120,12 @@ CorrectDropout <- function(obj,
     dplyr::mutate(global_fraction = sum(!!dplyr::sym(fraction_of_interest)*n)/sum(n)) %>%
     dplyr::ungroup() %>%
     dplyr::mutate(corrected_gf = global_fraction/((1 - pdo) + global_fraction * pdo)) %>%
-    dplyr::mutate(corrected_n = n * (corrected_fraction*(1 - pdo) + (1 - corrected_fraction)) /
-                    (corrected_gf*(1 - pdo) + (1 - corrected_gf)),
-                  correction_factor = corrected_fraction / !!dplyr::sym(fraction_of_interest)
+    dplyr::mutate(corrected_n = n * (corrected_gf*(1 - pdo) + (1 - corrected_gf) /
+                    (corrected_fraction*(1 - pdo) + (1 - corrected_fraction)))
     ) %>%
     dplyr::mutate(!!fraction_of_interest := corrected_fraction,
                   n = corrected_n,
-                  !!logit_fraction := logit(corrected_fraction),
-                  !!logit_se := correction_factor*!!dplyr::sym(logit_se)) %>%
+                  !!logit_fraction := logit(corrected_fraction)) %>%
     dplyr::select(sample, !!features_to_analyze, !!fraction_of_interest,
                   !!logit_fraction, !!logit_se, n, pdo, scale)
 
@@ -146,7 +148,7 @@ CorrectDropout <- function(obj,
   ### Add back -s4U data
   corrected <- corrected %>%
     dplyr::bind_rows(fractions %>%
-                       filter(fraction_highTC == 0))
+                       dplyr::filter(!!dplyr::sym(fraction_of_interest) == 0))
 
 
   ### Overwrite uncorrected data

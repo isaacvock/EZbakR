@@ -350,11 +350,11 @@ validate_EZbakRKinetics <- function(obj, features){
 #' @return An EZbakRData object. This is simply a list of the provide `fractions` and
 #' `metadf` with class `EZbakRData`
 #' @export
-EZbakRFractions <- function(kinetics, metadf, features,
+EZbakRKinetics <- function(kinetics, metadf, features,
                             name = NULL,
                             character_limit = 20){
 
-  fractions <- dplyr::as_tibble(fractions)
+  kinetics <- dplyr::as_tibble(kinetics)
   metadf <- dplyr::as_tibble(metadf)
 
   validate_EZbakRFractions(new_EZbakRFractions(kinetics, metadf, features = features,
