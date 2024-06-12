@@ -28,6 +28,8 @@ EZappend <- function(obj, new_table,
 
   }
 
+  return(obj)
+
 }
 
 
@@ -131,5 +133,6 @@ EZconcat <- function(obj1, obj2,
   }
 
 
+  return(final_obj)
 
 }

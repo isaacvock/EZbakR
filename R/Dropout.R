@@ -120,8 +120,8 @@ CorrectDropout <- function(obj,
     dplyr::mutate(global_fraction = sum(!!dplyr::sym(fraction_of_interest)*n)/sum(n)) %>%
     dplyr::ungroup() %>%
     dplyr::mutate(corrected_gf = global_fraction/((1 - pdo) + global_fraction * pdo)) %>%
-    dplyr::mutate(corrected_n = n * (corrected_gf*(1 - pdo) + (1 - corrected_gf) /
-                    (corrected_fraction*(1 - pdo) + (1 - corrected_fraction)))
+    dplyr::mutate(corrected_n = round(n * (corrected_gf*(1 - pdo) + (1 - corrected_gf) /
+                    (corrected_fraction*(1 - pdo) + (1 - corrected_fraction))))
     ) %>%
     dplyr::mutate(!!fraction_of_interest := corrected_fraction,
                   n = corrected_n,

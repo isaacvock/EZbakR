@@ -41,7 +41,7 @@ new_EZbakRKinetics <- function(kinetics, features, metadf,
                       metadf = metadf)
   names(struct_list[['kinetics']]) <- kinetics_name
 
-  struct_list[['metadata']][['kinetics']][[fraction_name]] <- list(features = features,
+  struct_list[['metadata']][['kinetics']][[kinetics_name]] <- list(features = features,
                                                                     kstrat = "custom")
 
   structure(struct_list, class = "EZbakRKinetics")
@@ -69,7 +69,8 @@ validate_EZbakRKinetics <- function(obj, features){
 
 
   ### Which columns represent kinetic parameters?
-  param_cols <- kinetics_cols[!(kinetics_cols %in% c("sample", "n", features))]
+  param_cols <- kinetics_cols[!(kinetics_cols %in% c("sample", "n", features,
+                                                     "normalized_reads"))]
 
 
   ### Are all supposed features actually in the kinetics table?
@@ -100,7 +101,7 @@ validate_EZbakRKinetics <- function(obj, features){
 
   expected_ests <- gsub("^se_", "", se_cols)
 
-  if(expected_ests > est_cols){
+  if(length(expected_ests) > length(est_cols)){
 
     stop("There are more se_* columns than there are parameter estimation
          columns. Each parameter estimate column should have a corresponding
@@ -247,6 +248,8 @@ validate_EZbakRKinetics <- function(obj, features){
   obj[['metadata']][['kinetics']][[kinetics_name]] <- list(features = features,
                                                            kstrat = "custom")
 
+  obj[['kinetics']][[kinetics_name]] <- kinetics
+
   return(obj)
 
 
@@ -357,7 +360,7 @@ EZbakRKinetics <- function(kinetics, metadf, features,
   kinetics <- dplyr::as_tibble(kinetics)
   metadf <- dplyr::as_tibble(metadf)
 
-  validate_EZbakRKintics(new_EZbakRKinetics(kinetics, metadf, features = features,
+  validate_EZbakRKinetics(new_EZbakRKinetics(kinetics, metadf, features = features,
                                                name = name,
                                                character_limit = character_limit),
                            features = features)

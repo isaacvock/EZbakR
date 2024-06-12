@@ -111,12 +111,12 @@ validate_EZbakRFractions <- function(obj){
                                        !grepl("^se_logit_fraction_", fraction_cols)]
 
 
-  se_cols <- param_cols[grepl("^se_logit_fraction_", fraction_est_cols)]
-  est_cols <- param_cols[grepl("^logit_fraction_", fraction_est_cols)]
+  se_cols <- fraction_est_cols[grepl("^se_logit_fraction_", fraction_est_cols)]
+  est_cols <- fraction_est_cols[grepl("^logit_fraction_", fraction_est_cols)]
 
   expected_ests <- gsub("^se_", "", se_cols)
 
-  if(expected_ests > est_cols){
+  if(length(expected_ests) > length(est_cols)){
 
     stop("There are more se_* columns than there are parameter estimation
          columns. Each parameter estimate column should have a corresponding
@@ -336,6 +336,9 @@ validate_EZbakRFractions <- function(obj){
   obj[['metadata']][['fractions']][[fraction_name]] <- list(features = fraction_features,
                                                             populations = mutations_in_fractions,
                                                             fraction_design = NULL)
+
+  obj[['fractions']][[fraction_name]] <- fractions
+
 
   return(obj)
 
