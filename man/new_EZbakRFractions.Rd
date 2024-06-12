@@ -4,7 +4,7 @@
 \alias{new_EZbakRFractions}
 \title{\code{EZbakRFractions} object constructor}
 \usage{
-new_EZbakRFractions(fractions, metadf, character_limit = 20)
+new_EZbakRFractions(fractions, metadf, name = NULL, character_limit = 20)
 }
 \arguments{
 \item{fractions}{Data frame containing information about the fraction of reads

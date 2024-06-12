@@ -7,12 +7,12 @@
 validate_EZbakRKinetics(obj, features)
 }
 \arguments{
-\item{obj}{An object of class \code{EZbakRFractions}}
+\item{obj}{An object of class \code{EZbakRKinetics}}
 
 \item{features}{Features tracked in \code{kinetics} data frame. Needs to be specified
 explicitly as it cannot be automatically inferred.}
 }
 \description{
-\code{validate_EZbakRData} ensures that input for \code{EZbakRFractions} construction
+\code{validate_EZbakRData} ensures that input for \code{EZbakRKinetics} construction
 is valid.
 }

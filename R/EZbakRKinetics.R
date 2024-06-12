@@ -16,7 +16,7 @@ new_EZbakRKinetics <- function(kinetics, features, metadf,
 
   if(is.null(name)){
 
-    # Can't have '_' in feature names when naming the fractions object
+    # Can't have '_' in feature names when naming the kinetics object
     features_gsub <- gsub("_", "", features)
 
     # Name for output
@@ -49,9 +49,9 @@ new_EZbakRKinetics <- function(kinetics, features, metadf,
 
 #' `EZbakRKinetics` object validator
 #'
-#' \code{validate_EZbakRData} ensures that input for `EZbakRFractions` construction
+#' \code{validate_EZbakRData} ensures that input for `EZbakRKinetics` construction
 #' is valid.
-#' @param obj An object of class `EZbakRFractions`
+#' @param obj An object of class `EZbakRKinetics`
 #' @param features Features tracked in `kinetics` data frame. Needs to be specified
 #' explicitly as it cannot be automatically inferred.
 validate_EZbakRKinetics <- function(obj, features){
@@ -129,7 +129,7 @@ validate_EZbakRKinetics <- function(obj, features){
   }
 
 
-  ### Does fractions data frame contain columns named "sample" and "n"?
+  ### Does kinetics data frame contain columns named "sample" and "n"?
   if(!("sample" %in% kinetics_cols & "n" %in% kinetics_cols)){
 
     rlang::abort(
@@ -153,7 +153,7 @@ validate_EZbakRKinetics <- function(obj, features){
 
 
 
-  ### Check if all of the samples in fractions are also in metadf
+  ### Check if all of the samples in kinetics are also in metadf
 
   samps_kinetics <- unique(kinetics$sample)
 
@@ -163,7 +163,7 @@ validate_EZbakRKinetics <- function(obj, features){
   }
 
 
-  ### Check that n in fractions is numeric and > 0
+  ### Check that n in kinetics is numeric and > 0
 
   is_pos_whole2 <- function(x){
 
@@ -287,9 +287,9 @@ validate_EZbakRKinetics <- function(obj, features){
 #'  the relevant column name of the `kinetics` table.
 #' }
 #' @param metadf Data frame detailing various aspects of each of the samples included
-#' in the fractions data frame. This includes:
+#' in the kinetics data frame. This includes:
 #' \itemize{
-#'  \item `sample`: The sample ID, which should correspond to a sample ID in the provided fractions data frame.
+#'  \item `sample`: The sample ID, which should correspond to a sample ID in the provided kinetics data frame.
 #'  \item `tl`: Metabolic label time. There are several edge cases to be aware of:
 #'  \itemize{
 #'    \item If more than one metabolic label was used in the set of samples described
@@ -347,7 +347,7 @@ validate_EZbakRKinetics <- function(obj, features){
 #' @param character_limit If name is chosen automatically, limit on the number of
 #' characters in said name. If default name yields a string longer than this,
 #' then kinetics table will be named `kinetics1`
-#' @return An EZbakRData object. This is simply a list of the provide `fractions` and
+#' @return An EZbakRData object. This is simply a list of the provided `kinetics` and
 #' `metadf` with class `EZbakRData`
 #' @export
 EZbakRKinetics <- function(kinetics, metadf, features,
@@ -357,7 +357,7 @@ EZbakRKinetics <- function(kinetics, metadf, features,
   kinetics <- dplyr::as_tibble(kinetics)
   metadf <- dplyr::as_tibble(metadf)
 
-  validate_EZbakRFractions(new_EZbakRFractions(kinetics, metadf, features = features,
+  validate_EZbakRKintics(new_EZbakRKinetics(kinetics, metadf, features = features,
                                                name = name,
                                                character_limit = character_limit),
                            features = features)
