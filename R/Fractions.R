@@ -26,6 +26,9 @@ create_fraction_design <- function(mutrate_populations){
 
 }
 
+
+
+
 #' Estimate fractions of each RNA population
 #'
 #' @param obj EZbakRDataobject
@@ -139,6 +142,56 @@ EstimateFractions <- function(obj, features = "all",
 
 
 }
+
+
+
+#' Estimate mutation rates
+#'
+#' @param obj EZbakRDataobject
+#' @param populations Character vector of the set of mutational populations
+#' that you want to infer the fractions of. For example, say your cB file contains
+#' columns tracking T-to-C and G-to-A
+#' @param strategy String denoting which new read mutation rate estimation strategy to use.
+#' Options include:
+#' \itemize{
+#'  \item standard: Estimate a single new read and old read mutation rate for each
+#'  sample. This is done via a binomial mixture model fit to all reads in a given sample.
+#'  \item hierarchical (NOT YET IMPLEMENTED): Estimate feature-specific mutation
+#'  rate with standard, regularizing the feature-specific
+#'  estimate with a sample-wide prior.
+#'  \item smalec (NOT YET IMPLEMENTED): Estimate two old read mutation rates, as was done in
+#'  Smalec et al., 2023. Idea is that alignment artifacts can give rise to a
+#'  high mutation rate old read population that should be accounted for
+#'  to avoid overestimating the fraction of new reads
+#' }
+#' @param pnew_prior_mean logit-Normal mean for logit(pnew) prior.
+#' @param pnew_prior_sd logit-Normal sd for logit(pnew) prior.
+#' @param pold_prior_mean logit-Normal mean for logit(pold) prior.
+#' @param pold_prior_sd logit-Normal sd for logit(pold) prior.
+#' @import data.table
+#' @export
+EstimateMutRates <- function(obj,
+                                        populations = "all",
+                                        strategy = "standard",
+                                        pnew_prior_mean = -2.94,
+                                        pnew_prior_sd = 0.3,
+                                        pold_prior_mean = -6.5,
+                                        pold_prior_sd = 0.5
+){
+
+  UseMethod("EstimateMutRates")
+
+}
+
+
+
+
+
+###################################################
+# EZBAKRDATA STANDARD METHODS
+###################################################
+
+
 
 #' Estimate fractions of each RNA population with standard EZbakRData object
 #'
@@ -585,357 +638,6 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
 
 
-#' Estimate fractions of each RNA population with standard EZbakRData object
-#'
-#' @import data.table
-#' @import arrow
-#' @importFrom magrittr %>%
-#' @export
-EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
-                                         mutrate_populations = "all",
-                                         fraction_design = NULL,
-                                         Poisson = TRUE,
-                                         strategy = c("standard", "hierarchical"),
-                                         column_to_reorder = NULL,
-                                         pnew_prior_mean = -2.94,
-                                         pnew_prior_sd = 0.3,
-                                         pold_prior_mean = -6.5,
-                                         pold_prior_sd = 0.5){
-
-  `.` <- list
-
-  ### Check that input is valid
-
-  args <- c(as.list(environment()))
-
-  if(!is(obj, "EZbakRData")){
-
-    stop("obj is not an EZbakRData object!")
-
-  }
-
-  check_EstimateFractions_input(args)
-
-
-  strategy <- match.arg(strategy)
-
-  if(!is.null(column_to_reorder)){
-
-    reorder_col <- TRUE
-
-  }
-
-  ### Estimate mutation rates
-  message("Estimating mutation rates")
-  obj <- EstimateMutRates(obj,
-                          populations = mutrate_populations,
-                          strategy = strategy,
-                          pnew_prior_mean = pnew_prior_mean,
-                          pnew_prior_sd = pnew_prior_sd,
-                          pold_prior_mean = pold_prior_mean,
-                          pold_prior_sd = pold_prior_sd)
-
-  mutation_rates <- obj$mutation_rates
-
-  ### Figure out which features will be analyzed
-
-  # cB columns
-  cB <- obj$cBds
-  cBschema <- arrow::schema(cBds)
-  cB_cols <- names(cBschema)
-
-  ### Vectors of potential column names
-
-  # Mutation counts possible
-  mutcounts <- expand.grid(c("T", "C", "G", "A", "U", "N"),
-                           c("T", "C", "G", "A", "U", "N"))
-  mutcounts <- paste0(mutcounts[,1], mutcounts[,2])
-
-  illegal_mutcounts <- c("TT", "CC", "GG", "AA", "UU")
-
-  mutcounts <- mutcounts[!(mutcounts %in% illegal_mutcounts)]
-
-  # Which mutcounts are in the cB?
-  mutcounts_in_cB <- cB_cols[cB_cols %in% mutcounts]
-
-  # Base count columns in cB
-  basecounts_in_cB <- paste0("n", substr(mutcounts_in_cB, start = 1, stop = 1))
-
-  # feature columns
-  features_in_cB <- cB_cols[!(cB_cols %in% c(mutcounts_in_cB,
-                                             basecounts_in_cB,
-                                             "sample", "n"))]
-
-  # Need to determine which columns of the cB to group reads by
-  if(features == "all"){
-
-    features_to_analyze <- features_in_cB
-
-  }else{
-
-    if(!all(features %in% features_in_cB)){
-
-      stop("features includes columns that do not exist in your cB!")
-
-    }else{
-
-      features_to_analyze <- features
-
-    }
-
-  }
-
-
-  ### Figure out which mutational populations to analyze
-
-  if(mutrate_populations == "all"){
-
-    pops_to_analyze <- mutcounts_in_cB
-
-  }else{
-
-    if(!all(mutrate_populations %in% mutcounts_in_cB)){
-
-      stop("mutrate_populations includes columns that do not exist in your cB!")
-
-    }else{
-
-      pops_to_analyze <- mutrate_populations
-
-    }
-  }
-
-  # Get nucleotide counts that are needed
-  necessary_basecounts <- paste0("n", substr(pops_to_analyze, start = 1, stop = 1))
-
-  ### Create fraction_design data frame if necessary
-
-  if(is.null(fraction_design)){
-
-    fraction_design <- create_fraction_design(pops_to_analyze)
-
-  }
-
-
-  ### Filter out label-less samples
-
-  metadf <- obj$metadf
-
-  # What columns represent label times of interest?
-  if(length(pops_to_analyze) == 1){
-
-    tl_cols_possible <- c("tl", "tpulse")
-
-  }else{
-
-    tl_cols_possible <- c(paste0("tl_", pops_to_analyze),
-                          paste0("tpulse_", pops_to_analyze))
-
-
-  }
-
-  tl_cols <- tl_cols_possible[tl_cols_possible %in% colnames(metadf)]
-
-  ### Which samples should be filtered out
-
-  metadf <- obj$metadf
-
-  samples_with_label <- metadf %>%
-    dplyr::rowwise() %>%
-    dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) > 0)) %>%
-    dplyr::ungroup() %>%
-    dplyr::select(sample) %>%
-    unlist() %>%
-    unname()
-
-
-  ### Estimate fraction new for each feature in each sample
-  message("Estimating fractions for each sample:")
-
-
-  # Keep only feature of interest
-  if(Poisson){
-
-    cols_to_group <- c(pops_to_analyze, "sample", features_to_analyze)
-
-  }else{
-
-    cols_to_group <- c(necessary_basecounts, pops_to_analyze, "sample", features_to_analyze)
-
-  }
-
-
-  # Pair down design matrix
-  fraction_design <- dplyr::as_tibble(fraction_design)
-  mutrate_design <- fraction_design %>%
-    dplyr::filter(present) %>%
-    dplyr::select(-present)
-
-  fns <- vector(mode = "list",
-                length = length(samples_with_label))
-
-  for(s in seq_along(samples_with_label)){
-
-    message(paste0("Analyzing ", samples_with_label[s], "..."))
-
-    sample_cB <- cB %>%
-      dplyr::filter(sample == samples_with_label[s]) %>%
-      dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group))) %>%
-      dplyr::summarise(reads = sum(n),
-                nTavg = sum(nT*n)/sum(n)) %>%
-      dplyr::collect() %>%
-      dplyr::filter(!dplyr::if_any(dplyr::all_of(cols_to_group), ~ .x == "NA"))
-
-    sample_cB <- setDT(sample_cB)
-
-    ### If using older versions of featureCounts, then assignment of reads to
-    ### transcripts can lead to different variations of strings
-    if(reorder_col){
-
-      unique_strings <- unique(sample_cB[[column_to_reorder]])
-
-      unique_strings_sorted <- vapply(lapply(strsplit(unique_strings, split=","), sort), paste,"", collapse=",")
-
-      target_dict <- data.table(unique_strings, unique_strings_sorted)
-      colnames(target_dict) <- c(column_to_reorder, 'new_column')
-
-      setkeyv(target_dict, column_to_reorder)
-      setkeyv(sample_cB, column_to_reorder)
-
-      sample_cB <- sample_cB[target_dict, nomatch = NULL][,
-                                                          (column_to_reorder) := new_column
-                                                         ][, new_column := NULL]
-
-
-    }
-
-    setkey(sample_cB, sample)
-
-
-
-
-    if(ncol(mutrate_design) == 1){
-
-      ### Can optimize for two-component mixture model
-
-      if(unlist(mutrate_design[1,1])){
-
-        highpop <- 1
-
-      }else{
-
-        highpop <- 2
-
-      }
-
-
-      ### Add mutation rate info
-
-      # Extract mutation rates
-      mutrates <- setDT(obj$mutation_rates[[1]] %>%
-                          dplyr::select(-params))
-
-      # Key for fast join
-      setkey(mutrates, sample)
-      setkey(cB, sample)
-
-      # Join
-      sample_cB <- sample_cB[mutrates, nomatch = NULL]
-
-
-      ### Estimate fraction new
-
-      col_name <- paste0("logit_fraction_high", pops_to_analyze)
-      uncertainty_col <- paste0("se_logit_fraction_high", pops_to_analyze)
-      natural_col_name <- paste0("fraction_high", pops_to_analyze)
-
-      fns <- dplyr::as_tibble(sample_cB) %>%
-        dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
-        dplyr::summarise(fit := list(I(ifelse(!(unique(sample) %in% samples_with_no_label),
-                                              optim(0,
-                                                    fn = fit_tcmm,
-                                                    muts = !!dplyr::sym(pops_to_analyze),
-                                                    nucs = !!dplyr::sym(necessary_basecounts),
-                                                    pnew = pnew,
-                                                    pold = pold,
-                                                    Poisson = Poisson,
-                                                    n = n,
-                                                    lower = -9,
-                                                    upper = 9,
-                                                    method = "L-BFGS-B",
-                                                    hessian = TRUE),
-                                              list(par = -Inf)))),
-                         n = sum(n)) %>%
-        dplyr::ungroup() %>%
-        dplyr::mutate(
-          !!col_name := purrr::map_dbl(fit, ~ .x$par[1]),
-          !!uncertainty_col := ifelse(!(unique(sample) %in% samples_with_no_label),
-                                      purrr::map_dbl(fit, ~ sqrt(solve(.x$hessian)[1])),
-                                      0)
-        ) %>%
-        dplyr::select(-fit) %>%
-        dplyr::mutate(!!natural_col_name := inv_logit(!!dplyr::sym(col_name))) %>%
-        dplyr::select(sample, !!features_to_analyze, !!natural_col_name,
-                      !!col_name, !!uncertainty_col, n)
-
-
-
-    }else{
-
-
-      sample_fns <- sample_cB[,.(mixture_fit = list(fit_general_mixture(dataset = .SD,
-                                                          mutrate_design = mutrate_design,
-                                                          mutcols = pops_to_analyze,
-                                                          basecols = necessary_basecounts,
-                                                          Poisson = Poisson,
-                                                          twocomp = FALSE,
-                                                          pnew = sapply(pops_to_analyze,
-                                                                        function(name) mutation_rates[[name]]$pnew[mutation_rates[[name]]$sample == sample ]),
-                                                          pold = sapply(pops_to_analyze,
-                                                                        function(name) mutation_rates[[name]]$pold[mutation_rates[[name]]$sample == sample ]) ) ),
-                   n = sum(n)),
-                by = c("sample", features_to_analyze)]
-
-
-      # Unroll the fraction estimates
-      sample_fns <- sample_fns %>%
-        tidyr::unnest_wider(mixture_fit)
-
-    }
-
-
-    fns[[s]] <- sample_fns
-
-  }
-
-
-  fns <- dplyr::bind_rows(fns)
-
-
-
-  message("Processing output")
-
-
-
-  # What should output be named?
-  fraction_vect <- paste(gsub("_","",features_to_analyze), collapse = "_")
-
-  obj[['fractions']][[fraction_vect]] <- fns
-
-  # Add new class information
-  if(!("EZbakRFractions" %in% class(obj))){
-
-    class(obj) <- c("EZbakRFractions", class(obj))
-
-  }
-
-  return(obj)
-
-}
-
-
-
-
 
 #' Estimate mutation rates
 #'
@@ -962,7 +664,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 #' @param pold_prior_sd logit-Normal sd for logit(pold) prior.
 #' @import data.table
 #' @export
-EstimateMutRates <- function(obj,
+EstimateMutRates.EZbakRData <- function(obj,
                              populations = "all",
                              strategy = "standard",
                              pnew_prior_mean = -2.94,
@@ -1044,6 +746,714 @@ EstimateMutRates <- function(obj,
   return(obj)
 
 }
+
+
+
+
+
+###################################################
+# ARROW DATABASE BACKEND FUNCTIONS
+###################################################
+
+
+
+#' Estimate fractions of each RNA population with standard EZbakRData object
+#'
+#' @import data.table
+#' @import arrow
+#' @importFrom magrittr %>%
+#' @export
+EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
+                                              mutrate_populations = "all",
+                                              fraction_design = NULL,
+                                              Poisson = TRUE,
+                                              strategy = c("standard", "hierarchical"),
+                                              column_to_reorder = NULL,
+                                              pnew_prior_mean = -2.94,
+                                              pnew_prior_sd = 0.3,
+                                              pold_prior_mean = -6.5,
+                                              pold_prior_sd = 0.5){
+
+  `.` <- list
+
+  ### Check that input is valid
+
+  args <- c(as.list(environment()))
+
+  if(!is(obj, "EZbakRData")){
+
+    stop("obj is not an EZbakRData object!")
+
+  }
+
+  check_EstimateFractions_input(args)
+
+
+  strategy <- match.arg(strategy)
+
+  if(!is.null(column_to_reorder)){
+
+    reorder_col <- TRUE
+
+  }
+
+  ### Estimate mutation rates
+  message("Estimating mutation rates")
+  obj <- EstimateMutRates(obj,
+                          populations = mutrate_populations,
+                          strategy = strategy,
+                          pnew_prior_mean = pnew_prior_mean,
+                          pnew_prior_sd = pnew_prior_sd,
+                          pold_prior_mean = pold_prior_mean,
+                          pold_prior_sd = pold_prior_sd)
+
+  mutation_rates <- obj$mutation_rates
+
+  ### Figure out which features will be analyzed
+
+  # cB columns
+  cB <- obj$cBds
+  cBschema <- arrow::schema(cBds)
+  cB_cols <- names(cBschema)
+
+  ### Vectors of potential column names
+
+  # Mutation counts possible
+  mutcounts <- expand.grid(c("T", "C", "G", "A", "U", "N"),
+                           c("T", "C", "G", "A", "U", "N"))
+  mutcounts <- paste0(mutcounts[,1], mutcounts[,2])
+
+  illegal_mutcounts <- c("TT", "CC", "GG", "AA", "UU")
+
+  mutcounts <- mutcounts[!(mutcounts %in% illegal_mutcounts)]
+
+  # Which mutcounts are in the cB?
+  mutcounts_in_cB <- cB_cols[cB_cols %in% mutcounts]
+
+
+  ##### BEGINNING OF CODE IDENTICALL TO EZBAKRDATA METHOD (SHOULD REFACTOR
+  ##### SO A COMMON FUNCTION IS CALLED HERE BY BOTH)
+
+  # Base count columns in cB
+  basecounts_in_cB <- paste0("n", substr(mutcounts_in_cB, start = 1, stop = 1))
+
+  # feature columns
+  features_in_cB <- cB_cols[!(cB_cols %in% c(mutcounts_in_cB,
+                                             basecounts_in_cB,
+                                             "sample", "n"))]
+
+  # Need to determine which columns of the cB to group reads by
+  if(features == "all"){
+
+    features_to_analyze <- features_in_cB
+
+  }else{
+
+    if(!all(features %in% features_in_cB)){
+
+      stop("features includes columns that do not exist in your cB!")
+
+    }else{
+
+      features_to_analyze <- features
+
+    }
+
+  }
+
+
+  ### Figure out which mutational populations to analyze
+
+  if(mutrate_populations == "all"){
+
+    pops_to_analyze <- mutcounts_in_cB
+
+  }else{
+
+    if(!all(mutrate_populations %in% mutcounts_in_cB)){
+
+      stop("mutrate_populations includes columns that do not exist in your cB!")
+
+    }else{
+
+      pops_to_analyze <- mutrate_populations
+
+    }
+  }
+
+  # Get nucleotide counts that are needed
+  necessary_basecounts <- paste0("n", substr(pops_to_analyze, start = 1, stop = 1))
+
+  ### Create fraction_design data frame if necessary
+
+  if(is.null(fraction_design)){
+
+    fraction_design <- create_fraction_design(pops_to_analyze)
+
+  }
+
+
+  ### Filter out label-less samples
+
+  metadf <- obj$metadf
+
+  # What columns represent label times of interest?
+  if(length(pops_to_analyze) == 1){
+
+    tl_cols_possible <- c("tl", "tpulse")
+
+  }else{
+
+    tl_cols_possible <- c(paste0("tl_", pops_to_analyze),
+                          paste0("tpulse_", pops_to_analyze))
+
+
+  }
+
+  tl_cols <- tl_cols_possible[tl_cols_possible %in% colnames(metadf)]
+
+
+  ##### END OF CODE IDENTICAL TO EZBAKRDATA
+
+  ### Which samples should be filtered out
+
+  metadf <- obj$metadf
+
+  samples_with_label <- metadf %>%
+    dplyr::rowwise() %>%
+    dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) > 0)) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(sample) %>%
+    unlist() %>%
+    unname()
+
+
+  ### Estimate fraction new for each feature in each sample
+  message("Estimating fractions for each sample:")
+
+
+  # Keep only feature of interest
+  if(Poisson){
+
+    cols_to_group <- c(pops_to_analyze, "sample", features_to_analyze)
+
+  }else{
+
+    cols_to_group <- c(necessary_basecounts, pops_to_analyze, "sample", features_to_analyze)
+
+  }
+
+
+  # Pair down design matrix
+  fraction_design <- dplyr::as_tibble(fraction_design)
+  mutrate_design <- fraction_design %>%
+    dplyr::filter(present) %>%
+    dplyr::select(-present)
+
+
+
+  # Get read counts for -s4U samples
+  all_samples <- metadf$sample
+  samples_without_label <- all_samples[!(all_samples %in% samples_with_label)]
+
+  fns <- vector(mode = "list",
+                length = length(all_samples))
+
+
+  col_name <- paste0("logit_fraction_high", pops_to_analyze)
+  uncertainty_col <- paste0("se_logit_fraction_high", pops_to_analyze)
+  natural_col_name <- paste0("fraction_high", pops_to_analyze)
+
+
+
+  for(s in seq_along(all_samples)){
+
+    if(s %in% samples_without_label){
+
+      ctl_cols_to_group <- c("sample", features_to_analyze)
+
+
+      sample_fns <- cB %>%
+        dplyr::filter(sample == all_samples[s]) %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group))) %>%
+        dplyr::summarise(n = sum(n),
+                         !!natural_col_name := 0,
+                         !!col_name := -Inf,
+                         !!uncertainty_col := 0) %>%
+        dplyr::collect() %>%
+        dplyr::filter(!dplyr::if_all(dplyr::all_of(features_to_analyze), ~ .x %in% c("NA", "__no_feature")))
+
+    }else{
+
+      message(paste0("Analyzing ", all_samples[s], "..."))
+
+      sample_cB <- cB %>%
+        dplyr::filter(sample == all_samples[s]) %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group))) %>%
+        dplyr::summarise(reads = sum(n),
+                         nTavg = sum(nT*n)/sum(n)) %>%
+        dplyr::collect() %>%
+        dplyr::filter(!dplyr::if_all(dplyr::all_of(features_to_analyze), ~ .x %in% c("NA", "__no_feature")))
+
+      sample_cB <- setDT(sample_cB)
+
+      ### If using older versions of featureCounts, then assignment of reads to
+      ### transcripts can lead to different variations of strings
+      ### NOTE: Technically irrelevant now as all featureCounts ambiguous features
+      ### are split and copied. Transcript set assignment done via parsing transcriptome
+      ### aligned bam. In addition, with new lowRAM setting, this problem gets
+      ### solved within fastq2EZbakR.
+      if(reorder_col){
+
+        unique_strings <- unique(sample_cB[[column_to_reorder]])
+
+        unique_strings_sorted <- vapply(lapply(strsplit(unique_strings, split=","), sort), paste,"", collapse=",")
+
+        target_dict <- data.table(unique_strings, unique_strings_sorted)
+        colnames(target_dict) <- c(column_to_reorder, 'new_column')
+
+        setkeyv(target_dict, column_to_reorder)
+        setkeyv(sample_cB, column_to_reorder)
+
+        sample_cB <- sample_cB[target_dict, nomatch = NULL][,
+                                                            (column_to_reorder) := new_column
+        ][, new_column := NULL]
+
+
+      }
+
+      setkey(sample_cB, sample)
+
+
+      if(ncol(mutrate_design) == 1){
+
+        ### Can optimize for two-component mixture model
+
+        if(unlist(mutrate_design[1,1])){
+
+          highpop <- 1
+
+        }else{
+
+          highpop <- 2
+
+        }
+
+
+        ### Add mutation rate info
+
+        # Extract mutation rates
+        mutrates <- setDT(obj$mutation_rates[[1]] %>%
+                            dplyr::select(-params))
+
+        # Key for fast join
+        setkey(mutrates, sample)
+        setkey(cB, sample)
+
+        # Join
+        sample_cB <- sample_cB[mutrates, nomatch = NULL]
+
+
+        ### Estimate fraction new
+
+
+        ##### MOST OF THE REST OF THIS FUNCTION IS NEARLY IDENTICAL TO DEFAULT METHOD
+
+        if(strategy == "hierarchical"){
+
+          message("FITTING HIERARCHICAL TWO-COMPONENT MIXTURE MODEL:")
+
+          ### Get coverages to filter by; only want high coverage for feature-specific
+          ### pnew estimation
+
+          coverages <- sample_cB[,.(coverage = sum(n)),
+                                 by = c("sample", features_to_analyze)]
+          coverages <- coverages[coverage > hier_readcutoff][, c("coverage") := .(NULL)]
+
+
+          ### Get feature-specific pnew estimates
+
+          message("Estimating distribution of feature-specific pnews")
+
+          keyvector <- c("sample", features_to_analyze)
+          setkeyv(coverages, keyvector)
+          setkeyv(sample_cB, keyvector)
+
+          feature_specific <- sample_cB[
+            coverages, nomatch = NULL
+          ][,
+            .(params = list(fit_tcmm(muts = get(pops_to_analyze),
+                                     nucs = get(necessary_basecounts),
+                                     n = n,
+                                     pold = unique(pold),
+                                     pnew_prior_mean = unique(pnew),
+                                     pnew_prior_sd = init_pnew_prior_sd)),
+              pold = unique(pold)),
+            by = c("sample", features_to_analyze)
+          ]
+
+
+          feature_specific[, c("pnew", "lpnew_uncert") := .( inv_logit(sapply(params, `[[`, 2)),
+                                                             sapply(params, `[[`, 4))]
+
+
+          ### Hierarchical model
+
+          message("Estimating fractions with feature-specific pnews")
+
+          global_est <- feature_specific[,.(pnew_prior = mean(logit(pnew)),
+                                            pnew_prior_sd = sd(logit(pnew)) - mean(lpnew_uncert),
+                                            pold = mean(pold)),
+                                         by = sample]
+
+          global_est[, pnew_prior_sd := ifelse(pnew_prior_sd < 0,
+                                               pnew_prior_sd_min,
+                                               pnew_prior_sd)
+          ]
+
+          global_est[, pnew_prior_sd := min(pnew_prior_sd)]
+
+          setkey(global_est, sample)
+          setkey(sample_cB, sample)
+
+          feature_specific <- sample_cB[global_est, nomatch = NULL][,
+                                                                    .(params = list(fit_tcmm(muts = get(pops_to_analyze),
+                                                                                             nucs = get(necessary_basecounts),
+                                                                                             n = n,
+                                                                                             pold = unique(pold),
+                                                                                             pnew_prior_mean = unique(pnew_prior),
+                                                                                             pnew_prior_sd = unique(pnew_prior_sd))),
+                                                                      n = sum(n)),
+                                                                    by = c("sample", features_to_analyze)
+          ]
+
+
+          feature_specific[, c(col_name, "pnew",
+                               uncertainty_col) := .(sapply(params, `[[`, 1),
+                                                     inv_logit(sapply(params, `[[`, 2)),
+                                                     sapply(params, `[[`, 3))]
+
+
+
+          sample_fns <- dplyr::as_tibble(feature_specific) %>%
+            dplyr::mutate(!!natural_col_name := inv_logit(!!dplyr::sym(col_name))) %>%
+            dplyr::select(sample, !!features_to_analyze, !!natural_col_name,
+                          !!col_name, !!uncertainty_col, n)
+
+
+          ### Save feature-specific pnews
+
+          mutrates[, pnew := NULL]
+
+          colvect <- c("sample", features_to_analyze, "pnew")
+
+          feature_mutrates <- feature_specific[,..colvect][
+            mutrates, on = "sample", nomatch = NULL
+          ]
+
+
+          ### NOTE: SHOULD I BE SAVING BOTH FEATURE AND
+          ### SAMPLE-WIDE PNEW ESTIMATES? PROBABLY
+          obj$mutation_rates[[1]] <- feature_mutrates
+
+
+        }else{
+
+          ##### WHOLE CODE BLOCK NEARLY IDENTICAL TO AS IN DEFAULT METHOD
+          sample_fns <- dplyr::as_tibble(sample_cB) %>%
+            dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
+            dplyr::summarise(fit = ifelse(!(unique(sample) %in% samples_with_no_label),
+                                          list(I(optim(0,
+                                                       fn = tcmml,
+                                                       muts = !!dplyr::sym(pops_to_analyze),
+                                                       nucs = !!dplyr::sym(necessary_basecounts),
+                                                       pnew = pnew,
+                                                       pold = pold,
+                                                       pnew_prior_mean = pnew_prior_mean,
+                                                       pnew_prior_sd = pnew_prior_sd,
+                                                       pold_prior_mean = pold_prior_mean,
+                                                       pold_prior_sd = pold_prior_sd,
+                                                       Poisson = Poisson,
+                                                       n = n,
+                                                       lower = -9,
+                                                       upper = 9,
+                                                       method = "L-BFGS-B",
+                                                       hessian = TRUE))),
+                                          list(I(list(par = -Inf,
+                                                      hessian = Inf)))),
+                             n = sum(n)) %>%
+            dplyr::ungroup() %>%
+            dplyr::mutate(
+              !!col_name := purrr::map_dbl(fit, ~ .x$par[1]),
+              !!uncertainty_col := purrr::map_dbl(fit, ~ sqrt(solve(.x$hessian)[1]))
+            ) %>%
+            dplyr::select(-fit) %>%
+            dplyr::mutate(!!natural_col_name := inv_logit(!!dplyr::sym(col_name))) %>%
+            dplyr::select(sample, !!features_to_analyze, !!natural_col_name,
+                          !!col_name, !!uncertainty_col, n)
+
+
+        }
+
+
+      }else{
+
+
+        sample_fns <- sample_cB[,.(mixture_fit = list(fit_general_mixture(dataset = .SD,
+                                                                          mutrate_design = mutrate_design,
+                                                                          mutcols = pops_to_analyze,
+                                                                          basecols = necessary_basecounts,
+                                                                          Poisson = Poisson,
+                                                                          twocomp = FALSE,
+                                                                          pnew = sapply(pops_to_analyze,
+                                                                                        function(name) mutation_rates[[name]]$pnew[mutation_rates[[name]]$sample == sample ]),
+                                                                          pold = sapply(pops_to_analyze,
+                                                                                        function(name) mutation_rates[[name]]$pold[mutation_rates[[name]]$sample == sample ]) ) ),
+                                   n = sum(n)),
+                                by = c("sample", features_to_analyze)]
+
+
+        # Unroll the fraction estimates
+        sample_fns <- sample_fns %>%
+          tidyr::unnest_wider(mixture_fit)
+
+      }
+
+
+
+    }
+
+
+
+
+    fns[[s]] <- sample_fns
+
+  }
+
+
+  fns <- dplyr::bind_rows(fns)
+
+
+
+  message("Processing output")
+
+
+
+  ##### REST OF THIS CODE IS IDENTICAL TO AS IN DEFAULT METHOD
+
+
+  # What should output be named?
+  fraction_vect <- paste(gsub("_","",features_to_analyze), collapse = "_")
+
+  if(nchar(fraction_vect) > character_limit){
+
+    num_fractions <- length(obj[['fractions']])
+    fraction_vect <- paste0("fractions", num_fractions + 1)
+
+  }
+
+  # Are there any metadata or fractions objects at this point?
+  if(length(obj[['metadata']]) > 0){
+
+    fraction_vect <- decide_output(obj,
+                                   proposed_name = fraction_vect,
+                                   type = "fractions",
+                                   features = features_to_analyze,
+                                   populations = pops_to_analyze,
+                                   fraction_design = fraction_design,
+                                   overwrite = overwrite)
+
+  }
+
+
+  # Save
+  obj[['fractions']][[fraction_vect]] <- dplyr::as_tibble(fns)
+
+  # Save metadata
+  obj[['metadata']][['fractions']][[fraction_vect]] <- list(features = features_to_analyze,
+                                                            populations = pops_to_analyze,
+                                                            fraction_design = fraction_design)
+
+
+
+  # Add new class information
+  if(!("EZbakRFractions" %in% class(obj))){
+
+    class(obj) <- c("EZbakRFractions", class(obj))
+
+  }
+
+  return(obj)
+
+
+
+}
+
+
+
+#' Estimate mutation rates
+#'
+#' @param obj EZbakRDataobject
+#' @param populations Character vector of the set of mutational populations
+#' that you want to infer the fractions of. For example, say your cB file contains
+#' columns tracking T-to-C and G-to-A
+#' @param strategy String denoting which new read mutation rate estimation strategy to use.
+#' Options include:
+#' \itemize{
+#'  \item standard: Estimate a single new read and old read mutation rate for each
+#'  sample. This is done via a binomial mixture model fit to all reads in a given sample.
+#'  \item hierarchical (NOT YET IMPLEMENTED): Estimate feature-specific mutation
+#'  rate with standard, regularizing the feature-specific
+#'  estimate with a sample-wide prior.
+#'  \item smalec (NOT YET IMPLEMENTED): Estimate two old read mutation rates, as was done in
+#'  Smalec et al., 2023. Idea is that alignment artifacts can give rise to a
+#'  high mutation rate old read population that should be accounted for
+#'  to avoid overestimating the fraction of new reads
+#' }
+#' @param pnew_prior_mean logit-Normal mean for logit(pnew) prior.
+#' @param pnew_prior_sd logit-Normal sd for logit(pnew) prior.
+#' @param pold_prior_mean logit-Normal mean for logit(pold) prior.
+#' @param pold_prior_sd logit-Normal sd for logit(pold) prior.
+#' @import data.table
+#' @export
+EstimateMutRates.EZbakRArrowData <- function(obj,
+                                        populations = "all",
+                                        strategy = "standard",
+                                        pnew_prior_mean = -2.94,
+                                        pnew_prior_sd = 0.3,
+                                        pold_prior_mean = -6.5,
+                                        pold_prior_sd = 0.5
+){
+
+  `.` <- list
+
+  ### Figure out which features will be analyzed
+
+  # cB columns
+  cB <- obj$cBds
+  cBschema <- arrow::schema(cBds)
+  cB_cols <- names(cBschema)
+
+  ### Vectors of potential column names
+
+  # Mutation counts possible
+  mutcounts <- expand.grid(c("T", "C", "G", "A", "U", "N"),
+                           c("T", "C", "G", "A", "U", "N"))
+  mutcounts <- paste0(mutcounts[,1], mutcounts[,2])
+
+  illegal_mutcounts <- c("TT", "CC", "GG", "AA", "UU")
+
+  mutcounts <- mutcounts[!(mutcounts %in% illegal_mutcounts)]
+
+  # Which mutcounts are in the cB?
+  mutcounts_in_cB <- cB_cols[cB_cols %in% mutcounts]
+
+  # Base count columns in cB
+  basecounts_in_cB <- paste0("n", substr(mutcounts_in_cB, start = 1, stop = 1))
+
+
+  # Which populations to analyze?
+  if(populations == "all"){
+
+    muts_analyze <- mutcounts_in_cB
+
+  }else{
+
+    muts_analyze <- populations
+
+  }
+
+  nucs_analyze <- basecounts_in_cB[which(mutcounts_in_cB %in% muts_analyze)]
+
+
+  # Infer proportion of each population
+  mutest <- vector(mode = "list", length = length(muts_analyze))
+
+  ### Which samples should be filtered out?
+
+  metadf <- obj$metadf
+
+  samples_with_label <- metadf %>%
+    dplyr::rowwise() %>%
+    dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) > 0)) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(sample) %>%
+    unlist() %>%
+    unname()
+
+
+  ### STEPS:
+  # 1) Extract sample's data and summarize
+  # 2) Collect and pass to model as in default method
+  for(i in seq_along(muts_analyze)){
+
+    # Infer proportion of each population
+    sample_mutest <- tibble()
+
+    group_cols <- c("sample", muts_analyze[i], nucs_analyze[i])
+
+    for(s in seq_along(samples_with_label)){
+
+      cB <- cB %>%
+        dplyr::filter(sample == samples_with_label[s]) %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(group_cols))) %>%
+        dplyr::summarise(n = sum(n)) %>%
+        dplyr::collect()
+
+      mutest_dt <- data.table::setDT(cB)
+
+      mutest_temp <- mutest_dt[,.(params = list(fit_tcmm(muts = get(muts_analyze[i]),
+                                                         nucs = get(nucs_analyze[i]),
+                                                         n = n,
+                                                         pnew_prior_mean = pnew_prior_mean,
+                                                         pnew_prior_sd = pnew_prior_sd,
+                                                         pold_prior_mean = pold_prior_mean,
+                                                         pold_prior_sd = pold_prior_sd))), by = sample]
+
+      mutest_temp[, c("p1", "p2") := .(inv_logit(sapply(params, `[[`, 2)),
+                                       inv_logit(sapply(params, `[[`, 3)))]
+
+      mutest_temp[,c("pold",
+                     "pnew") := .(min(c(p1, p2)),
+                                  max(c(p1, p2))), by = 1:nrow(mutest_temp)]
+
+      mutest_temp[,c("p1", "p2") := .(NULL, NULL)]
+
+      sample_mutest <- bind_rows(sample_mutest, mutest_temp)
+
+    }
+
+    mutest[[i]] <- sample_mutest
+
+  }
+
+
+  names(mutest) <- muts_analyze
+
+
+  obj$mutation_rates <- mutest
+
+
+  # Add new class information
+  if(!("EZbakRMutrates" %in% class(obj))){
+
+    class(obj) <- c("EZbakRMutrates", class(obj))
+
+  }
+
+
+  return(obj)
+
+}
+
+
+
+
+
+###################################################
+# MISCELLANEOUS HELPER FUNCTIONS
+###################################################
+
 
 
 
@@ -1204,6 +1614,9 @@ tcmml <- function(param, muts, nucs, n,
 
 
 
+
+
+
 # Fit all two-componenet mixture model variations
 fit_tcmm <- function(muts, nucs, n, pnew = NULL, pold = NULL,
                      pnew_prior_mean = -2.94,
@@ -1292,11 +1705,9 @@ fit_tcmm <- function(muts, nucs, n, pnew = NULL, pold = NULL,
 
 
 
-
 ###################################################
 # HELPER FUNCTIONS FOR MULTI LABEL MIXTURE MODELING
 ###################################################
-
 
 
 
