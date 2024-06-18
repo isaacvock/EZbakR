@@ -15,6 +15,7 @@
 #' for EZbakR to uniquely identify the table of interest. Even in that case though,
 #' this should only have to be non-null in the case where you have performed isoform-specific
 #' fraction estimation with more than one quantification tool's output.
+#' @export
 CorrectDropout <- function(obj,
                            grouping_factors = NULL,
                            features = NULL,

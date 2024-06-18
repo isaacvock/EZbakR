@@ -26,7 +26,8 @@
 #' @import data.table
 #' @export
 EstimateKinetics <- function(obj,
-                             strategy = c("standard", "tilac"),
+                             strategy = c("standard", "tilac", "NSS",
+                                          "pulse-chase"),
                              features = NULL,
                              populations = NULL,
                              fraction_design = NULL,
@@ -71,17 +72,7 @@ EstimateKinetics <- function(obj,
 
   ### "Method dispatch"
 
-  if(strategy == "standard"){
-
-    obj <- Standard_kinetic_estimation(obj,
-                                features = features,
-                                populations = populations,
-                                fraction_design = fraction_design,
-                                character_limit = character_limit,
-                                overwrite = overwrite)
-
-
-  }else if(strategy == "tilac"){
+  if(strategy == "tilac"){
 
     obj <- tilac_ratio_estimation(obj,
                                   features = features,
@@ -89,6 +80,17 @@ EstimateKinetics <- function(obj,
                                   fraction_design = fraction_design,
                                   character_limit = character_limit,
                                   overwrite = overwrite)
+
+
+  }else{
+
+    obj <- Standard_kinetic_estimation(obj,
+                                       strategy = strategy,
+                                       features = features,
+                                       populations = populations,
+                                       fraction_design = fraction_design,
+                                       character_limit = character_limit,
+                                       overwrite = overwrite)
 
   }
 
@@ -100,16 +102,20 @@ EstimateKinetics <- function(obj,
 
 # kdeg = -log(1 - fn)/tl
 # ksyn = (normalized read count)*kdeg
-Standard_kinetic_estimation <- function(obj, features = NULL,
+Standard_kinetic_estimation <- function(obj,
+                                        strategy = c("standard", "NSS",
+                                                     "pulse-chase"),
+                                        features = NULL,
                                         populations = NULL,
                                         fraction_design = NULL,
                                         character_limit = 20,
                                         overwrite = TRUE){
 
 
-
   `.` <- list
 
+
+  strategy <- match.arg(strategy)
 
   ### Figure out which fraction new estimates to use
 
@@ -128,30 +134,48 @@ Standard_kinetic_estimation <- function(obj, features = NULL,
 
 
 
-  ### Estimate kdegs
+  if(strategy == "standard"){
 
-  # Determine which column to use for kinetic parameter estimation
-  fraction_cols <- colnames(kinetics)
+    ### Estimate kdegs
 
-  fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
+    # Determine which column to use for kinetic parameter estimation
+    fraction_cols <- colnames(kinetics)
 
-  kinetics <- setDT(data.table::copy(kinetics))
+    fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
 
-  # Add label time info
-  metadf <- obj$metadf
+    kinetics <- setDT(data.table::copy(kinetics))
 
-  metadf <- setDT(data.table::copy(metadf))
-  setkey(metadf, sample)
-  setkey(kinetics, sample)
+    # Add label time info
+    metadf <- obj$metadf
 
-  kinetics <- kinetics[metadf[,c("sample", "tl")], nomatch = NULL]
+    metadf <- setDT(data.table::copy(metadf))
+    setkey(metadf, sample)
+    setkey(kinetics, sample)
 
-  # Make sure no -s4U controls made it through
-  kinetics <- kinetics[tl > 0]
+    kinetics <- kinetics[metadf[,c("sample", "tl")], nomatch = NULL]
+
+    # Make sure no -s4U controls made it through
+    kinetics <- kinetics[tl > 0]
 
 
-  kinetics[, kdeg := -log(1 - get(fraction_of_interest))/tl]
-  kinetics[, log_kdeg := log(kdeg)]
+    kinetics[, kdeg := -log(1 - get(fraction_of_interest))/tl]
+    kinetics[, log_kdeg := log(kdeg)]
+
+  }else if(strategy == "NSS"){
+
+    ### IDEA
+    # 1) Extract -s4U read counts from relevant source
+      # Default is just from fractions object
+      # Can also use a read count data frame stored in EZbakRData object
+    # 2) Normalize read counts
+      # Default is TMM
+      # Can also provide a table of scale factors
+      # Maybe can also choose not to normalize (technically would be same
+      # as providing scale table of 1, but I can autmoate that for user)
+    # 3) Estimate kdeg = -log(norm. old reads +s4U / norm. -s4U reads)/tl
+    # 4) Estimate ksyn = (fn * norm. total reads +s4U * kdeg)/(1 - exp(-kdeg*tl))
+
+  }
 
 
   ### Normalize read counts

@@ -6,7 +6,7 @@
 \usage{
 EstimateKinetics(
   obj,
-  strategy = c("standard", "tilac"),
+  strategy = c("standard", "tilac", "NSS", "pulse-chase"),
   features = NULL,
   populations = NULL,
   fraction_design = NULL,
