@@ -101,6 +101,16 @@ create_fraction_design <- function(mutrate_populations){
 #'  rate, regularizing the feature-specific estimate with a sample-wide prior. Currently
 #'  only compatible with single mutation type mixture modeling.
 #'  }
+#' @param split_multi_features If a set of reads maps ambiguously to multiple features,
+#' should data for such reads be copied for each feature in the ambiguous set? If this is
+#' `TRUE`, then `multi_feature_cols` also must be set.
+#' @param multi_feature_cols Character vector of columns that have the potential to
+#' include assignment to multiple features. Only these columns will have their feaures split
+#' if `split_multi_features` is `TRUE`.
+#' @param multi_feature_sep String representing how ambiguous feature assignments are
+#' distinguished in the feature names. For example, the default value of "+" denotes
+#' that if a read maps to multiple features (call them featureA and featureB, for example),
+#' then the feature column will have a value of "featureA+featureB".
 #' @param pnew_prior_mean logit-Normal mean for logit(pnew) prior.
 #' @param pnew_prior_sd logit-Normal sd for logit(pnew) prior.
 #' @param pold_prior_mean logit-Normal mean for logit(pold) prior.
@@ -126,7 +136,9 @@ EstimateFractions <- function(obj, features = "all",
                               fraction_design = NULL,
                               Poisson = TRUE,
                               strategy = c("standard", "hierarchical"),
-                              column_to_reorder = NULL,
+                              split_multi_features = FALSE,
+                              multi_feature_cols = NULL,
+                              multi_feature_sep = "+",
                               pnew_prior_mean = -2.94,
                               pnew_prior_sd = 0.3,
                               pold_prior_mean = -6.5,
@@ -203,7 +215,9 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                               fraction_design = NULL,
                               Poisson = TRUE,
                               strategy = c("standard", "hierarchical"),
-                              column_to_reorder = NULL,
+                              split_multi_features = FALSE,
+                              multi_feature_cols = NULL,
+                              multi_feature_sep = "+",
                               pnew_prior_mean = -2.94,
                               pnew_prior_sd = 0.3,
                               pold_prior_mean = -6.5,
@@ -230,12 +244,6 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
   strategy <- match.arg(strategy)
 
-
-  if(!is.null(column_to_reorder)){
-
-    reorder_col <- TRUE
-
-  }
 
   ### Estimate mutation rates
   message("Estimating mutation rates")
@@ -377,6 +385,14 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
   }
 
+
+  ### Split multi feature mappers if necessary
+  if(split_multi_features){
+
+    cB <- split_features(cB, multi_feature_cols)
+
+  }
+
   # TO-DO: Add an estimated runtime here based on the number of rows in the cB,
   # the number of features, and what model is being run.
   message("Estimating fractions")
@@ -407,6 +423,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
     # Join
     cB <- cB[mutrates, nomatch = NULL]
+
 
 
     ### Estimate fraction new
@@ -442,6 +459,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
         .(params = list(fit_tcmm(muts = get(pops_to_analyze),
                                       nucs = get(necessary_basecounts),
                                       n = n,
+                                      Poisson = Poisson,
                                       pold = unique(pold),
                                       pnew_prior_mean = unique(pnew),
                                       pnew_prior_sd = init_pnew_prior_sd)),
@@ -477,6 +495,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                                                      .(params = list(fit_tcmm(muts = get(pops_to_analyze),
                                                                                    nucs = get(necessary_basecounts),
                                                                                    n = n,
+                                                                                   Poisson = Poisson,
                                                                                    pold = unique(pold),
                                                                                    pnew_prior_mean = unique(pnew_prior),
                                                                                    pnew_prior_sd = unique(pnew_prior_sd))),
@@ -711,6 +730,7 @@ EstimateMutRates.EZbakRData <- function(obj,
     mutest_temp <- mutest_dt[,.(params = list(fit_tcmm(muts = get(muts_analyze[i]),
                                                          nucs = get(nucs_analyze[i]),
                                                          n = n,
+                                                         Poisson = Poisson,
                                                          pnew_prior_mean = pnew_prior_mean,
                                                          pnew_prior_sd = pnew_prior_sd,
                                                          pold_prior_mean = pold_prior_mean,
@@ -768,11 +788,18 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                               fraction_design = NULL,
                                               Poisson = TRUE,
                                               strategy = c("standard", "hierarchical"),
-                                              column_to_reorder = NULL,
+                                              split_multi_features = FALSE,
+                                              multi_feature_cols = NULL,
+                                              multi_feature_sep = "+",
                                               pnew_prior_mean = -2.94,
                                               pnew_prior_sd = 0.3,
                                               pold_prior_mean = -6.5,
-                                              pold_prior_sd = 0.5){
+                                              pold_prior_sd = 0.5,
+                                              hier_readcutoff = 300,
+                                              init_pnew_prior_sd = 0.8,
+                                              pnew_prior_sd_min = 0.01,
+                                              character_limit = 20,
+                                              overwrite = TRUE){
 
   `.` <- list
 
@@ -791,11 +818,6 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
   strategy <- match.arg(strategy)
 
-  if(!is.null(column_to_reorder)){
-
-    reorder_col <- TRUE
-
-  }
 
   ### Estimate mutation rates
   message("Estimating mutation rates")
@@ -968,6 +990,8 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
   for(s in seq_along(all_samples)){
 
+
+
     if(s %in% samples_without_label){
 
       ctl_cols_to_group <- c("sample", features_to_analyze)
@@ -975,52 +999,65 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
       sample_fns <- cB %>%
         dplyr::filter(sample == all_samples[s]) %>%
-        dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group))) %>%
-        dplyr::summarise(n = sum(n),
-                         !!natural_col_name := 0,
-                         !!col_name := -Inf,
-                         !!uncertainty_col := 0) %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(ctl_cols_to_group))) %>%
+        dplyr::summarise(n = sum(n)) %>%
         dplyr::collect() %>%
         dplyr::filter(!dplyr::if_all(dplyr::all_of(features_to_analyze), ~ .x %in% c("NA", "__no_feature")))
+
+
+      ### Split multi feature mappers if necessary
+      if(split_multi_features){
+
+        sample_fns <- split_features(sample_fns, multi_feature_cols)
+
+      }
+
+
+      dplyr::as_tibble(sample_fns) %>%
+        dplyr::mutate(!!natural_col_name := 0,
+                      !!col_name := -Inf,
+                      !!uncertainty_col := 0)
+
+
 
     }else{
 
       message(paste0("Analyzing ", all_samples[s], "..."))
 
-      sample_cB <- cB %>%
-        dplyr::filter(sample == all_samples[s]) %>%
-        dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group))) %>%
-        dplyr::summarise(reads = sum(n),
-                         nTavg = sum(nT*n)/sum(n)) %>%
-        dplyr::collect() %>%
-        dplyr::filter(!dplyr::if_all(dplyr::all_of(features_to_analyze), ~ .x %in% c("NA", "__no_feature")))
+      if(Poisson){
+
+        sample_cB <- cB %>%
+          dplyr::filter(sample == all_samples[s]) %>%
+          dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group))) %>%
+          dplyr::summarise(reads = sum(n),
+                           !!necessary_basecounts = sum(!!dplyr::sym(necessary_basecounts)*n)/sum(n)) %>%
+          dplyr::collect() %>%
+          dplyr::rename(n = reads) %>%
+          dplyr::filter(!dplyr::if_all(dplyr::all_of(features_to_analyze), ~ .x %in% c("NA", "__no_feature")))
+
+      }else{
+
+        sample_cB <- cB %>%
+          dplyr::filter(sample == all_samples[s]) %>%
+          dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group))) %>%
+          dplyr::summarise(n = sum(n)) %>%
+          dplyr::collect() %>%
+          dplyr::filter(!dplyr::if_all(dplyr::all_of(features_to_analyze), ~ .x %in% c("NA", "__no_feature")))
+
+      }
 
       sample_cB <- setDT(sample_cB)
 
-      ### If using older versions of featureCounts, then assignment of reads to
-      ### transcripts can lead to different variations of strings
-      ### NOTE: Technically irrelevant now as all featureCounts ambiguous features
-      ### are split and copied. Transcript set assignment done via parsing transcriptome
-      ### aligned bam. In addition, with new lowRAM setting, this problem gets
-      ### solved within fastq2EZbakR.
-      if(reorder_col){
 
-        unique_strings <- unique(sample_cB[[column_to_reorder]])
+      ### Split multi feature mappers if necessary
+      if(split_multi_features){
 
-        unique_strings_sorted <- vapply(lapply(strsplit(unique_strings, split=","), sort), paste,"", collapse=",")
-
-        target_dict <- data.table(unique_strings, unique_strings_sorted)
-        colnames(target_dict) <- c(column_to_reorder, 'new_column')
-
-        setkeyv(target_dict, column_to_reorder)
-        setkeyv(sample_cB, column_to_reorder)
-
-        sample_cB <- sample_cB[target_dict, nomatch = NULL][,
-                                                            (column_to_reorder) := new_column
-        ][, new_column := NULL]
+        sample_cB <- split_features(sample_cB, multi_feature_cols)
 
 
       }
+
+
 
       setkey(sample_cB, sample)
 
@@ -1085,6 +1122,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
             .(params = list(fit_tcmm(muts = get(pops_to_analyze),
                                      nucs = get(necessary_basecounts),
                                      n = n,
+                                     Poisson = Poisson,
                                      pold = unique(pold),
                                      pnew_prior_mean = unique(pnew),
                                      pnew_prior_sd = init_pnew_prior_sd)),
@@ -1120,6 +1158,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                                                     .(params = list(fit_tcmm(muts = get(pops_to_analyze),
                                                                                              nucs = get(necessary_basecounts),
                                                                                              n = n,
+                                                                                             Poisson = Poisson,
                                                                                              pold = unique(pold),
                                                                                              pnew_prior_mean = unique(pnew_prior),
                                                                                              pnew_prior_sd = unique(pnew_prior_sd))),
@@ -1197,6 +1236,16 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
 
       }else{
+
+        stop("Arrow backend is not currently compatible with > 1 mutation type modeling")
+
+        ### Split multi feature mappers if necessary
+        if(split_multi_features){
+
+          sample_cB <- split_features(sample_cB, multi_feature_cols)
+
+
+        }
 
 
         sample_fns <- sample_cB[,.(mixture_fit = list(fit_general_mixture(dataset = .SD,
@@ -1405,6 +1454,7 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
       mutest_temp <- mutest_dt[,.(params = list(fit_tcmm(muts = get(muts_analyze[i]),
                                                          nucs = get(nucs_analyze[i]),
                                                          n = n,
+                                                         Poisson = Poisson,
                                                          pnew_prior_mean = pnew_prior_mean,
                                                          pnew_prior_sd = pnew_prior_sd,
                                                          pold_prior_mean = pold_prior_mean,
@@ -1454,6 +1504,42 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
 # MISCELLANEOUS HELPER FUNCTIONS
 ###################################################
 
+
+# Split up multi-feature sets
+split_features <- function(cB, multi_feature_cols){
+
+  ### Copy junction data more efficiently
+  unique_juncs <- cB %>%
+    dplyr::select(!!multi_feature_cols) %>%
+    dplyr::distinct()
+
+
+  ### have to move in and out of the tidyverse because this next line is much, much easier in data.table
+  unique_juncs <- setDT(unique_juncs)
+  new_temp_cols <- paste0("unrolled_", 1:length(multi_feature_cols))
+  unique_juncs[,new_temp_cols := mget(multi_feature_cols)]
+
+
+  ### Back to the tidyverse, because can't easily do this in data.table (sigh...)
+  unique_juncs %>%
+    tidyr::separate_rows(dplyr::all_of(multi_feature_cols), sep = "\\+")
+
+  sample_cB <- sample_cB %>%
+    inner_join(unique_juncs, by = multi_feature_cols,
+               relationship = "many-to-many")
+
+
+  ### Back to data.table again because its just easier and more efficient
+  setDT(sample_cB)
+
+  sample_cB[
+    ,multi_feature_cols := mget(new_temp_cols)
+  ][,new_temp_cols := NULL]
+
+
+  return(sample_cB)
+
+}
 
 
 
