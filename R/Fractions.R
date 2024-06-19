@@ -1416,6 +1416,22 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
 
   metadf <- obj$metadf
 
+  # What columns represent label times of interest?
+  if(length(muts_analyze) == 1){
+
+    tl_cols_possible <- c("tl", "tpulse")
+
+  }else{
+
+    tl_cols_possible <- c(paste0("tl_", muts_analyze),
+                          paste0("tpulse_", muts_analyze))
+
+
+  }
+
+  tl_cols <- tl_cols_possible[tl_cols_possible %in% colnames(metadf)]
+
+
   samples_with_label <- metadf %>%
     dplyr::rowwise() %>%
     dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) > 0)) %>%
