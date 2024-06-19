@@ -233,11 +233,12 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
   args <- c(as.list(environment()))
 
-  if(!is(obj, "EZbakRData")){
-
-    stop("obj is not an EZbakRData object!")
-
-  }
+  ### TO-DO: Need to check for EZbakRArrowData object as well
+  # if(!is(obj, "EZbakRData")){
+  #
+  #   stop("obj is not an EZbakRData object!")
+  #
+  # }
 
   check_EstimateFractions_input(args)
 
