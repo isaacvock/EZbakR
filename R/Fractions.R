@@ -826,7 +826,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
   # cB columns
   cB <- obj$cBds
-  cBschema <- arrow::schema(cBds)
+  cBschema <- arrow::schema(cB)
   cB_cols <- names(cBschema)
 
   ### Vectors of potential column names
