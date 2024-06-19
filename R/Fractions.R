@@ -1096,7 +1096,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
         # Key for fast join
         setkey(mutrates, sample)
-        setkey(cB, sample)
+        setkey(sample_cB, sample)
 
         # Join
         sample_cB <- sample_cB[mutrates, nomatch = NULL]
