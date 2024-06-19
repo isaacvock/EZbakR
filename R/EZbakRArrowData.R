@@ -195,11 +195,10 @@ validate_EZbakRArrowData <- function(obj){
 
   ### Check if all of the samples in cBds are also in metadf
 
-  if(!all(samps_cB %in% metadf$sample)){
-    rlang::abort("Not all samples in the cBds are present in the metadf!",
+  if(!all(metadf$sample %in% samps_cB)){
+    rlang::abort("Not all samples in metadf are present in the cB!",
                  class = "cB_metadf_samples")
   }
-
 
   ### Check that mutation counts can be coerced to positive integers
 

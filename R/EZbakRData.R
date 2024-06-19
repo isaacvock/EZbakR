@@ -161,8 +161,8 @@ validate_EZbakRData <- function(obj){
 
   samps_cB <- unique(cB$sample)
 
-  if(!all(samps_cB %in% metadf$sample)){
-    rlang::abort("Not all samples in the cB are present in the metadf!",
+  if(!all(metadf$sample %in% samps_cB)){
+    rlang::abort("Not all samples in the metadf are present in the cB!",
           class = "cB_metadf_samples")
   }
 

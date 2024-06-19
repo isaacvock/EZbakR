@@ -1193,8 +1193,9 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
           ]
 
 
-          ### NOTE: SHOULD I BE SAVING BOTH FEATURE AND
-          ### SAMPLE-WIDE PNEW ESTIMATES? PROBABLY
+          ### NOTE: NOT DOING A GREAT JOB AT HANDLING
+          ### MULTIPLE DIFFERENT FEATURE SET HIERARCHICAL
+          ### ANALYSES RIGHT NOW
           current_name <- names(obj$mutation_rates)[1]
           obj$mutation_rates[[2]] <- feature_mutrates
           names(obj$mutration_rates) <- c(current_name, paste0("feature_", current_name))

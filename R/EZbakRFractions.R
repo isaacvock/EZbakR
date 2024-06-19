@@ -253,8 +253,8 @@ validate_EZbakRFractions <- function(obj){
 
   samps_fractions <- unique(fractions$sample)
 
-  if(!all(samps_fractions %in% metadf$sample)){
-    rlang::abort("Not all samples in fractions are present in the metadf!",
+  if(!all(metadf$sample %in% samps_fractions)){
+    rlang::abort("Not all samples in metadf are present in the fractions!",
                  class = "fractions_metadf_samples")
   }
 
