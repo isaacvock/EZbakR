@@ -1574,7 +1574,7 @@ split_features <- function(cB, multi_feature_cols){
   ][,(new_temp_cols) := NULL]
 
 
-  return(sample_cB)
+  return(cB)
 
 }
 
