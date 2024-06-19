@@ -270,7 +270,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                                            "sample", "n"))]
 
   # Need to determine which columns of the cB to group reads by
-  if(features == "all"){
+  if(features[1] == "all" & length(features) == 1){
 
     features_to_analyze <- features_in_cB
 
@@ -856,7 +856,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                              "sample", "n"))]
 
   # Need to determine which columns of the cB to group reads by
-  if(features == "all"){
+  if(features[1] == "all" & length(features) == 1){
 
     features_to_analyze <- features_in_cB
 
