@@ -385,7 +385,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   cB <- cB %>%
     dplyr::rowwise() %>%
     dplyr::filter(!(all(dplyr::across(all_of(features_to_analyze)) %in% c("NA", "__no_feature")))) %>%
-    ungroup()
+    dplyr::ungroup()
 
   ### Split multi feature mappers if necessary
 
@@ -1002,7 +1002,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
         dplyr::collect() %>%
         dplyr::rowwise() %>%
         dplyr::filter(!(all(dplyr::across(all_of(features_to_analyze)) %in% c("NA", "__no_feature")))) %>%
-        ungroup()
+        dplyr::ungroup()
 
       ### Split multi feature mappers if necessary
       if(split_multi_features){
@@ -1034,7 +1034,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
           dplyr::rename(n = reads) %>%
           dplyr::rowwise() %>%
           dplyr::filter(!(all(dplyr::across(all_of(features_to_analyze)) %in% c("NA", "__no_feature")))) %>%
-          ungroup()
+          dplyr::ungroup()
 
       }else{
 
@@ -1045,7 +1045,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
           dplyr::collect()  %>%
           dplyr::rowwise() %>%
           dplyr::filter(!(all(dplyr::across(all_of(features_to_analyze)) %in% c("NA", "__no_feature")))) %>%
-          ungroup()
+          dplyr::ungroup()
       }
 
       sample_cB <- setDT(sample_cB)
