@@ -381,12 +381,6 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   }
 
 
-  ### Filter out reads not assigned to any feature
-  cB <- cB %>%
-    dplyr::ungroup() %>%
-    dplyr::filter(rowSums(dplyr::across(dplyr::all_of(features_to_analyze)) %in% c("NA", "__no_feature")) != length(features_to_analyze))
-
-
   ### Split multi feature mappers if necessary
 
   if(split_multi_features){
@@ -597,6 +591,11 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
       tidyr::unnest_wider(mixture_fit)
 
   }
+
+  ### Filter out no-feature data
+  fns <- fns %>%
+    dplyr::filter(rowSums(dplyr::across(dplyr::all_of(features_to_analyze)) %in% c("NA", "__no_feature")) != length(features_to_analyze))
+
 
 
 
@@ -988,13 +987,16 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
   for(s in seq_along(all_samples)){
 
-    message(paste0("Analyzing ", all_samples[s], "..."))
+    message(paste0("ANALYZING ", all_samples[s], "..."))
 
 
     if(s %in% samples_without_label){
 
+      message("Counting reads")
+
       ctl_cols_to_group <- c("sample", features_to_analyze)
 
+      message()
 
       sample_fns <- cB %>%
         dplyr::filter(sample == all_samples[s]) %>%
@@ -1007,6 +1009,9 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
       ### Split multi feature mappers if necessary
       if(split_multi_features){
+
+        message("Splitting multi-feature mapping reads")
+
 
         sample_fns <- split_features(sample_fns, multi_feature_cols)
 
@@ -1025,6 +1030,9 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
       if(Poisson){
 
+        message("Extracting data for sample of interest and summarize out nucleotide content")
+
+
         sample_cB <- cB %>%
           dplyr::filter(sample == all_samples[s]) %>%
           dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group))) %>%
@@ -1032,20 +1040,18 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                            !!necessary_basecounts := sum(!!dplyr::sym(necessary_basecounts)*n)/sum(n)) %>%
           dplyr::collect() %>%
           dplyr::ungroup() %>%
-          dplyr::rename(n = reads) %>%
-          dplyr::filter(rowSums(dplyr::across(dplyr::all_of(features_to_analyze)) %in% c("NA", "__no_feature")) != length(features_to_analyze))
-
+          dplyr::rename(n = reads)
 
       }else{
+
+        message("Extracting data for sample of interest")
 
         sample_cB <- cB %>%
           dplyr::filter(sample == all_samples[s]) %>%
           dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group))) %>%
           dplyr::summarise(n = sum(n)) %>%
           dplyr::collect()  %>%
-          dplyr::ungroup() %>%
-          dplyr::filter(rowSums(dplyr::across(dplyr::all_of(features_to_analyze)) %in% c("NA", "__no_feature")) != length(features_to_analyze))
-
+          dplyr::ungroup()
       }
 
       sample_cB <- setDT(sample_cB)
@@ -1053,6 +1059,8 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
       ### Split multi feature mappers if necessary
       if(split_multi_features){
+
+        message("Splitting multi-feature mapping reads")
 
         sample_cB <- split_features(sample_cB, multi_feature_cols)
 
@@ -1080,6 +1088,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
 
         ### Add mutation rate info
+        message("Adding mutation rate estimation information")
 
         # Extract mutation rates
         mutrates <- setDT(obj$mutation_rates[[1]] %>%
@@ -1094,7 +1103,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
 
         ### Estimate fraction new
-
+        message("Estimating fractions")
 
         ##### MOST OF THE REST OF THIS FUNCTION IS NEARLY IDENTICAL TO DEFAULT METHOD
 
@@ -1242,7 +1251,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
       }else{
 
-        stop("Arrow backend is not currently compatible with > 1 mutation type modeling")
+        Poisson <- FALSE
 
         ### Split multi feature mappers if necessary
         if(split_multi_features){
@@ -1286,6 +1295,11 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
 
   fns <- dplyr::bind_rows(fns)
+
+
+  ### Filter out no-feature data
+  fns <- fns %>%
+    dplyr::filter(rowSums(dplyr::across(dplyr::all_of(features_to_analyze)) %in% c("NA", "__no_feature")) != length(features_to_analyze))
 
 
 
@@ -1540,24 +1554,24 @@ split_features <- function(cB, multi_feature_cols){
   ### have to move in and out of the tidyverse because this next line is much, much easier in data.table
   unique_juncs <- setDT(unique_juncs)
   new_temp_cols <- paste0("unrolled_", 1:length(multi_feature_cols))
-  unique_juncs[,new_temp_cols := mget(multi_feature_cols)]
+  unique_juncs[,(new_temp_cols) := mget(multi_feature_cols)]
 
 
   ### Back to the tidyverse, because can't easily do this in data.table (sigh...)
   unique_juncs %>%
     tidyr::separate_rows(dplyr::all_of(multi_feature_cols), sep = "\\+")
 
-  sample_cB <- sample_cB %>%
+  cB <- cB %>%
     dplyr::inner_join(unique_juncs, by = multi_feature_cols,
                relationship = "many-to-many")
 
 
   ### Back to data.table again because its just easier and more efficient
-  setDT(sample_cB)
+  setDT(cB)
 
-  sample_cB[
-    ,multi_feature_cols := mget(new_temp_cols)
-  ][,new_temp_cols := NULL]
+  cB[
+    ,(multi_feature_cols) := mget(new_temp_cols)
+  ][,(new_temp_cols) := NULL]
 
 
   return(sample_cB)
