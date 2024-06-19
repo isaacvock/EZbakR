@@ -361,6 +361,10 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   cols_to_group <- c(necessary_basecounts, pops_to_analyze, "sample", features_to_analyze)
   cB <- cB[,.(n = sum(n)), by = cols_to_group]
 
+  ### Filter out columns not mapping to any feature (easier and faster in data.table)
+  cB <- cB[cB[, !Reduce(`&`, lapply(.SD, `%in%`, c("NA", "__no_feature"))),.SDcols = features_to_analyze], ]
+
+
   # Pair down design matrix
   fraction_design <- dplyr::as_tibble(fraction_design)
   mutrate_design <- fraction_design %>%
@@ -591,12 +595,6 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
       tidyr::unnest_wider(mixture_fit)
 
   }
-
-  ### Filter out no-feature data
-  fns <- fns %>%
-    dplyr::filter(rowSums(dplyr::across(dplyr::all_of(features_to_analyze)) %in% c("NA", "__no_feature")) != length(features_to_analyze))
-
-
 
 
   ##### PROCESS OUTPUT AND RETURN
@@ -987,7 +985,6 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
   for(s in seq_along(all_samples)){
 
-    browser()
 
     message(paste0("ANALYZING ", all_samples[s], "..."))
 
@@ -1006,6 +1003,11 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
         dplyr::summarise(n = sum(n)) %>%
         dplyr::collect() %>%
         dplyr::ungroup()
+
+      ### Filter out columns not mapping to any feature (easier and faster in data.table)
+      sample_fns <- setDT(sample_fns)
+      sample_fns <- dplyr::as_tibble(sample_fns[sample_fns[, !Reduce(`&`, lapply(.SD, `%in%`, c("NA", "__no_feature"))),.SDcols = features_to_analyze], ])
+
 
       ### Split multi feature mappers if necessary
       if(split_multi_features){
@@ -1054,7 +1056,10 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
           dplyr::ungroup()
       }
 
+
+      ### Filter out columns not mapping to any feature (easier and faster in data.table)
       sample_cB <- setDT(sample_cB)
+      sample_cB <- dplyr::as_tibble(sample_cB[sample_cB[, !Reduce(`&`, lapply(.SD, `%in%`, c("NA", "__no_feature"))),.SDcols = features_to_analyze], ])
 
 
       ### Split multi feature mappers if necessary
@@ -1253,6 +1258,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
         Poisson <- FALSE
 
+
         ### Split multi feature mappers if necessary
         if(split_multi_features){
 
@@ -1295,12 +1301,6 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
 
   fns <- dplyr::bind_rows(fns)
-
-
-  ### Filter out no-feature data
-  fns <- fns %>%
-    dplyr::filter(rowSums(dplyr::across(dplyr::all_of(features_to_analyze)) %in% c("NA", "__no_feature")) != length(features_to_analyze))
-
 
 
   message("Processing output")
