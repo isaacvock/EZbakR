@@ -1454,13 +1454,14 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
 
     for(s in seq_along(samples_with_label)){
 
-      cB <- cB %>%
+      sample_cB <- cB %>%
         dplyr::filter(sample == samples_with_label[s]) %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(group_cols))) %>%
         dplyr::summarise(n = sum(n)) %>%
         dplyr::collect()
 
-      mutest_dt <- data.table::setDT(cB)
+      mutest_dt <- data.table::setDT(sample_cB)
+
 
       mutest_temp <- mutest_dt[,.(params = list(fit_tcmm(muts = get(muts_analyze[i]),
                                                          nucs = get(nucs_analyze[i]),
