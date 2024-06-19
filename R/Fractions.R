@@ -381,7 +381,14 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   }
 
 
+  ### Filter out reads not assigned to any feature
+  cB <- cB %>%
+    dplyr::rowwise() %>%
+    dplyr::filter(!(all(dplyr::across(all_of(features_to_analyze)) %in% c("NA", "__no_feature")))) %>%
+    ungroup()
+
   ### Split multi feature mappers if necessary
+
   if(split_multi_features){
 
     cB <- split_features(cB, multi_feature_cols)
@@ -982,6 +989,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
   for(s in seq_along(all_samples)){
 
 
+    browser()
 
     if(s %in% samples_without_label){
 
@@ -993,8 +1001,9 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
         dplyr::group_by(dplyr::across(dplyr::all_of(ctl_cols_to_group))) %>%
         dplyr::summarise(n = sum(n)) %>%
         dplyr::collect() %>%
-        dplyr::filter(!dplyr::if_all(dplyr::all_of(features_to_analyze), ~ .x %in% c("NA", "__no_feature")))
-
+        dplyr::rowwise() %>%
+        dplyr::filter(!(all(dplyr::across(all_of(features_to_analyze)) %in% c("NA", "__no_feature")))) %>%
+        ungroup()
 
       ### Split multi feature mappers if necessary
       if(split_multi_features){
@@ -1024,7 +1033,9 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                            !!necessary_basecounts := sum(!!dplyr::sym(necessary_basecounts)*n)/sum(n)) %>%
           dplyr::collect() %>%
           dplyr::rename(n = reads) %>%
-          dplyr::filter(!dplyr::if_all(dplyr::all_of(features_to_analyze), ~ .x %in% c("NA", "__no_feature")))
+          dplyr::rowwise() %>%
+          dplyr::filter(!(all(dplyr::across(all_of(features_to_analyze)) %in% c("NA", "__no_feature")))) %>%
+          ungroup()
 
       }else{
 
@@ -1032,9 +1043,10 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
           dplyr::filter(sample == all_samples[s]) %>%
           dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group))) %>%
           dplyr::summarise(n = sum(n)) %>%
-          dplyr::collect() %>%
-          dplyr::filter(!dplyr::if_all(dplyr::all_of(features_to_analyze), ~ .x %in% c("NA", "__no_feature")))
-
+          dplyr::collect()  %>%
+          dplyr::rowwise() %>%
+          dplyr::filter(!(all(dplyr::across(all_of(features_to_analyze)) %in% c("NA", "__no_feature")))) %>%
+          ungroup()
       }
 
       sample_cB <- setDT(sample_cB)
