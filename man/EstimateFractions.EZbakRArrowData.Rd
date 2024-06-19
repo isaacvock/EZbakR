@@ -11,11 +11,18 @@
   fraction_design = NULL,
   Poisson = TRUE,
   strategy = c("standard", "hierarchical"),
-  column_to_reorder = NULL,
+  split_multi_features = FALSE,
+  multi_feature_cols = NULL,
+  multi_feature_sep = "+",
   pnew_prior_mean = -2.94,
   pnew_prior_sd = 0.3,
   pold_prior_mean = -6.5,
-  pold_prior_sd = 0.5
+  pold_prior_sd = 0.5,
+  hier_readcutoff = 300,
+  init_pnew_prior_sd = 0.8,
+  pnew_prior_sd_min = 0.01,
+  character_limit = 20,
+  overwrite = TRUE
 )
 }
 \description{

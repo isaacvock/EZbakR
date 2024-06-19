@@ -11,7 +11,9 @@ EstimateFractions(
   fraction_design = NULL,
   Poisson = TRUE,
   strategy = c("standard", "hierarchical"),
-  column_to_reorder = NULL,
+  split_multi_features = FALSE,
+  multi_feature_cols = NULL,
+  multi_feature_sep = "+",
   pnew_prior_mean = -2.94,
   pnew_prior_sd = 0.3,
   pold_prior_mean = -6.5,
@@ -98,6 +100,19 @@ sample. This is done via a binomial mixture model aggregating over
 rate, regularizing the feature-specific estimate with a sample-wide prior. Currently
 only compatible with single mutation type mixture modeling.
 }}
+
+\item{split_multi_features}{If a set of reads maps ambiguously to multiple features,
+should data for such reads be copied for each feature in the ambiguous set? If this is
+\code{TRUE}, then \code{multi_feature_cols} also must be set.}
+
+\item{multi_feature_cols}{Character vector of columns that have the potential to
+include assignment to multiple features. Only these columns will have their feaures split
+if \code{split_multi_features} is \code{TRUE}.}
+
+\item{multi_feature_sep}{String representing how ambiguous feature assignments are
+distinguished in the feature names. For example, the default value of "+" denotes
+that if a read maps to multiple features (call them featureA and featureB, for example),
+then the feature column will have a value of "featureA+featureB".}
 
 \item{pnew_prior_mean}{logit-Normal mean for logit(pnew) prior.}
 

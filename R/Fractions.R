@@ -1030,7 +1030,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
           dplyr::filter(sample == all_samples[s]) %>%
           dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group))) %>%
           dplyr::summarise(reads = sum(n),
-                           !!necessary_basecounts = sum(!!dplyr::sym(necessary_basecounts)*n)/sum(n)) %>%
+                           !!necessary_basecounts := sum(!!dplyr::sym(necessary_basecounts)*n)/sum(n)) %>%
           dplyr::collect() %>%
           dplyr::rename(n = reads) %>%
           dplyr::filter(!dplyr::if_all(dplyr::all_of(features_to_analyze), ~ .x %in% c("NA", "__no_feature")))
