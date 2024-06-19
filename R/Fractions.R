@@ -940,7 +940,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
   samples_with_label <- metadf %>%
     dplyr::rowwise() %>%
-    dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) > 0)) %>%
+    dplyr::filter(any(dplyr::c_across(dplyr::all_of(tl_cols)) > 0)) %>%
     dplyr::ungroup() %>%
     dplyr::select(sample) %>%
     unlist() %>%
@@ -987,10 +987,12 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
   for(s in seq_along(all_samples)){
 
+    browser()
+
     message(paste0("ANALYZING ", all_samples[s], "..."))
 
 
-    if(s %in% samples_without_label){
+    if(all_samples[s] %in% samples_without_label){
 
       message("Counting reads")
 
@@ -1003,8 +1005,6 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
         dplyr::group_by(dplyr::across(dplyr::all_of(ctl_cols_to_group))) %>%
         dplyr::summarise(n = sum(n)) %>%
         dplyr::collect() %>%
-        dplyr::rowwise() %>%
-        dplyr::filter(!(all(dplyr::across(all_of(features_to_analyze)) %in% c("NA", "__no_feature")))) %>%
         dplyr::ungroup()
 
       ### Split multi feature mappers if necessary
@@ -1215,7 +1215,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
           ##### WHOLE CODE BLOCK NEARLY IDENTICAL TO AS IN DEFAULT METHOD
           sample_fns <- dplyr::as_tibble(sample_cB) %>%
             dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
-            dplyr::summarise(fit = ifelse(!(unique(sample) %in% samples_with_no_label),
+            dplyr::summarise(fit = ifelse(!(unique(sample) %in% samples_without_label),
                                           list(I(optim(0,
                                                        fn = tcmml,
                                                        muts = !!dplyr::sym(pops_to_analyze),
