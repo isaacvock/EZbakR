@@ -527,7 +527,9 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
              mutrates, on = "sample", nomatch = NULL
         ]
 
-      obj$mutation_rates[[1]] <- feature_mutrates
+      current_name <- names(obj$mutation_rates)[1]
+      obj$mutation_rates[[2]] <- feature_mutrates
+      names(obj$mutration_rates) <- c(current_name, paste0("feature_", current_name))
 
 
 
@@ -1193,7 +1195,9 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
           ### NOTE: SHOULD I BE SAVING BOTH FEATURE AND
           ### SAMPLE-WIDE PNEW ESTIMATES? PROBABLY
-          obj$mutation_rates[[1]] <- feature_mutrates
+          current_name <- names(obj$mutation_rates)[1]
+          obj$mutation_rates[[2]] <- feature_mutrates
+          names(obj$mutration_rates) <- c(current_name, paste0("feature_", current_name))
 
 
         }else{
