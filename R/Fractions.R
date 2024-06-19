@@ -1358,6 +1358,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 #' @param pold_prior_mean logit-Normal mean for logit(pold) prior.
 #' @param pold_prior_sd logit-Normal sd for logit(pold) prior.
 #' @import data.table
+#' @import arrow
 #' @export
 EstimateMutRates.EZbakRArrowData <- function(obj,
                                         populations = "all",
@@ -1447,7 +1448,7 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
   for(i in seq_along(muts_analyze)){
 
     # Infer proportion of each population
-    sample_mutest <- tibble()
+    sample_mutest <- dplyr::tibble()
 
     group_cols <- c("sample", muts_analyze[i], nucs_analyze[i])
 
@@ -1479,7 +1480,7 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
 
       mutest_temp[,c("p1", "p2") := .(NULL, NULL)]
 
-      sample_mutest <- bind_rows(sample_mutest, mutest_temp)
+      sample_mutest <- dplyr::bind_rows(sample_mutest, mutest_temp)
 
     }
 
@@ -1535,7 +1536,7 @@ split_features <- function(cB, multi_feature_cols){
     tidyr::separate_rows(dplyr::all_of(multi_feature_cols), sep = "\\+")
 
   sample_cB <- sample_cB %>%
-    inner_join(unique_juncs, by = multi_feature_cols,
+    dplyr::inner_join(unique_juncs, by = multi_feature_cols,
                relationship = "many-to-many")
 
 
