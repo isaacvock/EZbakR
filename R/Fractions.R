@@ -1029,6 +1029,8 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
     }else{
 
+      browser()
+
 
       if(Poisson){
 
@@ -1549,8 +1551,8 @@ split_features <- function(cB, multi_feature_cols, grouping_cols){
 
 
   ### Back to the tidyverse, because can't easily do this in data.table (sigh...)
-  unique_juncs %>%
-    tidyr::separate_rows(dplyr::all_of(multi_feature_cols), sep = "\\+")
+  unqiue_juncs <- unique_juncs %>%
+    tidyr::separate_rows(dplyr::all_of(new_temp_cols), sep = "\\+")
 
   cB <- cB %>%
     dplyr::inner_join(unique_juncs, by = multi_feature_cols,
@@ -1560,7 +1562,7 @@ split_features <- function(cB, multi_feature_cols, grouping_cols){
   ### Back to data.table again because its just easier and more efficient
   setDT(cB)
 
-  cB[,.(n = sum(n)), by = c(grouping_cols, new_temp_cols)][
+  cB <- cB[,.(n = sum(n)), by = c(grouping_cols, new_temp_cols)][
     ,(multi_feature_cols) := mget(new_temp_cols)
   ][,(new_temp_cols) := NULL]
 
