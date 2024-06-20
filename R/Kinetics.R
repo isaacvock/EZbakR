@@ -31,6 +31,7 @@ EstimateKinetics <- function(obj,
                              features = NULL,
                              populations = NULL,
                              fraction_design = NULL,
+                             grouping_factors = NULL,
                              character_limit = 20,
                              overwrite = TRUE){
 
@@ -109,6 +110,7 @@ Standard_kinetic_estimation <- function(obj,
                                         populations = NULL,
                                         fraction_design = NULL,
                                         character_limit = 20,
+                                        grouping_factors = NULL,
                                         overwrite = TRUE){
 
 
@@ -133,15 +135,15 @@ Standard_kinetic_estimation <- function(obj,
   features_to_analyze <- obj[["metadata"]][["fractions"]][[fractions_name]][["features"]]
 
 
+  # Determine which column to use for kinetic parameter estimation
+  fraction_cols <- colnames(kinetics)
+
+  fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
+
 
   if(strategy == "standard"){
 
     ### Estimate kdegs
-
-    # Determine which column to use for kinetic parameter estimation
-    fraction_cols <- colnames(kinetics)
-
-    fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
 
     kinetics <- setDT(data.table::copy(kinetics))
 
@@ -161,9 +163,63 @@ Standard_kinetic_estimation <- function(obj,
     kinetics[, kdeg := -log(1 - get(fraction_of_interest))/tl]
     kinetics[, log_kdeg := log(kdeg)]
 
+
+    ### Normalize read counts
+
+
+    # TO-DO: ALLOW USERS TO JUST USE THE TPM FROM ISOFORM QUANTIFICATION
+    reads_norm <- get_normalized_read_counts(obj = obj,
+                                             features_to_analyze = features_to_analyze,
+                                             fractions_name = fractions_name)
+
+
+
+    ### Estimate uncertainty in log(kdeg)
+
+    lkdeg_uncert <- function(fn, se_lfn){
+
+      deriv <- (1/log(1 - fn)) * (1 / (1 - fn)) * (fn*(1 - fn))
+
+      uncert <- abs(deriv)*se_lfn
+
+      return(uncert)
+
+    }
+
+    se_of_interest <- paste0("se_logit_", fraction_of_interest)
+
+    kinetics[, se_log_kdeg := lkdeg_uncert(fn = get(fraction_of_interest),
+                                           se_lfn = get(se_of_interest))]
+
+
+    ### Estimate ksyn
+
+    # Merge with kinetics
+    setkeyv(reads_norm, c("sample", features_to_analyze))
+    setkeyv(kinetics, c("sample", features_to_analyze))
+
+    cols_to_keep <- c("sample", features_to_analyze, "normalized_reads", "scale_factor")
+    kinetics_cols_to_keep <- c(cols_to_keep, "kdeg", "log_kdeg", "se_log_kdeg", "n")
+
+    kinetics <- kinetics[reads_norm[,..cols_to_keep], ..kinetics_cols_to_keep, nomatch = NULL]
+
+    # Estimate ksyn
+    kinetics[, ksyn := normalized_reads*kdeg]
+    kinetics[, log_ksyn := log(ksyn)]
+
+    # Estimate uncertainty (assuming normalized_reads ~ Poisson(normalized_reads)/scale_factor)
+    kinetics[, se_log_ksyn := sqrt( (1/(normalized_reads*scale_factor)) + se_log_kdeg^2)]
+
+
+
   }else if(strategy == "NSS"){
 
     ### IDEA
+    # After working through the mathematical formalism, turns out
+    # the ideas I had are identical to those presented inNarain et al., 2021.
+    # Best you can do is fit a single exponential model using -s4U and +s4U data
+    # to infer the "fraction of old reads that are still present by the end of
+    # the label time".
     # 1) Extract -s4U read counts from relevant source
       # Default is just from fractions object
       # Can also use a read count data frame stored in EZbakRData object
@@ -175,54 +231,168 @@ Standard_kinetic_estimation <- function(obj,
     # 3) Estimate kdeg = -log(norm. old reads +s4U / norm. -s4U reads)/tl
     # 4) Estimate ksyn = (fn * norm. total reads +s4U * kdeg)/(1 - exp(-kdeg*tl))
 
+    ### NOTE: a lot of steps 1 and 2 are duplicated from CorrectDropout, so
+    ### really should refactor this in the future
+
+
+    ##### STEP 1: GET -S4U READ COUNTS
+
+    ### Which columns should -s4U samples be grouped by?
+
+    metadf <- obj$metadf
+
+
+    if(is.null(grouping_factors)){
+
+      grouping_factors <- colnames(metadf)[!grepl("^tl", colnames(metadf)) &
+                                             (colnames(metadf) != "sample") &
+                                             !grepl("^tpulse", colnames(metadf)) &
+                                             !grepl("^tchase", colnames(metadf))]
+
+
+    }
+
+    # Necessary generalizations:
+    # 1) Metadf column used (e.g., pulse-chase)
+    nolabel_data <- kinetics %>%
+      dplyr::inner_join(metadf %>% dplyr::filter(tl == 0),
+                        by = "sample") %>%
+      dplyr::group_by(sample) %>%
+      dplyr::mutate(nolabel_rpm = n/(sum(n)/1000000)) %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(c(grouping_factors, features_to_analyze)))) %>%
+      dplyr::summarise(nolabel_rpm = mean(nolabel_rpm)) %>%
+      dplyr::select(!!grouping_factors, !!features_to_analyze, nolabel_rpm)
+
+
+    ##### STEP 2: INTEGRATE WITH +S4U TO GET ADJUSTED FRACTION NEW
+    kinetics <- kinetics %>%
+      dplyr::inner_join(metadf %>% dplyr::filter(tl > 0) %>%
+                          dplyr::select(sample, !!grouping_factors),
+                        by = "sample") %>%
+      dplyr::group_by(sample) %>%
+      dplyr::mutate(rpm = n/(sum(n)/1000000)) %>%
+      dplyr::inner_join(nolabel_data,
+                        by = c(grouping_factors, features_to_analyze)) %>%
+      dplyr::mutate(old_rpm = (1 - !!dplyr::sym(fraction_of_interest)) * rpm,
+                    new_rpm = (!!dplyr::sym(fraction_of_interest)) * rpm,
+                    kdeg = case_when(
+                      old_rpm >= nolabel_rpm ~ -log(1 - !!dplyr::sym(fraction_of_interest))/tl,
+                      .default = -log(old_rpm/nolabel_rpm)/tl
+                    ),
+                    ksyn = new_rpm * kdeg / (1 - exp(-kdeg*tl)),
+                    log_kdeg = log(kdeg),
+                    log_ksyn = log(ksyn))
+
+
+    ##### STEP 3: ESTIMATE UNCERTAINTY
+    #####   (higher than in standard due to -s4U read variance)
+
+    ### For now will simplify and use same uncertainty estimate
+
+    lkdeg_uncert <- function(fn, se_lfn){
+
+      deriv <- (1/log(1 - fn)) * (1 / (1 - fn)) * (fn*(1 - fn))
+
+      uncert <- abs(deriv)*se_lfn
+
+      return(uncert)
+
+    }
+
+    se_of_interest <- paste0("se_logit_", fraction_of_interest)
+
+    kinetics <- setDT(kinetics)
+    kinetics[, se_log_kdeg := lkdeg_uncert(fn = get(fraction_of_interest),
+                                           se_lfn = get(se_of_interest))]
+
+    # Estimate uncertainty (assuming normalized_reads ~ Poisson(normalized_reads)/scale_factor)
+    kinetics[, se_log_ksyn := sqrt( (1/(normalized_reads*scale_factor)) + se_log_kdeg^2)]
+
+
+
+  }else if(strategy == "shortfeed"){
+
+    ### IDEA
+    # Take it to the limit where there is no degradation (so dR/dt = ks).
+    # kdeg = fn / tl
+    # ksyn = fn * (normalized read count) / tl; basically new RNA produced per unit time
+    # Unclear how much this will matter, as it is literally just the limit of
+    # the standard analysis, but worth implementing I think.
+
+
+    ### NOTE: Currently a near perfect duplication of standard code, just
+    ### refactor into a function for goodness sake!
+
+    ### Estimate kdegs
+
+    kinetics <- setDT(data.table::copy(kinetics))
+
+    # Add label time info
+    metadf <- obj$metadf
+
+    metadf <- setDT(data.table::copy(metadf))
+    setkey(metadf, sample)
+    setkey(kinetics, sample)
+
+    kinetics <- kinetics[metadf[,c("sample", "tl")], nomatch = NULL]
+
+    # Make sure no -s4U controls made it through
+    kinetics <- kinetics[tl > 0]
+
+
+    kinetics[, kdeg := get(fraction_of_interest)/tl]
+    kinetics[, log_kdeg := log(kdeg)]
+
+
+    ### Normalize read counts
+
+
+    # TO-DO: ALLOW USERS TO JUST USE THE TPM FROM ISOFORM QUANTIFICATION
+    reads_norm <- get_normalized_read_counts(obj = obj,
+                                             features_to_analyze = features_to_analyze,
+                                             fractions_name = fractions_name)
+
+
+
+    ### Estimate uncertainty in log(kdeg)
+
+    # This needs to be a bit different in this case
+    lkdeg_uncert <- function(fn, se_lfn){
+
+      deriv <- (1/fn)*(fn*(1-fn))
+
+      uncert <- abs(deriv)*se_lfn
+
+      return(uncert)
+
+    }
+
+    se_of_interest <- paste0("se_logit_", fraction_of_interest)
+
+    kinetics[, se_log_kdeg := lkdeg_uncert(fn = get(fraction_of_interest),
+                                           se_lfn = get(se_of_interest))]
+
+
+    ### Estimate ksyn
+
+    # Merge with kinetics
+    setkeyv(reads_norm, c("sample", features_to_analyze))
+    setkeyv(kinetics, c("sample", features_to_analyze))
+
+    cols_to_keep <- c("sample", features_to_analyze, "normalized_reads", "scale_factor")
+    kinetics_cols_to_keep <- c(cols_to_keep, "kdeg", "log_kdeg", "se_log_kdeg", "n")
+
+    kinetics <- kinetics[reads_norm[,..cols_to_keep], ..kinetics_cols_to_keep, nomatch = NULL]
+
+    # Estimate ksyn
+    kinetics[, ksyn := normalized_reads*kdeg]
+    kinetics[, log_ksyn := log(ksyn)]
+
+    # Estimate uncertainty (assuming normalized_reads ~ Poisson(normalized_reads)/scale_factor)
+    kinetics[, se_log_ksyn := sqrt( (1/(normalized_reads*scale_factor)) + se_log_kdeg^2)]
+
+
   }
-
-
-  ### Normalize read counts
-
-
-  # TO-DO: ALLOW USERS TO JUST USE THE TPM FROM ISOFORM QUANTIFICATION
-  reads_norm <- get_normalized_read_counts(obj = obj,
-                                           features_to_analyze = features_to_analyze,
-                                           fractions_name = fractions_name)
-
-
-
-  ### Estimate uncertainty in log(kdeg)
-
-  lkdeg_uncert <- function(fn, se_lfn){
-
-    deriv <- (1/log(1 - fn)) * (1 / (1 - fn)) * (fn*(1 - fn))
-
-    uncert <- abs(deriv)*se_lfn
-
-    return(uncert)
-
-  }
-
-  se_of_interest <- paste0("se_logit_", fraction_of_interest)
-
-  kinetics[, se_log_kdeg := lkdeg_uncert(fn = get(fraction_of_interest),
-                                         se_lfn = get(se_of_interest))]
-
-
-  ### Estimate ksyn
-
-  # Merge with kinetics
-  setkeyv(reads_norm, c("sample", features_to_analyze))
-  setkeyv(kinetics, c("sample", features_to_analyze))
-
-  cols_to_keep <- c("sample", features_to_analyze, "normalized_reads", "scale_factor")
-  kinetics_cols_to_keep <- c(cols_to_keep, "kdeg", "log_kdeg", "se_log_kdeg", "n")
-
-  kinetics <- kinetics[reads_norm[,..cols_to_keep], ..kinetics_cols_to_keep, nomatch = NULL]
-
-  # Estimate ksyn
-  kinetics[, ksyn := normalized_reads*kdeg]
-  kinetics[, log_ksyn := log(ksyn)]
-
-  # Estimate uncertainty (assuming normalized_reads ~ Poisson(normalized_reads)/scale_factor)
-  kinetics[, se_log_ksyn := sqrt( (1/(normalized_reads*scale_factor)) + se_log_kdeg^2)]
 
 
 
