@@ -389,7 +389,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
   if(split_multi_features){
 
-    cB <- split_features(cB, multi_feature_cols, cols_to_group)
+    cB <- split_features(cB, multi_feature_cols,  c(cols_to_group, necessary_basecounts))
 
   }
 
@@ -1069,7 +1069,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
         message("Splitting multi-feature mapping reads")
 
-        sample_cB <- split_features(sample_cB, multi_feature_cols, cols_to_group)
+        sample_cB <- split_features(sample_cB, multi_feature_cols, c(cols_to_group, necessary_basecounts))
 
 
       }
