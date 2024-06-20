@@ -389,7 +389,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
   if(split_multi_features){
 
-    cB <- split_features(cB, multi_feature_cols)
+    cB <- split_features(cB, multi_feature_cols, cols_to_group)
 
   }
 
@@ -1015,7 +1015,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
         message("Splitting multi-feature mapping reads")
 
 
-        sample_fns <- split_features(sample_fns, multi_feature_cols)
+        sample_fns <- split_features(sample_fns, multi_feature_cols, ctl_cols_to_group)
 
       }
 
@@ -1067,7 +1067,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
         message("Splitting multi-feature mapping reads")
 
-        sample_cB <- split_features(sample_cB, multi_feature_cols)
+        sample_cB <- split_features(sample_cB, multi_feature_cols, cols_to_group)
 
 
       }
@@ -1257,15 +1257,6 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
       }else{
 
         Poisson <- FALSE
-
-
-        ### Split multi feature mappers if necessary
-        if(split_multi_features){
-
-          sample_cB <- split_features(sample_cB, multi_feature_cols)
-
-
-        }
 
 
         sample_fns <- sample_cB[,.(mixture_fit = list(fit_general_mixture(dataset = .SD,
@@ -1543,7 +1534,7 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
 
 
 # Split up multi-feature sets
-split_features <- function(cB, multi_feature_cols){
+split_features <- function(cB, multi_feature_cols, grouping_cols){
 
   ### Copy junction data more efficiently
   unique_juncs <- cB %>%
@@ -1569,7 +1560,7 @@ split_features <- function(cB, multi_feature_cols){
   ### Back to data.table again because its just easier and more efficient
   setDT(cB)
 
-  cB[
+  cB[,.(n = sum(n)), by = c(grouping_cols, new_temp_cols)][
     ,(multi_feature_cols) := mget(new_temp_cols)
   ][,(new_temp_cols) := NULL]
 
