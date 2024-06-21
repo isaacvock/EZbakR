@@ -755,16 +755,34 @@ EstimateMutRates.EZbakRData <- function(obj,
                                                          pold_prior_sd = pold_prior_sd,
                                                        pold = pold_est))), by = sample]
 
-    mutest_temp[, c("p1", "p2") := .(inv_logit(sapply(params, `[[`, 2)),
-                                     inv_logit(sapply(params, `[[`, 3)))]
+    if(is.null(pold_est)){
 
-    mutest_temp[,c("pold",
-                   "pnew") := .(min(c(p1, p2)),
-                                        max(c(p1, p2))), by = 1:nrow(mutest_temp)]
+      mutest_temp[, c("p1", "p2") := .(inv_logit(sapply(params, `[[`, 2)),
+                                       inv_logit(sapply(params, `[[`, 3)))]
 
-    mutest_temp[,c("p1", "p2") := .(NULL, NULL)]
+      mutest_temp[,c("pold",
+                     "pnew") := .(min(c(p1, p2)),
+                                  max(c(p1, p2))), by = 1:nrow(mutest_temp)]
 
-    mutest[[i]] <- mutest_temp
+      mutest_temp[,c("p1", "p2") := .(NULL, NULL)]
+
+      mutest[[i]] <- mutest_temp
+
+    }else{
+
+      mutest_temp[, c("p1") := .(inv_logit(sapply(params, `[[`, 2)))]
+
+      mutest_temp[,c("pold",
+                     "pnew") := .(pold_est,
+                                  p1), by = 1:nrow(mutest_temp)]
+
+      mutest_temp[,c("p1") := .(NULL)]
+
+      mutest[[i]] <- mutest_temp
+
+    }
+
+
 
   }
 
