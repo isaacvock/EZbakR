@@ -136,6 +136,9 @@ EstimateFractions <- function(obj, features = "all",
                               fraction_design = NULL,
                               Poisson = TRUE,
                               strategy = c("standard", "hierarchical"),
+                              filter_cols = "all",
+                              filter_condition = `&`,
+                              remove_features = c("NA", "__no_feature"),
                               split_multi_features = FALSE,
                               multi_feature_cols = NULL,
                               multi_feature_sep = "+",
@@ -146,6 +149,7 @@ EstimateFractions <- function(obj, features = "all",
                               hier_readcutoff = 300,
                               init_pnew_prior_sd = 0.8,
                               pnew_prior_sd_min = 0.01,
+                              pold_est = NULL,
                               character_limit = 20,
                               overwrite = TRUE){
 
@@ -188,7 +192,8 @@ EstimateMutRates <- function(obj,
                                         pnew_prior_mean = -2.94,
                                         pnew_prior_sd = 0.3,
                                         pold_prior_mean = -6.5,
-                                        pold_prior_sd = 0.5
+                                        pold_prior_sd = 0.5,
+                                        pold_est = NULL
 ){
 
   UseMethod("EstimateMutRates")
@@ -215,6 +220,9 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                               fraction_design = NULL,
                               Poisson = TRUE,
                               strategy = c("standard", "hierarchical"),
+                              filter_cols = "all",
+                              filter_condition = `&`,
+                              remove_features = c("NA", "__no_feature"),
                               split_multi_features = FALSE,
                               multi_feature_cols = NULL,
                               multi_feature_sep = "+",
@@ -224,6 +232,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                               pold_prior_sd = 0.5,
                               hier_readcutoff = 300,
                               init_pnew_prior_sd = 0.8,
+                              pold_est = NULL,
                               character_limit = 20,
                               overwrite = TRUE){
 
@@ -248,7 +257,8 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                           pnew_prior_mean = pnew_prior_mean,
                           pnew_prior_sd = pnew_prior_sd,
                           pold_prior_mean = pold_prior_mean,
-                          pold_prior_sd = pold_prior_sd)
+                          pold_prior_sd = pold_prior_sd,
+                          pold_est = pold_est)
 
   mutation_rates <- obj$mutation_rates
 
@@ -362,7 +372,13 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   cB <- cB[,.(n = sum(n)), by = cols_to_group]
 
   ### Filter out columns not mapping to any feature (easier and faster in data.table)
-  cB <- cB[cB[, !Reduce(`&`, lapply(.SD, `%in%`, c("NA", "__no_feature"))),.SDcols = features_to_analyze], ]
+  if(filter_cols[1] == "all" & length(filter_cols) == 1){
+
+    filter_cols <- features_to_analyze
+
+  }
+
+  cB <- cB[cB[, !Reduce(filter_condition, lapply(.SD, `%in%`, remove_features)),.SDcols = filter_cols], ]
 
 
   # Pair down design matrix
@@ -690,7 +706,8 @@ EstimateMutRates.EZbakRData <- function(obj,
                              pnew_prior_mean = -2.94,
                              pnew_prior_sd = 0.3,
                              pold_prior_mean = -6.5,
-                             pold_prior_sd = 0.5
+                             pold_prior_sd = 0.5,
+                             pold_est = NULL
                              ){
 
   `.` <- list
@@ -735,7 +752,8 @@ EstimateMutRates.EZbakRData <- function(obj,
                                                          pnew_prior_mean = pnew_prior_mean,
                                                          pnew_prior_sd = pnew_prior_sd,
                                                          pold_prior_mean = pold_prior_mean,
-                                                         pold_prior_sd = pold_prior_sd))), by = sample]
+                                                         pold_prior_sd = pold_prior_sd,
+                                                       pold = pold_est))), by = sample]
 
     mutest_temp[, c("p1", "p2") := .(inv_logit(sapply(params, `[[`, 2)),
                                      inv_logit(sapply(params, `[[`, 3)))]
@@ -789,6 +807,9 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                               fraction_design = NULL,
                                               Poisson = TRUE,
                                               strategy = c("standard", "hierarchical"),
+                                              filter_cols = "all",
+                                              filter_condition = `&`,
+                                              remove_features = c("NA", "__no_feature"),
                                               split_multi_features = FALSE,
                                               multi_feature_cols = NULL,
                                               multi_feature_sep = "+",
@@ -799,6 +820,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                               hier_readcutoff = 300,
                                               init_pnew_prior_sd = 0.8,
                                               pnew_prior_sd_min = 0.01,
+                                              pold_est = NULL,
                                               character_limit = 20,
                                               overwrite = TRUE){
 
@@ -822,7 +844,8 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                           pnew_prior_mean = pnew_prior_mean,
                           pnew_prior_sd = pnew_prior_sd,
                           pold_prior_mean = pold_prior_mean,
-                          pold_prior_sd = pold_prior_sd)
+                          pold_prior_sd = pold_prior_sd,
+                          pold_est = pold_est)
 
   mutation_rates <- obj$mutation_rates
 
@@ -982,6 +1005,18 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
   natural_col_name <- paste0("fraction_high", pops_to_analyze)
 
 
+  if(filter_cols[1] == "all" & length(filter_cols) == 1){
+
+    filter_cols <- features_to_analyze
+
+  }
+
+  if(!all(filter_cols %in% features_to_analyze)){
+
+    stop("Some of your filter_cols are not included in the features you want to analyze!")
+
+  }
+
 
   for(s in seq_along(all_samples)){
 
@@ -1006,8 +1041,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
       ### Filter out columns not mapping to any feature (easier and faster in data.table)
       sample_fns <- setDT(sample_fns)
-      sample_fns <- dplyr::as_tibble(sample_fns[sample_fns[, !Reduce(`&`, lapply(.SD, `%in%`, c("NA", "__no_feature"))),.SDcols = features_to_analyze], ])
-
+      sample_fns <- dplyr::as_tibble(sample_fns[sample_fns[, !Reduce(filter_condition, lapply(.SD, `%in%`, remove_features)),.SDcols = filter_cols], ])
 
       ### Split multi feature mappers if necessary
       if(split_multi_features){
@@ -1060,8 +1094,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
       ### Filter out columns not mapping to any feature (easier and faster in data.table)
       sample_cB <- setDT(sample_cB)
-      sample_cB <- dplyr::as_tibble(sample_cB[sample_cB[, !Reduce(`&`, lapply(.SD, `%in%`, c("NA", "__no_feature"))),.SDcols = features_to_analyze], ])
-
+      sample_cB <- dplyr::as_tibble(sample_cB[sample_cB[, !Reduce(filter_condition, lapply(.SD, `%in%`, remove_features)),.SDcols = filter_cols], ])
 
       ### Split multi feature mappers if necessary
       if(split_multi_features){
@@ -1384,7 +1417,8 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
                                         pnew_prior_mean = -2.94,
                                         pnew_prior_sd = 0.3,
                                         pold_prior_mean = -6.5,
-                                        pold_prior_sd = 0.5
+                                        pold_prior_sd = 0.5,
+                                        pold_est = NULL
 ){
 
   `.` <- list
@@ -1488,7 +1522,8 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
                                                          pnew_prior_mean = pnew_prior_mean,
                                                          pnew_prior_sd = pnew_prior_sd,
                                                          pold_prior_mean = pold_prior_mean,
-                                                         pold_prior_sd = pold_prior_sd))), by = sample]
+                                                         pold_prior_sd = pold_prior_sd,
+                                                         pold = pold_est))), by = sample]
 
       mutest_temp[, c("p1", "p2") := .(inv_logit(sapply(params, `[[`, 2)),
                                        inv_logit(sapply(params, `[[`, 3)))]
@@ -1676,18 +1711,18 @@ tcmml <- function(param, muts, nucs, n,
 
     if(pold > pnew){
 
-      prior <- dnorm(param[2], pnew_prior_mean, pnew_prior_sd,
+      prior <- dnorm(param[3], pnew_prior_mean, pnew_prior_sd,
                         log = TRUE) +
-        dnorm(param[3], pold_prior_mean, pold_prior_sd,
+        dnorm(param[2], pold_prior_mean, pold_prior_sd,
                         log = TRUE) +
         dnorm(param[1], fraction_prior_mean, fraction_prior_sd,
                         log = TRUE)
 
     }else{
 
-      prior <- dnorm(param[2], pold_prior_mean, pold_prior_sd,
+      prior <- dnorm(param[3], pold_prior_mean, pold_prior_sd,
                         log = TRUE) +
-        dnorm(param[3], pnew_prior_mean, pnew_prior_sd,
+        dnorm(param[2], pnew_prior_mean, pnew_prior_sd,
                         log = TRUE) +
         dnorm(param[1], fraction_prior_mean, fraction_prior_sd,
               log = TRUE)
