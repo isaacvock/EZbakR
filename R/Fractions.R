@@ -1,13 +1,18 @@
 #' Generate a `fraction_design` table for `EstimateFractions`
 #'
 #' @param mutrate_populations Character vector of the set of mutational populations
-#' present in your data.
+#' present in your data. For example, s4U fed data with standard nucleotide recoding
+#' chemistry (e.g., TimeLapse, SLAM, TUC, AMUC, etc.) would have a `mutrate_populations`
+#' of c("TC"). Dual labeling experiments with s4U and s6G feeds would have a `mutrate_populations`
+#' of c("TC", "GA").
 #' @return A `fraction_design` table that assumes that every possible combination of
 #' mutational populations listed in `mutrate_populations` are present in your data.
-#' The `present` column can be modified if this assumption is incorrect
+#' The `present` column can be modified if this assumption is incorrect.
 #' @export
 create_fraction_design <- function(mutrate_populations){
 
+  ### TO-DO: add custom types like TILAC and dual-label to create more realistic
+  ### fraction design matrices with > 1 population.
   fraction_design <- dplyr::tibble(present = rep(TRUE,
                                                  times = 2^length(mutrate_populations)))
 
@@ -31,12 +36,13 @@ create_fraction_design <- function(mutrate_populations){
 
 #' Estimate fractions of each RNA population
 #'
-#' @param obj EZbakRDataobject
+#' @param obj `EZbakRData` or `EZbakRArrowData` object
 #' @param features Character vector of the set of features you want to stratify
 #' reads by and estimate proportions of each RNA population. The default of "all"
-#' will use all feature columns in the `obj`'s cB.
+#' will use all feature columns in the `obj`'s cB file.
 #' @param mutrate_populations Character vector of the set of mutational populations
-#' that you want to infer the rates of mutations for.
+#' that you want to infer the rates of mutations for. By default, all mutation rates
+#' are estimated for all populations present in cB.
 #' @param fraction_design "Design matrix" specifying which RNA populations exist
 #' in your samples. By default, this will be created automatically and will assume
 #' that all combinations of the `mutrate_populations` you have requested to analyze are
@@ -91,7 +97,7 @@ create_fraction_design <- function(mutrate_populations){
 #' `tilac_fraction_design` object.
 #'
 #' @param Poisson If `TRUE`, use U-content adjusted Poisson mixture modeling strategy. Often provides
-#' significant performance gain without sacrificing accuracy.
+#' significant speed gain without sacrificing accuracy.
 #' @param strategy String denoting which new read mutation rate estimation strategy to use.
 #' Options include:
 #' \itemize{
@@ -103,18 +109,20 @@ create_fraction_design <- function(mutrate_populations){
 #'  }
 #' @param split_multi_features If a set of reads maps ambiguously to multiple features,
 #' should data for such reads be copied for each feature in the ambiguous set? If this is
-#' `TRUE`, then `multi_feature_cols` also must be set.
+#' `TRUE`, then `multi_feature_cols` also must be set. Examples where this should be set
+#' to `TRUE` includes when analyzing exonic bins (concept defined in original DEXSeq paper),
+#' exon-exon junctions, etc.
 #' @param multi_feature_cols Character vector of columns that have the potential to
-#' include assignment to multiple features. Only these columns will have their feaures split
+#' include assignment to multiple features. Only these columns will have their features split
 #' if `split_multi_features` is `TRUE`.
 #' @param multi_feature_sep String representing how ambiguous feature assignments are
 #' distinguished in the feature names. For example, the default value of "+" denotes
 #' that if a read maps to multiple features (call them featureA and featureB, for example),
-#' then the feature column will have a value of "featureA+featureB".
-#' @param pnew_prior_mean logit-Normal mean for logit(pnew) prior.
-#' @param pnew_prior_sd logit-Normal sd for logit(pnew) prior.
-#' @param pold_prior_mean logit-Normal mean for logit(pold) prior.
-#' @param pold_prior_sd logit-Normal sd for logit(pold) prior.
+#' then the feature column will have a value of "featureA+featureB" for that read.
+#' @param pnew_prior_mean Mean for logit(pnew) prior.
+#' @param pnew_prior_sd Standard deviation for logit(pnew) prior.
+#' @param pold_prior_mean Mean for logit(pold) prior.
+#' @param pold_prior_sd Standard deviation for logit(pold) prior.
 #' @param hier_readcutoff If `strategy` == `hierarchical`, only features with this many reads
 #' are used to infer the distribution of feature-specific labeled read mutation rates.
 #' @param init_pnew_prior_sd If `strategy` == `hierarchical`, this is the initial logit(pnew)
@@ -123,7 +131,7 @@ create_fraction_design <- function(mutrate_populations){
 #' will try to name this as a "_" separated character vector of all of the features analyzed.
 #' If this name is greater than `character_limit`, then it will default to "fraction#", where
 #' "#" represents a simple numerical ID for the table.
-#' @param overwrite If TRUE and an fractions estimate output already exists that
+#' @param overwrite If TRUE and a fractions estimate output already exists that
 #' would possess the same metadata (features analyzed, populations analyzed,
 #' and fraction_design), then it will get overwritten with the new output. Else,
 #' it will be saved as a separate output with the same name + "_#" where "#" is a

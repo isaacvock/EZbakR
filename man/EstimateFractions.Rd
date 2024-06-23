@@ -30,14 +30,15 @@ EstimateFractions(
 )
 }
 \arguments{
-\item{obj}{EZbakRDataobject}
+\item{obj}{\code{EZbakRData} or \code{EZbakRArrowData} object}
 
 \item{features}{Character vector of the set of features you want to stratify
 reads by and estimate proportions of each RNA population. The default of "all"
-will use all feature columns in the \code{obj}'s cB.}
+will use all feature columns in the \code{obj}'s cB file.}
 
 \item{mutrate_populations}{Character vector of the set of mutational populations
-that you want to infer the rates of mutations for.}
+that you want to infer the rates of mutations for. By default, all mutation rates
+are estimated for all populations present in cB.}
 
 \item{fraction_design}{"Design matrix" specifying which RNA populations exist
 in your samples. By default, this will be created automatically and will assume
@@ -93,7 +94,7 @@ of what a TILAC \code{fraction_design} table could look like, see the lazily loa
 \code{tilac_fraction_design} object.}
 
 \item{Poisson}{If \code{TRUE}, use U-content adjusted Poisson mixture modeling strategy. Often provides
-significant performance gain without sacrificing accuracy.}
+significant speed gain without sacrificing accuracy.}
 
 \item{strategy}{String denoting which new read mutation rate estimation strategy to use.
 Options include:
@@ -107,24 +108,26 @@ only compatible with single mutation type mixture modeling.
 
 \item{split_multi_features}{If a set of reads maps ambiguously to multiple features,
 should data for such reads be copied for each feature in the ambiguous set? If this is
-\code{TRUE}, then \code{multi_feature_cols} also must be set.}
+\code{TRUE}, then \code{multi_feature_cols} also must be set. Examples where this should be set
+to \code{TRUE} includes when analyzing exonic bins (concept defined in original DEXSeq paper),
+exon-exon junctions, etc.}
 
 \item{multi_feature_cols}{Character vector of columns that have the potential to
-include assignment to multiple features. Only these columns will have their feaures split
+include assignment to multiple features. Only these columns will have their features split
 if \code{split_multi_features} is \code{TRUE}.}
 
 \item{multi_feature_sep}{String representing how ambiguous feature assignments are
 distinguished in the feature names. For example, the default value of "+" denotes
 that if a read maps to multiple features (call them featureA and featureB, for example),
-then the feature column will have a value of "featureA+featureB".}
+then the feature column will have a value of "featureA+featureB" for that read.}
 
-\item{pnew_prior_mean}{logit-Normal mean for logit(pnew) prior.}
+\item{pnew_prior_mean}{Mean for logit(pnew) prior.}
 
-\item{pnew_prior_sd}{logit-Normal sd for logit(pnew) prior.}
+\item{pnew_prior_sd}{Standard deviation for logit(pnew) prior.}
 
-\item{pold_prior_mean}{logit-Normal mean for logit(pold) prior.}
+\item{pold_prior_mean}{Mean for logit(pold) prior.}
 
-\item{pold_prior_sd}{logit-Normal sd for logit(pold) prior.}
+\item{pold_prior_sd}{Standard deviation for logit(pold) prior.}
 
 \item{hier_readcutoff}{If \code{strategy} == \code{hierarchical}, only features with this many reads
 are used to infer the distribution of feature-specific labeled read mutation rates.}
@@ -137,7 +140,7 @@ will try to name this as a "_" separated character vector of all of the features
 If this name is greater than \code{character_limit}, then it will default to "fraction#", where
 "#" represents a simple numerical ID for the table.}
 
-\item{overwrite}{If TRUE and an fractions estimate output already exists that
+\item{overwrite}{If TRUE and a fractions estimate output already exists that
 would possess the same metadata (features analyzed, populations analyzed,
 and fraction_design), then it will get overwritten with the new output. Else,
 it will be saved as a separate output with the same name + "_#" where "#" is a

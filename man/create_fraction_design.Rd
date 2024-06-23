@@ -8,12 +8,15 @@ create_fraction_design(mutrate_populations)
 }
 \arguments{
 \item{mutrate_populations}{Character vector of the set of mutational populations
-present in your data.}
+present in your data. For example, s4U fed data with standard nucleotide recoding
+chemistry (e.g., TimeLapse, SLAM, TUC, AMUC, etc.) would have a \code{mutrate_populations}
+of c("TC"). Dual labeling experiments with s4U and s6G feeds would have a \code{mutrate_populations}
+of c("TC", "GA").}
 }
 \value{
 A \code{fraction_design} table that assumes that every possible combination of
 mutational populations listed in \code{mutrate_populations} are present in your data.
-The \code{present} column can be modified if this assumption is incorrect
+The \code{present} column can be modified if this assumption is incorrect.
 }
 \description{
 Generate a \code{fraction_design} table for \code{EstimateFractions}
