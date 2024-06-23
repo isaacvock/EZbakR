@@ -10,10 +10,10 @@ new_EZbakRFractions(fractions, metadf, name = NULL, character_limit = 20)
 \item{fractions}{Data frame containing information about the fraction of reads
 from each mutational population of interest.}
 
-\item{metadf}{Data frame tracking features of each of the samples included
+\item{metadf}{Data frame reporting aspects of each of the samples included
 in \code{fractions}}
 }
 \description{
-\code{new_EZbakRFractions} efficiently creates an object of class \code{EZbakRData}.
+\code{new_EZbakRFractions} efficiently creates an object of class \code{EZbakRFractions}.
 It does not perform any rigorous checks of the legitimacy of this object.
 }

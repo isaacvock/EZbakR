@@ -1,10 +1,10 @@
 #' `EZbakRFractions` object constructor
 #'
-#' \code{new_EZbakRFractions} efficiently creates an object of class `EZbakRData`.
+#' \code{new_EZbakRFractions} efficiently creates an object of class `EZbakRFractions`.
 #' It does not perform any rigorous checks of the legitimacy of this object.
 #' @param fractions Data frame containing information about the fraction of reads
 #' from each mutational population of interest.
-#' @param metadf Data frame tracking features of each of the samples included
+#' @param metadf Data frame reporting aspects of each of the samples included
 #' in `fractions`
 new_EZbakRFractions <- function(fractions, metadf,
                                 name = NULL, character_limit = 20){
@@ -49,7 +49,7 @@ new_EZbakRFractions <- function(fractions, metadf,
 
 #' `EZbakRFractions` object validator
 #'
-#' \code{validate_EZbakRData} ensures that input for `EZbakRFractions` construction
+#' \code{validate_EZbakRFractions} ensures that input for `EZbakRFractions` construction
 #' is valid.
 #' @param obj An object of class `EZbakRFractions`
 validate_EZbakRFractions <- function(obj){
@@ -350,7 +350,7 @@ validate_EZbakRFractions <- function(obj){
 
 #' `EZbakRFractions` helper function for users
 #'
-#' \code{EZbakRData} creates an object of class `EZbakRData` and checks the validity
+#' \code{EZbakRFractions} creates an object of class `EZbakRFractions` and checks the validity
 #' of the provided input.
 #' @param fractions Data frame with the following columns:
 #' \itemize{
@@ -365,8 +365,9 @@ validate_EZbakRFractions <- function(obj){
 #'  G-to-A), then you need to explicitly list all fractions of interest estimated.
 #'  For example, in a TILAC experiment, this would be `fraction_highTC_lowGA`,
 #'  `fraction_lowTC_highGA`, and `fraction_lowTC_lowGA`.
-#'  \item features: Any columns that cannot be interpreted as a mutation count
-#'  or base nucleotide count (and that aren't named `sample` or `n`) will be
+#'  \item n: Number of reads assigned to a given feature in a given sample.
+#'  \item features: Any columns that cannot be interpreted as an estimate of
+#'  population fractions (and that aren't named `sample` or `n`) will be
 #'  interpreted as an ID for a genomic "feature" from which a read originated.
 #'  Common examples of features and typical column names for said features include:
 #'  \itemize{
@@ -411,36 +412,10 @@ validate_EZbakRFractions <- function(obj){
 #'  \item `batch`: An ID for sets of samples that were collected and/or processed together.
 #'  Useful for regressing out technical batch effects
 #'  }
-#' \item `assay`: This optional column should include a string that
-#' describes the type of experiment that was done so as to influence
-#' how EZbakR analyzes and interprets the data from those samples.
-#' Possible values for `assay` currently include:
-#' \itemize{
-#'  \item standard: Refers to the "standard" nucleotide recoding RNA-seq methods
-#'  (e.g., TimeLapse-seq, SLAM-seq, TUC-seq, etc.), in which cells are fed with a
-#'  single metabolic label, RNA is extracted and sequenced, and mutations of a particular
-#'  type are counted
-#'  \item STL: Refers to Start-TimeLapse-seq, a method combining Start-seq (developed
-#'  by Karen Adelman's lab) with TimeLapse-seq. Used to infer the kinetics of
-#'  transcription initiation and promoter-proximal pause site departure.
-#'  \item TT: Refers to Transient-Transcriptome NR-seq, a method combining TT-seq (developed
-#'  by Patrick Cramer's lab) with NR-seq. TT-seq involves biochemically enriching
-#'  for labeled RNA. By combining this method with nucleotide recoding chemistry (as was
-#'  first done by the Simon lab with TT-TimeLapse-seq and has since been done with SLAM
-#'  chemistry, often referred to as TTchem-seq), it is possible to bioinformatically
-#'  filter out reads coming from unlabeled RNA background.
-#'  \item TILAC: Refers to TILAC, a method developed by the Simon lab to achieve
-#'  spike-in free normalization of RNA-seq data through the use of a dual labeling
-#'  approach inspired by the proteomic method SILAC.
-#'  \item subcellular: Refers to techniques such as subcellular TimeLapse-seq (developed
-#'  by Stirling Churchman's lab) which combine subcellular fractionation with
-#'  NR-seq to infer additional kinetic parameters.
-#'  \item sc: Refers to single-cell RNA-seq implementations of NR-seq.
-#'  }
 #'
 #' }
-#' @return An EZbakRData object. This is simply a list of the provide `fractions` and
-#' `metadf` with class `EZbakRData`
+#' @return An EZbakRFractions object. This is simply a list of the provide `fractions` and
+#' `metadf` with class `EZbakRFractions`
 #' @export
 EZbakRFractions <- function(fractions, metadf,
                             name = NULL, character_limit = 20){

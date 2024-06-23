@@ -10,6 +10,6 @@ validate_EZbakRFractions(obj)
 \item{obj}{An object of class \code{EZbakRFractions}}
 }
 \description{
-\code{validate_EZbakRData} ensures that input for \code{EZbakRFractions} construction
+\code{validate_EZbakRFractions} ensures that input for \code{EZbakRFractions} construction
 is valid.
 }
