@@ -12,9 +12,9 @@ new_EZbakRArrowData <- function(cBds, metadf){
   structure(list(cBds = cBds, metadf = metadf), class = "EZbakRArrowData")
 }
 
-#' `EZbakRDataobject` validator
+#' `EZbakRArrowData` EZbakRArrowData validator
 #'
-#' \code{validate_EZbakRData} ensures that input for `EZbakRArrowData` object construction
+#' \code{validate_EZbakRArrowData} ensures that input for `EZbakRArrowData` object construction
 #' is valid.
 #' @param obj An object of class `EZbakRArrowData`
 validate_EZbakRArrowData <- function(obj){
@@ -298,7 +298,7 @@ validate_EZbakRArrowData <- function(obj){
 
 #' `EZbakRArrowData` object helper function for users
 #'
-#' \code{EZbakRData} creates an object of class `EZbakRArrowData` and checks the validity
+#' \code{EZbakRArrowData} creates an object of class `EZbakRArrowData` and checks the validity
 #' of the provided input.
 #' @param cBds ArrowDataset with the following fields:
 #' \itemize{
@@ -391,8 +391,8 @@ validate_EZbakRArrowData <- function(obj){
 #'  }
 #'
 #' }
-#' @return An EZbakRData object. This is simply a list of the provide `cBds` and
-#' `metadf` with class `EZbakRData`
+#' @return An EZbakRArrowData object. This is simply a list of the provide `cBds` and
+#' `metadf` with class `EZbakRArrowData`
 #' @import data.table
 #' @export
 EZbakRArrowData <- function(cBds, metadf){

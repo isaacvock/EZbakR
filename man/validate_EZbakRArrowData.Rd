@@ -2,7 +2,7 @@
 % Please edit documentation in R/EZbakRArrowData.R
 \name{validate_EZbakRArrowData}
 \alias{validate_EZbakRArrowData}
-\title{\code{EZbakRDataobject} validator}
+\title{\code{EZbakRArrowData} EZbakRArrowData validator}
 \usage{
 validate_EZbakRArrowData(obj)
 }
@@ -10,6 +10,6 @@ validate_EZbakRArrowData(obj)
 \item{obj}{An object of class \code{EZbakRArrowData}}
 }
 \description{
-\code{validate_EZbakRData} ensures that input for \code{EZbakRArrowData} object construction
+\code{validate_EZbakRArrowData} ensures that input for \code{EZbakRArrowData} object construction
 is valid.
 }

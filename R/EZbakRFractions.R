@@ -1,6 +1,6 @@
 #' `EZbakRFractions` object constructor
 #'
-#' \code{new_EZbakRData} efficiently creates an object of class `EZbakRData`.
+#' \code{new_EZbakRFractions} efficiently creates an object of class `EZbakRData`.
 #' It does not perform any rigorous checks of the legitimacy of this object.
 #' @param fractions Data frame containing information about the fraction of reads
 #' from each mutational population of interest.

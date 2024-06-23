@@ -101,10 +101,10 @@ Useful for regressing out technical batch effects
 }}
 }
 \value{
-An EZbakRData object. This is simply a list of the provide \code{cBds} and
-\code{metadf} with class \code{EZbakRData}
+An EZbakRArrowData object. This is simply a list of the provide \code{cBds} and
+\code{metadf} with class \code{EZbakRArrowData}
 }
 \description{
-\code{EZbakRData} creates an object of class \code{EZbakRArrowData} and checks the validity
+\code{EZbakRArrowData} creates an object of class \code{EZbakRArrowData} and checks the validity
 of the provided input.
 }

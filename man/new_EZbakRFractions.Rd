@@ -14,6 +14,6 @@ from each mutational population of interest.}
 in \code{fractions}}
 }
 \description{
-\code{new_EZbakRData} efficiently creates an object of class \code{EZbakRData}.
+\code{new_EZbakRFractions} efficiently creates an object of class \code{EZbakRData}.
 It does not perform any rigorous checks of the legitimacy of this object.
 }
