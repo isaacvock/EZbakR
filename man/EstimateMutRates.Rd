@@ -11,7 +11,8 @@ EstimateMutRates(
   pnew_prior_mean = -2.94,
   pnew_prior_sd = 0.3,
   pold_prior_mean = -6.5,
-  pold_prior_sd = 0.5
+  pold_prior_sd = 0.5,
+  pold_est = NULL
 )
 }
 \arguments{

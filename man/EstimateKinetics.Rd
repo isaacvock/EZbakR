@@ -10,6 +10,7 @@ EstimateKinetics(
   features = NULL,
   populations = NULL,
   fraction_design = NULL,
+  grouping_factors = NULL,
   character_limit = 20,
   overwrite = TRUE
 )

@@ -11,6 +11,9 @@
   fraction_design = NULL,
   Poisson = TRUE,
   strategy = c("standard", "hierarchical"),
+  filter_cols = "all",
+  filter_condition = `&`,
+  remove_features = c("NA", "__no_feature"),
   split_multi_features = FALSE,
   multi_feature_cols = NULL,
   multi_feature_sep = "+",
@@ -20,6 +23,7 @@
   pold_prior_sd = 0.5,
   hier_readcutoff = 300,
   init_pnew_prior_sd = 0.8,
+  pold_est = NULL,
   character_limit = 20,
   overwrite = TRUE
 )
