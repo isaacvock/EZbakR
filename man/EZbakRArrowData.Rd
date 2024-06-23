@@ -2,7 +2,7 @@
 % Please edit documentation in R/EZbakRArrowData.R
 \name{EZbakRArrowData}
 \alias{EZbakRArrowData}
-\title{\code{EZbakRDataobject} helper function for users}
+\title{\code{EZbakRArrowData} object helper function for users}
 \usage{
 EZbakRArrowData(cBds, metadf)
 }
@@ -97,32 +97,6 @@ This could represent things like genetic knockouts or knockdowns, drug treatment
 \item \code{batch}: An ID for sets of samples that were collected and/or processed together.
 Useful for regressing out technical batch effects
 }
-\item \code{assay}: This optional column should include a string that
-describes the type of experiment that was done so as to influence
-how EZbakR analyzes and interprets the data from those samples.
-Possible values for \code{assay} currently include:
-\itemize{
-\item standard: Refers to the "standard" nucleotide recoding RNA-seq methods
-(e.g., TimeLapse-seq, SLAM-seq, TUC-seq, etc.), in which cells are fed with a
-single metabolic label, RNA is extracted and sequenced, and mutations of a particular
-type are counted
-\item STL: Refers to Start-TimeLapse-seq, a method combining Start-seq (developed
-by Karen Adelman's lab) with TimeLapse-seq. Used to infer the kinetics of
-transcription initiation and promoter-proximal pause site departure.
-\item TT: Refers to Transient-Transcriptome NR-seq, a method combining TT-seq (developed
-by Patrick Cramer's lab) with NR-seq. TT-seq involves biochemically enriching
-for labeled RNA. By combining this method with nucleotide recoding chemistry (as was
-first done by the Simon lab with TT-TimeLapse-seq and has since been done with SLAM
-chemistry, often referred to as TTchem-seq), it is possible to bioinformatically
-filter out reads coming from unlabeled RNA background.
-\item TILAC: Refers to TILAC, a method developed by the Simon lab to achieve
-spike-in free normalization of RNA-seq data through the use of a dual labeling
-approach inspired by the proteomic method SILAC.
-\item subcellular: Refers to techniques such as subcellular TimeLapse-seq (developed
-by Stirling Churchman's lab) which combine subcellular fractionation with
-NR-seq to infer additional kinetic parameters.
-\item sc: Refers to single-cell RNA-seq implementations of NR-seq.
-}
 
 }}
 }
@@ -131,6 +105,6 @@ An EZbakRData object. This is simply a list of the provide \code{cBds} and
 \code{metadf} with class \code{EZbakRData}
 }
 \description{
-\code{EZbakRData} creates an object of class \code{EZbakRData} and checks the validity
+\code{EZbakRData} creates an object of class \code{EZbakRArrowData} and checks the validity
 of the provided input.
 }

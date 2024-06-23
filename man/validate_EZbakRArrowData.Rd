@@ -7,9 +7,9 @@
 validate_EZbakRArrowData(obj)
 }
 \arguments{
-\item{obj}{An object of class \code{EZbakRDataobject}}
+\item{obj}{An object of class \code{EZbakRArrowData}}
 }
 \description{
-\code{validate_EZbakRData} ensures that input for \code{EZbakRDataobject} construction
+\code{validate_EZbakRData} ensures that input for \code{EZbakRArrowData} object construction
 is valid.
 }
