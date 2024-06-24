@@ -74,7 +74,7 @@ validate_EZbakRArrowData <- function(obj){
     samps_cB <- cBds %>%
       dplyr::select(sample) %>%
       dplyr::distinct() %>%
-      arrow::collect()
+      dplyr::collect()
 
   }
 
