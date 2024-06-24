@@ -246,11 +246,12 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 }
 
 
-#' Simulate NR-seq data for multiple replicates of multiple biological conditions
-#'
-#' `EZSimulate()` is a user friendly (though somewhat less flexible) alternative to
-#' `SimulateMutiCondition()`. It simulates multiple replicates of NR-seq data from
-#' multiple biological conditions, as well as -s4U control data.
+### HOPE TO SOME DAY WRITE THIS FUNCTION
+# Simulate NR-seq data for multiple replicates of multiple biological conditions
+#
+# `EZSimulate()` is a user friendly (though somewhat less flexible) alternative to
+# `SimulateMutiCondition()`. It simulates multiple replicates of NR-seq data from
+# multiple biological conditions, as well as -s4U control data.
 
 
 
@@ -754,6 +755,7 @@ SimulateMultiCondition <- function(nfeatures, metadf,
 
   }else{
 
+    nodropout_truth <- vector(mode = "list", length = nrow(metadf))
     for(s in 1:nrow(metadf)){
 
       pdo <- metadf$pdo[s]
@@ -762,7 +764,7 @@ SimulateMultiCondition <- function(nfeatures, metadf,
       fn_vect <- 1 - exp(-kdeg_vect*metadf$label_time[s])
 
 
-      nodropout_truth <- data.table::data.table(sample = metadf$sample[s],
+      nodropout_truth[[s]] <- data.table::data.table(sample = metadf$sample[s],
                                       feature = paste0(feature_prefix, 1:nfeatures),
                                       unbiased_fraction_highTC = fn_vect,
                                       unbiased_kdeg = kdeg_vect)
@@ -771,7 +773,7 @@ SimulateMultiCondition <- function(nfeatures, metadf,
 
     output <- list(cB = final_simdata$cB,
                    PerRepTruth = final_simdata$ground_truth,
-                   UnbiasedFractions = nodropout_truth,
+                   UnbiasedFractions = dplyr::bind_rows(nodropout_truth),
                    AvgTruth = kinetic_parameters,
                    metadf = metadf,
                    param_details = param_details)
