@@ -378,6 +378,12 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                                          character_limit = 20,
                                          overwrite = TRUE){
 
+  ### Hack to deal with devtools::check() NOTEs
+  n <- params <- coverage <- pold <- pnew <- lpnew_uncert <- pnew_prior <- ..colvect <- NULL
+  fit <- mixture_fit <- NULL
+
+  pnew_prior_sd_min <- pnew_prior_sd_min
+
   `.` <- list
 
   ### Check that input is valid
@@ -634,7 +640,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
       message("Estimating fractions with feature-specific pnews")
 
       global_est <- feature_specific[,.(pnew_prior = mean(logit(pnew)),
-                                    pnew_prior_sd = sd(logit(pnew)) - mean(lpnew_uncert),
+                                    pnew_prior_sd = stats::sd(logit(pnew)) - mean(lpnew_uncert),
                                     pold = mean(pold)),
                                  by = sample]
 
@@ -695,7 +701,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
       fns <- dplyr::as_tibble(cB) %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
         dplyr::summarise(fit = ifelse(!(unique(sample) %in% samples_with_no_label),
-                                      list(I(optim(0,
+                                      list(I(stats::optim(0,
                                                    fn = tcmml,
                                                    muts = !!dplyr::sym(pops_to_analyze),
                                                    nucs = !!dplyr::sym(necessary_basecounts),
@@ -1103,6 +1109,12 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                               character_limit = 20,
                                               overwrite = TRUE){
 
+
+  ### Hack to deal with devtools::check() NOTEs
+  present <- n <- reads <- params <- coverage <- pold <- pnew <- sd <- lpnew_uncert <- pnew_prior <- ..colvect <- NULL
+  fit <- mixture_fit <- NULL
+
+
   `.` <- list
 
   ### Check that input is valid
@@ -1119,7 +1131,6 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
   message("Estimating mutation rates")
   obj <- EstimateMutRates(obj,
                           populations = mutrate_populations,
-                          strategy = strategy,
                           pnew_prior_mean = pnew_prior_mean,
                           pnew_prior_sd = pnew_prior_sd,
                           pold_prior_mean = pold_prior_mean,
@@ -1470,7 +1481,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
           message("Estimating fractions with feature-specific pnews")
 
           global_est <- feature_specific[,.(pnew_prior = mean(logit(pnew)),
-                                            pnew_prior_sd = sd(logit(pnew)) - mean(lpnew_uncert),
+                                            pnew_prior_sd = stats::sd(logit(pnew)) - mean(lpnew_uncert),
                                             pold = mean(pold)),
                                          by = sample]
 
@@ -1535,7 +1546,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
           sample_fns <- dplyr::as_tibble(sample_cB) %>%
             dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
             dplyr::summarise(fit = ifelse(!(unique(sample) %in% samples_without_label),
-                                          list(I(optim(0,
+                                          list(I(stats::optim(0,
                                                        fn = tcmml,
                                                        muts = !!dplyr::sym(pops_to_analyze),
                                                        nucs = !!dplyr::sym(necessary_basecounts),

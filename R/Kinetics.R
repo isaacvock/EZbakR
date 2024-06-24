@@ -59,9 +59,9 @@ EstimateKinetics <- function(obj,
   ### Check that input is valid
 
   # EZbakRData object on which EstimateFractions() has been run?
-  if(!is(obj, "EZbakRFractions")){
+  if(!methods::is(obj, "EZbakRFractions")){
 
-    if(is(obj, "EZbakRData")){
+    if(methods::is(obj, "EZbakRData")){
 
       stop("obj is not an EZbakRFractions object! Run `obj <- EstimateFractions(obj, ...)`,
            where ... represents optional parameters, before running `EstimateKinetics`.")
@@ -479,7 +479,7 @@ Standard_kinetic_estimation <- function(obj,
                                                              counttype = "TMM_normalized")
 
 
-  if(!is(obj, "EZbakRKinetics")){
+  if(!methods::is(obj, "EZbakRKinetics")){
 
     class(obj) <- c( "EZbakRKinetics", class(obj))
 
@@ -611,7 +611,7 @@ tilac_ratio_estimation <- function(obj,
   # Eventually want to add count matrix output
   obj[['readcounts']][[reads_name]] <- list(reads_df = reads_norm)
 
-  if(!is(obj, "EZbakRKinetics")){
+  if(!methods::is(obj, "EZbakRKinetics")){
 
     class(obj) <- c( "EZbakRKinetics", class(obj))
 
