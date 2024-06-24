@@ -1872,6 +1872,11 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
 # Split up multi-feature sets
 split_features <- function(cB, multi_feature_cols, grouping_cols){
 
+  ### Hack to deal with devtools::check() NOTEs
+  n <- NULL
+
+  `.` <- list
+
   ### Copy junction data more efficiently
   unique_juncs <- cB %>%
     dplyr::select(!!multi_feature_cols) %>%

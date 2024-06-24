@@ -509,7 +509,13 @@ inv_logit <- function(x) exp(x)/(1+exp(x))
 ############################
 
 
-
+#' Get normalized read counts from either a cB table or `EZbakRFractions` object.
+#'
+#' Uses TMM normalization strategy, similar to that used by DESeq2 and edgeR.
+#'
+#' @param obj An `EZbakRData` or `EZbakRFractions` object.
+#' @param features_to_analyze Features in relevant table
+#' @param fractions_name Name of fractions table to use
 #' @export
 get_normalized_read_counts <- function(obj,
                                        features_to_analyze,
@@ -519,6 +525,13 @@ get_normalized_read_counts <- function(obj,
 
 }
 
+#' Get normalized read counts from either an `EZbakRFractions` object.
+#'
+#' Uses TMM normalization strategy, similar to that used by DESeq2 and edgeR.
+#'
+#' @param obj An `EZbakRFractions` object.
+#' @param features_to_analyze Features in relevant table
+#' @param fractions_name Name of fractions table to use
 #' @export
 get_normalized_read_counts.EZbakRFractions <- function(obj,
                                                        features_to_analyze,
@@ -533,10 +546,23 @@ get_normalized_read_counts.EZbakRFractions <- function(obj,
 
 }
 
+#' Get normalized read counts from either a cB table in an `EZbakRData` object.
+#'
+#' Uses TMM normalization strategy, similar to that used by DESeq2 and edgeR.
+#'
+#' @param obj An `EZbakRData` object.
+#' @param features_to_analyze Features in relevant table
+#' @param fractions_name Name of fractions table to use
 #' @export
 get_normalized_read_counts.default <- function(obj,
                                                features_to_analyze,
                                                fractions_name = NULL){
+
+  ### Hack to deal with devtools::check() NOTEs
+  n <- NULL
+
+  `.` <- list
+
 
   ### Get normalized read counts
 
@@ -555,9 +581,14 @@ get_normalized_read_counts.default <- function(obj,
 
 normalize_reads <- function(reads, features_to_analyze){
 
+  ### Hack to deal with devtools::check() NOTEs
+  geom_mean <- n <- normalized_reads <- scale_factor <- NULL
+
+  `.` <- list
+
   # Median of ratios normalization
   reads[, geom_mean := exp(mean(log(n))), by = features_to_analyze]
-  scales <- reads[, .(scale_factor =  median(n/geom_mean)), by = .(sample)]
+  scales <- reads[, .(scale_factor =  stats::median(n/geom_mean)), by = .(sample)]
 
   setkey(scales, sample)
   setkey(reads, sample)
@@ -820,102 +851,3 @@ get_table_name <- function(obj, tabletype,
 
 }
 
-
-
-# What comparative analysis table do you want?
-get_comparison <- function(obj,
-               condition,
-               reference,
-               experimental,
-               features){
-
-  # Function to get rid of the comparison data frame
-  remove_comparison <- function(input_list) {
-
-    input_list <- input_list[names(input_list) != "comparison"]
-
-    return(input_list)
-  }
-
-
-  metadata <- lapply(obj, remove_comparison)
-
-  if(length(metadata) == 1){
-
-    # Index of list of interest is the only list of interest
-    index <- 1
-
-  }else{
-
-    # Function to find particular metadata
-    check_meta <- function(input_list, element, value){
-
-      if(input_list[[element]] == value){
-
-        return(TRUE)
-
-      }else{
-
-        return(FALSE)
-
-      }
-
-    }
-
-
-    if(!is.null(condition)){
-
-      condition_check <- check_meta(metadata, "condition", condition)
-
-    }else{
-
-      condition_check <- rep(TRUE, times = length(metadata))
-
-    }
-
-    if(!is.null(reference)){
-
-      reference_check <- check_meta(metadata, "reference", reference)
-
-    }else{
-
-      reference_check <- rep(TRUE, times = length(metadata))
-
-    }
-
-    if(!is.null(experimental)){
-
-      experimental_check <- check_meta(metadata, "experimental", experimental)
-
-    }else{
-
-      experimental_check <- rep(TRUE, times = length(metadata))
-
-    }
-
-    if(!is.null(feature)){
-
-      features_check <- check_meta(metadata, "features", features)
-
-    }else{
-
-      features_check <- rep(TRUE, times = length(metadata))
-
-    }
-
-
-    index <- condition_check &
-      reference_check &
-      experimental_check &
-      features_check
-
-
-
-  }
-
-
-
-  return(obj[[index]])
-
-
-}

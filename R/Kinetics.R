@@ -504,6 +504,8 @@ tilac_ratio_estimation <- function(obj,
                                    character_limit = 20,
                                    overwrite = TRUE){
 
+  ### Hack to deal with devtools::check() NOTEs
+  ..cols_to_keep <- TILAC_ratio <- log_TILAC_ratio <- ..cols_to_keep <- NULL
 
   `.` <- list
 

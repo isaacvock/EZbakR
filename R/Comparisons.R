@@ -677,7 +677,7 @@ heteroskedastic_likelihood <- function(params, y, X_mean, X_sd, debug = FALSE) {
   sigma <- exp(X_sd %*% log_sigma)
 
   # Gaussian log-likelihood
-  logL <- -sum(dnorm(y, mean=mu, sd=sigma, log=TRUE))
+  logL <- -sum(stats::dnorm(y, mean=mu, sd=sigma, log=TRUE))
   return(logL)
 }
 
@@ -802,7 +802,7 @@ calc_avg_coverage <- function(data, formula){
 interaction_only <- function(formula) {
 
   # Extract terms information
-  terms_info <- terms(formula)
+  terms_info <- stats::terms(formula)
 
   # Convert to character for easier handling
   terms_char <- attr(terms_info, "term.labels")

@@ -7,7 +7,7 @@
 #' @param metadf Data frame tracking features of each of the samples included
 #' in `cBds`.
 new_EZbakRArrowData <- function(cBds, metadf){
-  stopifnot(is(cBds, "ArrowObject") & is(cBds, "Dataset"))
+  stopifnot(methods::is(cBds, "ArrowObject") & methods::is(cBds, "Dataset"))
   stopifnot(is.data.frame(metadf))
   structure(list(cBds = cBds, metadf = metadf), class = "EZbakRArrowData")
 }
