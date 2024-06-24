@@ -139,6 +139,10 @@ Standard_kinetic_estimation <- function(obj,
   ksyn <- normalized_reads <- log_ksyn <- se_log_ksyn <- scale_factor <- n <- nolabel_rpm <- NULL
   old_rpm <- new_rpm <- geom_mean <- rpm <- NULL
 
+  rm(..cols_to_keep)
+  rm(..kinetics_cols_to_keep)
+
+
   `.` <- list
 
 
@@ -506,6 +510,9 @@ tilac_ratio_estimation <- function(obj,
 
   ### Hack to deal with devtools::check() NOTEs
   ..cols_to_keep <- TILAC_ratio <- log_TILAC_ratio <- ..cols_keep <- NULL
+
+  rm(..cols_to_keep)
+  rm(..cols_keep)
 
   `.` <- list
 

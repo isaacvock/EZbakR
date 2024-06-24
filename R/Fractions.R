@@ -1121,6 +1121,8 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
   present <- n <- reads <- params <- coverage <- pold <- pnew <- sd <- lpnew_uncert <- pnew_prior <- ..colvect <- NULL
   fit <- mixture_fit <- NULL
 
+  rm(..colvect)
+
 
   `.` <- list
 

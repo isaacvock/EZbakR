@@ -246,6 +246,13 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 }
 
 
+#' Simulate NR-seq data for multiple replicates of multiple biological conditions
+#'
+#' `EZSimulate()` is a user friendly (though somewhat less flexible) alternative to
+#' `SimulateMutiCondition()`. It simulates multiple replicates of NR-seq data from
+#' multiple biological conditions, as well as -s4U control data.
+
+
 
 #' Simulate NR-seq data for multiple replicates of multiple biological conditions
 #'
@@ -656,6 +663,10 @@ SimulateMultiCondition <- function(nfeatures, metadf,
 
 
 
+    ### Each element is a vector of sample-specific kinetic parameters and read counts
+    # NOTE: bit weird to define sample-specific kinetic parameters rather than
+    # sample specific fraction news. From a practical perspective though, this
+    # is equivalent to that strategy.
     logkdegs[[i]] <- stats::rnorm(n = nsamp,
                            mean = feature_logkdegs,
                            sd = logkdeg_sds)
@@ -693,7 +704,7 @@ SimulateMultiCondition <- function(nfeatures, metadf,
     # the dropout biased fraction new, and kdeg_vect will represent the
     # kdeg that would be estimated from the true, unbiased fraction new.
     # This ensures that the ground_truth table from this function contains
-    # both the biased and unbaised fraction new estimates in it.
+    # both the biased and unbiased fraction new estimates in it.
     simdata[[s]] <- SimulateOneRep(nfeatures = nfeatures,
                                    read_vect = extract_ith(reads, s),
                                    label_time = as.numeric(metadf[s,"label_time"]),
@@ -730,11 +741,43 @@ SimulateMultiCondition <- function(nfeatures, metadf,
 
   ### Gather output
 
-  output <- list(cB = final_simdata$cB,
-                 PerRepTruth = final_simdata$ground_truth,
-                 AvgTruth = kinetic_parameters,
-                 metadf = metadf,
-                 param_details = param_details)
+  # TO-DO: Am not tracking the replicate fraction news in a way
+  # that accounts for potential dropout. PerRepTruth will only
+  # contain the dropout biased fraction new estimate
+  if(all(metadf$pdo == 0)){
+
+    output <- list(cB = final_simdata$cB,
+                   PerRepTruth = final_simdata$ground_truth,
+                   AvgTruth = kinetic_parameters,
+                   metadf = metadf,
+                   param_details = param_details)
+
+  }else{
+
+    for(s in 1:nrow(metadf)){
+
+      pdo <- metadf$pdo[s]
+
+      kdeg_vect <- exp(extract_ith(logkdegs, s))
+      fn_vect <- 1 - exp(-kdeg_vect*metadf$label_time[s])
+
+
+      nodropout_truth <- data.table::data.table(sample = metadf$sample[s],
+                                      feature = paste0(feature_prefix, 1:nfeatures),
+                                      unbiased_fraction_highTC = fn_vect,
+                                      unbiased_kdeg = kdeg_vect)
+
+    }
+
+    output <- list(cB = final_simdata$cB,
+                   PerRepTruth = final_simdata$ground_truth,
+                   UnbiasedFractions = nodropout_truth,
+                   AvgTruth = kinetic_parameters,
+                   metadf = metadf,
+                   param_details = param_details)
+
+  }
+
 
   return(output)
 

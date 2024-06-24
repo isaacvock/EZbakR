@@ -169,6 +169,12 @@ molecule is lost during library preparation and sequencing. If \code{pdo} is 0 (
 then there is not dropout.}
 }
 \description{
+\code{EZSimulate()} is a user friendly (though somewhat less flexible) alternative to
+\code{SimulateMutiCondition()}. It simulates multiple replicates of NR-seq data from
+multiple biological conditions, as well as -s4U control data.
+Simulate NR-seq data for multiple replicates of multiple biological conditions
+}
+\details{
 \code{SimulateMultiCondition} is a highly flexibly simulator that combines linear modeling
 of log(kdeg)'s with \code{SimulateOneRep} to simulate an NR-seq dataset. The linear model
 allows you to simulate multiple distinct treatments, batch effects, interaction effects,
