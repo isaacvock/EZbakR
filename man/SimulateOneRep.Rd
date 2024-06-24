@@ -105,8 +105,8 @@ from relevant distributions whose properties can be tuned by the various optiona
 parameters of \code{SimulateOneRep}. The number of mutable nucleotides (nT) in
 a read is drawn from a binomial distribution with \code{readlength} trials and a probability
 of "success" equal to \code{Ucont}. A read's status as new or old is drawn from a Bernoulli
-distribution with probability of "success" = the feature's fraction new. If a read
+distribution with probability of "success" equal to the feature's fraction new. If a read
 is new, the number of mutations in the read is drawn from a binomial distribution with
-probability of mutation = pnew. If a read is old, the number of mutations is instead
-drawn from a binomial distribution with probability of mutation = pold.
+probability of mutation equal to pnew. If a read is old, the number of mutations is instead
+drawn from a binomial distribution with probability of mutation equal to pold.
 }

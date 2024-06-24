@@ -6,10 +6,10 @@
 #' parameters of `SimulateOneRep`. The number of mutable nucleotides (nT) in
 #' a read is drawn from a binomial distribution with `readlength` trials and a probability
 #' of "success" equal to `Ucont`. A read's status as new or old is drawn from a Bernoulli
-#' distribution with probability of "success" = the feature's fraction new. If a read
+#' distribution with probability of "success" equal to the feature's fraction new. If a read
 #' is new, the number of mutations in the read is drawn from a binomial distribution with
-#' probability of mutation = pnew. If a read is old, the number of mutations is instead
-#' drawn from a binomial distribution with probability of mutation = pold.
+#' probability of mutation equal to pnew. If a read is old, the number of mutations is instead
+#' drawn from a binomial distribution with probability of mutation equal to pold.
 #'
 #' @param nfeatures Number of "features" (e.g., genes) to simulate data for
 #' @param read_vect Vector of length = `nfeatures`; specifies the number of reads
@@ -249,7 +249,8 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 #' `SimulateMultiCondition` is a highly flexibly simulator that combines linear modeling
 #' of log(kdeg)'s with `SimulateOneRep` to simulate an NR-seq dataset. The linear model
 #' allows you to simulate multiple distinct treatments, batch effects, interaction effects,
-#' etc.
+#' etc. The current downside for its flexibility is its relative complexity to implement.
+#' Easier to use simulators are on the way to EZbakR.
 #'
 #' @param nfeatures Number of "features" (e.g., genes) to simulate data for
 #' @param metadf A data frame with the following columns:
@@ -319,6 +320,16 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 #' @param Ucont Probability that a nucleotide in a simulated read is a U.
 #' @param logkdeg_mean Mean of normal distribution from which reference log(kdeg)
 #' linear model parameter is drawn from for each feature if `param_details` is not provided.
+#' @param feature_prefix Name given to the i-th feature is `paste0(feature_prefix, i)`. Shows up in the
+#' `feature` column of the output simulated data table.
+#' @param dispslope Negative binomial dispersion parameter "slope" with respect to read counts. See
+#' DESeq2 paper for dispersion model used.
+#' @param dispint Negative binomial dispersion parameter "intercept" with respect to read counts. See
+#' DESeq2 paper for dispersion model used.
+#' @param logkdegsdtrend_slope Slope for log10(read count) vs. log(kdeg) replicate variability trend
+#' @param logkdegsdtrend_intercept Intercept for log10(read count) vs. log(kdeg) replicate variability trend
+#' @param logksynsdtrend_slope Slope for log10(read count) vs. log(ksyn) replicate variability trend
+#' @param logksynsdtrend_intercept Intercept for log10(read count) vs. log(ksyn) replicate variability trend
 #' @param logkdeg_sd Standard deviation of normal distribution from which reference log(kdeg)
 #' linear model parameter is drawn from for each feature if `param_details` is not provided.
 #' @param logksyn_mean Mean of normal distribution from which reference log(ksyn)

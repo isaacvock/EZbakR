@@ -113,6 +113,23 @@ are simulated as being exactly this length.}
 
 \item{Ucont}{Probability that a nucleotide in a simulated read is a U.}
 
+\item{feature_prefix}{Name given to the i-th feature is \code{paste0(feature_prefix, i)}. Shows up in the
+\code{feature} column of the output simulated data table.}
+
+\item{dispslope}{Negative binomial dispersion parameter "slope" with respect to read counts. See
+DESeq2 paper for dispersion model used.}
+
+\item{dispint}{Negative binomial dispersion parameter "intercept" with respect to read counts. See
+DESeq2 paper for dispersion model used.}
+
+\item{logkdegsdtrend_slope}{Slope for log10(read count) vs. log(kdeg) replicate variability trend}
+
+\item{logkdegsdtrend_intercept}{Intercept for log10(read count) vs. log(kdeg) replicate variability trend}
+
+\item{logksynsdtrend_slope}{Slope for log10(read count) vs. log(ksyn) replicate variability trend}
+
+\item{logksynsdtrend_intercept}{Intercept for log10(read count) vs. log(ksyn) replicate variability trend}
+
 \item{logkdeg_mean}{Mean of normal distribution from which reference log(kdeg)
 linear model parameter is drawn from for each feature if \code{param_details} is not provided.}
 
@@ -155,5 +172,6 @@ then there is not dropout.}
 \code{SimulateMultiCondition} is a highly flexibly simulator that combines linear modeling
 of log(kdeg)'s with \code{SimulateOneRep} to simulate an NR-seq dataset. The linear model
 allows you to simulate multiple distinct treatments, batch effects, interaction effects,
-etc.
+etc. The current downside for its flexibility is its relative complexity to implement.
+Easier to use simulators are on the way to EZbakR.
 }
