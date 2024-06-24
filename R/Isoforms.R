@@ -26,7 +26,7 @@ ImportIsoformQuant <- function(obj, files,
                                ...){
 
   ### Hack to deal with devtools::check() NOTEs
-  trascript_id <- NULL
+  transcript_id <- NULL
 
   quant_tool <- match.arg(quant_tool)
 
@@ -309,7 +309,7 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
 
   ### Hack to deal with devtools::check() NOTEs
   expected_count <- TPM <- n <- group <- effective_length <- transcript_id <- n <- isoform_cnt <- data <- NULL
-  fnest <- logit_fn <- se_logit_fn
+  fnest <- logit_fn <- se_logit_fn <- NULL
 
   ### THINGS THAT NEED TO BE INFERRED
   # 1) Which fractions to grab

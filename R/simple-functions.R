@@ -202,7 +202,6 @@ SimpleMultiPopSim <- function(nreads = 1000, populations = c("TC"),
       identity <- stats::rmultinom(1, size = nreads,
                             probs = fractions)
 
-      newnewss
 
     }
 

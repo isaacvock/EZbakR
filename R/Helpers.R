@@ -96,8 +96,6 @@ EZget <- function(obj,
 
     }
 
-    break
-
   }
 
   ### DESIGN IDEA

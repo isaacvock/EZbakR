@@ -166,7 +166,7 @@ general_avg_and_reg <- function(obj, features, parameter,
 
   ### Hack to deal with devtools::check() NOTEs
   n <- log_normalized_reads <- logsd <- logsd_from_uncert <- replicates <- NULL
-  coverage <- se_mean <- se_logsd <- coverages <- parameters <- NULL
+  coverage <- se_mean <- se_logsd <- coverages <- parameters <- normalized_reads <- NULL
 
   `.` <- list
 
@@ -219,24 +219,24 @@ general_avg_and_reg <- function(obj, features, parameter,
 
   if(is.null(formula_mean)){
 
-    formula_mean <- as.formula(paste0("~", paste(condition_vars, collapse = "+")))
+    formula_mean <- stats::as.formula(paste0("~", paste(condition_vars, collapse = "+")))
 
   }
 
 
-  formula_mean <- as.formula(paste0(paste(c(parameter, formula_mean), collapse = ""), "-1"))
+  formula_mean <- stats::as.formula(paste0(paste(c(parameter, formula_mean), collapse = ""), "-1"))
 
 
   if(is.null(formula_sd)){
 
-    formula_sd <- as.formula(paste0("~", paste(condition_vars, collapse = "+")))
+    formula_sd <- stats::as.formula(paste0("~", paste(condition_vars, collapse = "+")))
 
   }
 
-  formula_reads <- as.formula(paste0(paste(c("log_normalized_reads", formula_sd), collapse = ""), "-1"))
+  formula_reads <- stats::as.formula(paste0(paste(c("log_normalized_reads", formula_sd), collapse = ""), "-1"))
 
 
-  formula_sd <- as.formula(paste0(paste(c(parameter, formula_sd), collapse = ""), "-1"))
+  formula_sd <- stats::as.formula(paste0(paste(c(parameter, formula_sd), collapse = ""), "-1"))
 
 
 
@@ -437,7 +437,7 @@ general_avg_and_reg <- function(obj, features, parameter,
 
     # Dynamically create formula
     formula_str <- paste("`logsd_", .x, "`", " ~ `coverage_", .x, "`", sep = "")
-    formula <- as.formula(formula_str)
+    formula <- stats::as.formula(formula_str)
 
     # Perform linear regression
     lm_result <- stats::lm(formula, data = model_fit)

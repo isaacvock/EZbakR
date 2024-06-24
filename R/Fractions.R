@@ -383,7 +383,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
   ### Hack to deal with devtools::check() NOTEs
   n <- params <- coverage <- pold <- pnew <- lpnew_uncert <- pnew_prior <- ..colvect <- NULL
-  fit <- mixture_fit <- NULL
+  fit <- mixture_fit <- present <- NULL
 
   pnew_prior_sd_min <- pnew_prior_sd_min
 
@@ -858,7 +858,7 @@ EstimateMutRates.EZbakRData <- function(obj,
 
 
   ### Hack to deal with devtools::check() NOTEs
-  n <- params <- p1 <- p2
+  n <- params <- p1 <- p2 <- NULL
 
   `.` <- list
 
