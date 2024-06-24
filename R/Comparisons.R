@@ -3,7 +3,14 @@
 #' `AverageAndRegularize` uses a linear model to average estimates of a parameter
 #' of interest over replicates, and to get averages for all of a set of conditions
 #' specified by the user. This specification is done through formulas that will
-#' be used to create a design matrix for parameters to estimate.
+#' be used to create a design matrix for parameters to estimate. Currently,
+#' some design matrices will yield much longer runtimes than others. This is due
+#' to some design matrices necessitating numerically estimating a set of maximum
+#' likelihood parameters, while others yield simple, analytic approximations that
+#' are quick to calculate. For example, formulas such as `~ treatment` or
+#' `~ treatment:duration` will be quick to fit, and formulas such as
+#' `~ treatment + batch` are currently much slower to fit. This will eventually
+#' be remedied through approximation of the solution to all full models.
 #'
 #' @param obj An `EZbakRFractions` object, which is an `EZbakRData` object on
 #' which `EstimateFractions()` has been run.
@@ -12,10 +19,15 @@
 #' will use all feature columns in the `obj`'s cB.
 #' @param parameter Parameter to average across replicates of a given condition.
 #' @param formula_mean An R formula object specifying how the `parameter` of interest
-#' depends on the sample characteristics specified in `obj`'s metadf. The most formula
-#' will be `~ treatment` or `~ treatment + batch`, where `treatment` and `batch` would
-#' be replaced with whatever you called the main treatment and batch identifiers in
-#' your metadf.
+#' depends on the sample characteristics specified in `obj`'s metadf. The most common formula
+#' will be `~ treatment` or `~ treatment:duration`, where `treatment` and `duration` would
+#' be replaced with whatever you called the relevant sample characteristics in your metadf.
+#' `~ treatment` means that an average value of `parameter` should be estimated for each
+#' set of samples with the same value for `treatment` in the metadf. `~ treatment:duration` specifies
+#' that an average value of `parameter` should be estimated for each set of samples with the same
+#' combination of `treatment` and `duration` values in the metadf. An example of the latter
+#' case is a situation where you have two or more treatments (e.g., drug treated and untreated control)
+#' which were applied for different durations of time (e.g., 4 and 8 hours).
 #' @param formula_sd Same as `formula_mean`, but this time specifying how the variance
 #' in the replicate estimates of `parameter` depends on the sample characteristics specified
 #' in `obj`'s metadf. Unlike standard linear modeling, this allows you to specify
@@ -33,12 +45,6 @@
 #' be estimated from the data, e.g., due to limited replicate numbers or correlated
 #' sample characteristics (i.e., all treatment As also correspond to batch As, and
 #' all treatment Bs correspond to batch Bs).
-#' @param quant_name Name of quantification tool appended to table name of interest.
-#' This is only relevant if you are providing isoform-specific estimates, in which
-#' case the isoform quantification tool's name may need to be provided in order
-#' for EZbakR to uniquely identify the table of interest. Even in that case though,
-#' this should only have to be non-null in the case where you have performed isoform-specific
-#' fraction estimation with more than one quantification tool's output.
 #' @param min_reads Minimum number of reads in all samples for a feature to be kept.
 #' @param force_optim Perform numerical likelihood estimation, even if a more efficient,
 #' approximate, analytical strategy is possible given `formula_mean` and `formula_sd`.
@@ -53,7 +59,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                             formula_mean = NULL, formula_sd = NULL,
                             include_all_parameters = TRUE,
                             sd_reg_factor = 10,
-                            error_if_singular = TRUE, quant_name = NULL,
+                            error_if_singular = TRUE,
                             min_reads = 10,
                             force_optim = FALSE,
                             character_limit = 20,
@@ -67,7 +73,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                              formula_mean = formula_mean, formula_sd = formula_sd,
                              include_all_parameters = include_all_parameters,
                              sd_reg_factor = sd_reg_factor,
-                             error_if_singular = error_if_singular, quant_name = quant_name,
+                             error_if_singular = error_if_singular,
                              TILAC = TRUE, min_reads = min_reads,
                              force_optim = force_optim,
                              character_limit = character_limit,
@@ -78,7 +84,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     obj <- general_avg_and_reg(obj = obj, features = features, parameter = parameter,
                         formula_mean = formula_mean, formula_sd = formula_sd,
                         include_all_parameters = include_all_parameters,
-                        sd_reg_factor = sd_reg_factor, quant_name = quant_name,
+                        sd_reg_factor = sd_reg_factor,
                         error_if_singular = error_if_singular, min_reads = min_reads,
                         force_optim = force_optim,
                         character_limit = character_limit,
@@ -151,7 +157,7 @@ general_avg_and_reg <- function(obj, features, parameter,
                                 formula_mean, formula_sd,
                                 include_all_parameters,
                                 sd_reg_factor,
-                                error_if_singular, quant_name = NULL,
+                                error_if_singular,
                                 TILAC = FALSE, min_reads = 10,
                                 force_optim = FALSE,
                                 character_limit = 20,
