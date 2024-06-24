@@ -12,7 +12,7 @@ EZSimulate(
   metadf = NULL,
   mean_formula = NULL,
   param_details = NULL,
-  seqdepth = 1e+07,
+  seqdepth = nfeatures * 2500,
   label_time = 2,
   pnew = 0.05,
   pold = 0.001,

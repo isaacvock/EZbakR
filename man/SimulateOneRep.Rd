@@ -19,7 +19,7 @@ SimulateOneRep(
   logkdeg_sd = 0.7,
   logksyn_mean = 2.3,
   logksyn_sd = 0.7,
-  seqdepth = 1e+07,
+  seqdepth = nfeatures * 2500,
   readlength = 200,
   Ucont = 0.25,
   feature_pnew = FALSE,

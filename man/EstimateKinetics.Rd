@@ -6,7 +6,7 @@
 \usage{
 EstimateKinetics(
   obj,
-  strategy = c("standard", "tilac", "NSS", "pulse-chase"),
+  strategy = c("standard", "tilac", "NSS", "shortfeed", "pulse-chase"),
   features = NULL,
   populations = NULL,
   fraction_design = NULL,
@@ -27,7 +27,7 @@ sample. This is done via a binomial mixture model aggregating over
 \item NSS: Use strategy similar to that presented in Narain et al., 2021 that
 assumes provided -s4U data provides a reference for how much RNA was present
 at the start of labeling. In this case, \code{grouping_factors} must also be set.
-\item short-feed: Estimate kinetic parameters assuming no degradation of labeled
+\item shortfeed: Estimate kinetic parameters assuming no degradation of labeled
 RNA, most appropriate if the metabolic label feed time is much shorter than
 the average half-life of an RNA in your system.
 \item tilac: Estimate TILAC-ratio as described in Courvan et al., 2022.
