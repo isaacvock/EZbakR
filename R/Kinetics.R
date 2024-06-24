@@ -333,6 +333,8 @@ Standard_kinetic_estimation <- function(obj,
     ##### STEP 3: ESTIMATE UNCERTAINTY
     ##### (higher than in standard due to -s4U read variance)
 
+    ### TO-DO: Incorporate number of -s4U replicates used to infer nolabel_n
+
     ### Uncertainty approximated with delta method
     lkdeg_uncert <- function(fn, se_lfn, Rs4U, Rctl, tl, kdeg){
 
