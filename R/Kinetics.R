@@ -170,6 +170,16 @@ Standard_kinetic_estimation <- function(obj,
   fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
 
 
+  ### Normalize read counts
+
+
+  # TO-DO: ALLOW USERS TO JUST USE THE TPM FROM ISOFORM QUANTIFICATION
+  reads_norm <- get_normalized_read_counts(obj = obj,
+                                           features_to_analyze = features_to_analyze,
+                                           fractions_name = fractions_name)
+
+
+
   if(strategy == "standard"){
 
     ### Estimate kdegs
@@ -191,16 +201,6 @@ Standard_kinetic_estimation <- function(obj,
 
     kinetics[, kdeg := -log(1 - get(fraction_of_interest))/tl]
     kinetics[, log_kdeg := log(kdeg)]
-
-
-    ### Normalize read counts
-
-
-    # TO-DO: ALLOW USERS TO JUST USE THE TPM FROM ISOFORM QUANTIFICATION
-    reads_norm <- get_normalized_read_counts(obj = obj,
-                                             features_to_analyze = features_to_analyze,
-                                             fractions_name = fractions_name)
-
 
 
     ### Estimate uncertainty in log(kdeg)
@@ -294,10 +294,9 @@ Standard_kinetic_estimation <- function(obj,
 
 
     ##### STEP 2: INTEGRATE WITH +S4U TO GET ADJUSTED FRACTION NEW
-    browser()
     kinetics <- kinetics %>%
       dplyr::inner_join(metadf %>% dplyr::filter(tl > 0) %>%
-                          dplyr::select(sample, !!grouping_factors),
+                          dplyr::select(sample, tl, !!grouping_factors),
                         by = "sample") %>%
       dplyr::group_by(sample) %>%
       dplyr::mutate(rpm = n/(sum(n)/1000000)) %>%
@@ -305,8 +304,8 @@ Standard_kinetic_estimation <- function(obj,
                         by = c(grouping_factors, features_to_analyze)) %>%
       dplyr::ungroup() %>%
       dplyr::mutate(old_rpm = (1 - !!dplyr::sym(fraction_of_interest)) * rpm,
-                    new_rpm = (!!dplyr::sym(fraction_of_interest)) * rpm,
-                    kdeg = dplyr::case_when(
+                    new_rpm = (!!dplyr::sym(fraction_of_interest)) * rpm) %>%
+      dplyr::mutate(kdeg = dplyr::case_when(
                       old_rpm >= nolabel_rpm ~ -log(1 - !!dplyr::sym(fraction_of_interest))/tl,
                       .default = -log(old_rpm/nolabel_rpm)/tl
                     ),
@@ -374,14 +373,6 @@ Standard_kinetic_estimation <- function(obj,
     kinetics[, kdeg := get(fraction_of_interest)/tl]
     kinetics[, log_kdeg := log(kdeg)]
 
-
-    ### Normalize read counts
-
-
-    # TO-DO: ALLOW USERS TO JUST USE THE TPM FROM ISOFORM QUANTIFICATION
-    reads_norm <- get_normalized_read_counts(obj = obj,
-                                             features_to_analyze = features_to_analyze,
-                                             fractions_name = fractions_name)
 
 
 
