@@ -10,8 +10,11 @@
 #' @param experimental Name of experimental level for comparison.
 #' @param features Character vector of feature names for which comparisons were made.
 #' @param plotlog2 If TRUE, assume that log(parameter) difference is passed in and that
-#' you want to plot log2(parameter) difference.
+#' you want to plot log2(parameter) difference. TO-DO: probably best to change this
+#' to a more general scale parameter by which the parameter is multiplied. Default
+#' would be log2(exp(1)) to convert log() to log2().
 #' @param FDR_cutoff False discovery cutoff by which to color points.
+#' @param difference_cutoff Minimum absolute difference cutoff by which to color points.
 #' @param size Size of points, passed to `geom_point()` size parameter. If not specified,
 #' a point size is automatically chosen.
 #' @import ggplot2
@@ -25,6 +28,7 @@ EZbakRVolcanoPlot <- function(obj,
                               features = NULL,
                               plotlog2 = TRUE,
                               FDR_cutoff = 0.05,
+                              difference_cutoff = 0,
                               size = NULL){
 
 
@@ -99,8 +103,8 @@ EZbakRVolcanoPlot <- function(obj,
   # Make Volcano plot
   ggv <- comparison %>%
     dplyr::mutate(conclusion = factor(dplyr::case_when(
-      difference < 0 & padj < FDR_cutoff ~ "Decreased",
-      difference > 0 & padj < FDR_cutoff ~ "Increased",
+      difference < -abs(difference_cutoff) & padj < FDR_cutoff ~ "Decreased",
+      difference > abs(difference_cutoff) & padj < FDR_cutoff ~ "Increased",
       .default = "Not Sig."
     ), levels = c("Decreased", "Increased", "Not Sig."))) %>%
     ggplot(aes(x = difference*scale_factor, y = -log10(padj), color = conclusion)) +
@@ -134,6 +138,7 @@ EZbakRVolcanoPlot <- function(obj,
 #' @param plotlog2 If TRUE, assume that log(parameter) difference is passed in and that
 #' you want to plot log2(parameter) difference.
 #' @param FDR_cutoff False discovery cutoff by which to color points.
+#' @param difference_cutoff Minimum absolute difference cutoff by which to color points.
 #' @param size Size of points, passed to `geom_point()` size parameter. If not specified,
 #' a point size is automatically chosen.
 #' @import ggplot2
@@ -147,6 +152,7 @@ EZbakRMAPlot <- function(obj,
                          features = NULL,
                          plotlog2 = TRUE,
                          FDR_cutoff = 0.05,
+                         difference_cutoff = 0,
                          size = NULL){
 
   ### Find the object you want to get
@@ -220,8 +226,8 @@ EZbakRMAPlot <- function(obj,
   # Make Volcano plot
   ggma <- comparison %>%
     dplyr::mutate(conclusion = factor(dplyr::case_when(
-      difference < 0 & padj < FDR_cutoff ~ "Decreased",
-      difference > 0 & padj < FDR_cutoff ~ "Increased",
+      difference < -abs(difference_cutoff) & padj < FDR_cutoff ~ "Decreased",
+      difference > abs(difference_cutoff) & padj < FDR_cutoff ~ "Increased",
       .default = "Not Sig."
     ), levels = c("Decreased", "Increased", "Not Sig."))) %>%
     ggplot(aes(y = difference*scale_factor, x = avg_coverage, color = conclusion)) +
