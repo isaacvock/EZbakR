@@ -25,6 +25,9 @@ ImportIsoformQuant <- function(obj, files,
                                                    "rsem", "stringtie"),
                                ...){
 
+  ### Hack to deal with devtools::check() NOTEs
+  trascript_id <- NULL
+
   quant_tool <- match.arg(quant_tool)
 
   txi <- tximport::tximport(files, type = quant_tool, txIn = TRUE, txOut = TRUE)
@@ -302,6 +305,9 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
                                             transcript_colname,
                                             gene_to_transcript){
 
+  ### Hack to deal with devtools::check() NOTEs
+  expected_count <- TPM <- n <- group <- effective_length <- transcript_id <- n <- isoform_cnt <- data <- NULL
+  fnest <- logit_fn <- se_logit_fn
 
   ### THINGS THAT NEED TO BE INFERRED
   # 1) Which fractions to grab
@@ -326,10 +332,10 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
 
   # Filter for data from sample of interest
   Fns <- obj$fractions[[fraction_name]] %>%
-    filter(sample == sample_name)
+    dplyr::filter(sample == sample_name)
 
   quant <- obj$readcounts[[quant_name]] %>%
-    filter(sample == sample_name & expected_count > 10 & TPM > 1)
+    dplyr::filter(sample == sample_name & expected_count > 10 & TPM > 1)
 
   # Need to have one row for each transcript ID from a group of
   # transcript IDs, and need to keep track of which reads came from
@@ -378,7 +384,7 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
   Fns_single <- Fns %>%
     dplyr::inner_join(single_isoforms %>% dplyr::select(-n),
                       by = gene_colnames) %>%
-    dplyr::group_by(across(all_of(c("sample", gene_colnames, "transcript_id")))) %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", gene_colnames, "transcript_id")))) %>%
     dplyr::summarise(!!fraction_of_interest := sum(n*(!!sym(fraction_of_interest)))/sum(n),
                      effective_length = mean(effective_length),
                      expected_count = mean(expected_count),
@@ -416,7 +422,7 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
   # Combine single and multi-isoform gene estimates
 
   output <- Fns_single %>%
-    ungroup() %>%
+    dplyr::ungroup() %>%
     dplyr::select(sample, !!gene_colnames, transcript_id, !!fraction_of_interest, !!logit_fraction_of_interest,
                   !!logit_fraction_se, expected_count, effective_length) %>%
     dplyr::bind_rows(Fns_multi %>% dplyr::ungroup()) %>%
@@ -425,7 +431,7 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
     dplyr::mutate(n = expected_count,
                   RPK = expected_count/(effective_length/1000),
                   !!logit_fraction_of_interest := ifelse(abs(!!sym(logit_fraction_of_interest)) >= 9,
-                                                  rnorm(1, !!sym(logit_fraction_of_interest), 0.25),
+                                                  stats::rnorm(1, !!sym(logit_fraction_of_interest), 0.25),
                                                   !!sym(logit_fraction_of_interest)),
                   !!fraction_of_interest := inv_logit(!!sym(logit_fraction_of_interest))) %>%
     dplyr::select(-expected_count, -effective_length)
