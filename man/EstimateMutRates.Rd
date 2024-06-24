@@ -7,7 +7,6 @@
 EstimateMutRates(
   obj,
   populations = "all",
-  strategy = "standard",
   pnew_prior_mean = -2.94,
   pnew_prior_sd = 0.3,
   pold_prior_mean = -6.5,
@@ -22,20 +21,6 @@ EstimateMutRates(
 that you want to infer the fractions of. For example, say your cB file contains
 columns tracking T-to-C and G-to-A}
 
-\item{strategy}{String denoting which new read mutation rate estimation strategy to use.
-Options include:
-\itemize{
-\item standard: Estimate a single new read and old read mutation rate for each
-sample. This is done via a binomial mixture model fit to all reads in a given sample.
-\item hierarchical (NOT YET IMPLEMENTED): Estimate feature-specific mutation
-rate with standard, regularizing the feature-specific
-estimate with a sample-wide prior.
-\item smalec (NOT YET IMPLEMENTED): Estimate two old read mutation rates, as was done in
-Smalec et al., 2023. Idea is that alignment artifacts can give rise to a
-high mutation rate old read population that should be accounted for
-to avoid overestimating the fraction of new reads
-}}
-
 \item{pnew_prior_mean}{logit-Normal mean for logit(pnew) prior.}
 
 \item{pnew_prior_sd}{logit-Normal sd for logit(pnew) prior.}
@@ -43,6 +28,10 @@ to avoid overestimating the fraction of new reads
 \item{pold_prior_mean}{logit-Normal mean for logit(pold) prior.}
 
 \item{pold_prior_sd}{logit-Normal sd for logit(pold) prior.}
+
+\item{pold_est}{Background mutation rate estimates if you have them. Can either be a single
+number applied to all samples or a named vector of values, where the names should be sample
+names.}
 }
 \description{
 Estimate mutation rates

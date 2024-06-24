@@ -107,6 +107,15 @@ create_fraction_design <- function(mutrate_populations){
 #'  rate, regularizing the feature-specific estimate with a sample-wide prior. Currently
 #'  only compatible with single mutation type mixture modeling.
 #'  }
+#' @param filter_cols Which feature columns should be used to filter out feature-less
+#' reads. The default value of "all" checks all feature columns for whether or not a
+#' read failed to get assigned to said feature.
+#' @param filter_condition Only two possible values for this make sense: \code{`&`} and \code{`|`}.
+#' If set to \code{`&`}, then all features in `filter_cols` must have a "null" value (i.e., a value included
+#' in `remove_features`) for the row to get filtered out. If set to \code{`|`}, then only
+#' a single feature in `filter_cols` needs to have one of these "null" values to get filtered out.
+#' @param remove_features All of the feature names that could indicate failed assignment of a read
+#' to a given feature. the fastq2EZbakR pipeline uses a value of '__no_feature'.
 #' @param split_multi_features If a set of reads maps ambiguously to multiple features,
 #' should data for such reads be copied for each feature in the ambiguous set? If this is
 #' `TRUE`, then `multi_feature_cols` also must be set. Examples where this should be set
@@ -127,6 +136,14 @@ create_fraction_design <- function(mutrate_populations){
 #' are used to infer the distribution of feature-specific labeled read mutation rates.
 #' @param init_pnew_prior_sd If `strategy` == `hierarchical`, this is the initial logit(pnew)
 #' prior standard deviation to regularize feature-specific labeled read mutation rate estimates.
+#' @param pnew_prior_sd_min The minimum logit(pnew) prior standard deviation when `strategy`
+#' is set to "hierarchcial". EZbakR will try to estimate this empirically as the standard deviation
+#' of initial feature-specific logit(pnew) estimates using high coverage features, minus the
+#' average uncertainty in the logit(pnew) estimates. As this difference can sometimes be negative,
+#' a value of `pnew_prior_sd_min` will be imputed in that case.
+#' @param pold_est Background mutation rate estimates if you have them. Can either be a single
+#' number applied to all samples or a named vector of values, where the names should be sample
+#' names.
 #' @param character_limit Maximum number of characters for naming out fractions output. EZbakR
 #' will try to name this as a "_" separated character vector of all of the features analyzed.
 #' If this name is greater than `character_limit`, then it will default to "fraction#", where
@@ -175,28 +192,17 @@ EstimateFractions <- function(obj, features = "all",
 #' @param populations Character vector of the set of mutational populations
 #' that you want to infer the fractions of. For example, say your cB file contains
 #' columns tracking T-to-C and G-to-A
-#' @param strategy String denoting which new read mutation rate estimation strategy to use.
-#' Options include:
-#' \itemize{
-#'  \item standard: Estimate a single new read and old read mutation rate for each
-#'  sample. This is done via a binomial mixture model fit to all reads in a given sample.
-#'  \item hierarchical (NOT YET IMPLEMENTED): Estimate feature-specific mutation
-#'  rate with standard, regularizing the feature-specific
-#'  estimate with a sample-wide prior.
-#'  \item smalec (NOT YET IMPLEMENTED): Estimate two old read mutation rates, as was done in
-#'  Smalec et al., 2023. Idea is that alignment artifacts can give rise to a
-#'  high mutation rate old read population that should be accounted for
-#'  to avoid overestimating the fraction of new reads
-#' }
 #' @param pnew_prior_mean logit-Normal mean for logit(pnew) prior.
 #' @param pnew_prior_sd logit-Normal sd for logit(pnew) prior.
 #' @param pold_prior_mean logit-Normal mean for logit(pold) prior.
 #' @param pold_prior_sd logit-Normal sd for logit(pold) prior.
+#' @param pold_est Background mutation rate estimates if you have them. Can either be a single
+#' number applied to all samples or a named vector of values, where the names should be sample
+#' names.
 #' @import data.table
 #' @export
 EstimateMutRates <- function(obj,
                                         populations = "all",
-                                        strategy = "standard",
                                         pnew_prior_mean = -2.94,
                                         pnew_prior_sd = 0.3,
                                         pold_prior_mean = -6.5,
@@ -261,7 +267,6 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   message("Estimating mutation rates")
   obj <- EstimateMutRates(obj,
                            populations = mutrate_populations,
-                           strategy = strategy,
                           pnew_prior_mean = pnew_prior_mean,
                           pnew_prior_sd = pnew_prior_sd,
                           pold_prior_mean = pold_prior_mean,
@@ -689,28 +694,17 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 #' @param populations Character vector of the set of mutational populations
 #' that you want to infer the fractions of. For example, say your cB file contains
 #' columns tracking T-to-C and G-to-A
-#' @param strategy String denoting which new read mutation rate estimation strategy to use.
-#' Options include:
-#' \itemize{
-#'  \item standard: Estimate a single new read and old read mutation rate for each
-#'  sample. This is done via a binomial mixture model fit to all reads in a given sample.
-#'  \item hierarchical (NOT YET IMPLEMENTED): Estimate feature-specific mutation
-#'  rate with standard, regularizing the feature-specific
-#'  estimate with a sample-wide prior.
-#'  \item smalec (NOT YET IMPLEMENTED): Estimate two old read mutation rates, as was done in
-#'  Smalec et al., 2023. Idea is that alignment artifacts can give rise to a
-#'  high mutation rate old read population that should be accounted for
-#'  to avoid overestimating the fraction of new reads
-#' }
 #' @param pnew_prior_mean logit-Normal mean for logit(pnew) prior.
 #' @param pnew_prior_sd logit-Normal sd for logit(pnew) prior.
 #' @param pold_prior_mean logit-Normal mean for logit(pold) prior.
 #' @param pold_prior_sd logit-Normal sd for logit(pold) prior.
+#' @param pold_est Background mutation rate estimates if you have them. Can either be a single
+#' number applied to all samples or a named vector of values, where the names should be sample
+#' names.
 #' @import data.table
 #' @export
 EstimateMutRates.EZbakRData <- function(obj,
                              populations = "all",
-                             strategy = "standard",
                              pnew_prior_mean = -2.94,
                              pnew_prior_sd = 0.3,
                              pold_prior_mean = -6.5,
@@ -1434,6 +1428,9 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 #' @param pnew_prior_sd logit-Normal sd for logit(pnew) prior.
 #' @param pold_prior_mean logit-Normal mean for logit(pold) prior.
 #' @param pold_prior_sd logit-Normal sd for logit(pold) prior.
+#' @param pold_est Background mutation rate estimates if you have them. Can either be a single
+#' number applied to all samples or a named vector of values, where the names should be sample
+#' names.
 #' @import data.table
 #' @import arrow
 #' @export

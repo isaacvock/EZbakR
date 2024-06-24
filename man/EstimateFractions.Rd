@@ -106,6 +106,18 @@ rate, regularizing the feature-specific estimate with a sample-wide prior. Curre
 only compatible with single mutation type mixture modeling.
 }}
 
+\item{filter_cols}{Which feature columns should be used to filter out feature-less
+reads. The default value of "all" checks all feature columns for whether or not a
+read failed to get assigned to said feature.}
+
+\item{filter_condition}{Only two possible values for this make sense: \code{`&`} and \code{`|`}.
+If set to \code{`&`}, then all features in \code{filter_cols} must have a "null" value (i.e., a value included
+in \code{remove_features}) for the row to get filtered out. If set to \code{`|`}, then only
+a single feature in \code{filter_cols} needs to have one of these "null" values to get filtered out.}
+
+\item{remove_features}{All of the feature names that could indicate failed assignment of a read
+to a given feature. the fastq2EZbakR pipeline uses a value of '__no_feature'.}
+
 \item{split_multi_features}{If a set of reads maps ambiguously to multiple features,
 should data for such reads be copied for each feature in the ambiguous set? If this is
 \code{TRUE}, then \code{multi_feature_cols} also must be set. Examples where this should be set
@@ -134,6 +146,16 @@ are used to infer the distribution of feature-specific labeled read mutation rat
 
 \item{init_pnew_prior_sd}{If \code{strategy} == \code{hierarchical}, this is the initial logit(pnew)
 prior standard deviation to regularize feature-specific labeled read mutation rate estimates.}
+
+\item{pnew_prior_sd_min}{The minimum logit(pnew) prior standard deviation when \code{strategy}
+is set to "hierarchcial". EZbakR will try to estimate this empirically as the standard deviation
+of initial feature-specific logit(pnew) estimates using high coverage features, minus the
+average uncertainty in the logit(pnew) estimates. As this difference can sometimes be negative,
+a value of \code{pnew_prior_sd_min} will be imputed in that case.}
+
+\item{pold_est}{Background mutation rate estimates if you have them. Can either be a single
+number applied to all samples or a named vector of values, where the names should be sample
+names.}
 
 \item{character_limit}{Maximum number of characters for naming out fractions output. EZbakR
 will try to name this as a "_" separated character vector of all of the features analyzed.

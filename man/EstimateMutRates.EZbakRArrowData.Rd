@@ -43,6 +43,10 @@ to avoid overestimating the fraction of new reads
 \item{pold_prior_mean}{logit-Normal mean for logit(pold) prior.}
 
 \item{pold_prior_sd}{logit-Normal sd for logit(pold) prior.}
+
+\item{pold_est}{Background mutation rate estimates if you have them. Can either be a single
+number applied to all samples or a named vector of values, where the names should be sample
+names.}
 }
 \description{
 Estimate mutation rates
