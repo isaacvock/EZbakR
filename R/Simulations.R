@@ -74,6 +74,9 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
                            pnew_kdeg_corr = FALSE,
                            logit_pnew_mean = -2.5, logit_pnew_sd = 0.1){
 
+  ### Hack to deal with devtools::check() NOTEs
+  feature <- TC <- nT <- NULL
+
   `.` <- list
 
 
@@ -375,6 +378,9 @@ SimulateMultiCondition <- function(nfeatures, metadf,
                                    pdiff_kd = 0.1, pdiff_ks = 0, pdiff_both = 0,
                                    pdo = 0){
 
+  ### Hack to deal with devtools::check() NOTEs
+  reference <- param <- NULL
+
 
   `.` <- list
 
@@ -596,7 +602,7 @@ SimulateMultiCondition <- function(nfeatures, metadf,
 
       sums[i] <- sum(abundances_i)
       means[i] <- mean(log10(abundances_i))
-      sds[i] <- sd(log10(abundances_i))
+      sds[i] <- stats::sd(log10(abundances_i))
 
     }
 

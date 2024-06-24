@@ -120,6 +120,9 @@ SimpleMultiPopSim <- function(nreads = 1000, populations = c("TC"),
                               fractions = NULL,
                               Nuc_cont = 0.25, rlen = 100, ngenes = 1){
 
+  ### Hack to deal with devtools::check() NOTEs
+  newness <- NULL
+
 
   ### label vectors with population identities
   names(high_mutrates) <- populations
@@ -128,7 +131,7 @@ SimpleMultiPopSim <- function(nreads = 1000, populations = c("TC"),
 
 
   ### Number of reads for each gene
-  nreads_per_gene <- as.vector(rmultinom(1,
+  nreads_per_gene <- as.vector(stats::rmultinom(1,
                                size = nreads,
                                prob = rep(1, times = ngenes)))
 
@@ -189,21 +192,21 @@ SimpleMultiPopSim <- function(nreads = 1000, populations = c("TC"),
       index_low <- (p-1)*ngenes + 1
       index_high <- p*ngenes
 
-      newness <- rbinom(nreads,
+      newness <- stats::rbinom(nreads,
                         size = 1,
                         rep(fractions[index_low:index_high],
                             times = nreads_per_gene))
 
     }else{
 
-      identity <- rmultinom(1, size = nreads,
+      identity <- stats::rmultinom(1, size = nreads,
                             probs = fractions)
 
       newnewss
 
     }
 
-    datalist[[populations[p]]] <- rbinom(nreads,
+    datalist[[populations[p]]] <- stats::rbinom(nreads,
                             size = round(rlen*Nuc_cont),
                             prob = newness*(high_mutrates[p]) +
                               (1 - newness)*(low_mutrates[p]))
