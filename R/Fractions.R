@@ -230,25 +230,26 @@ EstimateMutRates <- function(obj,
 #' @importFrom magrittr %>%
 #' @export
 EstimateFractions.EZbakRData <- function(obj, features = "all",
-                              mutrate_populations = "all",
-                              fraction_design = NULL,
-                              Poisson = TRUE,
-                              strategy = c("standard", "hierarchical"),
-                              filter_cols = "all",
-                              filter_condition = `&`,
-                              remove_features = c("NA", "__no_feature"),
-                              split_multi_features = FALSE,
-                              multi_feature_cols = NULL,
-                              multi_feature_sep = "+",
-                              pnew_prior_mean = -2.94,
-                              pnew_prior_sd = 0.3,
-                              pold_prior_mean = -6.5,
-                              pold_prior_sd = 0.5,
-                              hier_readcutoff = 300,
-                              init_pnew_prior_sd = 0.8,
-                              pold_est = NULL,
-                              character_limit = 20,
-                              overwrite = TRUE){
+                                         mutrate_populations = "all",
+                                         fraction_design = NULL,
+                                         Poisson = TRUE,
+                                         strategy = c("standard", "hierarchical"),
+                                         filter_cols = "all",
+                                         filter_condition = `&`,
+                                         remove_features = c("NA", "__no_feature"),
+                                         split_multi_features = FALSE,
+                                         multi_feature_cols = NULL,
+                                         multi_feature_sep = "+",
+                                         pnew_prior_mean = -2.94,
+                                         pnew_prior_sd = 0.3,
+                                         pold_prior_mean = -6.5,
+                                         pold_prior_sd = 0.5,
+                                         hier_readcutoff = 300,
+                                         init_pnew_prior_sd = 0.8,
+                                         pnew_prior_sd_min = 0.01,
+                                         pold_est = NULL,
+                                         character_limit = 20,
+                                         overwrite = TRUE){
 
   `.` <- list
 
@@ -704,12 +705,12 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 #' @import data.table
 #' @export
 EstimateMutRates.EZbakRData <- function(obj,
-                             populations = "all",
-                             pnew_prior_mean = -2.94,
-                             pnew_prior_sd = 0.3,
-                             pold_prior_mean = -6.5,
-                             pold_prior_sd = 0.5,
-                             pold_est = NULL
+                                        populations = "all",
+                                        pnew_prior_mean = -2.94,
+                                        pnew_prior_sd = 0.3,
+                                        pold_prior_mean = -6.5,
+                                        pold_prior_sd = 0.5,
+                                        pold_est = NULL
                              ){
 
   `.` <- list
@@ -1435,13 +1436,12 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 #' @import arrow
 #' @export
 EstimateMutRates.EZbakRArrowData <- function(obj,
-                                        populations = "all",
-                                        strategy = "standard",
-                                        pnew_prior_mean = -2.94,
-                                        pnew_prior_sd = 0.3,
-                                        pold_prior_mean = -6.5,
-                                        pold_prior_sd = 0.5,
-                                        pold_est = NULL
+                                             populations = "all",
+                                             pnew_prior_mean = -2.94,
+                                             pnew_prior_sd = 0.3,
+                                             pold_prior_mean = -6.5,
+                                             pold_prior_sd = 0.5,
+                                             pold_est = NULL
 ){
 
   `.` <- list
