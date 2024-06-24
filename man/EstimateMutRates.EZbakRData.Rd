@@ -15,7 +15,7 @@
 )
 }
 \arguments{
-\item{obj}{EZbakRDataobject}
+\item{obj}{An \code{EZbakRData} object}
 
 \item{populations}{Character vector of the set of mutational populations
 that you want to infer the fractions of. For example, say your cB file contains
@@ -34,5 +34,10 @@ number applied to all samples or a named vector of values, where the names shoul
 names.}
 }
 \description{
-Estimate mutation rates
+Two component mixture models are fit to all data to estimate global high and
+low mutation rates for all samples. Estimation of these mutation rates
+are regularized through the use of informative priors whose parameters can
+be altered using the arguments defined below. This is the default method
+which expects the input \code{obj} to include an in-memory cB table. For analyses
+of larger than RAM datasets, see the \code{EZbakRArrowData} method.
 }

@@ -5,6 +5,11 @@
 #' @param fractions Data frame containing information about the fraction of reads
 #' from each mutational population of interest.
 #' @param metadf Data frame reporting aspects of each of the samples included
+#' @param name Optional; name to give to fractions table.
+#' @param character_limit Maximum number of characters for naming out fractions output. EZbakR
+#' will try to name this as a "_" separated character vector of all of the features analyzed.
+#' If this name is greater than `character_limit`, then it will default to "fraction#", where
+#' "#" represents a simple numerical ID for the table.
 #' in `fractions`
 new_EZbakRFractions <- function(fractions, metadf,
                                 name = NULL, character_limit = 20){
@@ -414,6 +419,11 @@ validate_EZbakRFractions <- function(obj){
 #'  }
 #'
 #' }
+#' @param name Optional; name to give to fractions table.
+#' @param character_limit Maximum number of characters for naming out fractions output. EZbakR
+#' will try to name this as a "_" separated character vector of all of the features analyzed.
+#' If this name is greater than `character_limit`, then it will default to "fraction#", where
+#' "#" represents a simple numerical ID for the table.
 #' @return An EZbakRFractions object. This is simply a list of the provide `fractions` and
 #' `metadf` with class `EZbakRFractions`
 #' @export

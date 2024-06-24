@@ -95,6 +95,8 @@ NR-seq to infer additional kinetic parameters.
 \item{features}{Features tracked in \code{kinetics} data frame. Needs to be specified
 explicitly as it cannot be automatically inferred.}
 
+\item{name}{Optional; name to give to fractions table.}
+
 \item{character_limit}{If name is chosen automatically, limit on the number of
 characters in said name. If default name yields a string longer than this,
 then kinetics table will be named \code{kinetics1}}

@@ -7,6 +7,11 @@
 #' @param features Features tracked in `kinetics` data frame. Needs to be specified
 #' explicitly as it cannot be automatically inferred.
 #' @param metadf Data frame describing each of the samples included
+#' @param name Optional; name to give to fractions table.
+#' @param character_limit Maximum number of characters for naming out fractions output. EZbakR
+#' will try to name this as a "_" separated character vector of all of the features analyzed.
+#' If this name is greater than `character_limit`, then it will default to "fraction#", where
+#' "#" represents a simple numerical ID for the table.
 #' in `kinetics`
 new_EZbakRKinetics <- function(kinetics, features, metadf,
                                name = NULL,
@@ -347,6 +352,7 @@ validate_EZbakRKinetics <- function(obj, features){
 #' }
 #' @param features Features tracked in `kinetics` data frame. Needs to be specified
 #' explicitly as it cannot be automatically inferred.
+#' @param name Optional; name to give to fractions table.
 #' @param character_limit If name is chosen automatically, limit on the number of
 #' characters in said name. If default name yields a string longer than this,
 #' then kinetics table will be named `kinetics1`

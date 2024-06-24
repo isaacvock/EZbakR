@@ -7,7 +7,6 @@
 \method{EstimateMutRates}{EZbakRArrowData}(
   obj,
   populations = "all",
-  strategy = "standard",
   pnew_prior_mean = -2.94,
   pnew_prior_sd = 0.3,
   pold_prior_mean = -6.5,
@@ -16,25 +15,11 @@
 )
 }
 \arguments{
-\item{obj}{EZbakRDataobject}
+\item{obj}{An \code{EZbakRData} object}
 
 \item{populations}{Character vector of the set of mutational populations
 that you want to infer the fractions of. For example, say your cB file contains
 columns tracking T-to-C and G-to-A}
-
-\item{strategy}{String denoting which new read mutation rate estimation strategy to use.
-Options include:
-\itemize{
-\item standard: Estimate a single new read and old read mutation rate for each
-sample. This is done via a binomial mixture model fit to all reads in a given sample.
-\item hierarchical (NOT YET IMPLEMENTED): Estimate feature-specific mutation
-rate with standard, regularizing the feature-specific
-estimate with a sample-wide prior.
-\item smalec (NOT YET IMPLEMENTED): Estimate two old read mutation rates, as was done in
-Smalec et al., 2023. Idea is that alignment artifacts can give rise to a
-high mutation rate old read population that should be accounted for
-to avoid overestimating the fraction of new reads
-}}
 
 \item{pnew_prior_mean}{logit-Normal mean for logit(pnew) prior.}
 
@@ -49,5 +34,15 @@ number applied to all samples or a named vector of values, where the names shoul
 names.}
 }
 \description{
-Estimate mutation rates
+Two component mixture models are fit to all data to estimate global high and
+low mutation rates for all samples. Estimation of these mutation rates
+are regularized through the use of informative priors whose parameters can
+be altered using the arguments defined
+}
+\details{
+This method expects the input object to contain an on-disk Arrow Dataset in place
+of an in-memory cB file. Furtheromore, this dataset is expected to be partitioned by
+the individual samples. This allows EZbakR to load only a single sample worth of data
+in to memory at a time, which can significantly reduce RAM usage. The input object
+should be created with \code{EZbakRArrowData()}.
 }

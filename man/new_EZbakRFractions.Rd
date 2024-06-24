@@ -10,7 +10,14 @@ new_EZbakRFractions(fractions, metadf, name = NULL, character_limit = 20)
 \item{fractions}{Data frame containing information about the fraction of reads
 from each mutational population of interest.}
 
-\item{metadf}{Data frame reporting aspects of each of the samples included
+\item{metadf}{Data frame reporting aspects of each of the samples included}
+
+\item{name}{Optional; name to give to fractions table.}
+
+\item{character_limit}{Maximum number of characters for naming out fractions output. EZbakR
+will try to name this as a "_" separated character vector of all of the features analyzed.
+If this name is greater than \code{character_limit}, then it will default to "fraction#", where
+"#" represents a simple numerical ID for the table.
 in \code{fractions}}
 }
 \description{
