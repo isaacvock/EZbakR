@@ -9,17 +9,10 @@
 #' @param features Character vector of the set of features you want to stratify
 #' reads by and estimate proportions of each RNA population. The default of `NULL`
 #' will expect there to be only one fractions table in the EZbakRFractions object.
-#' @param quant_name Name of quantification tool appended to table name of interest.
-#' This is only relevant if you are providing isoform-specific estimates, in which
-#' case the isoform quantification tool's name may need to be provided in order
-#' for EZbakR to uniquely identify the table of interest. Even in that case though,
-#' this should only have to be non-null in the case where you have performed isoform-specific
-#' fraction estimation with more than one quantification tool's output.
 #' @export
 CorrectDropout <- function(obj,
                            grouping_factors = NULL,
-                           features = NULL,
-                           quant_name = NULL){
+                           features = NULL){
 
   ##### GENERAL STEPS:
   # 1) Get -s4U RPMs
