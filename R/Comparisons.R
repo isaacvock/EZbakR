@@ -164,6 +164,7 @@ general_avg_and_reg <- function(obj, features, parameter,
                                 overwrite = TRUE){
 
 
+
   ### Get name of standard error column
 
   parameter_se <- paste0("se_", parameter)
@@ -574,6 +575,12 @@ general_avg_and_reg <- function(obj, features, parameter,
 CompareParameters <- function(obj, condition, reference, experimental,
                               features = NULL, overwrite = TRUE, parameter = "log_kdeg"){
 
+
+  ### Hack to deal with annoying devtools::check() NOTE
+
+  difference <- uncertainty <- pval <- padj <- avg_coverage <- NULL
+
+
   ### Extract kinetic parameters of interest
 
   # metadf for covariates
@@ -608,7 +615,7 @@ CompareParameters <- function(obj, condition, reference, experimental,
     dplyr::mutate(difference = !!dplyr::sym(exp_mean) - !!dplyr::sym(ref_mean),
            uncertainty = sqrt( (!!dplyr::sym(ref_sd))^2 + (!!dplyr::sym(exp_sd))^2 ),
            stat = difference/uncertainty,
-           pval = 2*pnorm(-abs(stat)),
+           pval = 2*stats::pnorm(-abs(stat)),
            avg_coverage = ((!!dplyr::sym(ref_cov)) + (!!dplyr::sym(exp_cov))) / 2) %>%
     dplyr::mutate(padj = stats::p.adjust(pval, method = "BH")) %>%
     dplyr::select(!!features_to_analyze, difference, uncertainty, stat, pval, padj, avg_coverage)
@@ -637,7 +644,7 @@ CompareParameters <- function(obj, condition, reference, experimental,
                                                             parameter = parameter)
 
 
-  if(!is(obj, "EZbakRCompare")){
+  if(!methods::is(obj, "EZbakRCompare")){
 
     class(obj) <- c( "EZbakRCompare", class(obj))
 
