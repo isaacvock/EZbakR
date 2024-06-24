@@ -134,6 +134,10 @@ Standard_kinetic_estimation <- function(obj,
                                         grouping_factors = NULL,
                                         overwrite = TRUE){
 
+  ### Hack to deal with devtools::check() NOTEs
+  tl <- kdeg <- log_kdeg <- se_log_kdeg <- ..cols_to_keep <- ..kinetics_cols_to_keep <- NULL
+  ksyn <- normalized_reads <- log_ksyn <- se_log_ksyn <- scale_factor <- n <- nolabel_rpm <- NULL
+  old_rpm <- new_rpm <- geom_mean <- NULL
 
   `.` <- list
 
@@ -296,7 +300,7 @@ Standard_kinetic_estimation <- function(obj,
                         by = c(grouping_factors, features_to_analyze)) %>%
       dplyr::mutate(old_rpm = (1 - !!dplyr::sym(fraction_of_interest)) * rpm,
                     new_rpm = (!!dplyr::sym(fraction_of_interest)) * rpm,
-                    kdeg = case_when(
+                    kdeg = dplyr::case_when(
                       old_rpm >= nolabel_rpm ~ -log(1 - !!dplyr::sym(fraction_of_interest))/tl,
                       .default = -log(old_rpm/nolabel_rpm)/tl
                     ),
