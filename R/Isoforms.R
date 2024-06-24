@@ -104,6 +104,9 @@ ImportIsoformQuant <- function(obj, files,
 #' that all combinations of the `mutrate_populations` you have requested to analyze are
 #' present in your data. If this is not the case for your data, then you will have
 #' to create one manually. See docs for `EstimateFractions` (run ?EstimateFractions()) for more details.
+#' @param fraction_name Name of fraction estimate table to use. Should be stored in the
+#' `obj$fractions` list under this name. Can also rely on specifying `features` and/or `populations`
+#' and having `EZget()` find it.
 #' @param quant_name Name of transcript isoform quantification table to use. Should be stored
 #' in the obj$readcounts list under this name. Use `ImportIsoformQuant()` to create
 #' this table. If `quant_name` is `NULL`, it will search for tables containing the string
@@ -120,14 +123,19 @@ ImportIsoformQuant <- function(obj, files,
 #' and fraction_design), then it will get overwritten with the new output. Else,
 #' it will be saved as a separate output with the same name + "_#" where "#" is a
 #' numerical ID to distinguish the similar outputs.
+#' @param TPM_min Minimum TPM for a transcript to be kept in analysis.
+#' @param count_min Minimum expected_count for a transcript to be kept in analysis.
 #' @export
 EstimateIsoformFractions <- function(obj,
                                      features = NULL,
                                      populations = NULL,
                                      fraction_design = NULL,
+                                     fraction_name = NULL,
                                      quant_name = NULL,
                                      gene_to_transcript = NULL,
-                                     overwrite = TRUE){
+                                     overwrite = TRUE,
+                                     TPM_min = 1,
+                                     count_min = 10){
 
 
   if(is.null(quant_name)){
@@ -198,7 +206,9 @@ EstimateIsoformFractions <- function(obj,
                             fraction_name = fraction_name,
                             gene_colnames = gene_colnames,
                             transcript_colname = isoform_feature,
-                            gene_to_transcript = gene_to_transcript)
+                            gene_to_transcript = gene_to_transcript,
+                            TPM_min = TPM_min,
+                            count_min = count_min)
 
   isoform_fit <- dplyr::bind_rows(isoform_fit)
 
@@ -305,7 +315,9 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
                                             fraction_name,
                                             gene_colnames,
                                             transcript_colname,
-                                            gene_to_transcript){
+                                            gene_to_transcript,
+                                            count_min = 10,
+                                            TPM_min = 1){
 
   ### Hack to deal with devtools::check() NOTEs
   expected_count <- TPM <- n <- group <- effective_length <- transcript_id <- n <- isoform_cnt <- data <- NULL
@@ -337,7 +349,24 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
     dplyr::filter(sample == sample_name)
 
   quant <- obj$readcounts[[quant_name]] %>%
-    dplyr::filter(sample == sample_name & expected_count > 10 & TPM > 1)
+    dplyr::filter(sample == sample_name)
+
+  quant_cols <- colnames(quant)
+
+  if("expected_count" %in% quant_cols){
+
+    quant <- quant %>%
+      dplyr::filter(expected_count > count_min)
+
+  }
+
+  if("TPM" %in% quant_cols){
+
+    quant <- quant %>%
+      dplyr::filter(TPM > TPM_min)
+
+  }
+
 
   # Need to have one row for each transcript ID from a group of
   # transcript IDs, and need to keep track of which reads came from
@@ -347,7 +376,7 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
   if(is.null(gene_to_transcript)){
 
     Fns <- Fns %>%
-      dplyr::mutate(group = 1:n()) %>%
+      dplyr::mutate(group = 1:dplyr::n()) %>%
       tidyr::separate_rows(!!transcript_colname, sep = "\\+") %>%
       dplyr::mutate(transcript_id = !!sym(transcript_colname)) %>%
       dplyr::select(-!!transcript_colname) %>%
@@ -357,7 +386,7 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
   }else{
 
     Fns <- Fns %>%
-      dplyr::mutate(group = 1:n()) %>%
+      dplyr::mutate(group = 1:dplyr::n()) %>%
       tidyr::separate_rows(!!transcript_colname, sep = "\\+") %>%
       dplyr::mutate(transcript_id = !!sym(transcript_colname)) %>%
       dplyr::select(-!!transcript_colname) %>%

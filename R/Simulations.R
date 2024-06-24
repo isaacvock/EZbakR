@@ -1179,7 +1179,7 @@ SimulateIsoforms <- function(nfeatures,
     # Make cB
     cB <- dplyr::tibble(TC = TCs, nT = nUs, read_ID = 1:length(TCs),
                  GF = rep(gene_vect, times = reads),
-                 transcripts = rep(transcript_vect, times = reads))
+                 transcripts = rep(rep(transcript_vect, times = nt), times = reads))
 
   }else{
     cB <- dplyr::tibble()
@@ -1224,12 +1224,18 @@ SimulateIsoforms <- function(nfeatures,
     cB <- cB_u
   }else{
     # Merge
-    cB <- bind_rows(cB, cB_u)
+    cB <- dplyr::bind_rows(cB, cB_u)
   }
 
 
   ### Assemble ground truth and data
 
+  cB <- cB %>%
+    dplyr::rename(feature = GF) %>%
+    dplyr::group_by(feature, transcripts, TC, nT) %>%
+    dplyr::count() %>%
+    dplyr::mutate(sample = sample_name) %>%
+    dplyr::select(sample, feature, transcripts, TC, nT, n)
 
   truth <- dplyr::tibble(
     feature = gene_vect,
