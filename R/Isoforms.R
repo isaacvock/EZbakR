@@ -90,23 +90,33 @@ ImportIsoformQuant <- function(obj, files,
 #' to infer transcript isoform-specific fraction news (or more generally fraction
 #' of reads coming from a particular mutation population).
 #' @param obj An `EZbakRData` object
-#' @param fraction_identifier String that identifies the name of the fractions table
-#' with fraction new/high mutation type estimates for reads assigned to the set of
-#' isoforms with which they were compatible.
+#' @param features Character vector of the set of features you want to stratify
+#' reads by and estimate proportions of each RNA population. The default of "all"
+#' will use all feature columns in the `obj`'s cB.
+#' @param populations Mutational populations that were analyzed to generate the
+#' fractions table to use. For example, this would be "TC" for a standard
+#' s4U-based nucleotide recoding experiment.
+#' @param fraction_design "Design matrix" specifying which RNA populations exist
+#' in your samples. By default, this will be created automatically and will assume
+#' that all combinations of the `mutrate_populations` you have requested to analyze are
+#' present in your data. If this is not the case for your data, then you will have
+#' to create one manually. See docs for `EstimateFractions` (run ?EstimateFractions()) for more details.
 #' @param quant_name Name of transcript isoform quantification table to use. Should be stored
 #' in the obj$readcounts list under this name. Use `ImportIsoformQuant()` to create
 #' this table. If `quant_name` is `NULL`, it will search for tables containing the string
 #' "isoform_quant" in their name, as that is the naming convention used by `ImportIsoformQuant()`.
 #' If more than one such table exists, an error will be thrown and you will have to specify
 #' the exact name in `quant_name`.
-#' @param fraction_name Name of fractions table to use. Should represent the table
-#' stored in obj$fractions with fraction new/high mutation type estimates for reads
-#' assigned to the set of isoforms with which they were fully compatible.
 #' @param gene_to_transcript Table with columns `transcript_id` and all feature related
 #' columns that appear in the relevant fractions table. This is only relevant as a hack to
 #' to deal with the case where STAR includes in its transcriptome alignment transcripts
 #' on the opposite strand from where the RNA actually originated. This table will be used
 #' to filter out such transcript-feature combinations that should not exist.
+#' @param overwrite If TRUE and a fractions estimate output already exists that
+#' would possess the same metadata (features analyzed, populations analyzed,
+#' and fraction_design), then it will get overwritten with the new output. Else,
+#' it will be saved as a separate output with the same name + "_#" where "#" is a
+#' numerical ID to distinguish the similar outputs.
 #' @export
 EstimateIsoformFractions <- function(obj,
                                      features = NULL,

@@ -23,6 +23,9 @@
 #' @param features Character vector of the set of features you want to stratify
 #' reads by and estimate proportions of each RNA population. The default of "all"
 #' will use all feature columns in the `obj`'s cB.
+#' @param populations Mutational populations that were analyzed to generate the
+#' fractions table to use. For example, this would be "TC" for a standard
+#' s4U-based nucleotide recoding experiment.
 #' @param fraction_design "Design matrix" specifying which RNA populations exist
 #' in your samples. By default, this will be created automatically and will assume
 #' that all combinations of the `mutrate_populations` you have requested to analyze are

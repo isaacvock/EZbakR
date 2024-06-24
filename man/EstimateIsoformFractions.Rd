@@ -17,6 +17,20 @@ EstimateIsoformFractions(
 \arguments{
 \item{obj}{An \code{EZbakRData} object}
 
+\item{features}{Character vector of the set of features you want to stratify
+reads by and estimate proportions of each RNA population. The default of "all"
+will use all feature columns in the \code{obj}'s cB.}
+
+\item{populations}{Mutational populations that were analyzed to generate the
+fractions table to use. For example, this would be "TC" for a standard
+s4U-based nucleotide recoding experiment.}
+
+\item{fraction_design}{"Design matrix" specifying which RNA populations exist
+in your samples. By default, this will be created automatically and will assume
+that all combinations of the \code{mutrate_populations} you have requested to analyze are
+present in your data. If this is not the case for your data, then you will have
+to create one manually. See docs for \code{EstimateFractions} (run ?EstimateFractions()) for more details.}
+
 \item{quant_name}{Name of transcript isoform quantification table to use. Should be stored
 in the obj$readcounts list under this name. Use \code{ImportIsoformQuant()} to create
 this table. If \code{quant_name} is \code{NULL}, it will search for tables containing the string
@@ -30,13 +44,11 @@ to deal with the case where STAR includes in its transcriptome alignment transcr
 on the opposite strand from where the RNA actually originated. This table will be used
 to filter out such transcript-feature combinations that should not exist.}
 
-\item{fraction_identifier}{String that identifies the name of the fractions table
-with fraction new/high mutation type estimates for reads assigned to the set of
-isoforms with which they were compatible.}
-
-\item{fraction_name}{Name of fractions table to use. Should represent the table
-stored in obj$fractions with fraction new/high mutation type estimates for reads
-assigned to the set of isoforms with which they were fully compatible.}
+\item{overwrite}{If TRUE and a fractions estimate output already exists that
+would possess the same metadata (features analyzed, populations analyzed,
+and fraction_design), then it will get overwritten with the new output. Else,
+it will be saved as a separate output with the same name + "_#" where "#" is a
+numerical ID to distinguish the similar outputs.}
 }
 \description{
 Combines the output of \code{EstimateFractions} with transcript isoform
