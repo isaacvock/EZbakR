@@ -294,6 +294,7 @@ Standard_kinetic_estimation <- function(obj,
 
 
     ##### STEP 2: INTEGRATE WITH +S4U TO GET ADJUSTED FRACTION NEW
+    browser()
     kinetics <- kinetics %>%
       dplyr::inner_join(metadf %>% dplyr::filter(tl > 0) %>%
                           dplyr::select(sample, !!grouping_factors),
@@ -302,6 +303,7 @@ Standard_kinetic_estimation <- function(obj,
       dplyr::mutate(rpm = n/(sum(n)/1000000)) %>%
       dplyr::inner_join(nolabel_data,
                         by = c(grouping_factors, features_to_analyze)) %>%
+      dplyr::ungroup() %>%
       dplyr::mutate(old_rpm = (1 - !!dplyr::sym(fraction_of_interest)) * rpm,
                     new_rpm = (!!dplyr::sym(fraction_of_interest)) * rpm,
                     kdeg = dplyr::case_when(
