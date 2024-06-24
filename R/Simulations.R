@@ -1044,7 +1044,7 @@ SimulateIsoforms <- function(nfeatures,
                              feature_prefix = 'Gene',
                              pnew = 0.1,
                              pold = 0.002,
-                             funique = 0.1,
+                             funique = 0.2,
                              readlength = 200,
                              Ucont = 0.25,
                              avg_numiso = 2,
@@ -1178,7 +1178,7 @@ SimulateIsoforms <- function(nfeatures,
 
     # Make cB
     cB <- dplyr::tibble(TC = TCs, nT = nUs, read_ID = 1:length(TCs),
-                 GF = rep(gene_vect, times = reads),
+                 GF = paste0(feature_prefix, rep(gene_vect, times = reads)),
                  transcripts = rep(rep(transcript_vect, times = nt), times = reads))
 
   }else{
@@ -1215,7 +1215,7 @@ SimulateIsoforms <- function(nfeatures,
 
   # Make cB
   cB_u <- tibble(TC = TCs, nT = nUs, read_ID = (nrow(cB) + 1):(nrow(cB) + length(TCs)),
-                 GF = rep(gene_vect, times = reads_u),
+                 GF = paste0(feature_prefix, rep(gene_vect, times = reads_u)),
                  transcripts = rep(transcript_vect, times = reads_u))
 
 
@@ -1238,7 +1238,7 @@ SimulateIsoforms <- function(nfeatures,
     dplyr::select(sample, feature, transcripts, TC, nT, n)
 
   truth <- dplyr::tibble(
-    feature = gene_vect,
+    feature = paste0(feature_prefix, gene_vect),
     transcript_id = transcript_vect,
     true_kdeg = kd_t,
     true_ksyn = ks_t,
