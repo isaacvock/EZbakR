@@ -8,6 +8,7 @@ EZSimulate(
   nfeatures,
   ntreatments = 2,
   nreps = 3,
+  nctlreps = 1,
   metadf = NULL,
   mean_formula = NULL,
   param_details = NULL,
@@ -46,6 +47,9 @@ only relevant if \code{metadf} is not provided.}
 
 \item{nreps}{Number of replicates of each treatment to simulate. This parameter is
 only relevant if \code{metadf} is not provided}
+
+\item{nctlreps}{Number of -s4U replicates of each treatment to simulate. This parameter
+is only relevant if \code{metadf} is not provided.}
 
 \item{metadf}{A data frame with the following columns:
 \itemize{

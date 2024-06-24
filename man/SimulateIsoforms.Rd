@@ -13,7 +13,7 @@ SimulateIsoforms(
   feature_prefix = "Gene",
   pnew = 0.1,
   pold = 0.002,
-  funique = 0.1,
+  funique = 0.2,
   readlength = 200,
   Ucont = 0.25,
   avg_numiso = 2,

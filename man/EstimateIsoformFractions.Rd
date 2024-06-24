@@ -9,9 +9,12 @@ EstimateIsoformFractions(
   features = NULL,
   populations = NULL,
   fraction_design = NULL,
+  fraction_name = NULL,
   quant_name = NULL,
   gene_to_transcript = NULL,
-  overwrite = TRUE
+  overwrite = TRUE,
+  TPM_min = 1,
+  count_min = 10
 )
 }
 \arguments{
@@ -31,6 +34,10 @@ that all combinations of the \code{mutrate_populations} you have requested to an
 present in your data. If this is not the case for your data, then you will have
 to create one manually. See docs for \code{EstimateFractions} (run ?EstimateFractions()) for more details.}
 
+\item{fraction_name}{Name of fraction estimate table to use. Should be stored in the
+\code{obj$fractions} list under this name. Can also rely on specifying \code{features} and/or \code{populations}
+and having \code{EZget()} find it.}
+
 \item{quant_name}{Name of transcript isoform quantification table to use. Should be stored
 in the obj$readcounts list under this name. Use \code{ImportIsoformQuant()} to create
 this table. If \code{quant_name} is \code{NULL}, it will search for tables containing the string
@@ -49,6 +56,10 @@ would possess the same metadata (features analyzed, populations analyzed,
 and fraction_design), then it will get overwritten with the new output. Else,
 it will be saved as a separate output with the same name + "_#" where "#" is a
 numerical ID to distinguish the similar outputs.}
+
+\item{TPM_min}{Minimum TPM for a transcript to be kept in analysis.}
+
+\item{count_min}{Minimum expected_count for a transcript to be kept in analysis.}
 }
 \description{
 Combines the output of \code{EstimateFractions} with transcript isoform

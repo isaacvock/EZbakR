@@ -267,6 +267,8 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 #' only relevant if `metadf` is not provided.
 #' @param nreps Number of replicates of each treatment to simulate. This parameter is
 #' only relevant if `metadf` is not provided
+#' @param nctlreps Number of -s4U replicates of each treatment to simulate. This parameter
+#' is only relevant if `metadf` is not provided.
 #' @param metadf A data frame with the following columns:
 #' \itemize{
 #'  \item sample: Names given to samples to simulate.
@@ -371,7 +373,7 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
-EZSimulate <- function(nfeatures, ntreatments = 2, nreps = 3,
+EZSimulate <- function(nfeatures, ntreatments = 2, nreps = 3, nctlreps = 1,
                        metadf = NULL,
                        mean_formula = NULL,
                        param_details = NULL,
@@ -400,10 +402,22 @@ EZSimulate <- function(nfeatures, ntreatments = 2, nreps = 3,
   ### Set parameters
   if(is.null(metadf)){
 
-    mean_formula <- stats::as.formula('~treatment')
-    metadf <- dplyr::tibble(sample = paste0('sample', 1:(nreps*ntreatments)),
+    mean_formula <- stats::as.formula('~treatment-1')
+    metadf_s4U <- dplyr::tibble(sample = paste0('sample', 1:(nreps*ntreatments)),
                             treatment = rep(paste0('treatment', 1:ntreatments),
-                                            each = nreps))
+                                            each = nreps),
+                            label_time = label_time)
+
+    ctl_start <- nreps*ntreatments + 1
+    ctl_end <- nreps*ntreatments + nctlreps*ntreatments
+
+    metadf_ctl <- dplyr::tibble(sample = paste0('sample', ctl_start:ctl_end),
+                                treatment = rep(paste0('treatment', 1:ntreatments),
+                                                each = nctlreps),
+                                label_time = 0)
+
+    metadf <- dplyr::bind_rows(metadf_s4U,
+                               metadf_ctl)
 
 
     simdata <- SimulateMultiCondition(nfeatures = nfeatures, metadf = metadf,
@@ -426,6 +440,9 @@ EZSimulate <- function(nfeatures, ntreatments = 2, nreps = 3,
                                       pdiff_kd = pdiff_kd, pdiff_ks = pdiff_ks,
                                       pdiff_both = pdiff_both, pdo = pdo)
 
+
+    simdata[['metadf']] <- metadf
+    return(simdata)
 
   }else{
 
@@ -449,8 +466,11 @@ EZSimulate <- function(nfeatures, ntreatments = 2, nreps = 3,
                                       pdiff_kd = pdiff_kd, pdiff_ks = pdiff_ks,
                                       pdiff_both = pdiff_both, pdo = pdo)
 
+    return(simdata)
+
 
   }
+
 
 
 
