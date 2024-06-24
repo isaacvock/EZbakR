@@ -2,26 +2,44 @@
 #'
 #' @param obj An `EZbakRFractions` object, which is an `EZbakRData` object on
 #' which `EstimateFractions()` has been run.
-#' @param features Character vector of the set of features you want to stratify
-#' reads by and estimate proportions of each RNA population. The default of "all"
-#' will use all feature columns in the `obj`'s cB.
 #' @param strategy Kinetic parameter estimation strategy.
 #' Options include:
 #' \itemize{
 #'  \item standard: Estimate a single new read and old read mutation rate for each
 #'  sample. This is done via a binomial mixture model aggregating over
+#'  \item NSS: Use strategy similar to that presented in Narain et al., 2021 that
+#'  assumes provided -s4U data provides a reference for how much RNA was present
+#'  at the start of labeling. In this case, `grouping_factors` must also be set.
+#'  \item short-feed: Estimate kinetic parameters assuming no degradation of labeled
+#'  RNA, most appropriate if the metabolic label feed time is much shorter than
+#'  the average half-life of an RNA in your system.
+#'  \item tilac: Estimate TILAC-ratio as described in Courvan et al., 2022.
 #'  \item pulse-chase (NOT YET IMPLEMENTED): Estimate kdeg for a pulse-chase experiment. A kdeg will be estimated
 #'  for each time point at which label was present. This includes any pulse-only samples,
 #'  as well as all samples including a chase after the pulse.
 #'  \item custom (NOT YET IMPLEMENTED): Provide a custom function that takes
 #'  fraction estimates as input and produces as output kinetic parameter estimates.
 #' }
-#' @param quant_name Name of quantification tool appended to table name of interest.
-#' This is only relevant if you are providing isoform-specific estimates, in which
-#' case the isoform quantification tool's name may need to be provided in order
-#' for EZbakR to uniquely identify the table of interest. Even in that case though,
-#' this should only have to be non-null in the case where you have performed isoform-specific
-#' fraction estimation with more than one quantification tool's output.
+#' @param features Character vector of the set of features you want to stratify
+#' reads by and estimate proportions of each RNA population. The default of "all"
+#' will use all feature columns in the `obj`'s cB.
+#' @param fraction_design "Design matrix" specifying which RNA populations exist
+#' in your samples. By default, this will be created automatically and will assume
+#' that all combinations of the `mutrate_populations` you have requested to analyze are
+#' present in your data. If this is not the case for your data, then you will have
+#' to create one manually. See docs for `EstimateFractions` (run ?EstimateFractions()) for more details.
+#' @param grouping_factors Which sample-detail columns in the metadf should be used
+#' to group -s4U samples by for calculating the average -s4U RPM? The default value of
+#' `NULL` will cause all sample-detail columns to be used.
+#' @param character_limit Maximum number of characters for naming out fractions output. EZbakR
+#' will try to name this as a "_" separated character vector of all of the features analyzed.
+#' If this name is greater than `character_limit`, then it will default to "fraction#", where
+#' "#" represents a simple numerical ID for the table.
+#' @param overwrite If TRUE and a fractions estimate output already exists that
+#' would possess the same metadata (features analyzed, populations analyzed,
+#' and fraction_design), then it will get overwritten with the new output. Else,
+#' it will be saved as a separate output with the same name + "_#" where "#" is a
+#' numerical ID to distinguish the similar outputs.
 #' @return `EZbakRKinetics` object.
 #' @import data.table
 #' @export
