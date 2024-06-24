@@ -32,6 +32,10 @@ EZbakRVolcanoPlot <- function(obj,
                               size = NULL){
 
 
+  ### Hack to deal with devtools::check() NOTEs
+  comparison_name <- difference <- padj <- conclusion <- NULL
+
+
   ### Find the object you want to get
 
   # Function in Helpers.R
@@ -155,6 +159,10 @@ EZbakRMAPlot <- function(obj,
                          difference_cutoff = 0,
                          size = NULL){
 
+  ### Hack to deal with devtools::check() NOTEs
+  comparison_name <- difference <- avg_coverage <- conclusion <- NULL
+
+
   ### Find the object you want to get
 
   # Function in Helpers.R
@@ -244,7 +252,7 @@ EZbakRMAPlot <- function(obj,
 }
 
 
-EZbakRPCAPlot <- function(obj){
-
-  return(ggpca)
-}
+# EZbakRPCAPlot <- function(obj){
+#
+#   return(ggpca)
+# }
