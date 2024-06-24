@@ -441,7 +441,8 @@ EZSimulate <- function(nfeatures, ntreatments = 2, nreps = 3, nctlreps = 1,
                                       pdiff_both = pdiff_both, pdo = pdo)
 
 
-    simdata[['metadf']] <- metadf
+    simdata[['metadf']] <- metadf %>%
+      dplyr::rename(tl = label_time)
     return(simdata)
 
   }else{
@@ -1055,6 +1056,7 @@ SimulateMultiCondition <- function(nfeatures, metadf, mean_formula,
 #' ksyns are simulated
 #' @param logksyn_sd sdlog of a log-normal distribution from which
 #' ksyns are simulated
+#' @importFrom magrittr %>%
 #' @export
 SimulateIsoforms <- function(nfeatures,
                              nt = NULL,
