@@ -11,6 +11,9 @@
 #' @export
 create_fraction_design <- function(mutrate_populations){
 
+  ### Hack to deal with devtools::check() NOTEs
+  present <- NULL
+
   ### TO-DO: add custom types like TILAC and dual-label to create more realistic
   ### fraction design matrices with > 1 population.
   fraction_design <- dplyr::tibble(present = rep(TRUE,
@@ -1992,11 +1995,11 @@ tcmml <- function(param, muts, nucs, n,
 
   if(Poisson){
 
-    ll <- fn*dpois(muts, nucs*pnew) + (1 - fn)*dpois(muts, nucs*pold)
+    ll <- fn*stats::dpois(muts, nucs*pnew) + (1 - fn)*stats::dpois(muts, nucs*pold)
 
   }else{
 
-    ll <- fn*dbinom(muts, nucs, pnew) + (1 - fn)*dbinom(muts, nucs, pold)
+    ll <- fn*stats::dbinom(muts, nucs, pnew) + (1 - fn)*stats::dbinom(muts, nucs, pold)
 
   }
 
@@ -2007,20 +2010,20 @@ tcmml <- function(param, muts, nucs, n,
 
     if(pold > pnew){
 
-      prior <- dnorm(param[3], pnew_prior_mean, pnew_prior_sd,
+      prior <- stats::dnorm(param[3], pnew_prior_mean, pnew_prior_sd,
                         log = TRUE) +
-        dnorm(param[2], pold_prior_mean, pold_prior_sd,
+        stats::dnorm(param[2], pold_prior_mean, pold_prior_sd,
                         log = TRUE) +
-        dnorm(param[1], fraction_prior_mean, fraction_prior_sd,
+        stats::dnorm(param[1], fraction_prior_mean, fraction_prior_sd,
                         log = TRUE)
 
     }else{
 
-      prior <- dnorm(param[3], pold_prior_mean, pold_prior_sd,
+      prior <- stats::dnorm(param[3], pold_prior_mean, pold_prior_sd,
                         log = TRUE) +
-        dnorm(param[2], pnew_prior_mean, pnew_prior_sd,
+        stats::dnorm(param[2], pnew_prior_mean, pnew_prior_sd,
                         log = TRUE) +
-        dnorm(param[1], fraction_prior_mean, fraction_prior_sd,
+        stats::dnorm(param[1], fraction_prior_mean, fraction_prior_sd,
               log = TRUE)
 
 
@@ -2029,22 +2032,22 @@ tcmml <- function(param, muts, nucs, n,
 
   }else if(estimate_pnew){
 
-    prior <- dnorm(param[2], pnew_prior_mean, pnew_prior_sd,
+    prior <- stats::dnorm(param[2], pnew_prior_mean, pnew_prior_sd,
                         log = TRUE) +
-      dnorm(param[1], fraction_prior_mean, fraction_prior_sd,
+      stats::dnorm(param[1], fraction_prior_mean, fraction_prior_sd,
             log = TRUE)
 
 
   }else if(estimate_pold){
 
-    prior <- dnorm(param[2], pold_prior_mean, pold_prior_sd,
+    prior <- stats::dnorm(param[2], pold_prior_mean, pold_prior_sd,
                     log = TRUE) +
-      dnorm(param[1], fraction_prior_mean, fraction_prior_sd,
+      stats::dnorm(param[1], fraction_prior_mean, fraction_prior_sd,
             log = TRUE)
 
   }else{
 
-    prior <- dnorm(param[1], fraction_prior_mean, fraction_prior_sd,
+    prior <- stats::dnorm(param[1], fraction_prior_mean, fraction_prior_sd,
                    log = TRUE)
 
   }
@@ -2165,26 +2168,26 @@ two_comp_likelihood <- function(param, muts, nucs, Poisson = TRUE,
 
   if(Poisson){
 
-    likelihoods <- inv_logit(param[1])*dpois(muts,
+    likelihoods <- inv_logit(param[1])*stats::dpois(muts,
                                              lambda = pnew*nucs ) +
 
-      (1 - inv_logit(param[1]))*dpois(muts,
+      (1 - inv_logit(param[1]))*stats::dpois(muts,
                                       lambda = pold*nucs )
 
   }else{
 
-    likelihoods <- inv_logit(param[1])*dbinom(x = muts,
+    likelihoods <- inv_logit(param[1])*stats::dbinom(x = muts,
                                               size = nucs,
                                               prob = pnew) +
 
-      (1 - inv_logit(param[1]))*dbinom(x = muts,
+      (1 - inv_logit(param[1]))*stats::dbinom(x = muts,
                                        size = nucs,
                                        prob = pold)
 
 
   }
 
-  return(-sum(n*log(likelihoods)) - dnorm(param[1], log = TRUE))
+  return(-sum(n*log(likelihoods)) - stats::dnorm(param[1], log = TRUE))
 
 
 }
@@ -2252,7 +2255,7 @@ generalized_likelihood <- function(param, dataset, Poisson = TRUE,
       if(Poisson){
 
         # data.table syntax is an act of violence
-        L <- L*dpois(dataset[[mutcols[j]]],
+        L <- L*stats::dpois(dataset[[mutcols[j]]],
                       lambda = (as.numeric(mutrate_design[i, j])*pnew[j] +
                         pold[j]*(1 - as.numeric(mutrate_design[i, j])))*dataset[[basecols[j]]] )
 
@@ -2260,7 +2263,7 @@ generalized_likelihood <- function(param, dataset, Poisson = TRUE,
       }else{
 
         # data.table syntax is an act of violence
-        L <- L*dbinom(dataset[[mutcols[j]]],
+        L <- L*stats::dbinom(dataset[[mutcols[j]]],
                       dataset[[basecols[j]]],
                       prob = as.numeric(mutrate_design[i, j])*pnew[j] +
                         pold[j]*(1 - as.numeric(mutrate_design[i, j])))
@@ -2297,7 +2300,7 @@ generalized_likelihood <- function(param, dataset, Poisson = TRUE,
   # Prior regularize
   if(twocomp){
 
-    return(-sum(dataset[["n"]]*log(likelihoods)) - dnorm(param[1], log = TRUE))
+    return(-sum(dataset[["n"]]*log(likelihoods)) - stats::dnorm(param[1], log = TRUE))
 
   }else{
 

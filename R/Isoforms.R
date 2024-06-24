@@ -258,6 +258,8 @@ beta_r_likelihood <- function(data, design_matrix, v, par,
 # Infer mixture of isoform fractions using beta regression
 fit_beta_regression <- function(data){
 
+  ### Hack to deal with devtools::check() NOTEs
+  n <- fn <- group <- transcript_id <- p <- nreads <- NULL
 
 
   Fns_onegene <- data %>%
@@ -289,7 +291,7 @@ fit_beta_regression <- function(data){
 
   uncertainty <- sqrt(diag(solve(fit$hessian)))
 
-  return(tibble(transcript_id = colnames(design_matrix),
+  return(dplyr::tibble(transcript_id = colnames(design_matrix),
                 logit_fn = fit$par,
                 se_logit_fn = uncertainty))
 

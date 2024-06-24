@@ -164,6 +164,12 @@ general_avg_and_reg <- function(obj, features, parameter,
                                 overwrite = TRUE){
 
 
+  ### Hack to deal with devtools::check() NOTEs
+  n <- log_normalized_reads <- logsd <- logsd_from_uncert <- replicates <- NULL
+  coverage <- se_mean <- se_logsd <- coverages <- parameters <- NULL
+
+  `.` <- list
+
 
   ### Get name of standard error column
 
@@ -309,7 +315,7 @@ general_avg_and_reg <- function(obj, features, parameter,
       model_fit <- kinetics %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
         dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
-                         logsd = log(sd(!!dplyr::sym(parameter))),
+                         logsd = log(stats::sd(!!dplyr::sym(parameter))),
                          logsd_from_uncert = log(mean(!!dplyr::sym(parameter_se))),
                          coverage = mean(log_normalized_reads),
                          replicates = dplyr::n()) %>%
@@ -339,7 +345,7 @@ general_avg_and_reg <- function(obj, features, parameter,
       model_fit <- kinetics %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
         dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
-                         logsd = log(sd(!!dplyr::sym(parameter))),
+                         logsd = log(stats::sd(!!dplyr::sym(parameter))),
                          coverage = mean(coverage),
                          se_logsd = mean(se_logsd)) %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(c(features_to_analyze)))) %>%
@@ -367,7 +373,7 @@ general_avg_and_reg <- function(obj, features, parameter,
       model_fit <- kinetics %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2:length(mean_vars)], features_to_analyze)))) %>%
         dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
-                         logsd = log(sd(!!dplyr::sym(parameter))),
+                         logsd = log(stats::sd(!!dplyr::sym(parameter))),
                          logsd_from_uncert = log(mean(!!dplyr::sym(parameter_se))),
                          coverage = mean(log_normalized_reads),
                          replicates = dplyr::n()) %>%
@@ -483,7 +489,7 @@ general_avg_and_reg <- function(obj, features, parameter,
       dplyr::ungroup() %>%
       dplyr::mutate(!!col_name := get_sd_posterior(sd_est = !!dplyr::sym(sd_est_name),
                                                    sd_var = (!!dplyr::sym(sd_var_name)) ^ 2,
-                                                   fit_var = var(regression_results[[c]]$lm_result$residuals) / sd_reg_factor,
+                                                   fit_var = stats::var(regression_results[[c]]$lm_result$residuals) / sd_reg_factor,
                                                    fit_mean = !!dplyr::sym(fit_mean_name))) %>%
       dplyr::mutate(!!natural_col_name := exp((!!dplyr::sym(col_name))))
 
@@ -542,7 +548,7 @@ general_avg_and_reg <- function(obj, features, parameter,
 
   }
 
-  if(!is(obj, "EZbakRFit")){
+  if(!methods::is(obj, "EZbakRFit")){
 
     class(obj) <- c( "EZbakRFit", class(obj))
 
@@ -681,10 +687,9 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
                                              error_if_singular = TRUE) {
 
 
-
   # Parse formula objects into model matrices
-  designMatrix_mean <- model.matrix(formula_mean, data)
-  designMatrix_sd <- model.matrix(formula_sd, data)
+  designMatrix_mean <- stats::model.matrix(formula_mean, data)
+  designMatrix_sd <- stats::model.matrix(formula_sd, data)
 
 
   if(error_if_singular){
@@ -702,10 +707,10 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
 
   # Initial parameter guesses; keeping it realistic to hopefully increase odds of convergence
   startParams <- c(rep(mean(data[[dependent_var]]), times = ncol(designMatrix_mean)),
-                   rep(log(sd(data[[dependent_var]]) + 0.001), times = ncol(designMatrix_sd)))
+                   rep(log(stats::sd(data[[dependent_var]]) + 0.001), times = ncol(designMatrix_sd)))
 
   # Try BFGS
-  opt <- optim(startParams, heteroskedastic_likelihood,
+  opt <- stats::optim(startParams, heteroskedastic_likelihood,
                #gr = heteroskedastic_gradient,
                y = data[[dependent_var]],
                X_mean = designMatrix_mean,
@@ -727,7 +732,7 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
     # fitting.
     # I will note that "failed convergence" almost always meant that the
     # max number of iterations was hit (code 1).
-    opt <- optim(startParams, heteroskedastic_likelihood,
+    opt <- stats::optim(startParams, heteroskedastic_likelihood,
                  #\gr = heteroskedastic_gradient,
                  y = data[[dependent_var]],
                  X_mean = designMatrix_mean,
@@ -781,7 +786,7 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
 calc_avg_coverage <- function(data, formula){
 
   # Calculate average read counts in each group
-  fit <- lm(formula = formula,
+  fit <- stats::lm(formula = formula,
             data = data)
 
 
