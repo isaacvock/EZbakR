@@ -13,6 +13,7 @@ EZbakRVolcanoPlot(
   features = NULL,
   plotlog2 = TRUE,
   FDR_cutoff = 0.05,
+  difference_cutoff = 0,
   size = NULL
 )
 }
@@ -33,9 +34,13 @@ your metadf table.}
 \item{features}{Character vector of feature names for which comparisons were made.}
 
 \item{plotlog2}{If TRUE, assume that log(parameter) difference is passed in and that
-you want to plot log2(parameter) difference.}
+you want to plot log2(parameter) difference. TO-DO: probably best to change this
+to a more general scale parameter by which the parameter is multiplied. Default
+would be log2(exp(1)) to convert log() to log2().}
 
 \item{FDR_cutoff}{False discovery cutoff by which to color points.}
+
+\item{difference_cutoff}{Minimum absolute difference cutoff by which to color points.}
 
 \item{size}{Size of points, passed to \code{geom_point()} size parameter. If not specified,
 a point size is automatically chosen.}

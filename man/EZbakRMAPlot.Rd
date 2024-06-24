@@ -13,6 +13,7 @@ EZbakRMAPlot(
   features = NULL,
   plotlog2 = TRUE,
   FDR_cutoff = 0.05,
+  difference_cutoff = 0,
   size = NULL
 )
 }
@@ -36,6 +37,8 @@ your metadf table.}
 you want to plot log2(parameter) difference.}
 
 \item{FDR_cutoff}{False discovery cutoff by which to color points.}
+
+\item{difference_cutoff}{Minimum absolute difference cutoff by which to color points.}
 
 \item{size}{Size of points, passed to \code{geom_point()} size parameter. If not specified,
 a point size is automatically chosen.}

@@ -13,11 +13,12 @@ EZget(
   isoforms = NULL,
   kstrat = NULL,
   parameter = NULL,
-  returnNameOnly = FALSE,
   counttype = NULL,
   condition = NULL,
   experimental = NULL,
   reference = NULL,
+  repeatID = NULL,
+  returnNameOnly = FALSE,
   exactMatch = FALSE,
   alwaysCheck = FALSE
 )
@@ -46,6 +47,21 @@ the strategy used to infer kinetic parameters.}
 
 \item{parameter}{Only relevant if \code{type} == "averages" or "comparisons". Which
 parameter was being averaged or compared?}
+
+\item{counttype}{String denoting what type of read count information you are looking
+for. Current options are "TMM_normalized", "transcript", and "matrix". TO-DO:
+Not sure this is being used in any way currently...}
+
+\item{condition}{Condition specified in relevant run of \code{CompareParameters()}.
+Therefore, only relevant if type == "comparisons".}
+
+\item{experimental}{Experimental condition specified in relevant run of \code{CompareParameters()}.
+Therefore, only relevant if type == "comparisons".}
+
+\item{reference}{Reference condition specified in relevant run of \code{CompareParameters()}.
+Therefore, only relevant if type == "comparisons".}
+
+\item{repeatID}{Numerical ID for duplicate objects with same metadata.}
 
 \item{returnNameOnly}{If TRUE, then only the names of tables that passed your
 search criteria will be returned. Else, the single table passing your search
