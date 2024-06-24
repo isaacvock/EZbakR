@@ -392,6 +392,11 @@ EZSimulate <- function(nfeatures, ntreatments = 2, nreps = 3,
                        pdo = 0){
 
 
+  ### NOTE: This is obviously currently a very trivial wrapper that could
+  ### just be the default behavior of SimulateMultiCondition(). That being said,
+  ### I suspect that there will be other aspects of simulation parameter setting
+  ### that I would like to automate, so for now I will keep this as is
+
   ### Set parameters
   if(is.null(metadf)){
 
@@ -458,7 +463,7 @@ EZSimulate <- function(nfeatures, ntreatments = 2, nreps = 3,
 #' Simulate NR-seq data for multiple replicates of multiple biological conditions
 #'
 #' `SimulateMultiCondition` is a highly flexibly simulator that combines linear modeling
-#' of log(kdeg)'s with `SimulateOneRep` to simulate an NR-seq dataset. The linear model
+#' of log(kdeg)'s and log(ksyn)'s with `SimulateOneRep` to simulate an NR-seq dataset. The linear model
 #' allows you to simulate multiple distinct treatments, batch effects, interaction effects,
 #' etc. The current downside for its flexibility is its relative complexity to implement.
 #' Easier to use simulators are on the way to EZbakR.
@@ -988,7 +993,257 @@ SimulateMultiCondition <- function(nfeatures, metadf, mean_formula,
 
 
 
-SimulateIsoforms <- function(){
+#' Simulation of transcript isoform kinetic parameters.
+#'
+#' `SimulateIsoforms()` performs a simple simulation of isoform-specific kinetic
+#' parameters to showcase and test `EstimateIsoformFractions()`. It assumes that
+#' there are a set of reads (fraction of total set by `funique` parameter) which
+#' map uniquely to a given isoform, while the rest are ambiguous to all isoforms
+#' from that gene. Mutational content of these reads are simulated as in
+#' `SimulateOneRep()`.
+#'
+#' @param nfeatures Number of "features" to simulate data for. Each feature will
+#' have a simulated number of transcript isoforms
+#' @param nt (Optional), can provide a vector of the number of isoforms you would
+#' like to simulate for each of the `nfeatures` features. Vector can either be length
+#' 1, in which case that many isoforms will be simulated for all features, or length
+#' equal to `nfeatures`.
+#' @param seqdepth Total number of sequencing reads to simulate
+#' @param label_time Length of s^{4}U feed to simulate.
+#' @param feature_prefix Name given to the i-th feature is `paste0(feature_prefix, i)`. Shows up in the
+#' `feature` column of the output simulated data table.
+#' @param sample_name Character vector to assign to `sample` column of output simulated
+#' data table (the cB table).
+#' @param pnew Probability that a T is mutated to a C if a read is new.
+#' @param pold Probability that a T is mutated to a C if a read is old.
+#' @param readlength Length of simulated reads. In this simple simulation, all reads
+#' are simulated as being exactly this length.
+#' @param Ucont Probability that a nucleotide in a simulated read is a U.
+#' @param avg_numiso Average number of isoforms for each feature. Feature-specific
+#' isoform counts are drawn from a Poisson distribution with this average. NOTE:
+#' to insure that all features have multiple isoforms, the simulated number of
+#' isoforms drawn from a Poisson distribution is incremented by 2. Thus, the
+#' actual average number of isoforms from each feature is `avg_numiso` + 2.
+#' @param psynthdiff Percentage of genes for which all isoform abundance differences
+#' are synthesis driven. If not synthesis driven, then isoform abundance differences
+#' will be driven by differences in isoform kdegs.
+#' @param logkdeg_mean meanlog of a log-normal distribution from which
+#' kdegs are simulated
+#' @param logkdeg_sd sdlog of a log-normal distribution from which
+#' kdegs are simulated
+#' @param logksyn_mean meanlog of a log-normal distribution from which
+#' ksyns are simulated
+#' @param logksyn_sd sdlog of a log-normal distribution from which
+#' ksyns are simulated
+#' @export
+SimulateIsoforms <- function(nfeatures,
+                             nt = NULL,
+                             seqdepth = nfeatures*2500,
+                             label_time = 4,
+                             sample_name = 'sampleA',
+                             feature_prefix = 'Gene',
+                             pnew = 0.1,
+                             pold = 0.002,
+                             funique = 0.1,
+                             readlength = 200,
+                             Ucont = 0.25,
+                             avg_numiso = 2,
+                             psynthdiff = 0.5,
+                             logkdeg_mean = -1.9, logkdeg_sd = 0.7,
+                             logksyn_mean = 2.3, logksyn_sd = 0.7
+                             ){
+
+
+  if(is.null(nt)){
+
+    # Number of isoforms per genes (make them all multi-isoformgenes)
+    nt <- stats::rpois(nfeatures, avg_numiso) + 2
+
+  }else if(length(nt) == 1){
+
+    nt <- rep(nt, times = nfeatures)
+
+  }
+
+  # Is synthesis different
+  syn_driven <- as.logical(stats::rbinom(nfeatures, size = 1, prob = psynthdiff))
+
+  # Proportions for each transcript
+  pt <- rep(0, times = sum(nt))
+
+  tracker <- 1
+  for(i in 1:nfeatures){
+
+    # Simulate one dominant isoform and then a number of less prevalent isoforms
+    # Idea is to generate a number on an unnormalized scale (9 = dominant,
+    # other isoforms randomly assigned a real number between 1 and 4, uniform
+    # distribution over that range), and then normalize it for each gene (i.e,
+    # divide unnormalized number by sum of unnormalized numbers for that gene)
+    pt[tracker:(tracker+(nt[i] - 1))] <- c(9, stats::runif(n = (nt[i] - 1), min = 1, max = 4))
+    pt[tracker:(tracker+(nt[i] - 1))] <- pt[tracker:(tracker+(nt[i] - 1))]/sum(pt[tracker:(tracker+(nt[i] - 1))])
+
+    tracker <- tracker + nt[i]
+  }
+
+
+  # ksyn for each gene
+  ks_g <- stats::rlnorm(nfeatures, meanlog = logksyn_mean,
+                 sdlog = logksyn_sd)
+
+  # kdeg for each gene
+  kd_g <- stats::rlnorm(nfeatures, meanlog = logkdeg_mean,
+                 sdlog = logkdeg_sd)
+
+  # Simulate ks and kdeg for each transcript -------------------------------------
+
+  gene_vect <- rep(1:nfeatures, times = nt)
+
+  ks_t <- rep(0, times = sum(nt))
+  kd_t <- rep(0, times = sum(nt))
+
+  for(i in 1:sum(nt)){
+
+    dom_p <- max(pt[gene_vect == gene_vect[i]])
+
+    # Dominant isoform is given the simulated gene-wide kinetic parameters
+    # Each non-dominant isoform is either termed a "synthesis-driven" alternative
+    # isoform or a "degradation-driven". A synthesis-driven alt. isoform is one
+    # whose lower than dominant abundance is driven by a lower rate of synthesis
+    # for that gene. A degradation-driven alt. isoform is one whose lower than
+    # dominant abundance is driven by lower stability. Synthesis and degradation
+    # rate constants are chosen so that steady-state abundances are consistent
+    # with the isoform percentages simulated earlier
+    if(pt[i] == dom_p){
+      ks_t[i] <- ks_g[gene_vect[i]]
+      kd_t[i] <- kd_g[gene_vect[i]]
+    }else{
+      if(syn_driven[gene_vect[i]]){
+        kd_t[i] <- kd_g[gene_vect[i]]
+
+        ks_t[i] <- ((pt[i])/dom_p)*ks_g[gene_vect[i]]
+      }else{
+
+        ks_t[i] <- ks_g[gene_vect[i]]
+
+        kd_t[i] <- (dom_p/pt[i])*kd_g[gene_vect[i]]
+
+      }
+
+    }
+
+  }
+
+
+  # Simulate reads from each transcript ------------------------------------------
+
+  ### Non-unique reads
+  # I randomly choose some fraction of reads to be uniquely mapping to one isoform
+  # and some fraction to map to multiple isoforms.
+  # For the non-unique isoforms, I assume that the probability a read mapped to
+  # a given transcript is simply that transcript's relative abundance (i.e.,
+  # the proportion of RNA generated from that gene which become that isoform.
+  # this is `pt` simulated earlier).
+  # NOTE:
+  # I got confused once about how the mutational data is simulated in the case
+  # of non-unique reads. These reads are unambiguously from a given transcript
+  # isoform, so the fraction new that drives the simulation of the mutational
+  # data is just that isoform's simulated fraction new. At one point I wondered
+  # why I wasn't probablistically determining the transcript of origin for
+  # a non-unique read. This is unnecessary as the number of reads originating
+  # from a given isoform takes into account the relative abundance of each isoform.
+
+  if(funique < 1){
+    reads <- ceiling(((ks_t/kd_t)/sum(ks_t/kd_t))*seqdepth*(1-funique))
+    fns <- rep(1 - exp(-kd_t*label_time), times = reads)
+
+
+    # Number of Us
+    nUs <- stats::rbinom(n = sum(reads), size = readlength, prob = Ucont)
+
+    # Newness
+    newness <- stats::rbinom(n = sum(reads), size = 1, p = fns)
+
+    # Mutations
+    TCs <- stats::rbinom(n = sum(reads), size = nUs,
+                         prob = newness*pnew + (1 - newness)*pold )
+
+    # Transcript IDs
+    transcript_vect <- rep('', times = nfeatures)
+    for(i in 1:nfeatures){
+      ### TO-DO: Make this a prefix a user provided parameter
+      transcript_set <- paste0(feature_prefix, i, "_", "Transcript", 1:nt[i])
+      transcript_vect[i] <- paste(transcript_set, collapse = "+")
+
+    }
+
+    # Make cB
+    cB <- dplyr::tibble(TC = TCs, nT = nUs, read_ID = 1:length(TCs),
+                 GF = rep(gene_vect, times = reads),
+                 transcripts = rep(transcript_vect, times = reads))
+
+  }else{
+    cB <- dplyr::tibble()
+  }
+
+
+
+  ### Unique reads
+
+
+  reads_u <- ceiling(((ks_t/kd_t)/sum(ks_t/kd_t))*seqdepth*(funique))
+  fns <- rep(1 - exp(-kd_t*label_time), times = reads_u)
+
+
+  # Number of Us
+  nUs <- stats::rbinom(n = sum(reads_u), size = readlength, prob = Ucont)
+
+  # Newness
+  newness <- stats::rbinom(n = sum(reads_u), size = 1, p = fns)
+
+  # Mutations
+  TCs <- stats::rbinom(n = sum(reads_u), size = nUs, prob = newness*pnew + pold - newness*pold )
+
+  # Transcript IDs
+  gene_vect <- rep(1:nfeatures, times = nt)
+  transcript_vect <- c()
+  for(i in 1:nfeatures){
+    ### TO-DO: Make this a prefix a user provided parameter
+    transcript_set <- paste0(feature_prefix, i, "_", "Transcript", 1:nt[i])
+    transcript_vect <- c(transcript_vect, transcript_set)
+
+  }
+
+  # Make cB
+  cB_u <- tibble(TC = TCs, nT = nUs, read_ID = (nrow(cB) + 1):(nrow(cB) + length(TCs)),
+                 GF = rep(gene_vect, times = reads_u),
+                 transcripts = rep(transcript_vect, times = reads_u))
+
+
+  if(funique >= 1){
+    # Merge
+    cB <- cB_u
+  }else{
+    # Merge
+    cB <- bind_rows(cB, cB_u)
+  }
+
+
+  ### Assemble ground truth and data
+
+
+  truth <- dplyr::tibble(
+    feature = gene_vect,
+    transcript_id = transcript_vect,
+    true_kdeg = kd_t,
+    true_ksyn = ks_t,
+    true_fn = 1 - exp(-kd_t*label_time),
+    true_count = seqdepth*ceiling((ks_t/kd_t)/sum(ks_t/kd_t)),
+    true_TPM = (ks_t/kd_t)/(sum(ks_t/kd_t)/1000000)
+  )
+
+  return(list(cB = cB,
+              ground_truth = truth))
+
 
 }
 

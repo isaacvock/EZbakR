@@ -170,7 +170,7 @@ then there is not dropout.}
 }
 \description{
 \code{SimulateMultiCondition} is a highly flexibly simulator that combines linear modeling
-of log(kdeg)'s with \code{SimulateOneRep} to simulate an NR-seq dataset. The linear model
+of log(kdeg)'s and log(ksyn)'s with \code{SimulateOneRep} to simulate an NR-seq dataset. The linear model
 allows you to simulate multiple distinct treatments, batch effects, interaction effects,
 etc. The current downside for its flexibility is its relative complexity to implement.
 Easier to use simulators are on the way to EZbakR.
