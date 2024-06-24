@@ -22,6 +22,16 @@
 #' the strategy used to infer kinetic parameters.
 #' @param parameter Only relevant if `type` == "averages" or "comparisons". Which
 #' parameter was being averaged or compared?
+#' @param counttype String denoting what type of read count information you are looking
+#' for. Current options are "TMM_normalized", "transcript", and "matrix". TO-DO:
+#' Not sure this is being used in any way currently...
+#' @param condition Condition specified in relevant run of `CompareParameters()`.
+#' Therefore, only relevant if type == "comparisons".
+#' @param experimental Experimental condition specified in relevant run of `CompareParameters()`.
+#' Therefore, only relevant if type == "comparisons".
+#' @param reference Reference condition specified in relevant run of `CompareParameters()`.
+#' Therefore, only relevant if type == "comparisons".
+#' @param repeatID Numerical ID for duplicate objects with same metadata.
 #' @param returnNameOnly If TRUE, then only the names of tables that passed your
 #' search criteria will be returned. Else, the single table passing your search
 #' criteria will be returned. If there is more than one table that passes your
@@ -41,11 +51,12 @@ EZget <- function(obj,
                   isoforms = NULL,
                   kstrat = NULL,
                   parameter = NULL,
-                  returnNameOnly = FALSE,
                   counttype = NULL,
                   condition = NULL,
                   experimental = NULL,
                   reference = NULL,
+                  repeatID = NULL,
+                  returnNameOnly = FALSE,
                   exactMatch = FALSE,
                   alwaysCheck = FALSE){
 
@@ -256,6 +267,16 @@ EZget <- function(obj,
 
   }
 
+  if(!is.null(repeatID)){
+
+    possible_tables_rep <- exact_ezsearch(metadata,
+                                          query = repeatID,
+                                          object = "repeatID")
+
+    possible_tables <- intersect(possible_tables, possible_tables_rep)
+
+  }
+
   # Can return multiple names of candidate tables, but can
   # only return one table
   if(returnNameOnly){
@@ -266,6 +287,12 @@ EZget <- function(obj,
 
     }
 
+    if(length(possible_tables) == 0){
+
+      stop("No tables fit your search criterion!")
+
+    }
+
     return(possible_tables)
 
   }else{
@@ -273,6 +300,12 @@ EZget <- function(obj,
     if(length(possible_tables) > 1){
 
       stop("More than one table fits your search criterion!")
+
+    }
+
+    if(length(possible_tables) == 0){
+
+      stop("No tables fit your search criterion!")
 
     }
 
