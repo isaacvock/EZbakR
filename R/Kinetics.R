@@ -493,10 +493,12 @@ Standard_kinetic_estimation <- function(obj,
 
 # Estimate TILAC ratio
 tilac_ratio_estimation <- function(obj,
-                                   features = features,
-                                   populations = populations,
-                                   fraction_design = fraction_design,
-                                   character_limit = character_limit){
+                                   features = NULL,
+                                   populations = NULL,
+                                   fraction_design = NULL,
+                                   grouping_factors = NULL,
+                                   character_limit = 20,
+                                   overwrite = TRUE){
 
 
   `.` <- list

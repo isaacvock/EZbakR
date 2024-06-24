@@ -853,6 +853,10 @@ EstimateMutRates.EZbakRData <- function(obj,
                                         pold_est = NULL
                              ){
 
+
+  ### Hack to deal with devtools::check() NOTEs
+  n <- params <- p1 <- p2
+
   `.` <- list
 
 
@@ -1709,6 +1713,9 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
                                              pold_prior_sd = 0.5,
                                              pold_est = NULL
 ){
+
+  ### Hack to deal with devtools::check() NOTEs
+  n <- params <- p1 <- p2 <- NULL
 
   `.` <- list
 
