@@ -14,6 +14,12 @@ CorrectDropout <- function(obj,
                            grouping_factors = NULL,
                            features = NULL){
 
+
+  ### Hack to deal with devtools::check() NOTEs
+
+  tl <- n <- nolabel_rpm <- rpm <- pdo <- fit <- global_fraction <- corrected_gf <- corrected_fraction <- corrected_n <- NULL
+
+
   ##### GENERAL STEPS:
   # 1) Get -s4U RPMs
   # 2) Get +s4U RPMs
