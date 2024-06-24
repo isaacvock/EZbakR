@@ -102,10 +102,10 @@ characters in said name. If default name yields a string longer than this,
 then kinetics table will be named \code{kinetics1}}
 }
 \value{
-An EZbakRData object. This is simply a list of the provided \code{kinetics} and
-\code{metadf} with class \code{EZbakRData}
+An EZbakRKinetics object. This is simply a list of the provided \code{kinetics} and
+\code{metadf} with class \code{EZbakRKinetics}
 }
 \description{
-\code{EZbakRData} creates an object of class \code{EZbakRData} and checks the validity
+\code{EZbakRKinetics} creates an object of class \code{EZbakRKinetics} and checks the validity
 of the provided input.
 }

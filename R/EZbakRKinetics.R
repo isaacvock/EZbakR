@@ -1,6 +1,6 @@
 #' `EZbakRKinetics` object constructor
 #'
-#' \code{new_EZbakRData} efficiently creates an object of class `EZbakRData`.
+#' \code{new_EZbakRKinetics} efficiently creates an object of class `EZbakRKinetics`.
 #' It does not perform any rigorous checks of the legitimacy of this object.
 #' @param kinetics Data frame containing information about the kinetic parameters
 #' of interest for each set of features tracked.
@@ -54,7 +54,7 @@ new_EZbakRKinetics <- function(kinetics, features, metadf,
 
 #' `EZbakRKinetics` object validator
 #'
-#' \code{validate_EZbakRData} ensures that input for `EZbakRKinetics` construction
+#' \code{validate_EZbakRKinetics} ensures that input for `EZbakRKinetics` construction
 #' is valid.
 #' @param obj An object of class `EZbakRKinetics`
 #' @param features Features tracked in `kinetics` data frame. Needs to be specified
@@ -265,7 +265,7 @@ validate_EZbakRKinetics <- function(obj, features){
 
 #' `EZbakRKinetics` helper function for users
 #'
-#' \code{EZbakRData} creates an object of class `EZbakRData` and checks the validity
+#' \code{EZbakRKinetics} creates an object of class `EZbakRKinetics` and checks the validity
 #' of the provided input.
 #' @param kinetics Data frame with the following columns:
 #' \itemize{
@@ -356,8 +356,8 @@ validate_EZbakRKinetics <- function(obj, features){
 #' @param character_limit If name is chosen automatically, limit on the number of
 #' characters in said name. If default name yields a string longer than this,
 #' then kinetics table will be named `kinetics1`
-#' @return An EZbakRData object. This is simply a list of the provided `kinetics` and
-#' `metadf` with class `EZbakRData`
+#' @return An EZbakRKinetics object. This is simply a list of the provided `kinetics` and
+#' `metadf` with class `EZbakRKinetics`
 #' @export
 EZbakRKinetics <- function(kinetics, metadf, features,
                             name = NULL,

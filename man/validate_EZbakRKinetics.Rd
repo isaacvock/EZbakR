@@ -13,6 +13,6 @@ validate_EZbakRKinetics(obj, features)
 explicitly as it cannot be automatically inferred.}
 }
 \description{
-\code{validate_EZbakRData} ensures that input for \code{EZbakRKinetics} construction
+\code{validate_EZbakRKinetics} ensures that input for \code{EZbakRKinetics} construction
 is valid.
 }

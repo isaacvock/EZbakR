@@ -30,6 +30,6 @@ If this name is greater than \code{character_limit}, then it will default to "fr
 in \code{kinetics}}
 }
 \description{
-\code{new_EZbakRData} efficiently creates an object of class \code{EZbakRData}.
+\code{new_EZbakRKinetics} efficiently creates an object of class \code{EZbakRKinetics}.
 It does not perform any rigorous checks of the legitimacy of this object.
 }
