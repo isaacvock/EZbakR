@@ -250,7 +250,16 @@ Standard_kinetic_estimation <- function(obj,
     # the ideas I had are identical to those presented inNarain et al., 2021.
     # Best you can do is fit a single exponential model using -s4U and +s4U data
     # to infer the "fraction of old reads that are still present by the end of
-    # the label time".
+    # the label time". Turns out to be identical to estimating the average rate
+    # constant for a non-homogeneous Poisson process during the label time. If
+    # decay dynamics are non-Poissonian (time to decay is not ~ Exponential()),
+    # then memorylessness is out the window and you are always going to be screwed.
+    # I get the sense that exponential departure time is something of an approximation
+    # or central limit theorem of almost any "standard" departure process. Pretty
+    # much will be a good approximation as long as there is a predominantly rate-limiting
+    # step in the RNA decay process.
+    #
+    # Analysis steps:
     # 1) Extract -s4U read counts from relevant source
       # Default is just from fractions object
       # Can also use a read count data frame stored in EZbakRData object
@@ -289,16 +298,21 @@ Standard_kinetic_estimation <- function(obj,
       dplyr::inner_join(metadf %>% dplyr::filter(tl == 0),
                         by = "sample") %>%
       dplyr::group_by(sample) %>%
-      dplyr::mutate(nolabel_rpm = n/(sum(n)/1000000)) %>%
+      dplyr::mutate(nolabel_rpm = n/(sum(n)/1000000),
+                    nolabel_n = n) %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(c(grouping_factors, features_to_analyze)))) %>%
-      dplyr::summarise(nolabel_rpm = mean(nolabel_rpm)) %>%
-      dplyr::select(!!grouping_factors, !!features_to_analyze, nolabel_rpm)
+      dplyr::summarise(nolabel_rpm = mean(nolabel_rpm),
+                       nolabel_n = mean(nolabel_n),
+                       nolabel_reps = dplyr::n()) %>%
+      dplyr::select(!!grouping_factors, !!features_to_analyze,
+                    nolabel_rpm, nolabel_n, nolabel_reps)
 
 
     ##### STEP 2: INTEGRATE WITH +S4U TO GET ADJUSTED FRACTION NEW
     kinetics <- kinetics %>%
       dplyr::inner_join(metadf %>% dplyr::filter(tl > 0) %>%
-                          dplyr::select(sample, tl, !!grouping_factors),
+                          dplyr::select(sample, tl,
+                                        !!grouping_factors),
                         by = "sample") %>%
       dplyr::group_by(sample) %>%
       dplyr::mutate(rpm = n/(sum(n)/1000000)) %>%
@@ -317,17 +331,39 @@ Standard_kinetic_estimation <- function(obj,
 
 
     ##### STEP 3: ESTIMATE UNCERTAINTY
-    #####   (higher than in standard due to -s4U read variance)
+    ##### (higher than in standard due to -s4U read variance)
 
-    ### For now will simplify and use same uncertainty estimate
+    ### Uncertainty approximated with delta method
+    lkdeg_uncert <- function(fn, se_lfn, Rs4U, Rctl, tl, kdeg){
 
-    lkdeg_uncert <- function(fn, se_lfn){
-
-      deriv <- (1/log(1 - fn)) * (1 / (1 - fn)) * (fn*(1 - fn))
-
-      uncert <- abs(deriv)*se_lfn
+      part_1 <- (fn^2)*(se_lfn^2)
+      part_2 <- ((1/(Rs4U + 1))^2)*Rs4U/(tl^2)
+      part_3 <- ((1/(Rctl + 1))^2)*Rctl/(tl^2)
+      kdeg_var <- part_1 + part_2 + part_3
+      uncert <- sqrt(((1/kdeg)^2)*kdeg_var)
 
       return(uncert)
+
+    }
+
+    lksyn_uncert <- function(fn, se_lfn, Rs4U, Rctl, tl, kdeg){
+
+      ### kdeg and log(kdeg) variances
+      part_1 <- (fn^2)*(se_lfn^2)
+      part_2 <- ((1/(Rs4U + 1))^2)*Rs4U/(tl^2)
+      part_3 <- ((1/(Rctl + 1))^2)*Rctl/(tl^2)
+      kdeg_var <- part_1 + part_2 + part_3
+      lkdeg_var <- sqrt(((1/kdeg)^2)*kdeg_var)
+
+      ### log(ksyn) variance
+      part_1s <- ((1 - fn)^2)*(se_lfn^2)
+      part_2s <- ((1/(Rs4U + 1))^2)*Rs4U
+      part_3s <- lkdeg_var
+      part_4s <- ((tl*exp(-tl*kdeg))/(1 - exp(-tl*kdeg)))*kdeg_var
+      lksyn_var <- part_1s + part_2s + part_3s + part_4s
+
+      return(sqrt(lksyn_var))
+
 
     }
 
@@ -335,10 +371,19 @@ Standard_kinetic_estimation <- function(obj,
 
     kinetics <- setDT(kinetics)
     kinetics[, se_log_kdeg := lkdeg_uncert(fn = get(fraction_of_interest),
-                                           se_lfn = get(se_of_interest))]
+                                           se_lfn = get(se_of_interest),
+                                           Rs4U = n,
+                                           Rctl = nolabel_n,
+                                           tl = tl,
+                                           kdeg = kdeg)]
 
     # Estimate uncertainty (assuming normalized_reads ~ Poisson(normalized_reads)/scale_factor)
-    kinetics[, se_log_ksyn := sqrt( (1/(normalized_reads*scale_factor)) + se_log_kdeg^2)]
+    kinetics[, se_log_ksyn := lksyn_uncert(fn = get(fraction_of_interest),
+                                           se_lfn = get(se_of_interest),
+                                           Rs4U = n,
+                                           Rctl = nolabel_n,
+                                           tl = tl,
+                                           kdeg = kdeg)]
 
 
 
