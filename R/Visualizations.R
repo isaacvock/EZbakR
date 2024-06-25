@@ -20,7 +20,7 @@
 #' @import ggplot2
 #' @importFrom magrittr %>%
 #' @export
-EZbakRVolcanoPlot <- function(obj,
+EZVolcanoPlot <- function(obj,
                               parameter = "log_kdeg",
                               condition = NULL,
                               reference = NULL,
@@ -39,7 +39,7 @@ EZbakRVolcanoPlot <- function(obj,
   ### Find the object you want to get
 
   # Function in Helpers.R
-  comparson_name <- EZget(obj, type = "comparisons",
+  comparison_name <- EZget(obj, type = "comparisons",
                           condition = condition,
                           reference = reference,
                           experimental = experimental,
@@ -148,7 +148,7 @@ EZbakRVolcanoPlot <- function(obj,
 #' @import ggplot2
 #' @importFrom magrittr %>%
 #' @export
-EZbakRMAPlot <- function(obj,
+EZMAPlot <- function(obj,
                          parameter = "log_kdeg",
                          condition = NULL,
                          reference = NULL,
@@ -166,7 +166,7 @@ EZbakRMAPlot <- function(obj,
   ### Find the object you want to get
 
   # Function in Helpers.R
-  comparson_name <- EZget(obj, type = "comparisons",
+  comparison_name <- EZget(obj, type = "comparisons",
                           condition = condition,
                           reference = reference,
                           experimental = experimental,
