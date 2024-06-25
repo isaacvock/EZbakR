@@ -9,6 +9,7 @@ EstimateIsoformFractions(
   features = NULL,
   populations = NULL,
   fraction_design = NULL,
+  repeatID = NULL,
   fraction_name = NULL,
   quant_name = NULL,
   gene_to_transcript = NULL,

@@ -385,6 +385,8 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   n <- params <- coverage <- pold <- pnew <- lpnew_uncert <- pnew_prior <- ..colvect <- NULL
   fit <- mixture_fit <- present <- NULL
 
+  rm(..colvect)
+
   pnew_prior_sd_min <- pnew_prior_sd_min
 
   `.` <- list
@@ -694,8 +696,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
         ]
 
       current_name <- names(obj$mutation_rates)[1]
-      obj$mutation_rates[[2]] <- feature_mutrates
-      names(obj$mutration_rates) <- c(current_name, paste0("feature_", current_name))
+      obj$mutation_rates[[paste0("feature_", current_name)]] <- feature_mutrates
 
 
 
@@ -1567,9 +1568,10 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
           ### MULTIPLE DIFFERENT FEATURE SET HIERARCHICAL
           ### ANALYSES RIGHT NOW
           current_name <- names(obj$mutation_rates)[1]
-          obj$mutation_rates[[2]] <- feature_mutrates
-          names(obj$mutration_rates) <- c(current_name, paste0("feature_", current_name))
 
+          # Kinda cutesy, but works because bind_rows(dataframe, NULL) = dataframe
+          # so don't need a special condition for s == 1.
+          obj$mutation_rates[[paste0("feature_", current_name)]] <- dplyr::bind_rows(feature_mutrates, obj$mutation_rates[[paste0("feature_", current_name)]])
 
         }else{
 

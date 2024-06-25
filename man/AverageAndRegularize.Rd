@@ -8,6 +8,7 @@ AverageAndRegularize(
   obj,
   features = NULL,
   parameter = "log_kdeg",
+  repeatID = NULL,
   formula_mean = NULL,
   formula_sd = NULL,
   include_all_parameters = TRUE,
@@ -28,6 +29,9 @@ reads by and estimate proportions of each RNA population. The default of "all"
 will use all feature columns in the \code{obj}'s cB.}
 
 \item{parameter}{Parameter to average across replicates of a given condition.}
+
+\item{repeatID}{If multiple \code{kinetics} or \code{fractions} tables exist with the same metadata,
+then this is the numerical index by which they are distinguished.}
 
 \item{formula_mean}{An R formula object specifying how the \code{parameter} of interest
 depends on the sample characteristics specified in \code{obj}'s metadf. The most common formula

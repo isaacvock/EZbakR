@@ -71,7 +71,8 @@ EZget <- function(obj,
 
   if(!is.null(kstrat)){
 
-    kstrat <- match.arg(kstrat, c("standard", "tilac", "subcellular"))
+    kstrat <- match.arg(kstrat, c("standard", "tilac", "NSS",
+                                  "shortfeed", "pulse-chase"))
 
   }
 
@@ -314,13 +315,12 @@ EZget <- function(obj,
 
 vector_ezsearch <- function(metadata,
                                     queries,
-                                    object = c("features", "populations"),
+                                    object,
                             exactMatch){
 
 
   potential_tables <- c()
 
-  object <- match.arg(object)
   lmeta <- length(metadata)
 
   for(m in 1:lmeta){
@@ -358,9 +358,7 @@ vector_ezsearch <- function(metadata,
 
 exact_ezsearch <- function(metadata,
                            query,
-                           object = c("isoforms", "parameter", "counttype")){
-
-  object <- match.arg(object)
+                           object){
 
   lm <- length(metadata)
   possible_tables <- c()

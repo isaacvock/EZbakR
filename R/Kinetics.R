@@ -31,6 +31,8 @@
 #' that all combinations of the `mutrate_populations` you have requested to analyze are
 #' present in your data. If this is not the case for your data, then you will have
 #' to create one manually. See docs for `EstimateFractions` (run ?EstimateFractions()) for more details.
+#' @param repeatID If multiple `fractions` tables exist with the same metadata,
+#' then this is the numerical index by which they are distinguished.
 #' @param grouping_factors Which sample-detail columns in the metadf should be used
 #' to group -s4U samples by for calculating the average -s4U RPM? The default value of
 #' `NULL` will cause all sample-detail columns to be used.
@@ -53,6 +55,7 @@ EstimateKinetics <- function(obj,
                              features = NULL,
                              populations = NULL,
                              fraction_design = NULL,
+                             repeatID = NULL,
                              grouping_factors = NULL,
                              character_limit = 20,
                              overwrite = TRUE){
@@ -101,6 +104,7 @@ EstimateKinetics <- function(obj,
                                   features = features,
                                   populations = populations,
                                   fraction_design = fraction_design,
+                                  repeatID = repeatID,
                                   character_limit = character_limit,
                                   overwrite = overwrite)
 
@@ -112,6 +116,7 @@ EstimateKinetics <- function(obj,
                                        features = features,
                                        populations = populations,
                                        fraction_design = fraction_design,
+                                       repeatID = repeatID,
                                        character_limit = character_limit,
                                        overwrite = overwrite)
 
@@ -132,6 +137,7 @@ Standard_kinetic_estimation <- function(obj,
                                         features = NULL,
                                         populations = NULL,
                                         fraction_design = NULL,
+                                        repeatID = NULL,
                                         character_limit = 20,
                                         grouping_factors = NULL,
                                         overwrite = TRUE){
@@ -157,6 +163,7 @@ Standard_kinetic_estimation <- function(obj,
                           features = features,
                           populations = populations,
                           fraction_design = fraction_design,
+                          repeatID = repeatID,
                           returnNameOnly = TRUE)
 
 
@@ -589,6 +596,7 @@ tilac_ratio_estimation <- function(obj,
                                    populations = NULL,
                                    fraction_design = NULL,
                                    grouping_factors = NULL,
+                                   repeatID = NULL,
                                    character_limit = 20,
                                    overwrite = TRUE){
 

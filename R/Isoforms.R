@@ -130,6 +130,7 @@ EstimateIsoformFractions <- function(obj,
                                      features = NULL,
                                      populations = NULL,
                                      fraction_design = NULL,
+                                     repeatID = NULL,
                                      fraction_name = NULL,
                                      quant_name = NULL,
                                      gene_to_transcript = NULL,
@@ -166,6 +167,7 @@ EstimateIsoformFractions <- function(obj,
                            features = features,
                            populations = populations,
                            fraction_design = fraction_design,
+                           repeatID = repeatID,
                            returnNameOnly = TRUE)
 
     if(length(fraction_name) > 1){

@@ -10,6 +10,7 @@ EstimateKinetics(
   features = NULL,
   populations = NULL,
   fraction_design = NULL,
+  repeatID = NULL,
   grouping_factors = NULL,
   character_limit = 20,
   overwrite = TRUE
@@ -51,6 +52,9 @@ in your samples. By default, this will be created automatically and will assume
 that all combinations of the \code{mutrate_populations} you have requested to analyze are
 present in your data. If this is not the case for your data, then you will have
 to create one manually. See docs for \code{EstimateFractions} (run ?EstimateFractions()) for more details.}
+
+\item{repeatID}{If multiple \code{fractions} tables exist with the same metadata,
+then this is the numerical index by which they are distinguished.}
 
 \item{grouping_factors}{Which sample-detail columns in the metadf should be used
 to group -s4U samples by for calculating the average -s4U RPM? The default value of

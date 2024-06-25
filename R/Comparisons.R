@@ -18,6 +18,8 @@
 #' reads by and estimate proportions of each RNA population. The default of "all"
 #' will use all feature columns in the `obj`'s cB.
 #' @param parameter Parameter to average across replicates of a given condition.
+#' @param repeatID If multiple `kinetics` or `fractions` tables exist with the same metadata,
+#' then this is the numerical index by which they are distinguished.
 #' @param formula_mean An R formula object specifying how the `parameter` of interest
 #' depends on the sample characteristics specified in `obj`'s metadf. The most common formula
 #' will be `~ treatment` or `~ treatment:duration`, where `treatment` and `duration` would
@@ -56,6 +58,7 @@
 #' @importFrom magrittr %>%
 #' @export
 AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
+                                 repeatID = NULL,
                             formula_mean = NULL, formula_sd = NULL,
                             include_all_parameters = TRUE,
                             sd_reg_factor = 10,
@@ -194,10 +197,11 @@ general_avg_and_reg <- function(obj, features, parameter,
 
   # Function is in Helpers.R
   param_name <- EZget(obj,
-                         type = type,
-                         features = features,
-                         kstrat = kstrat,
-                         returnNameOnly = TRUE)
+                      type = type,
+                      features = features,
+                      kstrat = kstrat,
+                      repeatID = repeatID,
+                      returnNameOnly = TRUE)
 
 
   # Get fractions
@@ -594,13 +598,16 @@ general_avg_and_reg <- function(obj, features, parameter,
 #' @param features Character vector of the set of features you want to stratify
 #' reads by and estimate proportions of each RNA population. The default of "all"
 #' will use all feature columns in the `obj`'s cB.
+#' @param repeatID If multiple `averages` tables exist with the same metadata,
+#' then this is the numerical index by which they are distinguished.
 #' @param parameter Parameter to average across replicates of a given condition.
 #' @param overwrite If TRUE, then identical output will be overwritten if it exists.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
 CompareParameters <- function(obj, condition, reference, experimental,
-                              features = NULL, overwrite = TRUE, parameter = "log_kdeg"){
+                              features = NULL, repeatID = NULL,
+                              overwrite = TRUE, parameter = "log_kdeg"){
 
 
   ### Hack to deal with annoying devtools::check() NOTE
@@ -619,6 +626,7 @@ CompareParameters <- function(obj, condition, reference, experimental,
                          type = "averages",
                          features = features,
                          parameter = parameter,
+                         repeatID = repeatID,
                          returnNameOnly = TRUE)
 
 

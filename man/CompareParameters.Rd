@@ -10,6 +10,7 @@ CompareParameters(
   reference,
   experimental,
   features = NULL,
+  repeatID = NULL,
   overwrite = TRUE,
   parameter = "log_kdeg"
 )
@@ -30,6 +31,9 @@ Difference will be calculated as \code{experimental} - \code{reference}.}
 \item{features}{Character vector of the set of features you want to stratify
 reads by and estimate proportions of each RNA population. The default of "all"
 will use all feature columns in the \code{obj}'s cB.}
+
+\item{repeatID}{If multiple \code{averages} tables exist with the same metadata,
+then this is the numerical index by which they are distinguished.}
 
 \item{overwrite}{If TRUE, then identical output will be overwritten if it exists.}
 
