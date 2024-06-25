@@ -100,10 +100,33 @@ we can extract the kinetics table generated from the standard analysis like so:
 ```{r}
 kinetics <- EZget(ezbdo,
                   type = "kinetics",
-                  strategy = "standard")
+                  kstrat = "standard")
 ```
 
-In some cases, 
+In some cases, multiple tables with the exact same metadata exist. For example,
+the metadata for `fractions` tables is:
+
+* The feature columns by which reads were grouped. This is "feature" for both of
+our `fractions` tables.
+* The mutational populations analyzed. This is "TC" for both of our `fractions`
+tables.
+* The fraction_design table used. This is the standard fraction_design for
+a single mutation type analysis for both of our `fractions` tables.
+
+Since we set `overwrite = FALSE` in our second run of `EstimateFractions`, these
+tables were both saved. What distinguishes them is a final piece of metadata 
+saved for all tables: `repeatID`. This is a numerical ID that distinguishes 
+multiple instances of the same table. The ID is 1 for the first such object
+created, 2 for the second, etc. Thus, the analysis with the standard mixture
+model has a `repeatID` of 1, and the analysis with the hierarchical mixture
+model has a `repeatID` of 2. We can thus access the latter as such:
+
+```{r}
+h_fxn <- EZget(ezbdo, 
+               type = 'fractions',
+               repeatID = 2)
+```
+
 
 There are three parameters that tune `EZget()`'s behavior. These are:
 

@@ -571,7 +571,7 @@ Standard_kinetic_estimation <- function(obj,
 
 
   obj[["metadata"]][["kinetics"]][[kinetics_vect]] <- list(features = features_to_analyze,
-                                                           kstrat = "standard",
+                                                           kstrat = strategy,
                                                            repeatID = repeatID)
   obj[["metadata"]][["readcounts"]][[readcount_vect]] <- list(features = features_to_analyze,
                                                              counttype = "TMM_normalized",
