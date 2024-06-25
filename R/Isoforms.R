@@ -228,6 +228,24 @@ EstimateIsoformFractions <- function(obj,
 
   output_name <- "isoforms"
 
+  # How many identical tables already exist?
+  if(overwrite){
+
+    repeatID <- 1
+
+  }else{
+
+    repeatID <- length(EZget(obj,
+                                   type = 'fractions',
+                                   features = c(gene_colnames, "transcript_id"),
+                                   populations = pops,
+                                   fraction_design = fd,
+                                   returnNameOnly = TRUE,
+                                   exactMatch = TRUE,
+                                   alwaysCheck = TRUE)) + 1
+  }
+
+  # Get name for output
   output_name <- decide_output(obj, output_name,
                                 type = "fractions",
                                 features = c(gene_colnames, "transcript_id"),
@@ -241,7 +259,8 @@ EstimateIsoformFractions <- function(obj,
 
   obj[['metadata']][['fractions']][[output_name]] <- list(features = c(gene_colnames, "transcript_id"),
                                                           populations = pops,
-                                                          fraction_design = fd)
+                                                          fraction_design = fd,
+                                                          repeatID = repeatID)
 
 
   return(obj)

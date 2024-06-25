@@ -530,6 +530,26 @@ general_avg_and_reg <- function(obj, features, parameter,
                                    parameter = parameter,
                                    overwrite = overwrite)
 
+    # How many identical tables already exist?
+    if(overwrite){
+
+      repeatID <- 1
+
+    }else{
+
+      repeatID <- length(EZget(obj,
+                               type = 'averages',
+                               features = features_to_analyze,
+                               parameter = parameter,
+                               returnNameOnly = TRUE,
+                               exactMatch = TRUE,
+                               alwaysCheck = TRUE)) + 1
+    }
+
+  }else{
+
+    repeatID <- 1
+
   }
 
 
@@ -538,7 +558,8 @@ general_avg_and_reg <- function(obj, features, parameter,
 
   # Save metadata
   obj[['metadata']][['averages']][[avg_vect]] <- list(features = features_to_analyze,
-                                                      parameter = parameter)
+                                                      parameter = parameter,
+                                                      repeatID = repeatID)
 
 
   if(include_all_parameters){
@@ -636,9 +657,33 @@ CompareParameters <- function(obj, condition, reference, experimental,
 
 
   if(length(obj[['comparisons']]) > 0){
-    output_name <- decide_output(obj, output_name, type = "comparison",
+    output_name <- decide_output(obj, output_name, type = "comparisons",
                                  features = features, parameter = parameter,
+                                 reference = reference, experimental = experimental,
                                  overwrite = overwrite)
+
+    # How many identical tables already exist?
+    if(overwrite){
+
+      repeatID <- 1
+
+    }else{
+
+      repeatID <- length(EZget(obj,
+                               type = 'comparisons',
+                               features = features,
+                               parameter = parameter,
+                               reference = reference,
+                               experimental = experimental,
+                               returnNameOnly = TRUE,
+                               exactMatch = TRUE,
+                               alwaysCheck = TRUE)) + 1
+    }
+
+  }else{
+
+    repeatID <- 1
+
   }
 
   obj[["comparisons"]][[output_name]] <- dplyr::as_tibble(comparison)
@@ -647,7 +692,8 @@ CompareParameters <- function(obj, condition, reference, experimental,
                                                             reference = reference,
                                                             experimental = experimental,
                                                             features = features_to_analyze,
-                                                            parameter = parameter)
+                                                            parameter = parameter,
+                                                            repeatID = repeatID)
 
 
   if(!methods::is(obj, "EZbakRCompare")){

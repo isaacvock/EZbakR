@@ -498,8 +498,28 @@ Standard_kinetic_estimation <- function(obj,
                                    proposed_name = kinetics_vect,
                                    type = "kinetics",
                                    features = features_to_analyze,
-                                   kstrat = "standard",
+                                   kstrat = strategy,
                                    overwrite = overwrite)
+
+    # How many identical tables already exist?
+    if(overwrite){
+
+      repeatID <- 1
+
+    }else{
+
+      repeatID <- length(EZget(obj,
+                               type = 'kinetics',
+                               features = features_to_analyze,
+                               kstrat = strategy,
+                               returnNameOnly = TRUE,
+                               exactMatch = TRUE,
+                               alwaysCheck = TRUE)) + 1
+    }
+
+  }else{
+
+    repeatID <- 1
 
   }
 
@@ -513,6 +533,26 @@ Standard_kinetic_estimation <- function(obj,
                                    counttype = "TMM_normalized",
                                    overwrite = overwrite)
 
+    # How many identical tables already exist?
+    if(overwrite){
+
+      rc_repeatID <- 1
+
+    }else{
+
+      rc_repeatID <- length(EZget(obj,
+                               type = 'readcounts',
+                               features = features_to_analyze,
+                               counttype = "TMM_normalized",
+                               returnNameOnly = TRUE,
+                               exactMatch = TRUE,
+                               alwaysCheck = TRUE)) + 1
+    }
+
+  }else{
+
+    rc_repeatID <- 1
+
   }
 
   obj[["kinetics"]][[kinetics_vect]] <- dplyr::as_tibble(kinetics) %>%
@@ -524,9 +564,11 @@ Standard_kinetic_estimation <- function(obj,
 
 
   obj[["metadata"]][["kinetics"]][[kinetics_vect]] <- list(features = features_to_analyze,
-                                                           kstrat = "standard")
+                                                           kstrat = "standard",
+                                                           repeatID = repeatID)
   obj[["metadata"]][["readcounts"]][[readcount_vect]] <- list(features = features_to_analyze,
-                                                             counttype = "TMM_normalized")
+                                                             counttype = "TMM_normalized",
+                                                             repeatID = rc_repeatID)
 
 
   if(!methods::is(obj, "EZbakRKinetics")){

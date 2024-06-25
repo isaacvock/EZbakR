@@ -798,6 +798,27 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                                    fraction_design = fraction_design,
                                    overwrite = overwrite)
 
+    # How many identical tables already exist?
+    if(overwrite){
+
+      repeatID <- 1
+
+    }else{
+
+      repeatID <- length(EZget(obj,
+                               type = 'fractions',
+                               features = features_to_analyze,
+                               populations = pops_to_analyze,
+                               fraction_design = fraction_design,
+                               returnNameOnly = TRUE,
+                               exactMatch = TRUE,
+                               alwaysCheck = TRUE)) + 1
+    }
+
+  }else{
+
+    repeatID <- 1
+
   }
 
 
@@ -807,7 +828,8 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   # Save metadata
   obj[['metadata']][['fractions']][[fraction_vect]] <- list(features = features_to_analyze,
                                                             populations = pops_to_analyze,
-                                                            fraction_design = fraction_design)
+                                                            fraction_design = fraction_design,
+                                                            repeatID = repeatID)
 
 
 
