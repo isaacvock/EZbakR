@@ -2,12 +2,14 @@
 
 EZbakR is a one-stop-shop for analyses of nucleotide recoding RNA-seq datasets(NR-seq). NR-seq refers to a class of methods (e.g., TimeLapse-seq, SLAM-seq, TUC-seq, etc.) that combine RNA-seq, metabolic labeling, and unique metabolic label recoding chemistries. These methods were originally developed to dissect the kinetics of RNA synthesis and degradation. Excitingly though, a treasure trove of extensions of the original methods have been created over the years. To-date, nucleotide recoding has been combined with TT-seq, Start-seq, Ribo-seq, scRNA-seq, Perturb-seq, and subcellular fractionation, just to name a few such extensions. In addition, while the original methods used 4-thiouridine (s<sup>4</sup>U), the same chemistry has been found to work with 6-thioguanosine (s<sup>6</sup>G), opening the door to dual-labeling experimental designs (e.g., TILAC).
 
-To install, run:
+To install or update, run:
 
 ```
 library(devtools)
 devtools::install_github("isaacvock/EZbakR")
 ```
+
+At this point, changes will be made weekly, so updating frequently is highly suggested.
 
 ## What's new?
 
