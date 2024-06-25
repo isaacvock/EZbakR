@@ -14,10 +14,6 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup}
-library(EZbakR)
-```
-
 ## Introduction
 
 This vignette shows how to use the `EZget()` function provided by `EZbakR`.
@@ -25,7 +21,7 @@ In cases where you have multiple tables of a particular type in your `EZbakRData
 object, this can greatly facilitate extracting the table of interest. As a part
 of this vignette, I will also describe how an `EZbakRData` object is organized.
 
-```{r}
+```{r setup}
 library(EZbakR)
 ```
 

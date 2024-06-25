@@ -10,10 +10,19 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  fig.dim = c(6, 4)
 )
 ```
+
+## Introduction
+
 
 ```{r setup}
 library(EZbakR)
 ```
+
+## The basics
+
+
+## Model specification
