@@ -285,12 +285,6 @@ EZget <- function(obj,
 
     }
 
-    if(length(possible_tables) == 0){
-
-      stop("No tables fit your search criterion!")
-
-    }
-
     return(possible_tables)
 
   }else{
@@ -407,7 +401,6 @@ decide_output <- function(obj, proposed_name,
                           parameter = NULL,
                           overwrite = TRUE){
 
-
   type = match.arg(type)
 
   ### Does same analysis output already exist?
@@ -420,7 +413,8 @@ decide_output <- function(obj, proposed_name,
                              kstrat = kstrat,
                              counttype = counttype,
                              returnNameOnly = TRUE,
-                             exactMatch = TRUE)
+                             exactMatch = TRUE,
+                           alwaysCheck = TRUE)
 
   if(is.null(existing_output)){
 

@@ -1236,7 +1236,7 @@ SimulateIsoforms <- function(nfeatures,
   }
 
   # Make cB
-  cB_u <- tibble(TC = TCs, nT = nUs, read_ID = (nrow(cB) + 1):(nrow(cB) + length(TCs)),
+  cB_u <- dplyr::tibble(TC = TCs, nT = nUs, read_ID = (nrow(cB) + 1):(nrow(cB) + length(TCs)),
                  GF = paste0(feature_prefix, rep(gene_vect, times = reads_u)),
                  transcripts = rep(transcript_vect, times = reads_u))
 

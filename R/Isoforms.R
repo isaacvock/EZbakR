@@ -167,6 +167,13 @@ EstimateIsoformFractions <- function(obj,
                            populations = populations,
                            fraction_design = fraction_design,
                            returnNameOnly = TRUE)
+
+    if(length(fraction_name) > 1){
+
+      stop("More than one fractions table fits search criterion!
+           Either specify additional criterion (i.e., features, populations,
+           or fraction_design) or explicitly specify the table name (fraction_name).")
+    }
   }
 
 
