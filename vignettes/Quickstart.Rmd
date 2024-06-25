@@ -1,0 +1,54 @@
+---
+title: "EZbakR for people in a hurry"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Quickstart}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+abstract: >
+  EZbakR is a one-stop-shop for analyses of nucleotide recoding RNA-seq datasets
+  (NR-seq). NR-seq refers to a class of methods (e.g., TimeLapse-seq, SLAM-seq,
+  TUC-seq, etc.) that combine RNA-seq, metabolic labeling, and unique metabolic
+  label recoding chemistries. These methods were originally developed to dissect
+  the kinetics of RNA synthesis and degradation. Excitingly though, a treasure
+  trove of extensions of the original methods have been created over the years.
+  To-date, nucleotide recoding has been combined with TT-seq, Start-seq,
+  Ribo-seq, scRNA-seq, Perturb-seq, and subcellular fractionation, just to name
+  a few such extensions. In addition, while the original methods used 4-thiouridine   (s^4^U), the same chemistry has been found to work with 6-thioguanosine 
+  (s^6^G), opening the door to dual-labeling experimental designs (e.g., TILAC).
+  
+  EZbakR was designed to facilitate anlayses of the full gamut of NR-seq
+  methods. While not all analyses implemented in EZbakR can be applied to all
+  variants of NR-seq, EZbakR's modular design means that it has something for
+  everyone. In this vignette, we will quickly highlight the main modules of
+  EZbakR. For simplicity, we will be focusing on how to perform a standard, 
+  single-label NR-seq analysis. Other vignettes go into greater detail about
+  each module and the braod array of analyses that can be performed by each.
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.dim = c(6, 4)
+)
+```
+
+## Necessary Setup
+
+You will need to install and load EZbakR. Instructions to do so can be found at
+this [link](https://github.com/isaacvock/EZbakR). Setting the seed will also
+ensure exact reproducibility of analyses of simulated data shown in this vignette.
+
+```{r setup}
+library(EZbakR)
+set.seed(42)
+```
+
+## Step 0: Create an EZbakRData Object
+
+To use EZbakR, you will need to create an `EZbakRData` object. An `EZbakRData` 
+object consists of two components: a cB data frame and a metadf data frame. cB
+stands for "counts binomial" and contains all of the information about mutations 
+seen in sequencing reads in each sample sequenced. metadf stands for "metadata
+data frame" and contains information about the experimental details of each sample (i.e., how long the metabolic label feed was). Examples of what these data structures look like are available 

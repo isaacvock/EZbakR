@@ -21,6 +21,8 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.1
 Suggests: 
     furrr,
+    knitr,
+    rmarkdown,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Imports: 
@@ -37,3 +39,4 @@ Imports:
 Depends: 
     R (>= 3.5)
 LazyData: true
+VignetteBuilder: knitr
