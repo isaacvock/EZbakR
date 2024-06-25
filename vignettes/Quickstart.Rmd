@@ -23,7 +23,7 @@ abstract: >
   everyone. In this vignette, we will quickly highlight the main modules of
   EZbakR. For simplicity, we will be focusing on how to perform a standard, 
   single-label NR-seq analysis. Other vignettes go into greater detail about
-  each module and the braod array of analyses that can be performed by each.
+  each module and the broad array of analyses that can be performed by each.
 ---
 
 ```{r, include = FALSE}
@@ -139,7 +139,7 @@ See `?EstimateFractions()` for details and descriptions of optional parameters. 
 can use the simulated ground truth to assess estimate accuracy and confirm
 that the method is working:
 
-```{r}
+```{r, fig.align='center'}
 # Simulated ground truth
 truth <- simdata$PerRepTruth
 
@@ -177,7 +177,7 @@ analysis strategy is used. See `?EstimateKinetics` for details.
 
 Again, let's compare to ground_truth:
 
-```{r}
+```{r, fig.align='center'}
 # Simulated ground truth
 truth <- simdata$PerRepTruth
 
@@ -225,6 +225,22 @@ ezbdo <- AverageAndRegularize(ezbdo,
                               parameter = "log_ksyn")
 ```
 
+Let's make sure the estimates are still accurate:
+
+```{r, fig.align='center'}
+truth <- simdata$AvgTruth
+
+est <- EZget(ezbdo, type = 'averages', parameter = 'log_kdeg')
+
+compare <- dplyr::inner_join(truth, est, by = 'feature')
+
+plot(compare$true_logkdeg_treatmenttreatment1,
+     compare$mean_treatmenttreatment1)
+abline(0,1)
+
+```
+
+All good!
 
 ## Step 4: CompareParameters()
 
