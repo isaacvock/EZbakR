@@ -1,4 +1,13 @@
 url: https://isaacvock.github.io/EZbakR/
 template:
   bootstrap: 5
-
+articles:
+- title: Articles
+  navbar: ~
+  contents:
+  - Quickstart
+  - EZget
+  - EstimateFractions
+  - EstimateKinetics
+  - AverageAndRegularize
+  - CompareParameters
