@@ -53,7 +53,7 @@ ezbdo <- EstimateKinetics(ezbdo, repeatID = 2, strategy = "shortfeed")
 ```
 
 
-An `EZbakRData` object is a list with the following items:
+An `EZbakRData` object is a list that can contain the following items:
 
 1. **cB**: The cB table you provided upon object creation
 2. **metadf**: The metadf table you provided upon object creation
