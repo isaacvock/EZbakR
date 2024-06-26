@@ -166,12 +166,7 @@ examples for you to check out.</p>
 <p>“Standard” TC-only fractions design matrix:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Observe contents of cB</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">standard_fraction_design</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 2</span></span></span>
-<span><span class="co">#&gt;   TC    present</span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> TRUE  TRUE   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> FALSE TRUE</span></span></code></pre>
+<span><span class="va">standard_fraction_design</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left">TC</th>
@@ -213,16 +208,9 @@ s<sup>6</sup>G labeled sample), and reads with low T-to-C and G-to-A
 mutational content (old reads from either sample). However, you will
 NEVER expect a read with <strong>both</strong> high T-to-C and high
 G-to-A content, as there are no samples subjected to both labels:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Observe contents of cB</span></span>
 <span><span class="va">tilac_fraction_design</span></span></code></pre></div>
-<pre><code><span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 3</span></span></span>
-<span><span class="co">#&gt;   TC    GA    present</span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> TRUE  TRUE  FALSE  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> TRUE  FALSE TRUE   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> FALSE TRUE  TRUE   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> FALSE FALSE TRUE</span></span></code></pre>
 <table class="table">
 <thead><tr class="header">
 <th align="left">TC</th>
@@ -258,21 +246,10 @@ G-to-A content, as there are no samples subjected to both labels:</p>
 in this data. All other populations are present though, so their
 <code>present</code> values are <code>TRUE</code>.</p>
 <p>You can automatically generate a fraction design table as such:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Three populations for fun:</span></span>
 <span><span class="va">fd_table</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/create_fraction_design.html">create_fraction_design</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"TC"</span>, <span class="st">"GA"</span>, <span class="st">"CG"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">fd_table</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 8 × 4</span></span></span>
-<span><span class="co">#&gt;   TC    GA    CG    present</span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> TRUE  TRUE  TRUE  TRUE   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> FALSE TRUE  TRUE  TRUE   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> TRUE  FALSE TRUE  TRUE   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> FALSE FALSE TRUE  TRUE   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> TRUE  TRUE  FALSE TRUE   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> FALSE TRUE  FALSE TRUE   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">7</span> TRUE  FALSE FALSE TRUE   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">8</span> FALSE FALSE FALSE TRUE</span></span></code></pre>
+<span><span class="va">fd_table</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left">TC</th>
@@ -357,7 +334,7 @@ vignette), gene + exon-exon junction combos, and the standard
 exonic-gene feature, all with the same cB. You can specify which
 features to use in a given analysis via setting the
 <code>features</code> argument:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span>, features <span class="op">=</span> <span class="st">'feature'</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Estimating mutation rates</span></span>
 <span><span class="co">#&gt; Summarizing data for feature(s) of interest</span></span>
@@ -376,7 +353,7 @@ later). The default is thus for <code><a href="../reference/EstimateFractions.ht
 filter out any rows of the cB for which all analyzed features have this
 value. This is set by the <code>remove_features</code> argument, which
 is a vector of strings that should be considered ripe for filtering:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span>, remove_features <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"__no_feature"</span>, <span class="st">"feature1"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Estimating mutation rates</span></span>
 <span><span class="co">#&gt; Summarizing data for feature(s) of interest</span></span>
@@ -389,7 +366,7 @@ columns need to have one of the <code>remove_features</code> strings in
 order for them to get filtered. This behavior can be changed to the
 opposite extreme, where only a single feature needs to fail this test
 for the entire row to get filtered out:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span>, filter_condition <span class="op">=</span> <span class="va">`|`</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Estimating mutation rates</span></span>
 <span><span class="co">#&gt; Summarizing data for feature(s) of interest</span></span>
@@ -403,18 +380,14 @@ value for <code>remove_features</code> includes the string
 columns with the actual value <code>NA</code>. You can convert NA’s in
 your cB file with <code><a href="https://tidyr.tidyverse.org/reference/replace_na.html" class="external-link">tidyr::replace_na()</a></code> to whatever string
 you please:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">example_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>feature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'A'</span>, <span class="cn">NA</span>, <span class="st">'C'</span><span class="op">)</span>, </span>
 <span>                         other_feature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">NA</span>, <span class="st">'Y'</span>, <span class="st">'Z'</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">replaced_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tidyr.tidyverse.org/reference/replace_na.html" class="external-link">replace_na</a></span><span class="op">(</span><span class="va">example_df</span>,</span>
 <span>                          <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>feature <span class="op">=</span> <span class="st">'__no_feature'</span>,</span>
 <span>                               other_feature <span class="op">=</span> <span class="st">'NA'</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">replaced_df</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">#&gt;        feature other_feature</span></span>
-<span><span class="co">#&gt; 1            A            NA</span></span>
-<span><span class="co">#&gt; 2 __no_feature             Y</span></span>
-<span><span class="co">#&gt; 3            C             Z</span></span></code></pre>
+<span><span class="va">replaced_df</span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left">feature</th>
@@ -446,7 +419,7 @@ created by <code>EZbakR</code>’s isoform simulator,
 these rows into multiple rows for each feature assignment. To do that,
 you can specify the <code>split_multi_features</code> and
 <code>multi_feature_cols</code> arguments:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span>,</span>
 <span>                           split_multi_features <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>                           multi_feature_cols <span class="op">=</span> <span class="st">"feature"</span><span class="op">)</span></span>
@@ -499,7 +472,7 @@ will be strongly pushed towards to the sample-wide average. In other
 words, the feature-specific mutation rates are “regularized” towards the
 sample-wide average. This strategy will take a bit longer to run and can
 be implemented as so:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span>, </span>
 <span>                           strategy <span class="op">=</span> <span class="st">'hierarchical'</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Estimating mutation rates</span></span>
@@ -511,7 +484,22 @@ be implemented as so:</p>
 <span><span class="co">#&gt; Estimating fractions with feature-specific pnews</span></span>
 <span><span class="co">#&gt; Processing output</span></span></code></pre></div>
 <p>When doing this, the feature-specific and sample-wide mutation rates
-will both be saved in the <code>ezbdo$mutation_rates</code> list.</p>
+will both be saved in the <code>ezbdo$mutation_rates</code> list.As
+usual, let’s check the results:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">est</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EZget.html">EZget</a></span><span class="op">(</span><span class="va">ezbdo</span>, type <span class="op">=</span> <span class="st">'fractions'</span><span class="op">)</span></span>
+<span><span class="va">truth</span> <span class="op">&lt;-</span> <span class="va">simdata</span><span class="op">$</span><span class="va">PerRepTruth</span></span>
+<span></span>
+<span><span class="va">compare</span> <span class="op">&lt;-</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate-joins.html" class="external-link">inner_join</a></span><span class="op">(</span><span class="va">est</span>, <span class="va">truth</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'sample'</span>, <span class="st">'feature'</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">compare</span><span class="op">$</span><span class="va">true_fraction_highTC</span>,</span>
+<span>     <span class="va">compare</span><span class="op">$</span><span class="va">fraction_highTC</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/abline.html" class="external-link">abline</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span></span></code></pre></div>
+<p><img src="EstimateFractions_files/figure-html/unnamed-chunk-18-1.png" width="576"></p>
+<p>Still good! For now, I suggest using this strategy with caution
+though, as it is technically still “experimental”. In particular, watch
+out for extreme feature-specific mutation rates, which can be IDed in
+the</p>
 </div>
 <div class="section level3">
 <h3 id="isoform-deconvolution">Isoform deconvolution<a class="anchor" aria-label="anchor" href="#isoform-deconvolution"></a>
@@ -526,7 +514,7 @@ transcript equivalence class, which is just a fancy way of saying “the
 set of isoforms with which they are completely consistent”. fastq2EZbakR
 is able to do this, so check out its documentation for details. We can
 simulate such a cB ourselves for demonstration purposes:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Simulates a single sample worth of data</span></span>
 <span><span class="va">simdata_iso</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/SimulateIsoforms.html">SimulateIsoforms</a></span><span class="op">(</span>nfeatures <span class="op">=</span> <span class="fl">300</span><span class="op">)</span></span>
 <span></span>
@@ -544,7 +532,7 @@ all of the transcripts a read is consistent with are separated by “+”’s,
 though in this case, we don’t want to separate and copy the data for
 each isoform. Whether, we want to estimate fractions for each unique
 equivalence class:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Estimating mutation rates</span></span>
 <span><span class="co">#&gt; Summarizing data for feature(s) of interest</span></span>
@@ -577,7 +565,7 @@ documentation for more information (documentation <a href="https://bioconductor.
 isoform quantification output to use. You could technically do something
 similar if you are having a tough time using
 <code><a href="../reference/ImportIsoformQuant.html">ImportIsoformQuant()</a></code>, but I wouldn’t recommend it:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">### Hack in the true, simulated isoform levels</span></span>
 <span><span class="va">reads</span> <span class="op">&lt;-</span> <span class="va">simdata_iso</span><span class="op">$</span><span class="va">ground_truth</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
 <span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">transcript_id</span>, <span class="va">true_count</span>, <span class="va">true_TPM</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
@@ -593,7 +581,7 @@ similar if you are having a tough time using
 <span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateIsoformFractions.html">EstimateIsoformFractions</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Analyzing sample sampleA...</span></span></code></pre></div>
 <p>We can then see how it did by comparing to ground truth:</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">est</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EZget.html">EZget</a></span><span class="op">(</span><span class="va">ezbdo</span>, </span>
 <span>             type <span class="op">=</span> <span class="st">'fractions'</span>,</span>
 <span>             features <span class="op">=</span> <span class="st">"transcript_id"</span><span class="op">)</span></span>
@@ -605,7 +593,7 @@ similar if you are having a tough time using
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">compare</span><span class="op">$</span><span class="va">true_fn</span>,</span>
 <span>     <span class="va">compare</span><span class="op">$</span><span class="va">fraction_highTC</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/abline.html" class="external-link">abline</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span></span></code></pre></div>
-<p><img src="EstimateFractions_files/figure-html/unnamed-chunk-21-1.png" width="576" style="display: block; margin: auto;"></p>
+<p><img src="EstimateFractions_files/figure-html/unnamed-chunk-22-1.png" width="576" style="display: block; margin: auto;"></p>
 <p>This simulation is a bit extreme as around 50% of all isoform
 abundance differences are assumed to be completely driven by differences
 in isoform stability, which leads to underestimation of some of the
@@ -636,7 +624,7 @@ of your cB. This will create a set of .parquet files, with one file
 created for each sample. This will allow
 <code><a href="../reference/EstimateFractions.html">EstimateFractions()</a></code> to load your data in one sample at a
 time, so as to only hold a single sample of the cB in RAM at a time:</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/apache/arrow/" class="external-link">arrow</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co">### Move into the directory with your cB file</span></span>
@@ -684,7 +672,7 @@ filtering or summarization discussed in the arrows docs.</p>
 </h3>
 <p>You can then create an <code>EZbakRArrowData</code> object similarly
 to how you would create a standard <code>EZbakRData</code> object:</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu">arrow</span><span class="fu">::</span><span class="fu"><a href="https://arrow.apache.org/docs/r/reference/open_dataset.html" class="external-link">open_dataset</a></span><span class="op">(</span><span class="st">"Path/to/where/you/want/to/Arrow/Dataset/"</span><span class="op">)</span></span>
 <span></span>
 <span></span>
@@ -703,7 +691,7 @@ to how you would create a standard <code>EZbakRData</code> object:</p>
 <p>Finally, just run <code><a href="../reference/EstimateFractions.html">EstimateFractions()</a></code> with all of the
 settings you would normally use if you were working with an
 <code>EZbakRData</code> object:</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ezbado</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbado</span>,</span>
 <span>                            features <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"GF"</span>, <span class="st">"XF"</span>,</span>
 <span>                                         <span class="st">"junction_start"</span>, <span class="st">"junction_end"</span><span class="op">)</span>,</span>
