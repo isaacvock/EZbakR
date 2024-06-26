@@ -78,21 +78,370 @@
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h2>
-<p>Many tools</p>
+<p>The goal of most standard, single label, NR-seq experiments is to
+assess the kinetics of RNA synthesis and degradation. In EZbakR, this is
+the task of <code><a href="../reference/EstimateKinetics.html">EstimateKinetics()</a></code>. This vignette will discuss
+the basics of the standard analysis implemented by
+<code><a href="../reference/EstimateKinetics.html">EstimateKinetics()</a></code>, and touch on two alternative analysis
+strategies that <code><a href="../reference/EstimateKinetics.html">EstimateKinetics()</a></code> also implements:
+non-steady-state and short-feed analyses.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://isaacvock.github.io/EZbakR/">EZbakR</a></span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="the-basics">The basics<a class="anchor" aria-label="anchor" href="#the-basics"></a>
 </h2>
+<div class="section level3">
+<h3 id="running-the-standard-kdeg-and-ksyn-estimation">Running the standard kdeg and ksyn estimation<a class="anchor" aria-label="anchor" href="#running-the-standard-kdeg-and-ksyn-estimation"></a>
+</h3>
+<p>Below I demonstrate how to estimate synthesis and degradation rate
+constants using the standard analysis workflow and simulated data:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Simulate data</span></span>
+<span><span class="va">simdata</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EZSimulate.html">EZSimulate</a></span><span class="op">(</span>nfeatures <span class="op">=</span> <span class="fl">300</span>, nreps <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Create an `EZbakRData` object</span></span>
+<span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EZbakRData.html">EZbakRData</a></span><span class="op">(</span><span class="va">simdata</span><span class="op">$</span><span class="va">cB</span>, <span class="va">simdata</span><span class="op">$</span><span class="va">metadf</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Estimate fractions</span></span>
+<span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Estimating mutation rates</span></span>
+<span><span class="co">#&gt; Summarizing data for feature(s) of interest</span></span>
+<span><span class="co">#&gt; Averaging out the nucleotide counts for improved efficiency</span></span>
+<span><span class="co">#&gt; Estimating fractions</span></span>
+<span><span class="co">#&gt; Processing output</span></span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
+<span><span class="co"># Estimate synthesis and degradation rate constants</span></span>
+<span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateKinetics.html">EstimateKinetics</a></span><span class="op">(</span><span class="va">ezbdo</span>,</span>
+<span>                          strategy <span class="op">=</span> <span class="st">"standard"</span><span class="op">)</span></span></code></pre></div>
+<p>Setting <code>strategy = "standard"</code> is not strictly necessary,
+but I do it here to highlight that this is an argument that you can
+alter. If you have multiple <code>fractions</code> tables, then you will
+need to specify aspects of the metadata of the table you want to use.
+Under the hood, EZbakR is passing these arguments to
+<code><a href="../reference/EZget.html">EZget()</a></code>, so check out the vignette on <code><a href="../reference/EZget.html">EZget()</a></code>
+to better understand how this works:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create another fractions table</span></span>
+<span><span class="va">ezbdo2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span>, overwrite <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Estimating mutation rates</span></span>
+<span><span class="co">#&gt; Summarizing data for feature(s) of interest</span></span>
+<span><span class="co">#&gt; Averaging out the nucleotide counts for improved efficiency</span></span>
+<span><span class="co">#&gt; Estimating fractions</span></span>
+<span><span class="co">#&gt; Processing output</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
+<span><span class="co"># Estimate synthesis and degradation rate constants</span></span>
+<span>  <span class="co"># Use the 1st identical fractions table you created</span></span>
+<span><span class="va">ezbdo2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateKinetics.html">EstimateKinetics</a></span><span class="op">(</span><span class="va">ezbdo2</span>,</span>
+<span>                          repeatID <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>                          strategy <span class="op">=</span> <span class="st">"standard"</span><span class="op">)</span></span></code></pre></div>
+<p>In this case, <code>repeatID</code> has to be specified because the
+two fractions table present are identical in all other metadata aspects.
+Other metadata that you can specify are:</p>
+<ul>
+<li>
+<code>features</code>: Set of features analyzed, or a subset of
+features unique to the table of interest.</li>
+<li>
+<code>populations</code>: Mutation populations analyzed. Relevant if
+one of the tables is from a single-label analysis, and the other is from
+a multi-label analysis. <code><a href="../reference/EstimateKinetics.html">EstimateKinetics()</a></code>’s standard
+analysis strategy is only compatible with single-label analyses.</li>
+<li>
+<code>fraction_design</code>: The fraction design table used for the
+analysis of interest. Rarely will be necessary to specify in this
+case.</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="what-is-the-standard-strategy">What is the “standard” strategy?<a class="anchor" aria-label="anchor" href="#what-is-the-standard-strategy"></a>
+</h3>
+<p>The standard strategy makes the following assumptions:</p>
+<ol style="list-style-type: decimal">
+<li>You have conducted a pulse-label experiment. That means, cells were
+labeled for a period of time that I will refer to as the label time, and
+RNA was extracted after this labeling. This is in contrast to a
+pulse-chase design, where you label for a certain amount of time (the
+pulse time) and then chase with regular nucleotide for a certain amount
+of time (the chase time). Eventually, EZbakR will support kinetic
+parameter inference from a pulse-chase design, but I will say more about
+that at the end of this vignette.</li>
+<li>All of the populations of RNA you analyzed were at steady-state
+during the course of metabolic labeling. This means that their levels
+were constant and not changing in response to some perturbation during
+the labeling.</li>
+<li>RNA synthesis is a 0-th order, constant rate process, and RNA
+degradation is a 1st-order, single rate constant process.</li>
+</ol>
+<p>If all of these assumptions are met, then the dynamics of a given RNA
+population are well described by the following differential
+equation:</p>
+<p><span class="math display">\[
+\begin{align}
+\frac{\text{dR}}{\text{dt}} = k_{\text{syn}} - k_{\text{deg}}*\text{R}
+\end{align}
+\]</span> where <span class="math inline">\(\text{R}\)</span> represents
+the concentration of RNA over time and <span class="math inline">\(k_{\text{syn}}\)</span> and <span class="math inline">\(k_{\text{deg}}\)</span> are the synthesis and
+degradation rate constants, respectively. The general solution to this
+differential equation is:</p>
+<p><span class="math display">\[
+\begin{align}
+\text{R(t)} = \frac{ k_{\text{syn}}}{k_{\text{deg}}}
++  (\text{R}_\text{o} - \frac{ k_{\text{syn}}}{k_{\text{deg}}})*
+e^{-\text{tl}*k_{\text{deg}}}
+\end{align}
+\]</span></p>
+<p>where <span class="math inline">\(\text{R}_\text{o}\)</span> is the
+initial concentration of the RNA and <span class="math inline">\(\text{tl}\)</span> is the label time. Thus the
+concentration of new RNA (<span class="math inline">\(\text{R}_\text{o}
+= 0\)</span>) as a function of time is:</p>
+<p><span class="math display">\[
+\begin{align}
+\text{R}_{\text{new}}\text{(t)} = \frac{
+k_{\text{syn}}}{k_{\text{deg}}}*(1 - e^{-\text{tl}*k_{\text{deg}}})
+\end{align}
+\]</span> As we are assuming that the total RNA concentration is not
+changing during the labeling, and since the steady-state concentration
+of RNA (solve for R setting <span class="math inline">\(\frac{\text{dR}}{\text{dt}} = 0\)</span>) is <span class="math inline">\(\frac{ k_{\text{syn}}}{k_{\text{deg}}}\)</span>,
+we get that the fraction of RNA that is new (denoted <span class="math inline">\(\theta\)</span>) is:</p>
+<p><span class="math display">\[
+\begin{align}
+\theta = 1 - e^{-\text{tl}*k_{\text{deg}}}
+\end{align}
+\]</span> We can thus solve for the degradation rate constant, and use
+the normalized read counts to infer the synthesis rate constant.</p>
+<p><span class="math display">\[
+\begin{align}
+k_{\text{deg}} &amp;= -\frac{\text{log}(1 - \theta)}{\text{tl}} \\
+k_{\text{syn}} &amp;= (\text{normalized read count})*k_{\text{deg}}
+\end{align}
+\]</span></p>
+<p><strong>NOTE</strong>: degradation rate constants estimated in this
+manner will be in absolute units (1/time), whereas synthesis rate
+constants will be in relative units (read counts/time). Thus,
+degradation rate constant estimation is “internally normalized” (the
+fraction new is a ratio of two unnormalized quantities that would have
+the same normalization scale factor), whereas synthesis rate constant
+estimates require normalization across libraries and samples. At this
+stage, EZbakR uses TMM normalization (as in packages like edgeR and
+DESeq2) to calculate the normalized read counts. In the near future, it
+will also support users providing external scale factors (e.g., those
+derived from spike-ins).</p>
+</div>
 </div>
 <div class="section level2">
-<h2 id="shortfeed-analyses">Shortfeed analyses<a class="anchor" aria-label="anchor" href="#shortfeed-analyses"></a>
+<h2 id="short-feed-analyses">Short feed analyses<a class="anchor" aria-label="anchor" href="#short-feed-analyses"></a>
 </h2>
+<p>Sometimes it is advantageous to use a fairly short label time. For
+example, NR-seq is commonly used as a replacement for enrichment based
+metabolic labeling methods (e.g., TT-seq), and a short label time is
+used to ensure that there is limited degradation of newly synthesized
+RNA during the feed. EZbakR formalizes this strategy and provides a way
+by which to estimate synthesis and degradation rate constants in this
+context.</p>
+<div class="section level3">
+<h3 id="how-to-run-it">How to run it<a class="anchor" aria-label="anchor" href="#how-to-run-it"></a>
+</h3>
+<p>Everything is the same as it was in the standard case, except now we
+set <code>strategy = "shortfeed"</code>:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Estimate synthesis and degradation rate constants</span></span>
+<span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateKinetics.html">EstimateKinetics</a></span><span class="op">(</span><span class="va">ezbdo</span>,</span>
+<span>                          strategy <span class="op">=</span> <span class="st">"shortfeed"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="what-is-the-shortfeed-strategy">What is the “shortfeed” strategy?<a class="anchor" aria-label="anchor" href="#what-is-the-shortfeed-strategy"></a>
+</h3>
+<p>In the case of an extremely short label feed time (relative to the
+average half-life of RNA being analyzed), we can assume that there is no
+degradation newly synthesized RNA during the label time. Thus, the
+following differential equation and solution to said ODE describes the
+dynamics of the new RNA:</p>
+<p><span class="math display">\[
+\begin{align}
+\frac{\text{dR}}{\text{dt}} &amp;= k_{\text{syn}} \\
+\text{R}_{\text{new}}\text{(t)} &amp;=  k_{\text{syn}}*\text{t}
+\end{align}
+\]</span> Assuming that the concentration of new RNA is proportional to
+the normalized number of new reads yields the following estimate for
+<span class="math inline">\(k_{\text{syn}}\)</span>:</p>
+<p><span class="math display">\[
+k_{\text{syn}} =  \frac{\theta*(\text{normalized read
+count})}{\text{tl}}
+\]</span> Assuming the RNA levels are at steady-state (as in the
+standard analysis), yields the following estimate for the degradation
+rate constant:</p>
+<p><span class="math display">\[
+\begin{align}
+\text{normalized read count} &amp;=
+\frac{k_{\text{syn}}}{k_{\text{deg}}} \\
+k_{\text{deg}} &amp;= \frac{k_{\text{syn}}}{\text{normalized read
+count}} \\
+k_{\text{deg}} &amp;= \frac{\theta}{\text{tl}}
+\end{align}
+\]</span></p>
+<p>The calculus enthusiasts among you may recognize that this estimate
+for <span class="math inline">\(k_{\text{deg}}\)</span> is equivalent to
+a 1st order Taylor series approximation of the “standard” estimate
+strategy. This is no coincidence, as the assumption of a short feed is
+equivalent to assuming that <span class="math inline">\(\theta\)</span>
+is close to 0 (most of the RNA is old). It may also seem odd that this
+estimate is bound to be between 0 and 1/tl, but this just reflects the
+assumption made by this strategy that RNA half lives are much shorter
+than the label time.</p>
+</div>
 </div>
 <div class="section level2">
-<h2 id="non-steady-state-analyses">Non-steady-state analyses<a class="anchor" aria-label="anchor" href="#non-steady-state-analyses"></a>
+<h2 id="non-steady-state-nss-analyses">Non-steady-state (NSS) analyses<a class="anchor" aria-label="anchor" href="#non-steady-state-nss-analyses"></a>
 </h2>
+<p><strong>NOTE:</strong> The strategy described here is a slight
+modification of that discussed in <a href="https://www.sciencedirect.com/science/article/pii/S1097276521004962" class="external-link">Narain
+et al., 2021</a>. If you use EZbakR’s “NSS” strategy, please cite that
+paper as well as EZbakR.</p>
+<p>One of the key assumptions made by the “standard” analysis strategy
+is the assumption that RNA levels are at steady-state during the
+labeling. This assumption can be violated if a perturbation was applied
+to cells shortly before the start of, or during, labeling. It can also
+be violated if you are studying a process (e.g., development) where the
+state of the cells is changing over the course of the experiment.
+<code>EstimateKinetic()</code> can adjust its kinetic parameter
+estimation strategy accordingly, though it requires making some
+assumptions about how the experiment was performed. See below for
+details</p>
+<div class="section level3">
+<h3 id="requirements-of-the-nss-strategy">Requirements of the “NSS” strategy<a class="anchor" aria-label="anchor" href="#requirements-of-the-nss-strategy"></a>
+</h3>
+<p>In this case, it is important to discuss some key aspects about how
+this strategy works before showcasing it. Namely:</p>
+<ol style="list-style-type: decimal">
+<li>Instead of assuming the fraction new in a given sample is related to
+the degradation rate constant, EZbakR will compare the old read levels
+in the labeled sample and a control from the start of the labeling.</li>
+<li>EZbakR assumes that -label data (i.e., data collected from unlabeled
+cells) was collected at a time point equivalent to the start of
+labeling. This means that read counts from a given set of -label
+replicates provides information about the starting levels of RNA.</li>
+<li>Technically, you could also perform an NSS-style analysis if the end
+of a given set of labeled time points represents the start of the next
+set of labeled time points. EZbakR does not currently support
+NSS-analyses in this case, but it eventually will.</li>
+</ol>
+</div>
+<div class="section level3">
+<h3 id="how-to-run-it-1">How to run it<a class="anchor" aria-label="anchor" href="#how-to-run-it-1"></a>
+</h3>
+<p>The only difference in this case is that you have to tell EZbakR
+which -label samples to use as a reference for the initial
+concentrations of RNA. This is done by specicfying the
+<code>grouping_factors</code> parameter, which denotes the metadf
+columns that -label samples should be stratified by. In other words, old
+RNA levels in +label samples will be compared to total RNA levels in
+-label samples with the same metadf values for all of the
+<code>grouping_factors</code> columns specified:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Estimate synthesis and degradation rate constants</span></span>
+<span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateKinetics.html">EstimateKinetics</a></span><span class="op">(</span><span class="va">ezbdo</span>,</span>
+<span>                          strategy <span class="op">=</span> <span class="st">"NSS"</span>,</span>
+<span>                          grouping_factors <span class="op">=</span> <span class="st">"treatment"</span><span class="op">)</span></span></code></pre></div>
+<p>In this case, the only experimental details column of the metadf is
+called “treatment”, so this is specified in
+<code>grouping_factors</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="what-is-the-nss-strategy">What is the “NSS” strategy?<a class="anchor" aria-label="anchor" href="#what-is-the-nss-strategy"></a>
+</h3>
+<p>You can see <a href="https://www.sciencedirect.com/science/article/pii/S1097276521004962" class="external-link">Narain
+et al.</a> for an alternative discussion of this strategy.</p>
+<p>We would like to relax the assumption that the total RNA levels are
+unchanging over the course of the labeling. We can do this by
+considering the dynamics of the old RNA during the labeling. If we
+assume that a single, unchanging degradation rate constant describes
+their turnover, then the following ODE and solution describe its
+dynamics:</p>
+<p><span class="math display">\[
+\begin{align}
+\frac{\text{dR}}{\text{dt}} &amp;= -k_{\text{deg}}*\text{R} \\
+\text{R}_{\text{old}}\text{(t)}
+&amp;=  \text{R}_{\text{o}}*e^{-k_{\text{deg}}*\text{t}}
+\end{align}
+\]</span> In the steady-state case, <span class="math inline">\(\text{R}_{\text{o}}\)</span> would be equivalent
+to the steady-state RNA level (<span class="math inline">\(\frac{
+k_{\text{syn}}}{k_{\text{deg}}}\)</span>). In the away from steady-state
+case though, this assumption is no longer valid. Despite this, assume
+for a second that we could estimate <span class="math inline">\(\text{R}_{\text{o}}\)</span>. Under this
+assumption, we could then estimate <span class="math inline">\(k_{\text{deg}}\)</span> as follows:</p>
+<p><span class="math display">\[
+k_{\text{deg}} =
+-\frac{\text{log}(\text{R}_{\text{old}}\text{(t)}/\text{R}_{\text{o}})}{\text{tl}}
+\]</span></p>
+<p>We can then return to the general solution of the differential
+equation described in the ‘standard’ analysis strategy section:</p>
+<p><span class="math display">\[
+\begin{align}
+\text{R(t)} &amp;= \frac{ k_{\text{syn}}}{k_{\text{deg}}}
++  (\text{R}_\text{o} - \frac{ k_{\text{syn}}}{k_{\text{deg}}})*
+e^{-\text{tl}*k_{\text{deg}}} \\
+\text{R}_{\text{new}}\text{(t)} &amp;= \frac{
+k_{\text{syn}}}{k_{\text{deg}}}*(1 - e^{-\text{tl}*k_{\text{deg}}})
+\end{align}
+\]</span> where in the second line we set <span class="math inline">\(\text{R}_\text{o} = 0\)</span> as there was no new
+RNA at the start of labeling, and derive an estimator for <span class="math inline">\(k_{\text{syn}}\)</span>:</p>
+<p><span class="math display">\[
+k_{\text{syn}} = \frac{\theta*(\text{normalized read
+count)}*k_{\text{deg}}}{1 - e^{-k_{\text{deg}}*\text{tl}}}
+\]</span> This yields the same estimator as in the steady-state case
+when <span class="math inline">\(\theta = 1 -
+e^{-k_{\text{deg}}*\text{tl}}\)</span></p>
+<p>One thing you may be wondering is just how much of non-steady-state
+analysis this really is if we are still assuming constant rate
+constants? What if the rates of synthesis and degradation are being
+actively modulated by the cell during the label time? I won’t present a
+detailed proof here, but it turns out that the strategy laid out above
+is the best that you can do. In the case where rate constants are
+changing during the label time, you can think of the estimates from this
+strategy as time averages of the true rate constants, averaged over the
+labeling period.</p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="pulse-chase-analyses">Pulse-chase analyses<a class="anchor" aria-label="anchor" href="#pulse-chase-analyses"></a>
+</h2>
+<p>The infrastructure is in place for EZbakR to support pulse-chase
+analyses of kinetic parmaeters (e.g., metadf can accept specification of
+a pulse and chase time). Thus, in the future, EZbakR will provide such
+support. That being said, I would like to take some time to argue
+against <em>almost</em> ever doing a pulse-chase NR-seq experiment.
+Pulse-chase experimental designs suffer from a number of shortcomings
+and are almost never necessary in NR-seq experiments.</p>
+<p>There are many classic examples of pulse-chase experimental designs
+being used to assess the kinetics of RNA metabolism. In these cases
+though, the point of the pulse was to create a species of RNA whose
+dynamics are completely driven by the degradation kinetics of the RNA.
+For example, the pioneering studies from the Parker lab elucidating the
+mechanisms of RNA degradation involved pulsing with a particular
+nutrient to stimulate transcription of a construct. The chase then
+washed out that nutrient to shut off transcription from the construct,
+meaning that RNA produced from it will exclusively degrade post-chase.
+When you pulse with a metabolic label like s<sup>4</sup>U though, you
+have already created a species of RNA whose dynamics are completely
+degradation driven: the unlabeled RNA. Following the metabolic label
+pulse with a nucleotide chase is thus redundant, switching the
+degradation driven population from the unlabeled RNA to the labeled
+RNA.</p>
+<p>In addition, pulse-chase experiments often necessitate extensive
+exposure of your cells to the metabolic label, which increases the
+possibility of cytotoxic effects of metabolic label. Finally, analysis
+of pulse-chase experiments is more complicated than a pulse-label
+design. To estimate the kinetics of degradation, you need to know what
+fraction of the RNA for each feature of interest was labeled after the
+pulse. This means that estimating the synthesis and degradation kinetics
+requires two separate samples, RNA extracted after the pulse and RNA
+extracted after the chase. With the pulse alone, you can get all of the
+information that you can get with both though!! You want multiple time
+points? Just do multiple pulses. Pulse-labels are easier to perform and
+easier to analyze than pulse-chases.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
     </nav></aside>
