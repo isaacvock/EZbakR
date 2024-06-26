@@ -17,12 +17,6 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-
-```{r setup}
-library(EZbakR)
-```
-
-## The basics
-
-
-## Model specification
+A detailed vignette will eventually come for `AverageAndRegularize()`. For now,
+I direct you to the documentation found by running `?AverageAndRegularize()` and
+in the introductory vignette.
