@@ -17,6 +17,8 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
+Many tools 
+
 
 ```{r setup}
 library(EZbakR)

@@ -92,7 +92,7 @@ provides some lazily loaded examples for you to check out.
 
 "Standard" TC-only fractions design matrix:
 
-```{r, results = "hide"}
+```{r, echo = T, results = 'hide'}
 # Observe contents of cB
 print(standard_fraction_design)
 
@@ -129,7 +129,7 @@ are no samples subjected to both labels:
 
 ```{r, results = "hide"}
 # Observe contents of cB
-print(tilac_fraction_design)
+tilac_fraction_design
 
 ```
 
@@ -225,7 +225,7 @@ example_df <- data.frame(feature = c('A', NA, 'C'),
 replaced_df <- replace_na(example_df,
                           list(feature = '__no_feature',
                                other_feature = 'NA'))
-print(replaced_df)
+head(replaced_df)
 
 ```
 

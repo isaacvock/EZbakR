@@ -640,7 +640,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                                          sapply(params, `[[`, 4))]
 
 
-      ### Hierarchical model
+      ### Hierarchical model using priors inferred from feature-specific pnew distribution
 
       message("Estimating fractions with feature-specific pnews")
 
@@ -660,15 +660,20 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
       setkey(cB, sample)
 
       feature_specific <- cB[global_est, nomatch = NULL][,
-                                                     .(params = list(fit_tcmm(muts = get(pops_to_analyze),
+         .(params = dplyr::case_when(
+                                      !(unique(sample) %in% samples_with_no_label) ~ list(fit_tcmm(muts = get(pops_to_analyze),
                                                                                    nucs = get(necessary_basecounts),
                                                                                    n = n,
                                                                                    Poisson = Poisson,
                                                                                    pold = unique(pold),
                                                                                    pnew_prior_mean = unique(pnew_prior),
                                                                                    pnew_prior_sd = unique(pnew_prior_sd))),
-                                                       n = sum(n)),
-                                                     by = c("sample", features_to_analyze)
+                                      .default = list(list(p1 = -Inf,
+                                                                                            p2 = -Inf,
+                                                                                            p1_u = 0,
+                                                                                            p2_u = 0))),
+            n = sum(n)),
+          by = c("sample", features_to_analyze)
       ]
 
 
@@ -676,7 +681,6 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                            uncertainty_col) := .(sapply(params, `[[`, 1),
                                                inv_logit(sapply(params, `[[`, 2)),
                                                sapply(params, `[[`, 3))]
-
 
 
       fns <- dplyr::as_tibble(feature_specific) %>%
@@ -2159,7 +2163,7 @@ fit_tcmm <- function(muts, nucs, n, pnew = NULL, pold = NULL,
 
   }else{
 
-    uncertainty <- sqrt(diag(solve(fit$hessian)))
+    uncertainty <- sqrt(abs(diag(solve(fit$hessian))))
 
     if(estimate_pnew & estimate_pold){
 
