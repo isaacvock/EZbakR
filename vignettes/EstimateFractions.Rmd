@@ -94,13 +94,13 @@ provides some lazily loaded examples for you to check out.
 
 ```{r, echo = T, results = 'hide'}
 # Observe contents of cB
-print(standard_fraction_design)
+standard_fraction_design
 
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
 
-knitr::kable(print(standard_fraction_design), "pipe")
+knitr::kable(standard_fraction_design, "pipe")
 
 ```
 
@@ -135,7 +135,7 @@ tilac_fraction_design
 
 ```{r, echo = FALSE, warning = FALSE}
 
-knitr::kable(print(tilac_fraction_design), "pipe")
+knitr::kable(tilac_fraction_design, "pipe")
 
 ```
 
@@ -148,12 +148,12 @@ You can automatically generate a fraction design table as such:
 ```{r, results = "hide"}
 # Three populations for fun:
 fd_table <- create_fraction_design(c("TC", "GA", "CG"))
-print(fd_table)
+fd_table
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
 
-knitr::kable(print(fd_table), "pipe")
+knitr::kable(fd_table, "pipe")
 
 ```
 
@@ -218,20 +218,26 @@ the string `"NA"`, this does not properly handle filtering out of columns with
 the actual value `NA`. You can convert NA's in your cB file with 
 `tidyr::replace_na()` to whatever string you please:
 
-```{r, results = "hide"}
+```{r, results = 'hide'}
 example_df <- data.frame(feature = c('A', NA, 'C'), 
                          other_feature = c(NA, 'Y', 'Z'))
 
 replaced_df <- replace_na(example_df,
                           list(feature = '__no_feature',
                                other_feature = 'NA'))
-head(replaced_df)
+replaced_df
 
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
+example_df <- data.frame(feature = c('A', NA, 'C'), 
+                         other_feature = c(NA, 'Y', 'Z'))
 
-knitr::kable(print(replaced_df), "pipe")
+replaced_df <- replace_na(example_df,
+                          list(feature = '__no_feature',
+                               other_feature = 'NA'))
+
+knitr::kable(replaced_df, "pipe")
 
 ```
 
@@ -294,7 +300,23 @@ ezbdo <- EstimateFractions(ezbdo,
 ```
 
 When doing this, the feature-specific and sample-wide mutation rates will both
-be saved in the `ezbdo$mutation_rates` list. 
+be saved in the `ezbdo$mutation_rates` list.As usual, let's check the 
+results:
+
+```{r}
+est <- EZget(ezbdo, type = 'fractions')
+truth <- simdata$PerRepTruth
+
+compare <- dplyr::inner_join(est, truth, by = c('sample', 'feature'))
+
+plot(compare$true_fraction_highTC,
+     compare$fraction_highTC)
+abline(0,1)
+```
+
+Still good! For now, I suggest using this strategy with caution though, as it is
+technically still "experimental". In particular, watch out for extreme 
+feature-specific mutation rates, which can be IDed in the 
 
 ### Isoform deconvolution
 

@@ -677,6 +677,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
       ]
 
 
+
       feature_specific[, c(col_name, "pnew",
                            uncertainty_col) := .(sapply(params, `[[`, 1),
                                                inv_logit(sapply(params, `[[`, 2)),
@@ -1532,15 +1533,20 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
           setkey(sample_cB, sample)
 
           feature_specific <- sample_cB[global_est, nomatch = NULL][,
-                                                                    .(params = list(fit_tcmm(muts = get(pops_to_analyze),
-                                                                                             nucs = get(necessary_basecounts),
-                                                                                             n = n,
-                                                                                             Poisson = Poisson,
-                                                                                             pold = unique(pold),
-                                                                                             pnew_prior_mean = unique(pnew_prior),
-                                                                                             pnew_prior_sd = unique(pnew_prior_sd))),
-                                                                      n = sum(n)),
-                                                                    by = c("sample", features_to_analyze)
+                                                             .(params = dplyr::case_when(
+                                                               !(unique(sample) %in% samples_with_no_label) ~ list(fit_tcmm(muts = get(pops_to_analyze),
+                                                                                                                            nucs = get(necessary_basecounts),
+                                                                                                                            n = n,
+                                                                                                                            Poisson = Poisson,
+                                                                                                                            pold = unique(pold),
+                                                                                                                            pnew_prior_mean = unique(pnew_prior),
+                                                                                                                            pnew_prior_sd = unique(pnew_prior_sd))),
+                                                               .default = list(list(p1 = -Inf,
+                                                                                    p2 = -Inf,
+                                                                                    p1_u = 0,
+                                                                                    p2_u = 0))),
+                                                               n = sum(n)),
+                                                             by = c("sample", features_to_analyze)
           ]
 
 
