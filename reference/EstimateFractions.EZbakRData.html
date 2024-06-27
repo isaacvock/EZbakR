@@ -84,6 +84,8 @@ created with <code><a href="EZbakRData.html">EZbakRData()</a></code>. For larger
 <span>  init_pnew_prior_sd <span class="op">=</span> <span class="fl">0.8</span>,</span>
 <span>  pnew_prior_sd_min <span class="op">=</span> <span class="fl">0.01</span>,</span>
 <span>  pold_est <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  pold_from_nolabel <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  grouping_factors <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  character_limit <span class="op">=</span> <span class="fl">20</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -250,6 +252,20 @@ a value of <code>pnew_prior_sd_min</code> will be imputed in that case.</p></dd>
 <dd><p>Background mutation rate estimates if you have them. Can either be a single
 number applied to all samples or a named vector of values, where the names should be sample
 names.</p></dd>
+
+
+<dt>pold_from_nolabel</dt>
+<dd><p>Fix background mutation rate estimate to mutation rates seen in -label samples.
+By default, a single background rate is used for all samples, inferred from the average mutation rate
+across all -label samples. The <code>grouping_factors</code> argument can be specified to use certain -label samples
+to infer background mutation rates for certain sets of +label samples.</p></dd>
+
+
+<dt>grouping_factors</dt>
+<dd><p>If <code>pold_from_nolabel</code> is TRUE, then <code>grouping_factors</code> will specify the
+sample-detail columns in the metadf that should be used to group -label samples by. Average mutation
+rates in each group of -label samples will be used as the background mutation rate estimate in
++label samples with the same values for the relevant metadf columns.</p></dd>
 
 
 <dt>character_limit</dt>
