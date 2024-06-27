@@ -24,7 +24,7 @@ EZbakR represents a complete rewrite of bakR. Improvements implemented in EZbakR
     * Non-steady-state analyses as introduced in [Narain et al., 2021](https://www.sciencedirect.com/science/article/pii/S1097276521004962).
     * Short-feed analyses that assume negligible degradation of existing RNA.
     * Synthesis rate estimation is implemented as a part of all strategies.
-4. Improved uncertainty propogation so as to achieve performance of bakR's slower implementations (Hybrid and MCMC) with a strategy as efficient at bakR's most efficent implementation (MLE).
+4. Improved uncertainty propogation so as to achieve performance of bakR's slower implementations (Hybrid and MCMC) with a strategy as efficient as bakR's most efficent implementation (MLE).
 5. Removal of Stan dependencies. I love Stan, but having it as an R package dependency makes installation and maintenace more difficult.
 6. Optional [Apache Arrow](https://arrow.apache.org/) backend to help with analyses of larger-than-RAM datasets
 7. Linear model-based averaging of replicate data to support more complex experimental designs and maximally flexible comparative analyses. 
