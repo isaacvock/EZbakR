@@ -367,6 +367,14 @@ EstimateMutRates <- function(obj,
 #' @param pold_est Background mutation rate estimates if you have them. Can either be a single
 #' number applied to all samples or a named vector of values, where the names should be sample
 #' names.
+#' @param pold_from_nolabel Fix background mutation rate estimate to mutation rates seen in -label samples.
+#' By default, a single background rate is used for all samples, inferred from the average mutation rate
+#' across all -label samples. The `grouping_factors` argument can be specified to use certain -label samples
+#' to infer background mutation rates for certain sets of +label samples.
+#' @param grouping_factors If `pold_from_nolabel` is TRUE, then `grouping_factors` will specify the
+#' sample-detail columns in the metadf that should be used to group -label samples by. Average mutation
+#' rates in each group of -label samples will be used as the background mutation rate estimate in
+#' +label samples with the same values for the relevant metadf columns.
 #' @param character_limit Maximum number of characters for naming out fractions output. EZbakR
 #' will try to name this as a "_" separated character vector of all of the features analyzed.
 #' If this name is greater than `character_limit`, then it will default to "fraction#", where
@@ -398,6 +406,8 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                                          init_pnew_prior_sd = 0.8,
                                          pnew_prior_sd_min = 0.01,
                                          pold_est = NULL,
+                                         pold_from_nolabel = FALSE,
+                                         grouping_factors = NULL,
                                          character_limit = 20,
                                          overwrite = TRUE){
 
@@ -430,7 +440,9 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                           pnew_prior_sd = pnew_prior_sd,
                           pold_prior_mean = pold_prior_mean,
                           pold_prior_sd = pold_prior_sd,
-                          pold_est = pold_est)
+                          pold_est = pold_est,
+                          pold_from_nolabel = pold_from_nolabel,
+                          grouping_factors = grouping_factors)
 
   mutation_rates <- obj$mutation_rates
 
@@ -1242,6 +1254,14 @@ EstimateMutRates.EZbakRData <- function(obj,
 #' @param pold_est Background mutation rate estimates if you have them. Can either be a single
 #' number applied to all samples or a named vector of values, where the names should be sample
 #' names.
+#' @param pold_from_nolabel Fix background mutation rate estimate to mutation rates seen in -label samples.
+#' By default, a single background rate is used for all samples, inferred from the average mutation rate
+#' across all -label samples. The `grouping_factors` argument can be specified to use certain -label samples
+#' to infer background mutation rates for certain sets of +label samples.
+#' @param grouping_factors If `pold_from_nolabel` is TRUE, then `grouping_factors` will specify the
+#' sample-detail columns in the metadf that should be used to group -label samples by. Average mutation
+#' rates in each group of -label samples will be used as the background mutation rate estimate in
+#' +label samples with the same values for the relevant metadf columns.
 #' @param character_limit Maximum number of characters for naming out fractions output. EZbakR
 #' will try to name this as a "_" separated character vector of all of the features analyzed.
 #' If this name is greater than `character_limit`, then it will default to "fraction#", where
@@ -1274,6 +1294,8 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                               init_pnew_prior_sd = 0.8,
                                               pnew_prior_sd_min = 0.01,
                                               pold_est = NULL,
+                                              pold_from_nolabel = FALSE,
+                                              grouping_factors = NULL,
                                               character_limit = 20,
                                               overwrite = TRUE){
 
@@ -1305,7 +1327,9 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                           pnew_prior_sd = pnew_prior_sd,
                           pold_prior_mean = pold_prior_mean,
                           pold_prior_sd = pold_prior_sd,
-                          pold_est = pold_est)
+                          pold_est = pold_est,
+                          pold_from_nolabel = pold_from_nolabel,
+                          grouping_factors = grouping_factors)
 
   mutation_rates <- obj$mutation_rates
 
