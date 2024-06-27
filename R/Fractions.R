@@ -147,6 +147,14 @@ create_fraction_design <- function(mutrate_populations){
 #' @param pold_est Background mutation rate estimates if you have them. Can either be a single
 #' number applied to all samples or a named vector of values, where the names should be sample
 #' names.
+#' @param pold_from_nolabel Fix background mutation rate estimate to mutation rates seen in -label samples.
+#' By default, a single background rate is used for all samples, inferred from the average mutation rate
+#' across all -label samples. The `grouping_factors` argument can be specified to use certain -label samples
+#' to infer background mutation rates for certain sets of +label samples.
+#' @param grouping_factors If `pold_from_nolabel` is TRUE, then `grouping_factors` will specify the
+#' sample-detail columns in the metadf that should be used to group -label samples by. Average mutation
+#' rates in each group of -label samples will be used as the background mutation rate estimate in
+#' +label samples with the same values for the relevant metadf columns.
 #' @param character_limit Maximum number of characters for naming out fractions output. EZbakR
 #' will try to name this as a "_" separated character vector of all of the features analyzed.
 #' If this name is greater than `character_limit`, then it will default to "fraction#", where
@@ -178,6 +186,8 @@ EstimateFractions <- function(obj, features = "all",
                               init_pnew_prior_sd = 0.8,
                               pnew_prior_sd_min = 0.01,
                               pold_est = NULL,
+                              pold_from_ctls = FALSE,
+                              grouping_factors = NULL,
                               character_limit = 20,
                               overwrite = TRUE){
 
@@ -207,15 +217,25 @@ EstimateFractions <- function(obj, features = "all",
 #' @param pold_est Background mutation rate estimates if you have them. Can either be a single
 #' number applied to all samples or a named vector of values, where the names should be sample
 #' names.
+#' @param pold_from_nolabel Fix background mutation rate estimate to mutation rates seen in -label samples.
+#' By default, a single background rate is used for all samples, inferred from the average mutation rate
+#' across all -label samples. The `grouping_factors` argument can be specified to use certain -label samples
+#' to infer background mutation rates for certain sets of +label samples.
+#' @param grouping_factors If `pold_from_nolabel` is TRUE, then `grouping_factors` will specify the
+#' sample-detail columns in the metadf that should be used to group -label samples by. Average mutation
+#' rates in each group of -label samples will be used as the background mutation rate estimate in
+#' +label samples with the same values for the relevant metadf columns.
 #' @import data.table
 #' @export
 EstimateMutRates <- function(obj,
-                                        populations = "all",
-                                        pnew_prior_mean = -2.94,
-                                        pnew_prior_sd = 0.3,
-                                        pold_prior_mean = -6.5,
-                                        pold_prior_sd = 0.5,
-                                        pold_est = NULL
+                            populations = "all",
+                            pnew_prior_mean = -2.94,
+                            pnew_prior_sd = 0.3,
+                            pold_prior_mean = -6.5,
+                            pold_prior_sd = 0.5,
+                            pold_est = NULL,
+                            pold_from_nolabel = FALSE,
+                            grouping_factors = NULL
 ){
 
   UseMethod("EstimateMutRates")
@@ -873,6 +893,14 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 #' @param pold_est Background mutation rate estimates if you have them. Can either be a single
 #' number applied to all samples or a named vector of values, where the names should be sample
 #' names.
+#' @param pold_from_nolabel Fix background mutation rate estimate to mutation rates seen in -label samples.
+#' By default, a single background rate is used for all samples, inferred from the average mutation rate
+#' across all -label samples. The `grouping_factors` argument can be specified to use certain -label samples
+#' to infer background mutation rates for certain sets of +label samples.
+#' @param grouping_factors If `pold_from_nolabel` is TRUE, then `grouping_factors` will specify the
+#' sample-detail columns in the metadf that should be used to group -label samples by. Average mutation
+#' rates in each group of -label samples will be used as the background mutation rate estimate in
+#' +label samples with the same values for the relevant metadf columns.
 #' @import data.table
 #' @export
 EstimateMutRates.EZbakRData <- function(obj,
@@ -881,7 +909,9 @@ EstimateMutRates.EZbakRData <- function(obj,
                                         pnew_prior_sd = 0.3,
                                         pold_prior_mean = -6.5,
                                         pold_prior_sd = 0.5,
-                                        pold_est = NULL
+                                        pold_est = NULL,
+                                        pold_from_nolabel = FALSE,
+                                        grouping_factors = NULL
                              ){
 
 
@@ -892,7 +922,11 @@ EstimateMutRates.EZbakRData <- function(obj,
 
 
   cB <- obj$cB
+  metadf <- obj$metadf
   cB <- data.table::setDT(cB)
+
+
+
 
   # Figure out which mutation counts are in the cB
   mutcounts_in_cB <- find_mutcounts(obj)
@@ -918,12 +952,111 @@ EstimateMutRates.EZbakRData <- function(obj,
 
   for(i in seq_along(muts_analyze)){
 
+    ### Infer polds from -label data and/or parse pold estimates
+
+    # What columns represent label times of interest?
+    if(length(muts_analyze) == 1){
+
+      tl_cols_possible <- c("tl", "tpulse")
+
+    }else{
+
+      tl_cols_possible <- c(paste0("tl_", muts_analyze),
+                            paste0("tpulse_", muts_analyze))
+
+
+    }
+
+    tl_cols <- tl_cols_possible[tl_cols_possible %in% colnames(metadf)]
+
+    # Which samples are -label?
+    samples_with_no_label <- metadf %>%
+      dplyr::rowwise() %>%
+      dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) == 0)) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(sample) %>%
+      unlist() %>%
+      unname()
+
+
+    # Infer background mutation rate from -label data
+    if(pold_from_nolabel){
+
+      metadf <- data.table::setDT(data.table::copy(metadf))[sample %in% samples_with_no_label]
+      setkey(cB, sample)
+      setkey(metadf, sample)
+
+      if(is.null(grouping_factors)){
+
+        background_rates <- cB[metadf, nomatch = NULL][,
+                                                       .(pold_est = sum(get(mut_analyze[i])*n)/sum(get(nucs_analyze[i])*n))
+                                                       ]
+
+        pold_dt <- data.table(pold_est = as.numeric(background_rates$pold_est[1]),
+                              sample = metadf$sample[!(metadf$sample %in% samples_with_no_label)])
+
+      }else{
+
+        background_rates <- cB[metadf, nomatch = NULL][,
+                                                       .(pold_est = sum(get(mut_analyze[i])*n)/sum(get(nucs_analyze[i]))),
+                                                       by = grouping_factors
+        ]
+
+        metagroup <- metadf[!(sample %in% samples_with_no_label), c('sample', grouping_factors)]
+        pold_dt <- background_rates[metagroup, on = grouping_factors, nomatch = NULL][,c(grouping_factors) := rep(NULL, times = length(grouping_factors))]
+
+      }
+
+
+
+    }else{
+
+      # Create lookup table if pold_est is provided
+      if(length(pold_est) == 1){
+
+        pold_dt <- data.table(pold_est = pold_est,
+                              sample = metadf$sample[!(metadf$sample %in% samples_with_no_label)])
+
+      }else if(length(pold_est) > 1){
+
+        samps_provided <- names(pold_est)
+        label_samps <- metadf$sample[!(metadf$sample %in% samples_with_no_label)]
+
+        if(!all(samps_provided %in% label_samps)){
+
+          stop("Names of pold_est vector elements include samples not found in the metadf!")
+
+        }
+
+        if(!all(label_samps %in% samps_provided)){
+
+          stop("Not all samples in metadf are found as names of the pold_est vector elements!")
+
+        }
+
+        pold_dt <- data.table::data.table(pold_est = pold_est,
+                                          sample = samps_provided)
+
+      }else{
+
+        # Hack to filter out -label samples
+        pold_dt <- data.table::data.table(sample = metadf$sample[!(metadf$sample %in% samples_with_no_label)])
+
+      }
+
+
+    }
+
+
+    ### Estimate mutation rates
+
     group_cols <- c("sample", muts_analyze[i], nucs_analyze[i])
 
     mutest_dt <- cB[,.(n = sum(n)),
                     by = group_cols]
 
-    mutest_temp <- mutest_dt[,.(params = list(fit_tcmm(muts = get(muts_analyze[i]),
+
+    mutest_temp <- mutest_dt[pold_dt, on = sample, nomatch = NULL][,.(params = list(fit_tcmm(muts = get(muts_analyze[i]),
                                                          nucs = get(nucs_analyze[i]),
                                                          n = n,
                                                          Poisson = FALSE,
@@ -1742,6 +1875,14 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 #' @param pold_est Background mutation rate estimates if you have them. Can either be a single
 #' number applied to all samples or a named vector of values, where the names should be sample
 #' names.
+#' @param pold_from_nolabel Fix background mutation rate estimate to mutation rates seen in -label samples.
+#' By default, a single background rate is used for all samples, inferred from the average mutation rate
+#' across all -label samples. The `grouping_factors` argument can be specified to use certain -label samples
+#' to infer background mutation rates for certain sets of +label samples.
+#' @param grouping_factors If `pold_from_nolabel` is TRUE, then `grouping_factors` will specify the
+#' sample-detail columns in the metadf that should be used to group -label samples by. Average mutation
+#' rates in each group of -label samples will be used as the background mutation rate estimate in
+#' +label samples with the same values for the relevant metadf columns.
 #' @import data.table
 #' @export
 EstimateMutRates.EZbakRArrowData <- function(obj,
@@ -1750,7 +1891,9 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
                                              pnew_prior_sd = 0.3,
                                              pold_prior_mean = -6.5,
                                              pold_prior_sd = 0.5,
-                                             pold_est = NULL
+                                             pold_est = NULL,
+                                             pold_from_nolabel = FALSE,
+                                             grouping_factors = NULL
 ){
 
   ### Hack to deal with devtools::check() NOTEs
@@ -1839,6 +1982,101 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
 
     group_cols <- c("sample", muts_analyze[i], nucs_analyze[i])
 
+    ### Infer polds from -label data and/or parse pold estimates
+
+    # Which samples are -label?
+    samples_with_no_label <- metadf$sample[!(metadf$sample %in% samples_with_label)]
+
+    if(pold_from_nolabel){
+
+      ctl_cB <- dplyr::tibble()
+      ctl_group_cols <- c("")
+
+      ### Compile all -label data
+      for(c in seq_along(samples_with_no_label)){
+
+
+        ctl_cB <- cB %>%
+          dplyr::filter(sample == samples_with_no_label[s]) %>%
+          dplyr::summarise(muts = sum(n*!!dplyr::sym(muts_analyze[i])),
+                           nucs = sum(n*!!dplyr::sym(nucs_analyze[i])),
+                           reads = sum(n),
+                           sample = unique(sample)) %>%
+          dplyr::collect() %>%
+          dplyr::bind_rows(ctl_cB)
+
+
+      }
+
+
+      ### Infer background rates
+      metadf <- data.table::setDT(data.table::copy(metadf))[sample %in% samples_with_no_label]
+      ctl_cB <- data.table::setDT(ctl_cB)
+      setkey(ctl_cB, sample)
+      setkey(metadf, sample)
+
+
+      if(is.null(grouping_factors)){
+
+        background_rates <- ctl_cB[metadf, nomatch = NULL][,
+                                                       .(pold_est = sum(muts*reads)/sum(nucs*reads))
+        ]
+
+        pold_dt <- data.table(pold_est = as.numeric(background_rates$pold_est[1]),
+                              sample = samples_with_label)
+
+      }else{
+
+        background_rates <- cB[metadf, nomatch = NULL][,
+                                                       .(pold_est = sum(muts*reads)/sum(nucs*reads)),
+                                                       by = grouping_factors
+        ]
+
+        metagroup <- metadf[samples %in% samples_with_label, c('sample', grouping_factors)]
+        pold_dt <- background_rates[metagroup, on = grouping_factors, nomatch = NULL][,c(grouping_factors) := rep(NULL, times = length(grouping_factors))]
+
+      }
+
+
+    }else{
+
+      # Create lookup table if pold_est is provided
+      if(length(pold_est) == 1){
+
+        pold_dt <- data.table(pold_est = pold_est,
+                              sample = samples_with_label)
+
+      }else if(length(pold_est) > 1){
+
+        samps_provided <- names(pold_est)
+
+        if(!all(samps_provided %in% samples_with_label)){
+
+          stop("Names of pold_est vector elements include samples not found in the metadf!")
+
+        }
+
+        if(!all(samples_with_label %in% samps_provided)){
+
+          stop("Not all samples in metadf are found as names of the pold_est vector elements!")
+
+        }
+
+        pold_dt <- data.table::data.table(pold_est = pold_est,
+                                          sample = samps_provided)
+
+      }else{
+
+        # Dummy table because sample_cB will get merged with this one way or another
+        pold_dt <- data.table::data.table(sample = samples_with_label)
+
+      }
+
+    }
+
+
+    ### Estimate mutation rates
+
     for(s in seq_along(samples_with_label)){
 
       sample_cB <- cB %>%
@@ -1847,10 +2085,11 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
         dplyr::summarise(n = sum(n)) %>%
         dplyr::collect()
 
+
       mutest_dt <- data.table::setDT(sample_cB)
 
 
-      mutest_temp <- mutest_dt[,.(params = list(fit_tcmm(muts = get(muts_analyze[i]),
+      mutest_temp <- mutest_dt[pold_dt, on = sample, nomatch = NULL][,.(params = list(fit_tcmm(muts = get(muts_analyze[i]),
                                                          nucs = get(nucs_analyze[i]),
                                                          n = n,
                                                          Poisson = FALSE,
