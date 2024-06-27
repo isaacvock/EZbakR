@@ -87,6 +87,10 @@ be remedied through approximation of the solution to all full models.</p>
 <span>  <span class="va">obj</span>,</span>
 <span>  features <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  parameter <span class="op">=</span> <span class="st">"log_kdeg"</span>,</span>
+<span>  type <span class="op">=</span> <span class="st">"kinetics"</span>,</span>
+<span>  kstrat <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  populations <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  fraction_design <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  repeatID <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  formula_mean <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  formula_sd <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -115,6 +119,16 @@ will use all feature columns in the <code>obj</code>'s cB.</p></dd>
 
 <dt>parameter</dt>
 <dd><p>Parameter to average across replicates of a given condition.</p></dd>
+
+
+<dt>type</dt>
+<dd><p>What type of table is the parameter found in? Default is "kinetics",
+but can also set to "fractions".</p></dd>
+
+
+<dt>kstrat</dt>
+<dd><p>If <code>type == "kinetics"</code>, then <code>kstrat</code> specifies the kinetic parameter
+inference strategy.</p></dd>
 
 
 <dt>repeatID</dt>
