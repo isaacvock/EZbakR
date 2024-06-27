@@ -25,6 +25,8 @@ EstimateFractions(
   init_pnew_prior_sd = 0.8,
   pnew_prior_sd_min = 0.01,
   pold_est = NULL,
+  pold_from_nolabel = FALSE,
+  grouping_factors = NULL,
   character_limit = 20,
   overwrite = TRUE
 )
@@ -156,6 +158,16 @@ a value of \code{pnew_prior_sd_min} will be imputed in that case.}
 \item{pold_est}{Background mutation rate estimates if you have them. Can either be a single
 number applied to all samples or a named vector of values, where the names should be sample
 names.}
+
+\item{pold_from_nolabel}{Fix background mutation rate estimate to mutation rates seen in -label samples.
+By default, a single background rate is used for all samples, inferred from the average mutation rate
+across all -label samples. The \code{grouping_factors} argument can be specified to use certain -label samples
+to infer background mutation rates for certain sets of +label samples.}
+
+\item{grouping_factors}{If \code{pold_from_nolabel} is TRUE, then \code{grouping_factors} will specify the
+sample-detail columns in the metadf that should be used to group -label samples by. Average mutation
+rates in each group of -label samples will be used as the background mutation rate estimate in
++label samples with the same values for the relevant metadf columns.}
 
 \item{character_limit}{Maximum number of characters for naming out fractions output. EZbakR
 will try to name this as a "_" separated character vector of all of the features analyzed.
