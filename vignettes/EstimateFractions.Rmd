@@ -263,9 +263,66 @@ feature names for multi-feature assigned reads is different from "+", this
 can be addressed by altering the `multi_feature_sep` argument.
 
 
+## Improving estimates
+
+Two things can impact the accuracy of fractions estimation:
+
+1. Dropout: this is the phenomenon by which metabolically labeled RNA or sequencing reads derived from such RNA are lost either during library preparation or during computational processing of the raw sequencing data. Several labs have independently identified and discussed the prevalence of dropout in NR-seq and other metabolic labeling RNA-seq experiments. Recent work suggests that there are three potential causes for this: 1) Loss of labeled RNA on plastic surfaces during RNA extraction, 2) RT falloff due to modifications of the metabolic labeling made by some NR-seq chemistries, and 3) loss of reads with many NR-induced mutations due to poor read alignment.
+2. Inaccurate mutation rate estimates
+
+In this section, we will discuss some strategies you can use to address these
+two challenges.
+
+### Correcting dropout
+
+If you have -label data to compare to, EZbakR can use this data to quantify and
+correct for dropout. The strategy used by EZbakR is identical to that previously
+implemented in bakR. You can read more about the mathematical details of this
+strategy [here](https://simonlabcode.github.io/bakR/articles/Dropout.html). To
+implement dropout correction, run `CorrectDropout()`, specifying which metadf
+sample characteristic columns should be used to associate -label and +label 
+samples:
+
+```{r}
+ezbdo <- CorrectDropout(ezbdo, 
+                        grouping_factors = "treatment")
+```
+
+`grouping_factors` is technically not a required argument, as EZbakR will try
+to infer it automatically. EZbakR assumes that all metadf sample characteristic
+columns should be used for grouping though, so its important to know that this
+default can be altered as necessary.
+
+
+### Inferring background mutation rates from -label data
+
+In some cases (e.g., if label incorporation rates are low, or if a very short
+label time was used), it can be difficult to estimate the high and low mutation
+rates in a given sample. To curtail this challenge, you can use -label data to
+infer background mutation rates, and then estimate the chemically induced
+mutation rate fixing the background mutation rate to the -label rate. To do
+this, you just need to set `pold_from_nolabel` to `TRUE`:
+
+```{r}
+ezbdo <- EstimateFractions(ezbdo,
+                           pold_from_nolabel = TRUE)
+```
+
+By default, a single background mutation rate (pold) will be estimated using all
+of the -label data. Alternatively, you can specify sample characteristics by
+which to stratify -label data, so that one pold is estimated per group of samples
+with the same value for the metadf columns specified in `grouping_factors`:
+
+```{r}
+ezbdo <- EstimateFractions(ezbdo,
+                           pold_from_nolabel = TRUE,
+                           grouping_factors = 'treatment')
+```
+
+
 ## Fancy functionalities
 
-In the last section, we discussed how `EstimateFractions()` basic functionality
+In the first section, we discussed the basic functionality of `EstimateFractions()`
 and how to alter its key behaviors. In this section, I will discuss some of the
 cooler, more niche analysis strategies that `EstimateFractions()` can implement.
 

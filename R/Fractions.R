@@ -621,8 +621,9 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
     setkey(mutrates, sample)
     setkey(cB, sample)
 
+
     # Join
-    cB <- cB[mutrates, nomatch = NULL]
+    cB <- mutrates[cB]
 
 
 
@@ -640,7 +641,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
       ### Get coverages to filter by; only want high coverage for feature-specific
       ### pnew estimation
 
-      coverages <- cB[,.(coverage = sum(n)),
+      coverages <- cB[!(sample %in% samples_with_no_label)][,.(coverage = sum(n)),
                       by = c("sample", features_to_analyze)]
       coverages <- coverages[coverage > hier_readcutoff][, c("coverage") := .(NULL)]
 
@@ -691,16 +692,15 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
       setkey(global_est, sample)
       setkey(cB, sample)
 
-      feature_specific <- cB[global_est, nomatch = NULL][,
-         .(params = dplyr::case_when(
-                                      !(unique(sample) %in% samples_with_no_label) ~ list(fit_tcmm(muts = get(pops_to_analyze),
+      feature_specific <- global_est[cB][,
+         .(params = ifelse(!(unique(sample) %in% samples_with_no_label), list(fit_tcmm(muts = get(pops_to_analyze),
                                                                                    nucs = get(necessary_basecounts),
                                                                                    n = n,
                                                                                    Poisson = Poisson,
                                                                                    pold = unique(pold),
                                                                                    pnew_prior_mean = unique(pnew_prior),
                                                                                    pnew_prior_sd = unique(pnew_prior_sd))),
-                                      .default = list(list(p1 = -Inf,
+                                      list(list(p1 = -Inf,
                                                                                             p2 = -Inf,
                                                                                             p1_u = 0,
                                                                                             p2_u = 0))),
@@ -928,7 +928,9 @@ EstimateMutRates.EZbakRData <- function(obj,
 
 
   ### Hack to deal with devtools::check() NOTEs
-  n <- params <- p1 <- p2 <- NULL
+  n <- params <- p1 <- p2 <- ..cols_to_keep <- NULL
+
+  rm(..cols_to_keep)
 
   `.` <- list
 
@@ -1924,7 +1926,9 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
 ){
 
   ### Hack to deal with devtools::check() NOTEs
-  n <- params <- p1 <- p2 <- NULL
+  n <- params <- p1 <- p2 <- ..cols_to_keep <- muts <- nucs <- NULL
+
+  rm(..cols_to_keep)
 
   `.` <- list
 
