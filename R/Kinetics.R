@@ -145,7 +145,7 @@ Standard_kinetic_estimation <- function(obj,
   ### Hack to deal with devtools::check() NOTEs
   tl <- kdeg <- log_kdeg <- se_log_kdeg <- ..cols_to_keep <- ..kinetics_cols_to_keep <- NULL
   ksyn <- normalized_reads <- log_ksyn <- se_log_ksyn <- scale_factor <- n <- nolabel_rpm <- NULL
-  old_rpm <- new_rpm <- geom_mean <- rpm <- NULL
+  old_rpm <- new_rpm <- geom_mean <- rpm <- nolabel_n <- nolabel_reps <- NULL
 
   rm(..cols_to_keep)
   rm(..kinetics_cols_to_keep)
@@ -343,7 +343,7 @@ Standard_kinetic_estimation <- function(obj,
     ### TO-DO: Incorporate number of -s4U replicates used to infer nolabel_n
 
     ### Uncertainty approximated with delta method
-    lkdeg_uncert <- function(fn, se_lfn, Rs4U, Rctl, tl, kdeg){
+    lkdeg_uncert_nss <- function(fn, se_lfn, Rs4U, Rctl, tl, kdeg){
 
       part_1 <- (fn^2)*(se_lfn^2)
       part_2 <- ((1/(Rs4U + 1))^2)*Rs4U/(tl^2)
@@ -355,7 +355,7 @@ Standard_kinetic_estimation <- function(obj,
 
     }
 
-    lksyn_uncert <- function(fn, se_lfn, Rs4U, Rctl, tl, kdeg){
+    lksyn_uncert_nss <- function(fn, se_lfn, Rs4U, Rctl, tl, kdeg){
 
       ### kdeg and log(kdeg) variances
       part_1 <- (fn^2)*(se_lfn^2)
@@ -379,7 +379,7 @@ Standard_kinetic_estimation <- function(obj,
     se_of_interest <- paste0("se_logit_", fraction_of_interest)
 
     kinetics <- setDT(kinetics)
-    kinetics[, se_log_kdeg := lkdeg_uncert(fn = get(fraction_of_interest),
+    kinetics[, se_log_kdeg := lkdeg_uncert_nss(fn = get(fraction_of_interest),
                                            se_lfn = get(se_of_interest),
                                            Rs4U = n,
                                            Rctl = nolabel_n,
@@ -387,7 +387,7 @@ Standard_kinetic_estimation <- function(obj,
                                            kdeg = kdeg)]
 
     # Estimate uncertainty (assuming normalized_reads ~ Poisson(normalized_reads)/scale_factor)
-    kinetics[, se_log_ksyn := lksyn_uncert(fn = get(fraction_of_interest),
+    kinetics[, se_log_ksyn := lksyn_uncert_nss(fn = get(fraction_of_interest),
                                            se_lfn = get(se_of_interest),
                                            Rs4U = n,
                                            Rctl = nolabel_n,
@@ -435,7 +435,7 @@ Standard_kinetic_estimation <- function(obj,
     ### Estimate uncertainty in log(kdeg)
 
     # This needs to be a bit different in this case
-    lkdeg_uncert <- function(fn, se_lfn){
+    lkdeg_uncert_sf <- function(fn, se_lfn){
 
       deriv <- (1/fn)*(fn*(1-fn))
 
@@ -447,7 +447,7 @@ Standard_kinetic_estimation <- function(obj,
 
     se_of_interest <- paste0("se_logit_", fraction_of_interest)
 
-    kinetics[, se_log_kdeg := lkdeg_uncert(fn = get(fraction_of_interest),
+    kinetics[, se_log_kdeg := lkdeg_uncert_sf(fn = get(fraction_of_interest),
                                            se_lfn = get(se_of_interest))]
 
 

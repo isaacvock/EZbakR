@@ -35,6 +35,9 @@ that all combinations of the \code{mutrate_populations} you have requested to an
 present in your data. If this is not the case for your data, then you will have
 to create one manually. See docs for \code{EstimateFractions} (run ?EstimateFractions()) for more details.}
 
+\item{repeatID}{If multiple \code{fractions} tables exist with the same metadata,
+then this is the numerical index by which they are distinguished.}
+
 \item{fraction_name}{Name of fraction estimate table to use. Should be stored in the
 \code{obj$fractions} list under this name. Can also rely on specifying \code{features} and/or \code{populations}
 and having \code{EZget()} find it.}

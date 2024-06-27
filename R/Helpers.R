@@ -397,6 +397,9 @@ decide_output <- function(obj, proposed_name,
                           counttype = NULL,
                           kstrat = NULL,
                           parameter = NULL,
+                          condition = NULL,
+                          reference = NULL,
+                          experimental = NULL,
                           overwrite = TRUE){
 
   type = match.arg(type)
@@ -410,6 +413,9 @@ decide_output <- function(obj, proposed_name,
                              parameter = parameter,
                              kstrat = kstrat,
                              counttype = counttype,
+                           condition = condition,
+                           reference = reference,
+                           experimental = experimental,
                              returnNameOnly = TRUE,
                              exactMatch = TRUE,
                            alwaysCheck = TRUE)

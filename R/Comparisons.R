@@ -668,6 +668,7 @@ CompareParameters <- function(obj, condition, reference, experimental,
     output_name <- decide_output(obj, output_name, type = "comparisons",
                                  features = features, parameter = parameter,
                                  reference = reference, experimental = experimental,
+                                 condition = condition,
                                  overwrite = overwrite)
 
     # How many identical tables already exist?
@@ -681,6 +682,7 @@ CompareParameters <- function(obj, condition, reference, experimental,
                                type = 'comparisons',
                                features = features,
                                parameter = parameter,
+                               condition = condition,
                                reference = reference,
                                experimental = experimental,
                                returnNameOnly = TRUE,

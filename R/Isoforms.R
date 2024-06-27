@@ -104,6 +104,8 @@ ImportIsoformQuant <- function(obj, files,
 #' that all combinations of the `mutrate_populations` you have requested to analyze are
 #' present in your data. If this is not the case for your data, then you will have
 #' to create one manually. See docs for `EstimateFractions` (run ?EstimateFractions()) for more details.
+#' @param repeatID If multiple `fractions` tables exist with the same metadata,
+#' then this is the numerical index by which they are distinguished.
 #' @param fraction_name Name of fraction estimate table to use. Should be stored in the
 #' `obj$fractions` list under this name. Can also rely on specifying `features` and/or `populations`
 #' and having `EZget()` find it.

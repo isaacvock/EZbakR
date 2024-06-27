@@ -1037,6 +1037,7 @@ SimulateMultiCondition <- function(nfeatures, metadf, mean_formula,
 #' data table (the cB table).
 #' @param pnew Probability that a T is mutated to a C if a read is new.
 #' @param pold Probability that a T is mutated to a C if a read is old.
+#' @param funique Fraction of reads that uniquely "map" to a single isoform.
 #' @param readlength Length of simulated reads. In this simple simulation, all reads
 #' are simulated as being exactly this length.
 #' @param Ucont Probability that a nucleotide in a simulated read is a U.
@@ -1074,6 +1075,9 @@ SimulateIsoforms <- function(nfeatures,
                              logkdeg_mean = -1.9, logkdeg_sd = 0.7,
                              logksyn_mean = 2.3, logksyn_sd = 0.7
                              ){
+
+  ### Hack to deal with devtools::check() NOTEs
+  feature <- GF <- transcripts <- TC <- nT <- n <- NULL
 
 
   if(is.null(nt)){

@@ -47,6 +47,8 @@ data table (the cB table).}
 
 \item{pold}{Probability that a T is mutated to a C if a read is old.}
 
+\item{funique}{Fraction of reads that uniquely "map" to a single isoform.}
+
 \item{readlength}{Length of simulated reads. In this simple simulation, all reads
 are simulated as being exactly this length.}
 
