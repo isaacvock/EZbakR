@@ -1001,7 +1001,7 @@ EstimateMutRates.EZbakRData <- function(obj,
       if(is.null(grouping_factors)){
 
         background_rates <- cB[metadf, nomatch = NULL][,
-                                                       .(pold_est = sum(get(mut_analyze[i])*n)/sum(get(nucs_analyze[i])*n))
+                                                       .(pold_est = sum(get(muts_analyze[i])*n)/sum(get(nucs_analyze[i])*n))
                                                        ]
 
         pold_dt <- data.table(pold_est = as.numeric(background_rates$pold_est[1]),
@@ -1010,7 +1010,7 @@ EstimateMutRates.EZbakRData <- function(obj,
       }else{
 
         background_rates <- cB[metadf, nomatch = NULL][,
-                                                       .(pold_est = sum(get(mut_analyze[i])*n)/sum(get(nucs_analyze[i]))),
+                                                       .(pold_est = sum(get(muts_analyze[i])*n)/sum(get(nucs_analyze[i]))),
                                                        by = grouping_factors
         ]
 
