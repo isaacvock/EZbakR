@@ -990,17 +990,16 @@ EstimateMutRates.EZbakRData <- function(obj,
       unlist() %>%
       unname()
 
-
     # Infer background mutation rate from -label data
     if(pold_from_nolabel){
 
-      metadf <- data.table::setDT(data.table::copy(metadf))[sample %in% samples_with_no_label]
+      metadf <- data.table::setDT(data.table::copy(metadf))
       setkey(cB, sample)
       setkey(metadf, sample)
 
       if(is.null(grouping_factors)){
 
-        background_rates <- cB[metadf, nomatch = NULL][,
+        background_rates <- cB[metadf, nomatch = NULL][sample %in% samples_with_no_label][,
                                                        .(pold_est = sum(get(muts_analyze[i])*n)/sum(get(nucs_analyze[i])*n))
                                                        ]
 
@@ -1009,12 +1008,13 @@ EstimateMutRates.EZbakRData <- function(obj,
 
       }else{
 
-        background_rates <- cB[metadf, nomatch = NULL][,
-                                                       .(pold_est = sum(get(muts_analyze[i])*n)/sum(get(nucs_analyze[i]))),
+        background_rates <- cB[metadf, nomatch = NULL][sample %in% samples_with_no_label][,
+                                                       .(pold_est = sum(get(muts_analyze[i])*n)/sum(get(nucs_analyze[i])*n)),
                                                        by = grouping_factors
         ]
 
-        metagroup <- metadf[!(sample %in% samples_with_no_label), c('sample', grouping_factors)]
+        cols_to_keep <- c("sample", grouping_factors)
+        metagroup <- metadf[!(sample %in% samples_with_no_label)][, ..cols_to_keep]
         pold_dt <- background_rates[metagroup, on = grouping_factors, nomatch = NULL][,c(grouping_factors) := rep(NULL, times = length(grouping_factors))]
 
       }
@@ -1060,6 +1060,7 @@ EstimateMutRates.EZbakRData <- function(obj,
     }
 
 
+
     ### Estimate mutation rates
 
     group_cols <- c("sample", muts_analyze[i], nucs_analyze[i])
@@ -1068,7 +1069,7 @@ EstimateMutRates.EZbakRData <- function(obj,
                     by = group_cols]
 
 
-    mutest_temp <- mutest_dt[pold_dt, on = sample, nomatch = NULL][,.(params = list(fit_tcmm(muts = get(muts_analyze[i]),
+    mutest_temp <- mutest_dt[pold_dt, on = "sample", nomatch = NULL][,.(params = list(fit_tcmm(muts = get(muts_analyze[i]),
                                                          nucs = get(nucs_analyze[i]),
                                                          n = n,
                                                          Poisson = FALSE,
@@ -1078,7 +1079,7 @@ EstimateMutRates.EZbakRData <- function(obj,
                                                          pold_prior_sd = pold_prior_sd,
                                                        pold = pold_est))), by = sample]
 
-    if(is.null(pold_est)){
+    if(is.null(pold_est) & !pold_from_nolabel){
 
       mutest_temp[, c("p1", "p2") := .(inv_logit(sapply(params, `[[`, 2)),
                                        inv_logit(sapply(params, `[[`, 3)))]
@@ -1095,11 +1096,13 @@ EstimateMutRates.EZbakRData <- function(obj,
 
       mutest_temp[, c("p1") := .(inv_logit(sapply(params, `[[`, 2)))]
 
+      mutest_temp <- mutest_temp[pold_dt, on = "sample", nomatch = NULL]
+
       mutest_temp[,c("pold",
                      "pnew") := .(pold_est,
                                   p1), by = 1:nrow(mutest_temp)]
 
-      mutest_temp[,c("p1") := .(NULL)]
+      mutest_temp[,c("p1", "pold_est") := .(NULL, NULL)]
 
       mutest[[i]] <- mutest_temp
 
@@ -2113,7 +2116,7 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
       mutest_dt <- data.table::setDT(sample_cB)
 
 
-      mutest_temp <- mutest_dt[pold_dt, on = sample, nomatch = NULL][,.(params = list(fit_tcmm(muts = get(muts_analyze[i]),
+      mutest_temp <- mutest_dt[pold_dt, on = "sample", nomatch = NULL][,.(params = list(fit_tcmm(muts = get(muts_analyze[i]),
                                                          nucs = get(nucs_analyze[i]),
                                                          n = n,
                                                          Poisson = FALSE,
@@ -2123,14 +2126,32 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
                                                          pold_prior_sd = pold_prior_sd,
                                                          pold = pold_est))), by = sample]
 
-      mutest_temp[, c("p1", "p2") := .(inv_logit(sapply(params, `[[`, 2)),
-                                       inv_logit(sapply(params, `[[`, 3)))]
 
-      mutest_temp[,c("pold",
-                     "pnew") := .(min(c(p1, p2)),
-                                  max(c(p1, p2))), by = 1:nrow(mutest_temp)]
+      if(is.null(pold_est) & !pold_from_nolabel){
 
-      mutest_temp[,c("p1", "p2") := .(NULL, NULL)]
+        mutest_temp[, c("p1", "p2") := .(inv_logit(sapply(params, `[[`, 2)),
+                                         inv_logit(sapply(params, `[[`, 3)))]
+
+        mutest_temp[,c("pold",
+                       "pnew") := .(min(c(p1, p2)),
+                                    max(c(p1, p2))), by = 1:nrow(mutest_temp)]
+
+        mutest_temp[,c("p1", "p2") := .(NULL, NULL)]
+
+
+      }else{
+
+        mutest_temp[, c("p1") := .(inv_logit(sapply(params, `[[`, 2)))]
+
+        mutest_temp <- mutest_temp[pold_dt, on = "sample", nomatch = NULL]
+
+        mutest_temp[,c("pold",
+                       "pnew") := .(pold_est,
+                                    p1), by = 1:nrow(mutest_temp)]
+
+        mutest_temp[,c("p1", "pold_est") := .(NULL, NULL)]
+
+      }
 
       sample_mutest <- dplyr::bind_rows(sample_mutest, mutest_temp)
 
