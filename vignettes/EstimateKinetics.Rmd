@@ -213,7 +213,7 @@ The calculus enthusiasts among you may recognize that this estimate for
 $k_{\text{deg}}$ is equivalent to a 1st order Taylor series approximation of
 the "standard" estimate strategy. This is no coincidence, as the assumption of
 a short feed is equivalent to assuming that $\theta$ is close to 0 (most of the
-RNA is old). It may also seem odd that this estimate is bound to be between 0 
+RNA is old). It may also seem odd that this estimate is bounded between 0 
 and 1/tl, but this just reflects the assumption made by this strategy that RNA
 half lives are much shorter than the label time.
 
@@ -311,7 +311,11 @@ RNA at the start of labeling, and derive an estimator for $k_{\text{syn}}$:
 $$
 k_{\text{syn}} = \frac{\theta*(\text{normalized read count)}*k_{\text{deg}}}{1 - e^{-k_{\text{deg}}*\text{tl}}}
 $$
-This yields the same estimator as in the steady-state case when $\theta = 1 - e^{-k_{\text{deg}}*\text{tl}}$
+This yields the same estimator as in the steady-state case when 
+$\theta = 1 - e^{-k_{\text{deg}}*\text{tl}}$. To make this strategy work, we 
+just need to estimate the starting levels of old RNA. Thus, you need some
+sort of RNA-seq data from a timepoint equivalent to the start of labeling.
+Currently, EZbakR assumes that your -label controls fulfill this role.
 
 One thing you may be wondering is just how much of non-steady-state analysis 
 this really is if we are still assuming constant rate constants? What if the
