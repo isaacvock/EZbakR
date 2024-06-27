@@ -18,6 +18,10 @@
 #' reads by and estimate proportions of each RNA population. The default of "all"
 #' will use all feature columns in the `obj`'s cB.
 #' @param parameter Parameter to average across replicates of a given condition.
+#' @param type What type of table is the parameter found in? Default is "kinetics",
+#' but can also set to "fractions".
+#' @param kstrat If `type == "kinetics"`, then `kstrat` specifies the kinetic parameter
+#' inference strategy.
 #' @param repeatID If multiple `kinetics` or `fractions` tables exist with the same metadata,
 #' then this is the numerical index by which they are distinguished.
 #' @param formula_mean An R formula object specifying how the `parameter` of interest
@@ -58,42 +62,39 @@
 #' @importFrom magrittr %>%
 #' @export
 AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
+                                 type = "kinetics",
+                                 kstrat = NULL,
+                                 populations = NULL,
+                                 fraction_design = NULL,
                                  repeatID = NULL,
-                            formula_mean = NULL, formula_sd = NULL,
-                            include_all_parameters = TRUE,
-                            sd_reg_factor = 10,
-                            error_if_singular = TRUE,
-                            min_reads = 10,
-                            force_optim = FALSE,
-                            character_limit = 20,
-                            overwrite = TRUE){
+                                 formula_mean = NULL, formula_sd = NULL,
+                                 include_all_parameters = TRUE,
+                                 sd_reg_factor = 10,
+                                 error_if_singular = TRUE,
+                                 min_reads = 10,
+                                 force_optim = FALSE,
+                                 character_limit = 20,
+                                 overwrite = TRUE){
 
 
 
   if(parameter == "log_TILAC_ratio"){
 
-    obj <- general_avg_and_reg(obj = obj, features = features, parameter = parameter,
+    TILAC <- TRUE
+
+  }
+
+  obj <- general_avg_and_reg(obj = obj, features = features, parameter = parameter,
+                             type = type, kstrat = kstrat, populations = populations,
+                             fraction_design = fraction_design,
                              formula_mean = formula_mean, formula_sd = formula_sd,
                              include_all_parameters = include_all_parameters,
                              sd_reg_factor = sd_reg_factor,
-                             error_if_singular = error_if_singular,
-                             TILAC = TRUE, min_reads = min_reads,
+                             error_if_singular = error_if_singular, min_reads = min_reads,
                              force_optim = force_optim,
+                             TILAC = TILAC,
                              character_limit = character_limit,
                              overwrite = overwrite)
-
-  }else{
-
-    obj <- general_avg_and_reg(obj = obj, features = features, parameter = parameter,
-                        formula_mean = formula_mean, formula_sd = formula_sd,
-                        include_all_parameters = include_all_parameters,
-                        sd_reg_factor = sd_reg_factor,
-                        error_if_singular = error_if_singular, min_reads = min_reads,
-                        force_optim = force_optim,
-                        character_limit = character_limit,
-                        overwrite = overwrite)
-
-  }
 
   return(obj)
 
@@ -157,6 +158,9 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 
 general_avg_and_reg <- function(obj, features, parameter,
                                 type = "kinetics",
+                                kstrat = NULL,
+                                populations = NULL,
+                                fraction_design = NULL,
                                 formula_mean, formula_sd,
                                 include_all_parameters,
                                 sd_reg_factor,
@@ -184,15 +188,7 @@ general_avg_and_reg <- function(obj, features, parameter,
   # metadf for covariates
   metadf <- obj$metadf
 
-  ### Figure out which fraction new estimates to use
-
-  if(parameter %in% c("log_kdeg", "log_ksyn")){
-    kstrat <- "standard"
-  }else if(TILAC){
-    kstrat <- "tilac"
-  }else{
-    kstrat <- NULL
-  }
+  ### Figure out which table to use
 
 
   # Function is in Helpers.R
@@ -200,6 +196,8 @@ general_avg_and_reg <- function(obj, features, parameter,
                       type = type,
                       features = features,
                       kstrat = kstrat,
+                      populations = populations,
+                      fraction_design = fraction_design,
                       repeatID = repeatID,
                       returnNameOnly = TRUE)
 
@@ -210,9 +208,46 @@ general_avg_and_reg <- function(obj, features, parameter,
   features_to_analyze <- obj[["metadata"]][[type]][[param_name]][["features"]]
 
 
-  # Get the kinetic parameter data frame
-  kinetics <- kinetics %>%
-    dplyr::mutate(log_normalized_reads = log10(normalized_reads))
+  if(type == "fractions"){
+
+    normalized_reads <- get_normalized_read_counts(obj = obj,
+                                                   features_to_analyze = features_to_analyze,
+                                                   fractions_name = param_name) %>%
+      dplyr::as_tibble()
+
+    # Get the kinetic parameter data frame
+    kinetics <- kinetics %>%
+      dplyr::inner_join(normalized_reads[,c("sample",
+                                            features_to_analyze,
+                                            "normalized_reads")],
+                        by = c("sample", features_to_analyze)) %>%
+      dplyr::mutate(log_normalized_reads = log10(normalized_reads))
+
+
+    # Which samples need to get filtered out
+    mcols <- colnames(metadf)
+    tl_cols <- mcols[grepl("^tl", mcols) | grepl("^tpulse", mcols)]
+
+    samples_with_no_label <- metadf %>%
+      dplyr::rowwise() %>%
+      dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) == 0)) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(sample) %>%
+      unlist() %>%
+      unname()
+
+    # Filter out label-less samples
+    kinetics <- kinetics %>%
+      dplyr::filter(!(sample %in% samples_with_no_label))
+
+  }else{
+
+    # Get the kinetic parameter data frame
+    kinetics <- kinetics %>%
+      dplyr::mutate(log_normalized_reads = log10(normalized_reads))
+
+
+  }
 
 
 

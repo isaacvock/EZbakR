@@ -8,6 +8,10 @@ AverageAndRegularize(
   obj,
   features = NULL,
   parameter = "log_kdeg",
+  type = "kinetics",
+  kstrat = NULL,
+  populations = NULL,
+  fraction_design = NULL,
   repeatID = NULL,
   formula_mean = NULL,
   formula_sd = NULL,
@@ -29,6 +33,12 @@ reads by and estimate proportions of each RNA population. The default of "all"
 will use all feature columns in the \code{obj}'s cB.}
 
 \item{parameter}{Parameter to average across replicates of a given condition.}
+
+\item{type}{What type of table is the parameter found in? Default is "kinetics",
+but can also set to "fractions".}
+
+\item{kstrat}{If \code{type == "kinetics"}, then \code{kstrat} specifies the kinetic parameter
+inference strategy.}
 
 \item{repeatID}{If multiple \code{kinetics} or \code{fractions} tables exist with the same metadata,
 then this is the numerical index by which they are distinguished.}
