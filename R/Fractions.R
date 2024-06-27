@@ -1595,7 +1595,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
 
 
-
+      sample_cB <- setDT(sample_cB)
       setkey(sample_cB, sample)
 
 
@@ -2004,6 +2004,7 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
   # 2) Collect and pass to model as in default method
   for(i in seq_along(muts_analyze)){
 
+
     # Infer proportion of each population
     sample_mutest <- dplyr::tibble()
 
@@ -2024,11 +2025,10 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
 
 
         ctl_cB <- cB %>%
-          dplyr::filter(sample == samples_with_no_label[s]) %>%
+          dplyr::filter(sample == samples_with_no_label[c]) %>%
+          dplyr::group_by(sample) %>%
           dplyr::summarise(muts = sum(n*!!dplyr::sym(muts_analyze[i])),
-                           nucs = sum(n*!!dplyr::sym(nucs_analyze[i])),
-                           reads = sum(n),
-                           sample = unique(sample)) %>%
+                           nucs = sum(n*!!dplyr::sym(nucs_analyze[i]))) %>%
           dplyr::collect() %>%
           dplyr::bind_rows(ctl_cB)
 
@@ -2037,7 +2037,7 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
 
 
       ### Infer background rates
-      metadf <- data.table::setDT(data.table::copy(metadf))[sample %in% samples_with_no_label]
+      metadf <- data.table::setDT(data.table::copy(metadf))
       ctl_cB <- data.table::setDT(ctl_cB)
       setkey(ctl_cB, sample)
       setkey(metadf, sample)
@@ -2045,8 +2045,8 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
 
       if(is.null(grouping_factors)){
 
-        background_rates <- ctl_cB[metadf, nomatch = NULL][,
-                                                       .(pold_est = sum(muts*reads)/sum(nucs*reads))
+        background_rates <- ctl_cB[metadf, nomatch = NULL][sample %in% samples_with_no_label][,
+                                                       .(pold_est = sum(muts)/sum(nucs))
         ]
 
         pold_dt <- data.table(pold_est = as.numeric(background_rates$pold_est[1]),
@@ -2054,12 +2054,13 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
 
       }else{
 
-        background_rates <- cB[metadf, nomatch = NULL][,
-                                                       .(pold_est = sum(muts*reads)/sum(nucs*reads)),
+        background_rates <- ctl_cB[metadf, nomatch = NULL][sample %in% samples_with_no_label][,
+                                                       .(pold_est = sum(muts)/sum(nucs)),
                                                        by = grouping_factors
         ]
 
-        metagroup <- metadf[samples %in% samples_with_label, c('sample', grouping_factors)]
+        cols_to_keep <- c("sample", grouping_factors)
+        metagroup <- metadf[sample %in% samples_with_label][,..cols_to_keep]
         pold_dt <- background_rates[metagroup, on = grouping_factors, nomatch = NULL][,c(grouping_factors) := rep(NULL, times = length(grouping_factors))]
 
       }
