@@ -53,7 +53,12 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">CorrectDropout</span><span class="op">(</span><span class="va">obj</span>, grouping_factors <span class="op">=</span> <span class="cn">NULL</span>, features <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">CorrectDropout</span><span class="op">(</span></span>
+<span>  <span class="va">obj</span>,</span>
+<span>  grouping_factors <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  features <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  exactMatch <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -73,6 +78,13 @@ to group -s4U samples by for calculating the average -s4U RPM? The default value
 <dd><p>Character vector of the set of features you want to stratify
 reads by and estimate proportions of each RNA population. The default of <code>NULL</code>
 will expect there to be only one fractions table in the EZbakRFractions object.</p></dd>
+
+
+<dt>exactMatch</dt>
+<dd><p>If TRUE, then <code>features</code> must exactly match the <code>features</code>
+metadata for a given fractions table for it to be used. Means that you cannot
+specify a subset of features by default. Set this to FALSE if you would like
+to specify a feature subset.</p></dd>
 
 </dl></div>
 

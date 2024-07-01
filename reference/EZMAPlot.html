@@ -60,6 +60,7 @@
 <span>  reference <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  experimental <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  features <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  exactMatch <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  plotlog2 <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  FDR_cutoff <span class="op">=</span> <span class="fl">0.05</span>,</span>
 <span>  difference_cutoff <span class="op">=</span> <span class="fl">0</span>,</span>
@@ -94,6 +95,13 @@ your metadf table.</p></dd>
 
 <dt>features</dt>
 <dd><p>Character vector of feature names for which comparisons were made.</p></dd>
+
+
+<dt>exactMatch</dt>
+<dd><p>If TRUE, then <code>features</code> and <code>populations</code> have to exactly match
+those for a given fractions table for that table to be used. Means that you can't
+specify a subset of features or populations by default, since this is TRUE
+by default.</p></dd>
 
 
 <dt>plotlog2</dt>

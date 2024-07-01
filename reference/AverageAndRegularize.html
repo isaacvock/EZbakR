@@ -91,6 +91,7 @@ be remedied through approximation of the solution to all full models.</p>
 <span>  kstrat <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  populations <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  fraction_design <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  exactMatch <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  repeatID <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  formula_mean <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  formula_sd <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -129,6 +130,13 @@ but can also set to "fractions".</p></dd>
 <dt>kstrat</dt>
 <dd><p>If <code>type == "kinetics"</code>, then <code>kstrat</code> specifies the kinetic parameter
 inference strategy.</p></dd>
+
+
+<dt>exactMatch</dt>
+<dd><p>If TRUE, then <code>features</code> and <code>populations</code> have to exactly match
+those for a given fractions table for that table to be used. Means that you can't
+specify a subset of features or populations by default, since this is TRUE
+by default.</p></dd>
 
 
 <dt>repeatID</dt>
