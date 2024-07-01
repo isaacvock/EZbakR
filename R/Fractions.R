@@ -553,7 +553,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
   # Keep only feature of interest
   cols_to_group <- c(necessary_basecounts, pops_to_analyze, "sample", features_to_analyze)
-  cB <- cB[,.(n = sum(n)), by = cols_to_group]
+  cB <- cB[sample %in% metadf$sample][,.(n = sum(n)), by = cols_to_group]
 
   ### Filter out columns not mapping to any feature (easier and faster in data.table)
   if(filter_cols[1] == "all" & length(filter_cols) == 1){
@@ -1748,6 +1748,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
         }else{
 
           ##### WHOLE CODE BLOCK NEARLY IDENTICAL TO AS IN DEFAULT METHOD
+          # NOTE: Throws warning sometimes due to summarise returning multi-entries
           sample_fns <- dplyr::as_tibble(sample_cB) %>%
             dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", features_to_analyze)))) %>%
             dplyr::summarise(fit = ifelse(!(unique(sample) %in% samples_without_label),
