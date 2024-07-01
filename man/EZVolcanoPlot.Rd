@@ -11,6 +11,7 @@ EZVolcanoPlot(
   reference = NULL,
   experimental = NULL,
   features = NULL,
+  exactMatch = TRUE,
   plotlog2 = TRUE,
   FDR_cutoff = 0.05,
   difference_cutoff = 0,
@@ -32,6 +33,11 @@ your metadf table.}
 \item{experimental}{Name of experimental level for comparison.}
 
 \item{features}{Character vector of feature names for which comparisons were made.}
+
+\item{exactMatch}{If TRUE, then \code{features} has to exactly match
+those for a given comparisons table for that table to be used. Means that you can't
+specify a subset of features by default, since this is TRUE
+by default.}
 
 \item{plotlog2}{If TRUE, assume that log(parameter) difference is passed in and that
 you want to plot log2(parameter) difference. TO-DO: probably best to change this

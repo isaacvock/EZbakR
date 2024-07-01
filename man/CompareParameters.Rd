@@ -10,6 +10,7 @@ CompareParameters(
   reference,
   experimental,
   features = NULL,
+  exactMatch = TRUE,
   repeatID = NULL,
   overwrite = TRUE,
   parameter = "log_kdeg"
@@ -31,6 +32,11 @@ Difference will be calculated as \code{experimental} - \code{reference}.}
 \item{features}{Character vector of the set of features you want to stratify
 reads by and estimate proportions of each RNA population. The default of "all"
 will use all feature columns in the \code{obj}'s cB.}
+
+\item{exactMatch}{If TRUE, then \code{features} and \code{populations} have to exactly match
+those for a given fractions table for that table to be used. Means that you can't
+specify a subset of features or populations by default, since this is TRUE
+by default.}
 
 \item{repeatID}{If multiple \code{averages} tables exist with the same metadata,
 then this is the numerical index by which they are distinguished.}

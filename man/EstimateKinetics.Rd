@@ -11,6 +11,7 @@ EstimateKinetics(
   populations = NULL,
   fraction_design = NULL,
   repeatID = NULL,
+  exactMatch = TRUE,
   grouping_factors = NULL,
   character_limit = 20,
   overwrite = TRUE
@@ -55,6 +56,11 @@ to create one manually. See docs for \code{EstimateFractions} (run ?EstimateFrac
 
 \item{repeatID}{If multiple \code{fractions} tables exist with the same metadata,
 then this is the numerical index by which they are distinguished.}
+
+\item{exactMatch}{If TRUE, then \code{features} and \code{populations} have to exactly match
+those for a given fractions table for that table to be used. Means that you can't
+specify a subset of features or populations by default, since this is TRUE
+by default.}
 
 \item{grouping_factors}{Which sample-detail columns in the metadf should be used
 to group -s4U samples by for calculating the average -s4U RPM? The default value of

@@ -9,10 +9,15 @@
 #' @param features Character vector of the set of features you want to stratify
 #' reads by and estimate proportions of each RNA population. The default of `NULL`
 #' will expect there to be only one fractions table in the EZbakRFractions object.
+#' @param exactMatch If TRUE, then `features` must exactly match the `features`
+#' metadata for a given fractions table for it to be used. Means that you cannot
+#' specify a subset of features by default. Set this to FALSE if you would like
+#' to specify a feature subset.
 #' @export
 CorrectDropout <- function(obj,
                            grouping_factors = NULL,
-                           features = NULL){
+                           features = NULL,
+                           exactMatch = TRUE){
 
 
   ### Hack to deal with devtools::check() NOTEs
@@ -34,6 +39,7 @@ CorrectDropout <- function(obj,
   # Function in Helpers.R
   fractions_name <- EZget(obj, type = "fractions",
                           features = features,
+                          exactMatch = exactMatch,
                           returnNameOnly = TRUE)
 
   # Get fractions

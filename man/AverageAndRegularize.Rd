@@ -12,6 +12,7 @@ AverageAndRegularize(
   kstrat = NULL,
   populations = NULL,
   fraction_design = NULL,
+  exactMatch = TRUE,
   repeatID = NULL,
   formula_mean = NULL,
   formula_sd = NULL,
@@ -39,6 +40,11 @@ but can also set to "fractions".}
 
 \item{kstrat}{If \code{type == "kinetics"}, then \code{kstrat} specifies the kinetic parameter
 inference strategy.}
+
+\item{exactMatch}{If TRUE, then \code{features} and \code{populations} have to exactly match
+those for a given fractions table for that table to be used. Means that you can't
+specify a subset of features or populations by default, since this is TRUE
+by default.}
 
 \item{repeatID}{If multiple \code{kinetics} or \code{fractions} tables exist with the same metadata,
 then this is the numerical index by which they are distinguished.}

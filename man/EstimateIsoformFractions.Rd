@@ -10,6 +10,7 @@ EstimateIsoformFractions(
   populations = NULL,
   fraction_design = NULL,
   repeatID = NULL,
+  exactMatch = TRUE,
   fraction_name = NULL,
   quant_name = NULL,
   gene_to_transcript = NULL,
@@ -37,6 +38,11 @@ to create one manually. See docs for \code{EstimateFractions} (run ?EstimateFrac
 
 \item{repeatID}{If multiple \code{fractions} tables exist with the same metadata,
 then this is the numerical index by which they are distinguished.}
+
+\item{exactMatch}{If TRUE, then \code{features} and \code{populations} have to exactly match
+those for a given fractions table for that table to be used. Means that you can't
+specify a subset of features or populations by default, since this is TRUE
+by default.}
 
 \item{fraction_name}{Name of fraction estimate table to use. Should be stored in the
 \code{obj$fractions} list under this name. Can also rely on specifying \code{features} and/or \code{populations}

@@ -4,7 +4,12 @@
 \alias{CorrectDropout}
 \title{Correct for experimental/bioinformatic dropout of labeled RNA.}
 \usage{
-CorrectDropout(obj, grouping_factors = NULL, features = NULL)
+CorrectDropout(
+  obj,
+  grouping_factors = NULL,
+  features = NULL,
+  exactMatch = TRUE
+)
 }
 \arguments{
 \item{obj}{An EZbakRFractions object, which is an EZbakRData object on which
@@ -17,6 +22,11 @@ to group -s4U samples by for calculating the average -s4U RPM? The default value
 \item{features}{Character vector of the set of features you want to stratify
 reads by and estimate proportions of each RNA population. The default of \code{NULL}
 will expect there to be only one fractions table in the EZbakRFractions object.}
+
+\item{exactMatch}{If TRUE, then \code{features} must exactly match the \code{features}
+metadata for a given fractions table for it to be used. Means that you cannot
+specify a subset of features by default. Set this to FALSE if you would like
+to specify a feature subset.}
 }
 \description{
 Correct for experimental/bioinformatic dropout of labeled RNA.
