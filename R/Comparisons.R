@@ -17,6 +17,10 @@
 #' @param features Character vector of the set of features you want to stratify
 #' reads by and estimate proportions of each RNA population. The default of "all"
 #' will use all feature columns in the `obj`'s cB.
+#' @param exactMatch If TRUE, then `features` and `populations` have to exactly match
+#' those for a given fractions table for that table to be used. Means that you can't
+#' specify a subset of features or populations by default, since this is TRUE
+#' by default.
 #' @param parameter Parameter to average across replicates of a given condition.
 #' @param type What type of table is the parameter found in? Default is "kinetics",
 #' but can also set to "fractions".
@@ -66,6 +70,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                  kstrat = NULL,
                                  populations = NULL,
                                  fraction_design = NULL,
+                                 exactMatch = TRUE,
                                  repeatID = NULL,
                                  formula_mean = NULL, formula_sd = NULL,
                                  include_all_parameters = TRUE,
@@ -86,6 +91,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   obj <- general_avg_and_reg(obj = obj, features = features, parameter = parameter,
                              type = type, kstrat = kstrat, populations = populations,
+                             exactMatch = exactMatch,
                              fraction_design = fraction_design,
                              formula_mean = formula_mean, formula_sd = formula_sd,
                              include_all_parameters = include_all_parameters,
@@ -102,7 +108,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
 
 # See if a factor referenced in a formula object has only a single factor.
-  # This will break the linear modeling strategies I employ in this function
+# This will break the linear modeling strategies I employ in this function
 checkSingleLevelFactors <- function(formula, data) {
 
   variables <- all.vars(formula)
@@ -160,6 +166,7 @@ general_avg_and_reg <- function(obj, features, parameter,
                                 type = "kinetics",
                                 kstrat = NULL,
                                 populations = NULL,
+                                exactMatch = exactMatch,
                                 fraction_design = NULL,
                                 formula_mean, formula_sd,
                                 include_all_parameters,
@@ -196,6 +203,7 @@ general_avg_and_reg <- function(obj, features, parameter,
                       type = type,
                       features = features,
                       kstrat = kstrat,
+                      exactMatch = exactMatch,
                       populations = populations,
                       fraction_design = fraction_design,
                       repeatID = repeatID,
@@ -286,7 +294,7 @@ general_avg_and_reg <- function(obj, features, parameter,
   # Add covariates to kinetics
   kinetics <- kinetics %>%
     dplyr::inner_join(metadf %>%
-                 dplyr::select(-!!tl_cols), by = "sample")
+                        dplyr::select(-!!tl_cols), by = "sample")
 
 
 
@@ -375,12 +383,12 @@ general_avg_and_reg <- function(obj, features, parameter,
 
       # It's faster this way
       # Bit tricky as you have to:
-        # 1) Estimate mean of sd in each group
-        # 2) Average sd across groups
-          # Can't just do sd across all groups, as this will be a function of both
-          # replicate variability and difference across groups. So will overestimate sd.
-        # 3) Calculate se of sd based on number of replicates across all groups
-        # 4) Calculate se of mean based on number of replicates within a group
+      # 1) Estimate mean of sd in each group
+      # 2) Average sd across groups
+      # Can't just do sd across all groups, as this will be a function of both
+      # replicate variability and difference across groups. So will overestimate sd.
+      # 3) Calculate se of sd based on number of replicates across all groups
+      # 4) Calculate se of mean based on number of replicates within a group
       model_fit <- kinetics %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
         dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
@@ -563,11 +571,11 @@ general_avg_and_reg <- function(obj, features, parameter,
   if(length(obj[['metadata']][['averages']]) > 0){
 
     avg_vect <- decide_output(obj,
-                                   proposed_name = avg_vect,
-                                   type = "averages",
-                                   features = features_to_analyze,
-                                   parameter = parameter,
-                                   overwrite = overwrite)
+                              proposed_name = avg_vect,
+                              type = "averages",
+                              features = features_to_analyze,
+                              parameter = parameter,
+                              overwrite = overwrite)
 
     # How many identical tables already exist?
     if(overwrite){
@@ -633,6 +641,10 @@ general_avg_and_reg <- function(obj, features, parameter,
 #' @param features Character vector of the set of features you want to stratify
 #' reads by and estimate proportions of each RNA population. The default of "all"
 #' will use all feature columns in the `obj`'s cB.
+#' @param exactMatch If TRUE, then `features` and `populations` have to exactly match
+#' those for a given fractions table for that table to be used. Means that you can't
+#' specify a subset of features or populations by default, since this is TRUE
+#' by default.
 #' @param repeatID If multiple `averages` tables exist with the same metadata,
 #' then this is the numerical index by which they are distinguished.
 #' @param parameter Parameter to average across replicates of a given condition.
@@ -641,7 +653,7 @@ general_avg_and_reg <- function(obj, features, parameter,
 #' @importFrom magrittr %>%
 #' @export
 CompareParameters <- function(obj, condition, reference, experimental,
-                              features = NULL, repeatID = NULL,
+                              features = NULL, exactMatch = TRUE, repeatID = NULL,
                               overwrite = TRUE, parameter = "log_kdeg"){
 
 
@@ -661,6 +673,7 @@ CompareParameters <- function(obj, condition, reference, experimental,
                          type = "averages",
                          features = features,
                          parameter = parameter,
+                         exactMatch = exactMatch,
                          repeatID = repeatID,
                          returnNameOnly = TRUE)
 
@@ -683,10 +696,10 @@ CompareParameters <- function(obj, condition, reference, experimental,
 
   comparison <- parameter_est %>%
     dplyr::mutate(difference = !!dplyr::sym(exp_mean) - !!dplyr::sym(ref_mean),
-           uncertainty = sqrt( (!!dplyr::sym(ref_sd))^2 + (!!dplyr::sym(exp_sd))^2 ),
-           stat = difference/uncertainty,
-           pval = 2*stats::pnorm(-abs(stat)),
-           avg_coverage = ((!!dplyr::sym(ref_cov)) + (!!dplyr::sym(exp_cov))) / 2) %>%
+                  uncertainty = sqrt( (!!dplyr::sym(ref_sd))^2 + (!!dplyr::sym(exp_sd))^2 ),
+                  stat = difference/uncertainty,
+                  pval = 2*stats::pnorm(-abs(stat)),
+                  avg_coverage = ((!!dplyr::sym(ref_cov)) + (!!dplyr::sym(exp_cov))) / 2) %>%
     dplyr::mutate(padj = stats::p.adjust(pval, method = "BH")) %>%
     dplyr::select(!!features_to_analyze, difference, uncertainty, stat, pval, padj, avg_coverage)
 
@@ -802,12 +815,12 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
 
   # Try BFGS
   opt <- stats::optim(startParams, heteroskedastic_likelihood,
-               #gr = heteroskedastic_gradient,
-               y = data[[dependent_var]],
-               X_mean = designMatrix_mean,
-               X_sd = designMatrix_sd,
-               method = "BFGS",
-               hessian = TRUE)
+                      #gr = heteroskedastic_gradient,
+                      y = data[[dependent_var]],
+                      X_mean = designMatrix_mean,
+                      X_sd = designMatrix_sd,
+                      method = "BFGS",
+                      hessian = TRUE)
 
 
 
@@ -824,14 +837,14 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
     # I will note that "failed convergence" almost always meant that the
     # max number of iterations was hit (code 1).
     opt <- stats::optim(startParams, heteroskedastic_likelihood,
-                 #\gr = heteroskedastic_gradient,
-                 y = data[[dependent_var]],
-                 X_mean = designMatrix_mean,
-                 X_sd = designMatrix_sd,
-                 method = "L-BFGS-B",
-                 upper = rep(7, times = length(startParams)),
-                 lower = rep(-7, times = length(startParams)),
-                 hessian = TRUE)
+                        #\gr = heteroskedastic_gradient,
+                        y = data[[dependent_var]],
+                        X_mean = designMatrix_mean,
+                        X_sd = designMatrix_sd,
+                        method = "L-BFGS-B",
+                        upper = rep(7, times = length(startParams)),
+                        lower = rep(-7, times = length(startParams)),
+                        hessian = TRUE)
 
 
     if(opt$convergence != 0){
@@ -878,7 +891,7 @@ calc_avg_coverage <- function(data, formula){
 
   # Calculate average read counts in each group
   fit <- stats::lm(formula = formula,
-            data = data)
+                   data = data)
 
 
   estimates <- fit$coefficient
@@ -923,8 +936,8 @@ heteroskedastic_gradient <- function(params, y, X_mean, X_sd){
   s_vects <- ((y - mu)^2)/(sigma^3)
 
   # Hadamard product for betas
-    # Because derivative is 0 if design matrix is 0 and derivative of
-    # normal log-likelihood otherwise
+  # Because derivative is 0 if design matrix is 0 and derivative of
+  # normal log-likelihood otherwise
   nr <- nrow(X_mean)
   ncb <- ncol(X_mean)
   ncs <- ncol(X_sd)
@@ -949,7 +962,5 @@ heteroskedastic_gradient <- function(params, y, X_mean, X_sd){
 
 
 }
-
-
 
 

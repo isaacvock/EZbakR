@@ -33,6 +33,10 @@
 #' to create one manually. See docs for `EstimateFractions` (run ?EstimateFractions()) for more details.
 #' @param repeatID If multiple `fractions` tables exist with the same metadata,
 #' then this is the numerical index by which they are distinguished.
+#' @param exactMatch If TRUE, then `features` and `populations` have to exactly match
+#' those for a given fractions table for that table to be used. Means that you can't
+#' specify a subset of features or populations by default, since this is TRUE
+#' by default.
 #' @param grouping_factors Which sample-detail columns in the metadf should be used
 #' to group -s4U samples by for calculating the average -s4U RPM? The default value of
 #' `NULL` will cause all sample-detail columns to be used.
@@ -56,6 +60,7 @@ EstimateKinetics <- function(obj,
                              populations = NULL,
                              fraction_design = NULL,
                              repeatID = NULL,
+                             exactMatch = TRUE,
                              grouping_factors = NULL,
                              character_limit = 20,
                              overwrite = TRUE){
@@ -105,6 +110,7 @@ EstimateKinetics <- function(obj,
                                   populations = populations,
                                   fraction_design = fraction_design,
                                   repeatID = repeatID,
+                                  exactMatch = exactMatch,
                                   character_limit = character_limit,
                                   overwrite = overwrite)
 
@@ -117,6 +123,7 @@ EstimateKinetics <- function(obj,
                                        populations = populations,
                                        fraction_design = fraction_design,
                                        repeatID = repeatID,
+                                       exactMatch = exactMatch,
                                        character_limit = character_limit,
                                        overwrite = overwrite)
 
@@ -138,6 +145,7 @@ Standard_kinetic_estimation <- function(obj,
                                         populations = NULL,
                                         fraction_design = NULL,
                                         repeatID = NULL,
+                                        exactMatch = TRUE,
                                         character_limit = 20,
                                         grouping_factors = NULL,
                                         overwrite = TRUE){
@@ -164,6 +172,7 @@ Standard_kinetic_estimation <- function(obj,
                           populations = populations,
                           fraction_design = fraction_design,
                           repeatID = repeatID,
+                          exactMatch = exactMatch,
                           returnNameOnly = TRUE)
 
 
@@ -594,6 +603,7 @@ Standard_kinetic_estimation <- function(obj,
 tilac_ratio_estimation <- function(obj,
                                    features = NULL,
                                    populations = NULL,
+                                   exactMatch = TRUE,
                                    fraction_design = NULL,
                                    grouping_factors = NULL,
                                    repeatID = NULL,
