@@ -106,6 +106,10 @@ ImportIsoformQuant <- function(obj, files,
 #' to create one manually. See docs for `EstimateFractions` (run ?EstimateFractions()) for more details.
 #' @param repeatID If multiple `fractions` tables exist with the same metadata,
 #' then this is the numerical index by which they are distinguished.
+#' @param exactMatch If TRUE, then `features` and `populations` have to exactly match
+#' those for a given fractions table for that table to be used. Means that you can't
+#' specify a subset of features or populations by default, since this is TRUE
+#' by default.
 #' @param fraction_name Name of fraction estimate table to use. Should be stored in the
 #' `obj$fractions` list under this name. Can also rely on specifying `features` and/or `populations`
 #' and having `EZget()` find it.
@@ -133,6 +137,7 @@ EstimateIsoformFractions <- function(obj,
                                      populations = NULL,
                                      fraction_design = NULL,
                                      repeatID = NULL,
+                                     exactMatch = TRUE,
                                      fraction_name = NULL,
                                      quant_name = NULL,
                                      gene_to_transcript = NULL,
@@ -169,6 +174,7 @@ EstimateIsoformFractions <- function(obj,
                            features = features,
                            populations = populations,
                            fraction_design = fraction_design,
+                           exactMatch = exactMatch,
                            repeatID = repeatID,
                            returnNameOnly = TRUE)
 

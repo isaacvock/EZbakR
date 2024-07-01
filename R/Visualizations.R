@@ -9,6 +9,10 @@
 #' @param reference Name of reference level for comparison.
 #' @param experimental Name of experimental level for comparison.
 #' @param features Character vector of feature names for which comparisons were made.
+#' @param exactMatch If TRUE, then `features` has to exactly match
+#' those for a given comparisons table for that table to be used. Means that you can't
+#' specify a subset of features by default, since this is TRUE
+#' by default.
 #' @param plotlog2 If TRUE, assume that log(parameter) difference is passed in and that
 #' you want to plot log2(parameter) difference. TO-DO: probably best to change this
 #' to a more general scale parameter by which the parameter is multiplied. Default
@@ -26,6 +30,7 @@ EZVolcanoPlot <- function(obj,
                               reference = NULL,
                               experimental = NULL,
                               features = NULL,
+                          exactMatch = TRUE,
                               plotlog2 = TRUE,
                               FDR_cutoff = 0.05,
                               difference_cutoff = 0,
@@ -44,6 +49,7 @@ EZVolcanoPlot <- function(obj,
                           reference = reference,
                           experimental = experimental,
                           features = features,
+                          exactMatch = exactMatch,
                           returnNameOnly = TRUE)
 
   comparison <- obj[['comparisons']][[comparison_name]]
@@ -139,6 +145,10 @@ EZVolcanoPlot <- function(obj,
 #' @param reference Name of reference level for comparison.
 #' @param experimental Name of experimental level for comparison.
 #' @param features Character vector of feature names for which comparisons were made.
+#' @param exactMatch If TRUE, then `features` and `populations` have to exactly match
+#' those for a given fractions table for that table to be used. Means that you can't
+#' specify a subset of features or populations by default, since this is TRUE
+#' by default.
 #' @param plotlog2 If TRUE, assume that log(parameter) difference is passed in and that
 #' you want to plot log2(parameter) difference.
 #' @param FDR_cutoff False discovery cutoff by which to color points.
@@ -154,6 +164,7 @@ EZMAPlot <- function(obj,
                          reference = NULL,
                          experimental = NULL,
                          features = NULL,
+                     exactMatch = TRUE,
                          plotlog2 = TRUE,
                          FDR_cutoff = 0.05,
                          difference_cutoff = 0,
@@ -171,6 +182,7 @@ EZMAPlot <- function(obj,
                           reference = reference,
                           experimental = experimental,
                           features = features,
+                          exactMatch = exactMatch,
                           returnNameOnly = TRUE)
 
   comparison <- obj[['comparisons']][[comparison_name]]
