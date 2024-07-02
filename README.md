@@ -11,6 +11,8 @@ devtools::install_github("isaacvock/EZbakR")
 
 At this point, changes will be made weekly, so updating frequently is highly suggested.
 
+Documentation is here: https://isaacvock.github.io/EZbakR/
+
 ## What's new?
 
 EZbakR represents a complete rewrite of bakR. Improvements implemented in EZbakR include:
