@@ -1699,3 +1699,252 @@ check_SimulateMultiCondition_input <- function(args){
 
 
 }
+
+
+#' Simulation of generalized dynamical system model.
+#'
+#' `SimulateDynamics()` simulates any specified dynamical system of interconverting
+#' RNA species. Its required input is similar to that of `EstimateDynamics()`, i.e.,
+#' an adjacency matrix describing the set of species and how they are related to
+#' one another and a list of formula relating actually assayed species to the
+#' modeled species. Currently, `SimulateDynamics()` implements a naive heteroskedastic
+#' replicate variability simulation and is not designed to simulate multiple experimental
+#' conditions.
+#'
+#' @param nfeatures Number of "features" to simulate data for. A "feature" in this case
+#' may contain a number of "sub-features". For example, you may want to simulate pre-RNA
+#' and mature RNA for a set of "genes", in which case the number of features is the number
+#' of genes.
+#' @param graph An adjacency matrix describing the reaction diagram graph relating
+#' the various RNA species to one another.
+#' @param metadf Data frame with two required columns (`sample` and `tl`). `sample`
+#' represents names given to each simulated sample. `tl` represents the label time
+#' for that sample. Additional columns can specify other features of the sample,
+#' like what subcellular compartment the sample is taken from. **NOTE: Not sure I am
+#' actually using these optional columns in any useful capacity anymore**.
+#' @param formula_list A list of named lists. The names of each sub-list should be
+#' the same as the sample names as they are found in `metadf`. Each sub-list should be
+#' a list of formula relating feature names that will show up as columns of the simulated
+#' cB to species modeled in your `graph`. This only needs to be specified if you want
+#' to simulate the scenario where some of the measured species are a sum of modeled species.
+#' @param log_means Vector of log-Normal logmeans from which the distribution of
+#' feature-specific parameters will be drawn from. Length of vector should be the same
+#' as max(entries in `graph`), i.e., the number of parameters in your specified model.
+#' @param log_sds Vector of log-Normal logsds from which the distribution of
+#' feature-specific parameters will be drawn from.
+#' @param unassigned_name String to give to reads not assigned to a given feature.
+#' @param seqdepth Total number of reads in each sample.
+#' @param dispersion Negative binomial `size` parameter to use for simulating read counts
+#' @param lfn_sd Logit(fn) replicate variability.
+#' @importFrom magrittr %>%
+#' @export
+SimulateDynamics <- function(nfeatures, graph, metadf,
+                             formula_list = NULL,
+                             log_means, log_sds,
+                             unassigned_name = "__no_feature",
+                             seqdepth = nfeatures * 2500,
+                             dispersion = 100, lfn_sd = 0.2){
+
+
+  ### Step 0, generate parameters for each feature
+
+  param_list <- vector(mode = "list", length = length(log_means))
+
+  for(lms in seq_along(log_means)){
+
+    param_list[[lms]] <- stats::rlnorm(nfeatures,
+                                meanlog = log_means[lms],
+                                sdlog = log_sds[lms])
+
+  }
+
+
+  # Loop over each feature
+  sim_df <- dplyr::tibble()
+  for(i in 1:nfeatures){
+
+
+    ### Step 1, construct A
+    param_extend <- c(0, sapply(param_list, function(x) x[i]))
+    param_graph <- matrix(param_extend[graph + 1],
+                          nrow = nrow(graph),
+                          ncol = ncol(graph),
+                          byrow = FALSE)
+
+    A <- matrix(0,
+                nrow = nrow(graph) - 1,
+                ncol = ncol(graph) - 1)
+
+    rownames(A) <- rownames(graph[-1,])
+    colnames(A) <- rownames(graph[-1,])
+
+
+
+    zero_index <- which(colnames(graph) == "0")
+
+    diag(A) <- -rowSums(param_graph[-zero_index,])
+    A <- A + t(param_graph[-zero_index,-zero_index])
+
+
+    ### Step 2: infer general solution
+
+    Rss <- solve(a = A,
+                 b = -param_graph[zero_index,-zero_index])
+
+
+    ev <- eigen(A)
+
+    lambda <- ev$values
+    V<- ev$vectors
+
+
+    ### Step 3: Infer data for actual measured species
+    all_ss <- c()
+    all_fns <- c()
+    features <- c()
+    sample_names <- c()
+    for(s in seq_along(metadf$sample)){
+
+      tl <- metadf$tl[s]
+      sample <- metadf$sample[s]
+
+      cs <- solve(V, -Rss)
+
+      exp_lambda <- exp(lambda*tl)
+
+      scaled_eigenvectors <- V %*% diag(exp_lambda*cs)
+
+      result_vector <- rowSums(scaled_eigenvectors) + Rss
+
+      names(result_vector) <- rownames(A)
+
+      # Evaluate the formulas
+      sample_formula <- formula_list[[sample]]
+
+      measured_levels <- evaluate_formulas(result_vector, sample_formula)
+
+      names(Rss) <- rownames(A)
+      measured_ss <- evaluate_formulas(Rss, sample_formula)
+
+
+      all_fns <- c(all_fns, measured_levels/measured_ss)
+      all_ss <- c(all_ss, measured_ss)
+      features <- c(features, names(measured_levels))
+      sample_names <- c(sample_names, rep(sample, times = length(measured_levels)))
+
+    }
+
+    sample_details <- metadf %>%
+      dplyr::select(-tl)
+
+
+
+    sim_df <- dplyr::bind_rows(sim_df,
+                        dplyr::tibble(sample = sample_names,
+                               fn = all_fns,
+                               ss = all_ss,
+                               feature_type = features,
+                               feature = paste0("Gene", i)) %>%
+                          dplyr::inner_join(sample_details,
+                                     by = "sample"))
+
+
+  }
+
+  ### Simulate one replicate of each feature and sample
+  combined_cB <- dplyr::tibble()
+  combined_gt <- dplyr::tibble()
+  for(s in seq_along(metadf$sample)){
+
+
+    sample_name <- metadf$sample[s]
+
+    sample_sim <- sim_df %>%
+      dplyr::filter(sample == sample_name) %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(avg_reads = seqdepth*ss/sum(ss))
+
+    # Add some read variance
+    sample_sim$reads <- stats::rnbinom(n = nrow(sample_sim),
+                                mu = sample_sim$avg_reads,
+                                size = dispersion)
+
+    # Add some fn variance
+    sample_sim$fn_rep <- inv_logit(
+      rnorm(n = nrow(sample_sim),
+            mean = logit(sample_sim$fn),
+            sd = lfn_sd)
+    )
+
+    types <- unique(sample_sim$feature_type)
+    num_types <- length(types)
+    NF <- length(unique(sample_sim$feature))
+
+    cB <- dplyr::tibble()
+    gt <- dplyr::tibble()
+    for(n in 1:num_types){
+
+      ft <- types[n]
+
+      feature_sim <- sample_sim %>%
+        dplyr::filter(feature_type == ft)
+
+
+      simdata <- SimulateOneRep(nfeatures = NF,
+                                read_vect = feature_sim$reads,
+                                fn_vect = feature_sim$fn_rep,
+                                sample_name = sample_name)
+
+      cB <- dplyr::bind_rows(cB, simdata$cB %>%
+                        dplyr::rename(!!ft := feature))
+
+      gt <- dplyr::bind_rows(gt, simdata$ground_truth %>%
+                        dplyr::rename(!!ft := feature))
+
+    }
+
+    cB <- cB %>%
+      dplyr::mutate(dplyr::across(dplyr::all_of(types), ~tidyr::replace_na(.x, unassigned_name)))
+
+    gt <- gt %>%
+      dplyr::mutate(dplyr::across(dplyr::all_of(types), ~tidyr::replace_na(.x, unassigned_name)))
+
+
+    combined_cB <- dplyr::bind_rows(combined_cB, cB)
+    combined_gt <- dplyr::bind_rows(combined_gt, gt)
+
+  }
+
+  # Get parameter truths
+  names(param_list) <- paste0('k', 1:length(log_means))
+  parameter_truth <- as_tibble(param_list)
+  parameter_truth$feature <- paste0('Gene', 1:nrow(parameter_truth))
+
+  # Form final ground truth
+  gt_list <- list(replicate_truth = combined_gt,
+                  avgfn_truth = sim_df,
+                  parameter_truth = parameter_truth)
+
+  output <- list(cB = combined_cB,
+                 ground_truth = gt_list)
+
+}
+
+# Function for relating modeled species to measured species
+evaluate_formulas <- function(original_vector, formulas) {
+
+
+  new_vector <- numeric()
+
+  for (formula in formulas) {
+    response <- as.character(formula[[2]])
+    terms <- all.vars(formula[[3]])
+    expr <- formula[[3]]
+    env <- list2env(as.list(original_vector))
+    value <- eval(expr, envir = env)
+    new_vector[response] <- value
+  }
+
+  return(new_vector)
+
+}
