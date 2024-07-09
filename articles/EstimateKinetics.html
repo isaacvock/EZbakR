@@ -5,59 +5,51 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<meta name="description" content="EZbakR">
 <title>EstimateKinetics • EZbakR</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous">
-<!-- bootstrap-toc --><script src="https://cdn.jsdelivr.net/gh/afeld/bootstrap-toc@v1.0.1/dist/bootstrap-toc.min.js" integrity="sha256-4veVQbu7//Lk5TSmc7YV48MxtMy98e26cf5MrgZYnwo=" crossorigin="anonymous"></script><!-- headroom.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script><!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.11/clipboard.min.js" integrity="sha512-7O5pXpc0oCRrxk8RUfDYFgn0nO1t+jLuIOQdOMRp4APB7uZ4vSjspzp5y6YDtDs4VzUSTbWzBFZ/LKJhnyFOKw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script><!-- search --><script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.4.6/fuse.js" integrity="sha512-zv6Ywkjyktsohkbp9bb45V6tEMoWhzFzXis+LrMehmJZZSys19Yxf1dopHx7WzIKxr5tK2dVcYmaCk2uqdjF4A==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/autocomplete.js/0.38.0/autocomplete.jquery.min.js" integrity="sha512-GU9ayf+66Xx2TmpxqJpliWbT5PiGYxpaG8rfnBEk1LL8l1KGkRShhngwdXK1UgqhAzWpZHSiYPc09/NwDQIGyg==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/mark.min.js" integrity="sha512-5CYOlHXGh6QpOFA/TeTylKLWfB3ftPsde7AnmhuitiTX4K5SqCLBeKro6sPS8ilsz1Q4NRx3v8Ko2IBiszzdww==" crossorigin="anonymous"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="EstimateKinetics">
-<meta property="og:description" content="EZbakR">
-<!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script><!--[if lt IE 9]>
-<script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
-<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-<![endif]-->
+<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.4.2/css/all.min.css" rel="stylesheet">
+<link href="../deps/font-awesome-6.4.2/css/v4-shims.min.css" rel="stylesheet">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="EstimateKinetics">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
-    
 
-    <nav class="navbar fixed-top navbar-light navbar-expand-lg bg-light" data-bs-theme="light"><div class="container">
-    
+
+    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+
     <a class="navbar-brand me-2" href="../index.html">EZbakR</a>
 
     <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
 
-    
+
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item">
-  <a class="nav-link" href="../reference/index.html">Reference</a>
-</li>
+<li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
-  <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
-  <div class="dropdown-menu" aria-labelledby="dropdown-articles">
-    <a class="dropdown-item" href="../articles/Quickstart.html">EZbakR for people in a hurry</a>
-    <a class="dropdown-item" href="../articles/EZget.html">EZget</a>
-    <a class="dropdown-item" href="../articles/EstimateFractions.html">EstimateFractions</a>
-    <a class="dropdown-item" href="../articles/EstimateKinetics.html">EstimateKinetics</a>
-    <a class="dropdown-item" href="../articles/AverageAndRegularize.html">AverageAndRegularize</a>
-    <a class="dropdown-item" href="../articles/CompareParameters.html">CompareParameters</a>
-  </div>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><a class="dropdown-item" href="../articles/Quickstart.html">EZbakR for people in a hurry</a></li>
+    <li><a class="dropdown-item" href="../articles/EZget.html">EZget</a></li>
+    <li><a class="dropdown-item" href="../articles/EstimateFractions.html">EstimateFractions</a></li>
+    <li><a class="dropdown-item" href="../articles/EstimateKinetics.html">EstimateKinetics</a></li>
+    <li><a class="dropdown-item" href="../articles/AverageAndRegularize.html">AverageAndRegularize</a></li>
+    <li><a class="dropdown-item" href="../articles/CompareParameters.html">CompareParameters</a></li>
+  </ul>
 </li>
       </ul>
-<form class="form-inline my-2 my-lg-0" role="search">
-        <input type="search" class="form-control me-sm-2" aria-label="Toggle navigation" name="search-input" data-search-index="../search.json" id="search-input" placeholder="Search for" autocomplete="off">
-</form>
-
-      <ul class="navbar-nav"></ul>
+<ul class="navbar-nav">
+<li class="nav-item"><form class="form-inline" role="search">
+ <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
+</form></li>
+      </ul>
 </div>
 
-    
+
   </div>
 </nav><div class="container template-article">
 
@@ -66,10 +58,11 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="" class="logo" alt=""><h1>EstimateKinetics</h1>
+
+      <h1>EstimateKinetics</h1>
             
       
-      
+
       <div class="d-none name"><code>EstimateKinetics.Rmd</code></div>
     </div>
 
@@ -109,9 +102,8 @@ constants using the standard analysis workflow and simulated data:</p>
 <span><span class="co">#&gt; Summarizing data for feature(s) of interest</span></span>
 <span><span class="co">#&gt; Averaging out the nucleotide counts for improved efficiency</span></span>
 <span><span class="co">#&gt; Estimating fractions</span></span>
-<span><span class="co">#&gt; Processing output</span></span></code></pre></div>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span></span>
+<span><span class="co">#&gt; Processing output</span></span>
+<span></span>
 <span><span class="co"># Estimate synthesis and degradation rate constants</span></span>
 <span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateKinetics.html">EstimateKinetics</a></span><span class="op">(</span><span class="va">ezbdo</span>,</span>
 <span>                          strategy <span class="op">=</span> <span class="st">"standard"</span><span class="op">)</span></span></code></pre></div>
@@ -122,16 +114,15 @@ need to specify aspects of the metadata of the table you want to use.
 Under the hood, EZbakR is passing these arguments to
 <code><a href="../reference/EZget.html">EZget()</a></code>, so check out the vignette on <code><a href="../reference/EZget.html">EZget()</a></code>
 to better understand how this works:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create another fractions table</span></span>
 <span><span class="va">ezbdo2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span>, overwrite <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Estimating mutation rates</span></span>
 <span><span class="co">#&gt; Summarizing data for feature(s) of interest</span></span>
 <span><span class="co">#&gt; Averaging out the nucleotide counts for improved efficiency</span></span>
 <span><span class="co">#&gt; Estimating fractions</span></span>
-<span><span class="co">#&gt; Processing output</span></span></code></pre></div>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span></span>
+<span><span class="co">#&gt; Processing output</span></span>
+<span></span>
 <span><span class="co"># Estimate synthesis and degradation rate constants</span></span>
 <span>  <span class="co"># Use the 1st identical fractions table you created</span></span>
 <span><span class="va">ezbdo2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateKinetics.html">EstimateKinetics</a></span><span class="op">(</span><span class="va">ezbdo2</span>,</span>
@@ -178,46 +169,56 @@ degradation is a 1st-order, single rate constant process.</li>
 <p>If all of these assumptions are met, then the dynamics of a given RNA
 population are well described by the following differential
 equation:</p>
-<p><span class="math display">\[
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right"><mfrac><mtext mathvariant="normal">dR</mtext><mtext mathvariant="normal">dt</mtext></mfrac><mo>=</mo><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub><mo>−</mo><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub><mo>*</mo><mtext mathvariant="normal">R</mtext></mtd></mtr></mtable><annotation encoding="application/x-tex">
 \begin{align}
-\frac{\text{dR}}{\text{dt}} = k_{\text{syn}} - k_{\text{deg}}*\text{R}
+\frac{\text{dR}}{\text{dt}} = k_{\text{syn}} - k_{\text{deg}}*\text{R} 
 \end{align}
-\]</span> where <span class="math inline">\(\text{R}\)</span> represents
-the concentration of RNA over time and <span class="math inline">\(k_{\text{syn}}\)</span> and <span class="math inline">\(k_{\text{deg}}\)</span> are the synthesis and
-degradation rate constants, respectively. The general solution to this
-differential equation is:</p>
-<p><span class="math display">\[
+</annotation></semantics></math> where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtext mathvariant="normal">R</mtext><annotation encoding="application/x-tex">\text{R}</annotation></semantics></math>
+represents the concentration of RNA over time and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub><annotation encoding="application/x-tex">k_{\text{syn}}</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub><annotation encoding="application/x-tex">k_{\text{deg}}</annotation></semantics></math>
+are the synthesis and degradation rate constants, respectively. The
+general solution to this differential equation is:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right"><mtext mathvariant="normal">R(t)</mtext><mo>=</mo><mfrac><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mfrac><mo>+</mo><mrow><mo stretchy="true" form="prefix">(</mo><msub><mtext mathvariant="normal">R</mtext><mtext mathvariant="normal">o</mtext></msub><mo>−</mo><mfrac><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mfrac><mo stretchy="true" form="postfix">)</mo></mrow><mo>*</mo><msup><mi>e</mi><mrow><mo>−</mo><mtext mathvariant="normal">tl</mtext><mo>*</mo><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mrow></msup></mtd></mtr></mtable><annotation encoding="application/x-tex">
 \begin{align}
-\text{R(t)} = \frac{ k_{\text{syn}}}{k_{\text{deg}}}
-+  (\text{R}_\text{o} - \frac{ k_{\text{syn}}}{k_{\text{deg}}})*
-e^{-\text{tl}*k_{\text{deg}}}
+\text{R(t)} = \frac{ k_{\text{syn}}}{k_{\text{deg}}} +  (\text{R}_\text{o} - \frac{ k_{\text{syn}}}{k_{\text{deg}}})* e^{-\text{tl}*k_{\text{deg}}}
 \end{align}
-\]</span></p>
-<p>where <span class="math inline">\(\text{R}_\text{o}\)</span> is the
-initial concentration of the RNA and <span class="math inline">\(\text{tl}\)</span> is the label time. Thus the
-concentration of new RNA (<span class="math inline">\(\text{R}_\text{o}
-= 0\)</span>) as a function of time is:</p>
-<p><span class="math display">\[
+</annotation></semantics></math></p>
+<p>where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mtext mathvariant="normal">R</mtext><mtext mathvariant="normal">o</mtext></msub><annotation encoding="application/x-tex">\text{R}_\text{o}</annotation></semantics></math>
+is the initial concentration of the RNA and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtext mathvariant="normal">tl</mtext><annotation encoding="application/x-tex">\text{tl}</annotation></semantics></math>
+is the label time. Thus the concentration of new RNA
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mtext mathvariant="normal">R</mtext><mtext mathvariant="normal">o</mtext></msub><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\text{R}_\text{o} = 0</annotation></semantics></math>)
+as a function of time is:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right"><msub><mtext mathvariant="normal">R</mtext><mtext mathvariant="normal">new</mtext></msub><mtext mathvariant="normal">(t)</mtext><mo>=</mo><mfrac><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mfrac><mo>*</mo><mrow><mo stretchy="true" form="prefix">(</mo><mn>1</mn><mo>−</mo><msup><mi>e</mi><mrow><mo>−</mo><mtext mathvariant="normal">tl</mtext><mo>*</mo><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mrow></msup><mo stretchy="true" form="postfix">)</mo></mrow></mtd></mtr></mtable><annotation encoding="application/x-tex">
 \begin{align}
-\text{R}_{\text{new}}\text{(t)} = \frac{
-k_{\text{syn}}}{k_{\text{deg}}}*(1 - e^{-\text{tl}*k_{\text{deg}}})
+\text{R}_{\text{new}}\text{(t)} = \frac{ k_{\text{syn}}}{k_{\text{deg}}}*(1 - e^{-\text{tl}*k_{\text{deg}}})
 \end{align}
-\]</span> As we are assuming that the total RNA concentration is not
-changing during the labeling, and since the steady-state concentration
-of RNA (solve for R setting <span class="math inline">\(\frac{\text{dR}}{\text{dt}} = 0\)</span>) is <span class="math inline">\(\frac{ k_{\text{syn}}}{k_{\text{deg}}}\)</span>,
-we get that the fraction of RNA that is new (denoted <span class="math inline">\(\theta\)</span>) is:</p>
-<p><span class="math display">\[
+</annotation></semantics></math> As we are assuming that the total RNA
+concentration is not changing during the labeling, and since the
+steady-state concentration of RNA (solve for R setting
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mfrac><mtext mathvariant="normal">dR</mtext><mtext mathvariant="normal">dt</mtext></mfrac><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\frac{\text{dR}}{\text{dt}} = 0</annotation></semantics></math>)
+is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mfrac><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mfrac><annotation encoding="application/x-tex">\frac{ k_{\text{syn}}}{k_{\text{deg}}}</annotation></semantics></math>,
+we get that the fraction of RNA that is new (denoted
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>θ</mi><annotation encoding="application/x-tex">\theta</annotation></semantics></math>)
+is:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right"><mi>θ</mi><mo>=</mo><mn>1</mn><mo>−</mo><msup><mi>e</mi><mrow><mo>−</mo><mtext mathvariant="normal">tl</mtext><mo>*</mo><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mrow></msup></mtd></mtr></mtable><annotation encoding="application/x-tex">
 \begin{align}
 \theta = 1 - e^{-\text{tl}*k_{\text{deg}}}
 \end{align}
-\]</span> We can thus solve for the degradation rate constant, and use
-the normalized read counts to infer the synthesis rate constant.</p>
-<p><span class="math display">\[
+</annotation></semantics></math> We can thus solve for the degradation
+rate constant, and use the normalized read counts to infer the synthesis
+rate constant.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right"><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mtd><mtd columnalign="left" style="text-align: left"><mo>=</mo><mo>−</mo><mfrac><mrow><mtext mathvariant="normal">log</mtext><mrow><mo stretchy="true" form="prefix">(</mo><mn>1</mn><mo>−</mo><mi>θ</mi><mo stretchy="true" form="postfix">)</mo></mrow></mrow><mtext mathvariant="normal">tl</mtext></mfrac></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right"><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub></mtd><mtd columnalign="left" style="text-align: left"><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mtext mathvariant="normal">normalized read count</mtext><mo stretchy="true" form="postfix">)</mo></mrow><mo>*</mo><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mtd></mtr></mtable><annotation encoding="application/x-tex">
 \begin{align}
 k_{\text{deg}} &amp;= -\frac{\text{log}(1 - \theta)}{\text{tl}} \\
 k_{\text{syn}} &amp;= (\text{normalized read count})*k_{\text{deg}}
 \end{align}
-\]</span></p>
+</annotation></semantics></math></p>
 <p><strong>NOTE</strong>: degradation rate constants estimated in this
 manner will be in absolute units (1/time), whereas synthesis rate
 constants will be in relative units (read counts/time). Thus,
@@ -246,7 +247,7 @@ context.</p>
 </h3>
 <p>Everything is the same as it was in the standard case, except now we
 set <code>strategy = "shortfeed"</code>:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Estimate synthesis and degradation rate constants</span></span>
 <span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateKinetics.html">EstimateKinetics</a></span><span class="op">(</span><span class="va">ezbdo</span>,</span>
 <span>                          strategy <span class="op">=</span> <span class="st">"shortfeed"</span><span class="op">)</span></span></code></pre></div>
@@ -259,34 +260,34 @@ average half-life of RNA being analyzed), we can assume that there is no
 degradation newly synthesized RNA during the label time. Thus, the
 following differential equation and solution to said ODE describes the
 dynamics of the new RNA:</p>
-<p><span class="math display">\[
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right"><mfrac><mtext mathvariant="normal">dR</mtext><mtext mathvariant="normal">dt</mtext></mfrac></mtd><mtd columnalign="left" style="text-align: left"><mo>=</mo><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right"><msub><mtext mathvariant="normal">R</mtext><mtext mathvariant="normal">new</mtext></msub><mtext mathvariant="normal">(t)</mtext></mtd><mtd columnalign="left" style="text-align: left"><mo>=</mo><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub><mo>*</mo><mtext mathvariant="normal">t</mtext></mtd></mtr></mtable><annotation encoding="application/x-tex">
 \begin{align}
 \frac{\text{dR}}{\text{dt}} &amp;= k_{\text{syn}} \\
 \text{R}_{\text{new}}\text{(t)} &amp;=  k_{\text{syn}}*\text{t}
 \end{align}
-\]</span> Assuming that the concentration of new RNA is proportional to
-the normalized number of new reads yields the following estimate for
-<span class="math inline">\(k_{\text{syn}}\)</span>:</p>
-<p><span class="math display">\[
-k_{\text{syn}} =  \frac{\theta*(\text{normalized read
-count})}{\text{tl}}
-\]</span> Assuming the RNA levels are at steady-state (as in the
-standard analysis), yields the following estimate for the degradation
-rate constant:</p>
-<p><span class="math display">\[
+</annotation></semantics></math> Assuming that the concentration of new
+RNA is proportional to the normalized number of new reads yields the
+following estimate for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub><annotation encoding="application/x-tex">k_{\text{syn}}</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub><mo>=</mo><mfrac><mrow><mi>θ</mi><mo>*</mo><mrow><mo stretchy="true" form="prefix">(</mo><mtext mathvariant="normal">normalized read count</mtext><mo stretchy="true" form="postfix">)</mo></mrow></mrow><mtext mathvariant="normal">tl</mtext></mfrac></mrow><annotation encoding="application/x-tex">
+k_{\text{syn}} =  \frac{\theta*(\text{normalized read count})}{\text{tl}}
+</annotation></semantics></math> Assuming the RNA levels are at
+steady-state (as in the standard analysis), yields the following
+estimate for the degradation rate constant:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right"><mtext mathvariant="normal">normalized read count</mtext></mtd><mtd columnalign="left" style="text-align: left"><mo>=</mo><mfrac><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mfrac></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right"><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mtd><mtd columnalign="left" style="text-align: left"><mo>=</mo><mfrac><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub><mtext mathvariant="normal">normalized read count</mtext></mfrac></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right"><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mtd><mtd columnalign="left" style="text-align: left"><mo>=</mo><mfrac><mi>θ</mi><mtext mathvariant="normal">tl</mtext></mfrac></mtd></mtr></mtable><annotation encoding="application/x-tex">
 \begin{align}
-\text{normalized read count} &amp;=
-\frac{k_{\text{syn}}}{k_{\text{deg}}} \\
-k_{\text{deg}} &amp;= \frac{k_{\text{syn}}}{\text{normalized read
-count}} \\
+\text{normalized read count} &amp;= \frac{k_{\text{syn}}}{k_{\text{deg}}} \\
+k_{\text{deg}} &amp;= \frac{k_{\text{syn}}}{\text{normalized read count}} \\
 k_{\text{deg}} &amp;= \frac{\theta}{\text{tl}}
 \end{align}
-\]</span></p>
+</annotation></semantics></math></p>
 <p>The calculus enthusiasts among you may recognize that this estimate
-for <span class="math inline">\(k_{\text{deg}}\)</span> is equivalent to
-a 1st order Taylor series approximation of the “standard” estimate
-strategy. This is no coincidence, as the assumption of a short feed is
-equivalent to assuming that <span class="math inline">\(\theta\)</span>
+for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub><annotation encoding="application/x-tex">k_{\text{deg}}</annotation></semantics></math>
+is equivalent to a 1st order Taylor series approximation of the
+“standard” estimate strategy. This is no coincidence, as the assumption
+of a short feed is equivalent to assuming that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>θ</mi><annotation encoding="application/x-tex">\theta</annotation></semantics></math>
 is close to 0 (most of the RNA is old). It may also seem odd that this
 estimate is bounded between 0 and 1/tl, but this just reflects the
 assumption made by this strategy that RNA half lives are much shorter
@@ -340,7 +341,7 @@ columns that -label samples should be stratified by. In other words, old
 RNA levels in +label samples will be compared to total RNA levels in
 -label samples with the same metadf values for all of the
 <code>grouping_factors</code> columns specified:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Estimate synthesis and degradation rate constants</span></span>
 <span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateKinetics.html">EstimateKinetics</a></span><span class="op">(</span><span class="va">ezbdo</span>,</span>
 <span>                          strategy <span class="op">=</span> <span class="st">"NSS"</span>,</span>
@@ -360,44 +361,45 @@ considering the dynamics of the old RNA during the labeling. If we
 assume that a single, unchanging degradation rate constant describes
 their turnover, then the following ODE and solution describe its
 dynamics:</p>
-<p><span class="math display">\[
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right"><mfrac><mtext mathvariant="normal">dR</mtext><mtext mathvariant="normal">dt</mtext></mfrac></mtd><mtd columnalign="left" style="text-align: left"><mo>=</mo><mo>−</mo><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub><mo>*</mo><mtext mathvariant="normal">R</mtext></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right"><msub><mtext mathvariant="normal">R</mtext><mtext mathvariant="normal">old</mtext></msub><mtext mathvariant="normal">(t)</mtext></mtd><mtd columnalign="left" style="text-align: left"><mo>=</mo><msub><mtext mathvariant="normal">R</mtext><mtext mathvariant="normal">o</mtext></msub><mo>*</mo><msup><mi>e</mi><mrow><mo>−</mo><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub><mo>*</mo><mtext mathvariant="normal">t</mtext></mrow></msup></mtd></mtr></mtable><annotation encoding="application/x-tex">
 \begin{align}
 \frac{\text{dR}}{\text{dt}} &amp;= -k_{\text{deg}}*\text{R} \\
-\text{R}_{\text{old}}\text{(t)}
-&amp;=  \text{R}_{\text{o}}*e^{-k_{\text{deg}}*\text{t}}
+\text{R}_{\text{old}}\text{(t)} &amp;=  \text{R}_{\text{o}}*e^{-k_{\text{deg}}*\text{t}}
 \end{align}
-\]</span> In the steady-state case, <span class="math inline">\(\text{R}_{\text{o}}\)</span> would be equivalent
-to the steady-state RNA level (<span class="math inline">\(\frac{
-k_{\text{syn}}}{k_{\text{deg}}}\)</span>). In the away from steady-state
-case though, this assumption is no longer valid. Despite this, assume
-for a second that we could estimate <span class="math inline">\(\text{R}_{\text{o}}\)</span>. Under this
-assumption, we could then estimate <span class="math inline">\(k_{\text{deg}}\)</span> as follows:</p>
-<p><span class="math display">\[
-k_{\text{deg}} =
--\frac{\text{log}(\text{R}_{\text{old}}\text{(t)}/\text{R}_{\text{o}})}{\text{tl}}
-\]</span></p>
+</annotation></semantics></math> In the steady-state case,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mtext mathvariant="normal">R</mtext><mtext mathvariant="normal">o</mtext></msub><annotation encoding="application/x-tex">\text{R}_{\text{o}}</annotation></semantics></math>
+would be equivalent to the steady-state RNA level
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mfrac><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mfrac><annotation encoding="application/x-tex">\frac{ k_{\text{syn}}}{k_{\text{deg}}}</annotation></semantics></math>).
+In the away from steady-state case though, this assumption is no longer
+valid. Despite this, assume for a second that we could estimate
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mtext mathvariant="normal">R</mtext><mtext mathvariant="normal">o</mtext></msub><annotation encoding="application/x-tex">\text{R}_{\text{o}}</annotation></semantics></math>.
+Under this assumption, we could then estimate
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub><annotation encoding="application/x-tex">k_{\text{deg}}</annotation></semantics></math>
+as follows:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub><mo>=</mo><mo>−</mo><mfrac><mrow><mtext mathvariant="normal">log</mtext><mrow><mo stretchy="true" form="prefix">(</mo><msub><mtext mathvariant="normal">R</mtext><mtext mathvariant="normal">old</mtext></msub><mtext mathvariant="normal">(t)</mtext><mi>/</mi><msub><mtext mathvariant="normal">R</mtext><mtext mathvariant="normal">o</mtext></msub><mo stretchy="true" form="postfix">)</mo></mrow></mrow><mtext mathvariant="normal">tl</mtext></mfrac></mrow><annotation encoding="application/x-tex">
+k_{\text{deg}} = -\frac{\text{log}(\text{R}_{\text{old}}\text{(t)}/\text{R}_{\text{o}})}{\text{tl}}
+</annotation></semantics></math></p>
 <p>We can then return to the general solution of the differential
 equation described in the ‘standard’ analysis strategy section:</p>
-<p><span class="math display">\[
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right"><mtext mathvariant="normal">R(t)</mtext></mtd><mtd columnalign="left" style="text-align: left"><mo>=</mo><mfrac><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mfrac><mo>+</mo><mrow><mo stretchy="true" form="prefix">(</mo><msub><mtext mathvariant="normal">R</mtext><mtext mathvariant="normal">o</mtext></msub><mo>−</mo><mfrac><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mfrac><mo stretchy="true" form="postfix">)</mo></mrow><mo>*</mo><msup><mi>e</mi><mrow><mo>−</mo><mtext mathvariant="normal">tl</mtext><mo>*</mo><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mrow></msup></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right"><msub><mtext mathvariant="normal">R</mtext><mtext mathvariant="normal">new</mtext></msub><mtext mathvariant="normal">(t)</mtext></mtd><mtd columnalign="left" style="text-align: left"><mo>=</mo><mfrac><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mfrac><mo>*</mo><mrow><mo stretchy="true" form="prefix">(</mo><mn>1</mn><mo>−</mo><msup><mi>e</mi><mrow><mo>−</mo><mtext mathvariant="normal">tl</mtext><mo>*</mo><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mrow></msup><mo stretchy="true" form="postfix">)</mo></mrow></mtd></mtr></mtable><annotation encoding="application/x-tex">
 \begin{align}
-\text{R(t)} &amp;= \frac{ k_{\text{syn}}}{k_{\text{deg}}}
-+  (\text{R}_\text{o} - \frac{ k_{\text{syn}}}{k_{\text{deg}}})*
-e^{-\text{tl}*k_{\text{deg}}} \\
-\text{R}_{\text{new}}\text{(t)} &amp;= \frac{
-k_{\text{syn}}}{k_{\text{deg}}}*(1 - e^{-\text{tl}*k_{\text{deg}}})
+\text{R(t)} &amp;= \frac{ k_{\text{syn}}}{k_{\text{deg}}} +  (\text{R}_\text{o} - \frac{ k_{\text{syn}}}{k_{\text{deg}}})* e^{-\text{tl}*k_{\text{deg}}} \\
+\text{R}_{\text{new}}\text{(t)} &amp;= \frac{ k_{\text{syn}}}{k_{\text{deg}}}*(1 - e^{-\text{tl}*k_{\text{deg}}})
 \end{align}
-\]</span> where in the second line we set <span class="math inline">\(\text{R}_\text{o} = 0\)</span> as there was no new
-RNA at the start of labeling, and derive an estimator for <span class="math inline">\(k_{\text{syn}}\)</span>:</p>
-<p><span class="math display">\[
-k_{\text{syn}} = \frac{\theta*(\text{normalized read
-count)}*k_{\text{deg}}}{1 - e^{-k_{\text{deg}}*\text{tl}}}
-\]</span> This yields the same estimator as in the steady-state case
-when <span class="math inline">\(\theta = 1 -
-e^{-k_{\text{deg}}*\text{tl}}\)</span>. To make this strategy work, we
-just need to estimate the starting levels of old RNA. Thus, you need
-some sort of RNA-seq data from a timepoint equivalent to the start of
-labeling. Currently, EZbakR assumes that your -label controls fulfill
-this role.</p>
+</annotation></semantics></math> where in the second line we set
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mtext mathvariant="normal">R</mtext><mtext mathvariant="normal">o</mtext></msub><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\text{R}_\text{o} = 0</annotation></semantics></math>
+as there was no new RNA at the start of labeling, and derive an
+estimator for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub><annotation encoding="application/x-tex">k_{\text{syn}}</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>k</mi><mtext mathvariant="normal">syn</mtext></msub><mo>=</mo><mfrac><mrow><mi>θ</mi><mo>*</mo><mo stretchy="false" form="prefix">(</mo><mtext mathvariant="normal">normalized read count)</mtext><mo>*</mo><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub></mrow><mrow><mn>1</mn><mo>−</mo><msup><mi>e</mi><mrow><mo>−</mo><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub><mo>*</mo><mtext mathvariant="normal">tl</mtext></mrow></msup></mrow></mfrac></mrow><annotation encoding="application/x-tex">
+k_{\text{syn}} = \frac{\theta*(\text{normalized read count)}*k_{\text{deg}}}{1 - e^{-k_{\text{deg}}*\text{tl}}}
+</annotation></semantics></math> This yields the same estimator as in
+the steady-state case when
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>θ</mi><mo>=</mo><mn>1</mn><mo>−</mo><msup><mi>e</mi><mrow><mo>−</mo><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub><mo>*</mo><mtext mathvariant="normal">tl</mtext></mrow></msup></mrow><annotation encoding="application/x-tex">\theta = 1 - e^{-k_{\text{deg}}*\text{tl}}</annotation></semantics></math>.
+To make this strategy work, we just need to estimate the starting levels
+of old RNA. Thus, you need some sort of RNA-seq data from a timepoint
+equivalent to the start of labeling. Currently, EZbakR assumes that your
+-label controls fulfill this role.</p>
 <p>One thing you may be wondering is just how much of non-steady-state
 analysis this really is if we are still assuming constant rate
 constants? What if the rates of synthesis and degradation are being
@@ -447,7 +449,7 @@ information that you can get with both though!! You want multiple time
 points? Just do multiple pulses. Pulse-labels are easier to perform and
 easier to analyze than pulse-chases.</p>
 </div>
-  </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
 </div>
 
@@ -458,15 +460,15 @@ easier to analyze than pulse-chases.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.9.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.0.</p>
 </div>
 
     </footer>
 </div>
 
-  
 
-  
+
+
 
   </body>
 </html>
