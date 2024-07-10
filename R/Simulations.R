@@ -1917,7 +1917,7 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
 
   # Get parameter truths
   names(param_list) <- paste0('k', 1:length(log_means))
-  parameter_truth <- as_tibble(param_list)
+  parameter_truth <- dplyr::as_tibble(param_list)
   parameter_truth$feature <- paste0('Gene', 1:nrow(parameter_truth))
 
   # Form final ground truth
