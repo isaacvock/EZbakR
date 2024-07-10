@@ -327,7 +327,6 @@ general_avg_and_reg <- function(obj, features, parameter,
 
 
   message("Fitting linear model")
-  browser()
   if(single_level_mean | single_level_sd){
 
     if(length(all.vars(formula_mean)) != 2 | length(all.vars(formula_sd)) != 2 ){
@@ -580,6 +579,8 @@ general_avg_and_reg <- function(obj, features, parameter,
                               type = "averages",
                               features = features_to_analyze,
                               parameter = parameter,
+                              mean_vars = mean_vars[2:length(mean_vars)], # 1st element == parameter
+                              sd_vars = sd_vars[2:length(sd_vars)], # 1st element == parameter
                               overwrite = overwrite)
 
     # How many identical tables already exist?
@@ -594,6 +595,8 @@ general_avg_and_reg <- function(obj, features, parameter,
                                features = features_to_analyze,
                                parameter = parameter,
                                returnNameOnly = TRUE,
+                               mean_vars = mean_vars[2:length(mean_vars)], # 1st element == parameter
+                               sd_vars = sd_vars[2:length(sd_vars)], # 1st element == parameter
                                exactMatch = TRUE,
                                alwaysCheck = TRUE)) + 1
     }
