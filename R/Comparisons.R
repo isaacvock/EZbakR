@@ -327,6 +327,7 @@ general_avg_and_reg <- function(obj, features, parameter,
 
 
   message("Fitting linear model")
+  browser()
   if(single_level_mean | single_level_sd){
 
     if(length(all.vars(formula_mean)) != 2 | length(all.vars(formula_sd)) != 2 ){
@@ -610,6 +611,8 @@ general_avg_and_reg <- function(obj, features, parameter,
   # Save metadata
   obj[['metadata']][['averages']][[avg_vect]] <- list(features = features_to_analyze,
                                                       parameter = parameter,
+                                                      mean_vars = mean_vars[2:length(mean_vars)], # 1st element == parameter
+                                                      sd_vars = sd_vars[2:length(sd_vars)], # 1st element == parameter
                                                       repeatID = repeatID)
 
 
@@ -649,6 +652,10 @@ general_avg_and_reg <- function(obj, features, parameter,
 #' those for a given fractions table for that table to be used. Means that you can't
 #' specify a subset of features or populations by default, since this is TRUE
 #' by default.
+#' @param mean_vars Sample features from metadf that were used in formula for
+#' parameter average linear model.
+#' @param sd_vars Sample features from metadf that were used in formula for
+#' parameter standard deviation linear model.
 #' @param repeatID If multiple `averages` tables exist with the same metadata,
 #' then this is the numerical index by which they are distinguished.
 #' @param parameter Parameter to average across replicates of a given condition.
@@ -658,6 +665,7 @@ general_avg_and_reg <- function(obj, features, parameter,
 #' @export
 CompareParameters <- function(obj, condition, reference, experimental,
                               features = NULL, exactMatch = TRUE, repeatID = NULL,
+                              mean_vars = NULL, sd_vars = NULL,
                               overwrite = TRUE, parameter = "log_kdeg"){
 
 
@@ -677,6 +685,8 @@ CompareParameters <- function(obj, condition, reference, experimental,
                          type = "averages",
                          features = features,
                          parameter = parameter,
+                         mean_vars = mean_vars,
+                         sd_vars = sd_vars,
                          exactMatch = exactMatch,
                          repeatID = repeatID,
                          returnNameOnly = TRUE)

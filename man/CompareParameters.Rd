@@ -12,6 +12,8 @@ CompareParameters(
   features = NULL,
   exactMatch = TRUE,
   repeatID = NULL,
+  mean_vars = NULL,
+  sd_vars = NULL,
   overwrite = TRUE,
   parameter = "log_kdeg"
 )
@@ -40,6 +42,12 @@ by default.}
 
 \item{repeatID}{If multiple \code{averages} tables exist with the same metadata,
 then this is the numerical index by which they are distinguished.}
+
+\item{mean_vars}{Sample features from metadf that were used in formula for
+parameter average linear model.}
+
+\item{sd_vars}{Sample features from metadf that were used in formula for
+parameter standard deviation linear model.}
 
 \item{overwrite}{If TRUE, then identical output will be overwritten if it exists.}
 

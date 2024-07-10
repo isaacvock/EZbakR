@@ -17,6 +17,8 @@ EZget(
   condition = NULL,
   experimental = NULL,
   reference = NULL,
+  mean_vars = NULL,
+  sd_vars = NULL,
   repeatID = NULL,
   returnNameOnly = FALSE,
   exactMatch = FALSE,
@@ -60,6 +62,12 @@ Therefore, only relevant if type == "comparisons".}
 
 \item{reference}{Reference condition specified in relevant run of \code{CompareParameters()}.
 Therefore, only relevant if type == "comparisons".}
+
+\item{mean_vars}{Sample features from metadf that were used in formula for
+parameter average linear model. Only relevant if type == "averages".}
+
+\item{sd_vars}{Sample features from metadf that were used in formula for
+parameter standard deviation linear model. Only relevant if type == "averages".}
 
 \item{repeatID}{Numerical ID for duplicate objects with same metadata.}
 

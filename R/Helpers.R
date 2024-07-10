@@ -31,6 +31,10 @@
 #' Therefore, only relevant if type == "comparisons".
 #' @param reference Reference condition specified in relevant run of `CompareParameters()`.
 #' Therefore, only relevant if type == "comparisons".
+#' @param mean_vars Sample features from metadf that were used in formula for
+#' parameter average linear model. Only relevant if type == "averages".
+#' @param sd_vars Sample features from metadf that were used in formula for
+#' parameter standard deviation linear model. Only relevant if type == "averages".
 #' @param repeatID Numerical ID for duplicate objects with same metadata.
 #' @param returnNameOnly If TRUE, then only the names of tables that passed your
 #' search criteria will be returned. Else, the single table passing your search
@@ -55,6 +59,8 @@ EZget <- function(obj,
                   condition = NULL,
                   experimental = NULL,
                   reference = NULL,
+                  mean_vars = NULL,
+                  sd_vars = NULL,
                   repeatID = NULL,
                   returnNameOnly = FALSE,
                   exactMatch = FALSE,
@@ -275,6 +281,33 @@ EZget <- function(obj,
     possible_tables <- intersect(possible_tables, possible_tables_rep)
 
   }
+
+
+  if(!is.null(mean_vars)){
+
+    possible_tables_mv <- vector_ezsearch(metadata,
+                                          mean_vars,
+                                          "mean_vars",
+                                          exactMatch = exactMatch)
+
+    possible_tables <- intersect(possible_tables, possible_tables_mv)
+
+
+  }
+
+
+  if(!is.null(sd_vars)){
+
+    possible_tables_sd <- vector_ezsearch(metadata,
+                                          sd_vars,
+                                          "sd_vars",
+                                          exactMatch = exactMatch)
+
+    possible_tables <- intersect(possible_tables, possible_tables_sd)
+
+
+  }
+
 
   # Can return multiple names of candidate tables, but can
   # only return one table
