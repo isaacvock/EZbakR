@@ -59,6 +59,8 @@
 <span>  condition <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  experimental <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  reference <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  mean_vars <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  sd_vars <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  repeatID <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  returnNameOnly <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  exactMatch <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -129,6 +131,16 @@ Therefore, only relevant if type == "comparisons".</p></dd>
 <dt id="arg-reference">reference<a class="anchor" aria-label="anchor" href="#arg-reference"></a></dt>
 <dd><p>Reference condition specified in relevant run of <code><a href="CompareParameters.html">CompareParameters()</a></code>.
 Therefore, only relevant if type == "comparisons".</p></dd>
+
+
+<dt id="arg-mean-vars">mean_vars<a class="anchor" aria-label="anchor" href="#arg-mean-vars"></a></dt>
+<dd><p>Sample features from metadf that were used in formula for
+parameter average linear model. Only relevant if type == "averages".</p></dd>
+
+
+<dt id="arg-sd-vars">sd_vars<a class="anchor" aria-label="anchor" href="#arg-sd-vars"></a></dt>
+<dd><p>Sample features from metadf that were used in formula for
+parameter standard deviation linear model. Only relevant if type == "averages".</p></dd>
 
 
 <dt id="arg-repeatid">repeatID<a class="anchor" aria-label="anchor" href="#arg-repeatid"></a></dt>

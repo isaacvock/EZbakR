@@ -54,6 +54,8 @@
 <span>  features <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  exactMatch <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  repeatID <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  mean_vars <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  sd_vars <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  parameter <span class="op">=</span> <span class="st">"log_kdeg"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -99,6 +101,16 @@ by default.</p></dd>
 <dt id="arg-repeatid">repeatID<a class="anchor" aria-label="anchor" href="#arg-repeatid"></a></dt>
 <dd><p>If multiple <code>averages</code> tables exist with the same metadata,
 then this is the numerical index by which they are distinguished.</p></dd>
+
+
+<dt id="arg-mean-vars">mean_vars<a class="anchor" aria-label="anchor" href="#arg-mean-vars"></a></dt>
+<dd><p>Sample features from metadf that were used in formula for
+parameter average linear model.</p></dd>
+
+
+<dt id="arg-sd-vars">sd_vars<a class="anchor" aria-label="anchor" href="#arg-sd-vars"></a></dt>
+<dd><p>Sample features from metadf that were used in formula for
+parameter standard deviation linear model.</p></dd>
 
 
 <dt id="arg-overwrite">overwrite<a class="anchor" aria-label="anchor" href="#arg-overwrite"></a></dt>
