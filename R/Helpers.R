@@ -433,6 +433,8 @@ decide_output <- function(obj, proposed_name,
                           condition = NULL,
                           reference = NULL,
                           experimental = NULL,
+                          mean_vars = NULL,
+                          sd_vars = NULL,
                           overwrite = TRUE){
 
   type = match.arg(type)
@@ -449,6 +451,8 @@ decide_output <- function(obj, proposed_name,
                            condition = condition,
                            reference = reference,
                            experimental = experimental,
+                           mean_vars = mean_vars,
+                           sd_vars = sd_vars,
                              returnNameOnly = TRUE,
                              exactMatch = TRUE,
                            alwaysCheck = TRUE)
