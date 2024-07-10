@@ -259,12 +259,12 @@ general_avg_and_reg <- function(obj, features, parameter,
 
 
 
-  # Add kinetic parameter column to formula\
-  condition_vars <- colnames(metadf)[!grepl("tl", colnames(metadf)) &
-                                       (colnames(metadf) != "sample")]
-
-
   if(is.null(formula_mean)){
+
+    # Add kinetic parameter column to formula\
+    condition_vars <- colnames(metadf)[!grepl("tl", colnames(metadf)) &
+                                         (colnames(metadf) != "sample")]
+
 
     formula_mean <- stats::as.formula(paste0("~", paste(condition_vars, collapse = "+")))
 
@@ -275,6 +275,11 @@ general_avg_and_reg <- function(obj, features, parameter,
 
 
   if(is.null(formula_sd)){
+
+    # Add kinetic parameter column to formula\
+    condition_vars <- colnames(metadf)[!grepl("tl", colnames(metadf)) &
+                                         (colnames(metadf) != "sample")]
+
 
     formula_sd <- stats::as.formula(paste0("~", paste(condition_vars, collapse = "+")))
 
@@ -293,8 +298,7 @@ general_avg_and_reg <- function(obj, features, parameter,
 
   # Add covariates to kinetics
   kinetics <- kinetics %>%
-    dplyr::inner_join(metadf %>%
-                        dplyr::select(-!!tl_cols), by = "sample")
+    dplyr::inner_join(metadf, by = "sample")
 
 
 
