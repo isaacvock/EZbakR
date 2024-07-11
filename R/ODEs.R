@@ -398,6 +398,7 @@ EZDynamics <- function(obj,
   }
 
 
+  return(obj)
 
 }
 
