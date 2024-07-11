@@ -21,7 +21,8 @@ EZDynamics(
   mean_vars = NULL,
   sd_vars = NULL,
   repeatID = NULL,
-  exactMatch = TRUE
+  exactMatch = TRUE,
+  overwrite = TRUE
 )
 }
 \arguments{
@@ -134,6 +135,12 @@ then this is the numerical index by which they are distinguished.}
 those for a given fractions table for that table to be used. Means that you can't
 specify a subset of features or populations by default, since this is TRUE
 by default.}
+
+\item{overwrite}{If TRUE and a fractions estimate output already exists that
+would possess the same metadata (features analyzed, populations analyzed,
+and fraction_design), then it will get overwritten with the new output. Else,
+it will be saved as a separate output with the same name + "_#" where "#" is a
+numerical ID to distinguish the similar outputs.}
 }
 \description{
 \code{EZDynamics()} estimates parameters of a user-specified dynamical systems

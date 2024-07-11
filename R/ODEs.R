@@ -107,6 +107,11 @@
 #' those for a given fractions table for that table to be used. Means that you can't
 #' specify a subset of features or populations by default, since this is TRUE
 #' by default.
+#' @param overwrite If TRUE and a fractions estimate output already exists that
+#' would possess the same metadata (features analyzed, populations analyzed,
+#' and fraction_design), then it will get overwritten with the new output. Else,
+#' it will be saved as a separate output with the same name + "_#" where "#" is a
+#' numerical ID to distinguish the similar outputs.
 #' @importFrom magrittr %>%
 #' @export
 EZDynamics <- function(obj,
@@ -125,7 +130,8 @@ EZDynamics <- function(obj,
                      mean_vars = NULL,
                      sd_vars = NULL,
                      repeatID = NULL,
-                     exactMatch = TRUE){
+                     exactMatch = TRUE,
+                     overwrite = TRUE){
 
   ##### ORDER OF OPERATIONS
   # 1) Infer homogeneous ODE system matrix representation (A)
@@ -274,8 +280,11 @@ EZDynamics <- function(obj,
 
 
     # Fit model
+    cols_to_group_by <- c(grouping_features,
+                       pivot_columns[pivot_columns %in% c("tl", sample_feature)])
+
     dynfit <- tidy_avgs  %>%
-      group_by(grouping_features) %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group_by))) %>%
       summarise(fit = list(I(stats::optim(starting_values,
                                           fn = dynamics_likelihood,
                                           graph = graph,
