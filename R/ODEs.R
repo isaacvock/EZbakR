@@ -407,8 +407,9 @@ EZDynamics <- function(obj,
 
 # Function to relate measured species to actual species by evaluating the
 # user provided formulas
-evaluate_formulas <- function(original_vector, formula) {
+evaluate_formulas2 <- function(original_vector, formula) {
 
+  browser()
   new_vector <- numeric()
   response <- as.character(formula[[2]])
   terms <- all.vars(formula[[3]])
@@ -430,6 +431,7 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
                                 use_coverage = TRUE){
   ### Step 1, construct A
 
+  browser()
   # Parameters are on log-scale for ease of optimization
   param_extend <- c(0, exp(parameter_ests))
   param_graph <- matrix(param_extend[graph + 1],
@@ -495,10 +497,10 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
     sample_formula <- sample_formula[[which(sapply(1:length(sample_formula),
                                                    function(x) all.vars(sample_formula[[x]])[1] == feature_type))]]
 
-    measured_levels <- evaluate_formulas(result_vector, sample_formula)
+    measured_levels <- evaluate_formulas2(result_vector, sample_formula)
 
     names(Rss) <- rownames(A)
-    measured_ss <- evaluate_formulas(Rss, sample_formula)
+    measured_ss <- evaluate_formulas2(Rss, sample_formula)
 
     all_fns <- c(all_fns, measured_levels/measured_ss)
     all_ss <- c(all_ss, measured_ss)
