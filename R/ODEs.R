@@ -156,6 +156,8 @@ EZDynamics <- function(obj,
 
   ### Input
 
+  browser()
+
   # Tidy averages table (currently makes hard assumption about interaction terms being only terms)
   table_name <- EZget(obj = obj, type = type, features = features,
                       populations = populations, fraction_design = fraction_design,
@@ -291,7 +293,7 @@ EZDynamics <- function(obj,
 
     # Fit model
     cols_to_group_by <- c(grouping_features,
-                       pivot_columns[pivot_columns %in% c("tl", sample_feature)])
+                       pivot_columns[!(pivot_columns %in% c("tl", sample_feature))])
 
     dynfit <- tidy_avgs  %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group_by))) %>%
@@ -347,7 +349,7 @@ EZDynamics <- function(obj,
 
   if(num_dynamics > 0){
     output_name <- decide_output(obj, output_name, type = "dynamics",
-                                 features = features, features = features,
+                                 features = features,
                                  sub_features = sub_features,
                                  grouping_features = grouping_features,
                                  sample_feature = sample_feature,
@@ -363,7 +365,7 @@ EZDynamics <- function(obj,
 
       repeatID <- length(EZget(obj,
                                type = 'dynamics',
-                               features = features, features = features,
+                               features = features,
                                sub_features = sub_features,
                                grouping_features = grouping_features,
                                sample_feature = sample_feature,
