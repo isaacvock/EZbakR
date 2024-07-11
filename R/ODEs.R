@@ -253,14 +253,25 @@ EZDynamics <- function(obj,
     always_assigned <- fm_cols[which(colSums(feature_mat) == nrow(feature_mat))]
 
     if(length(always_assigned) > 1){
+
       stop("There are multiple sub_features that never have a value of `unassigned_name`!
            There is not way for EZbakR to determine which measured species a row
            corresponds to in this case.")
+
+    }else if(is.null(always_assigned)){
+
+      sometimes_assigned <- fm_cols
+
+    }else{
+
+      sometimes_assigned <- fm_cols[fm_cols != always_assigned]
+
     }
 
-    sometimes_assigned <- fm_cols[fm_cols != always_assigned]
 
     measured_species <- apply(feature_mat, 1, function(row) {
+
+      browser()
 
       valid_cols <- sometimes_assigned[!row[fm_cols != always_assigned]]
 
