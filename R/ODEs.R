@@ -271,9 +271,8 @@ EZDynamics <- function(obj,
 
     measured_species <- apply(feature_mat, 1, function(row) {
 
-      browser()
 
-      valid_cols <- sometimes_assigned[!row[fm_cols != always_assigned]]
+      valid_cols <- sometimes_assigned[!row[!(fm_cols %in% always_assigned)]]
 
       if(length(valid_cols) > 0){
 
