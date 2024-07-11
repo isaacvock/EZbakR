@@ -120,7 +120,7 @@ EZDynamics <- function(obj,
                      grouping_features,
                      sample_feature = NULL,
                      modeled_to_measured = NULL,
-                     parameter_names = paste0("k", 1:(nrow(graph)-1)),
+                     parameter_names = paste0("k", 1:max(graph)),
                      unassigned_name = "__no_feature",
                      type = "averages",
                      features = NULL,
@@ -294,6 +294,7 @@ EZDynamics <- function(obj,
     cols_to_group_by <- c(grouping_features,
                        pivot_columns[!(pivot_columns %in% c("tl", sample_feature))])
 
+
     dynfit <- tidy_avgs  %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group_by))) %>%
       dplyr::summarise(fit = list(I(stats::optim(starting_values,
@@ -309,7 +310,8 @@ EZDynamics <- function(obj,
                                           lower = lower_bounds,
                                           upper = upper_bounds,
                                           method = "L-BFGS-B",
-                                          hessian = TRUE))))
+                                          hessian = TRUE,
+                                          use_coverage = TRUE))))
 
 
     # Get parameter estimates and uncertainties
@@ -467,6 +469,7 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
   lambda <- ev$values
   V<- ev$vectors
+  cs <- solve(V, -Rss)
 
 
   ### Step 3: Infer data for actual measured species
@@ -479,7 +482,6 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
     sample_feature <- sample_features[n]
     feature_type <- feature_types[n]
 
-    cs <- solve(V, -Rss)
 
     exp_lambda <- exp(lambda*tl)
 
@@ -514,7 +516,7 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
   ### Step 4 calculate likelihood
   ll <- stats::dnorm(logit_fn,
-              all_fns,
+              logit(all_fns),
               logit_fn_sd,
               log = TRUE)
 
