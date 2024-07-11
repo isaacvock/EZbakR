@@ -258,7 +258,7 @@ EZDynamics <- function(obj,
            corresponds to in this case.")
     }
 
-    somtimes_assigned <- fm_cols[fm_cols != always_assigned]
+    sometimes_assigned <- fm_cols[fm_cols != always_assigned]
 
     measured_species <- apply(feature_mat, 1, function(row) {
 
