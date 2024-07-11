@@ -536,7 +536,7 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
     ll <- ll +
       stats::dnorm(coverage,
             log10(all_ss),
-            (1/((10^coverage)*(log(10)^2)))/nreps,
+            (1/((10^coverage)*(log(10)^2)))/sqrt(nreps),
             log = TRUE)
 
   }
