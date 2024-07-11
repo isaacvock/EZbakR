@@ -6,7 +6,7 @@
 \usage{
 EZget(
   obj,
-  type = c("fractions", "kinetics", "readcounts", "averages", "comparisons"),
+  type = c("fractions", "kinetics", "readcounts", "averages", "comparisons", "dynamics"),
   features = NULL,
   populations = NULL,
   fraction_design = NULL,
@@ -20,6 +20,10 @@ EZget(
   mean_vars = NULL,
   sd_vars = NULL,
   repeatID = NULL,
+  sub_features = NULL,
+  grouping_features = NULL,
+  sample_feature = NULL,
+  graph = NULL,
   returnNameOnly = FALSE,
   exactMatch = FALSE,
   alwaysCheck = FALSE
@@ -70,6 +74,21 @@ parameter average linear model. Only relevant if type == "averages".}
 parameter standard deviation linear model. Only relevant if type == "averages".}
 
 \item{repeatID}{Numerical ID for duplicate objects with same metadata.}
+
+\item{sub_features}{Only relevant if type == "dynamics". Feature columns
+that distinguished between the different measured species when running
+\code{EZDynamics()}.}
+
+\item{grouping_features}{Only relevant if type == "dynamics. Features
+that were the overarching feature assignments by which \code{sub_features} were grouped
+when running \code{EZDynamics()}.}
+
+\item{sample_feature}{Only relevant if type == "dynamics". Name of the metadf
+column that distinguished the different classes of samples when running
+\code{EZDynamics()}.}
+
+\item{graph}{Only relevant if type == "dynamics". NxN adjacency matrix,
+where N represents the number of species modeled when running \code{EZDynamics()}.}
 
 \item{returnNameOnly}{If TRUE, then only the names of tables that passed your
 search criteria will be returned. Else, the single table passing your search

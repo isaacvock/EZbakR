@@ -32,7 +32,7 @@
 #' For example, the model 0 -> P -> M -> 0 would have the `graph`:
 #' `matrix(c(0, 1, 0, 0, 0, 2, 3, 0, 0), nrow = 3, ncol = 3, byrow = TRUE`.
 #' @param sub_features Which feature columns distinguish between the different
-#' measured species. Note, the measured species need not have the same name,
+#' measured species? Note, the measured species need not have the same name,
 #' and may not be directly equivalent to, the modeled species. The relationship
 #' between the modeled species in `graph` and `sub_features` needs to be specified
 #' in `modeled_to_measured` if the names are not equivalent though.
@@ -312,9 +312,64 @@ EZDynamics <- function(obj,
   }
 
 
-  ### TO-DO Add a new table type to EZbakRData object and EZget()
+  ### Add output to object
 
-  return(dynfit)
+  num_dynamics <- length(obj[['dynamics']])
+
+  output_name <- paste0("dynamics", num_dynamics + 1)
+
+
+  if(num_dynamics > 0){
+    output_name <- decide_output(obj, output_name, type = "dynamics",
+                                 features = features, features = features,
+                                 sub_features = sub_features,
+                                 grouping_features = grouping_features,
+                                 sample_feature = sample_feature,
+                                 graph = graph, parameter = parameter,
+                                 mean_vars = mean_vars, sd_vars = sd_vars)
+
+    # How many identical tables already exist?
+    if(overwrite){
+
+      repeatID <- 1
+
+    }else{
+
+      repeatID <- length(EZget(obj,
+                               type = 'dynamics',
+                               features = features, features = features,
+                               sub_features = sub_features,
+                               grouping_features = grouping_features,
+                               sample_feature = sample_feature,
+                               graph = graph, parameter = parameter,
+                               mean_vars = mean_vars, sd_vars = sd_vars,
+                               returnNameOnly = TRUE,
+                               exactMatch = TRUE,
+                               alwaysCheck = TRUE)) + 1
+    }
+
+  }else{
+
+    repeatID <- 1
+
+  }
+
+  obj[["dynamics"]][[output_name]] <- dplyr::as_tibble(dynfit)
+
+  obj[["metadata"]][["dynamics"]][[output_name]] <- list(features = features,
+                                                         sub_features = sub_features,
+                                                         grouping_features = grouping_features,
+                                                         sample_feature = sample_feature,
+                                                         graph = graph, parameter = parameter,
+                                                         mean_vars = mean_vars, sd_vars = sd_vars,
+                                                         repeatID = repeatID)
+
+
+  if(!methods::is(obj, "EZbakRDynamics")){
+
+    class(obj) <- c( "EZbakRDynamics", class(obj))
+
+  }
 
 
 
@@ -322,16 +377,21 @@ EZDynamics <- function(obj,
 
 
 
-# Function to evaluate formulas and generate a new named vector
-evaluate_formulas2 <- function(original_vector, formula) {
+# Function to relate measured species to actual species by evaluating the
+# user provided formulas
+evaluate_formulas <- function(original_vector, formula) {
+
   new_vector <- numeric()
   response <- as.character(formula[[2]])
   terms <- all.vars(formula[[3]])
   expr <- formula[[3]]
   env <- list2env(as.list(original_vector))
   value <- eval(expr, envir = env)
+
+  # Will return vector with names of measured species
   new_vector[response] <- value
   return(new_vector)
+
 }
 
 # Likelihood function for generalized dynamical systems modeling
@@ -407,10 +467,10 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
     sample_formula <- sample_formula[[which(sapply(1:length(sample_formula),
                                                    function(x) all.vars(sample_formula[[x]])[1] == feature_type))]]
 
-    measured_levels <- evaluate_formulas2(result_vector, sample_formula)
+    measured_levels <- evaluate_formulas(result_vector, sample_formula)
 
     names(Rss) <- rownames(A)
-    measured_ss <- evaluate_formulas2(Rss, sample_formula)
+    measured_ss <- evaluate_formulas(Rss, sample_formula)
 
     all_fns <- c(all_fns, measured_levels/measured_ss)
     all_ss <- c(all_ss, measured_ss)

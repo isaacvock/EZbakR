@@ -45,7 +45,7 @@ For example, the model 0 -> P -> M -> 0 would have the \code{graph}:
 \verb{matrix(c(0, 1, 0, 0, 0, 2, 3, 0, 0), nrow = 3, ncol = 3, byrow = TRUE}.}
 
 \item{sub_features}{Which feature columns distinguish between the different
-measured species. Note, the measured species need not have the same name,
+measured species? Note, the measured species need not have the same name,
 and may not be directly equivalent to, the modeled species. The relationship
 between the modeled species in \code{graph} and \code{sub_features} needs to be specified
 in \code{modeled_to_measured} if the names are not equivalent though.}

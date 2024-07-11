@@ -35,6 +35,17 @@
 #' parameter average linear model. Only relevant if type == "averages".
 #' @param sd_vars Sample features from metadf that were used in formula for
 #' parameter standard deviation linear model. Only relevant if type == "averages".
+#' @param sub_features Only relevant if type == "dynamics". Feature columns
+#' that distinguished between the different measured species when running
+#' `EZDynamics()`.
+#' @param grouping_features Only relevant if type == "dynamics. Features
+#' that were the overarching feature assignments by which `sub_features` were grouped
+#' when running `EZDynamics()`.
+#' @param sample_feature Only relevant if type == "dynamics". Name of the metadf
+#' column that distinguished the different classes of samples when running
+#' `EZDynamics()`.
+#' @param graph Only relevant if type == "dynamics". NxN adjacency matrix,
+#' where N represents the number of species modeled when running `EZDynamics()`.
 #' @param repeatID Numerical ID for duplicate objects with same metadata.
 #' @param returnNameOnly If TRUE, then only the names of tables that passed your
 #' search criteria will be returned. Else, the single table passing your search
@@ -48,7 +59,7 @@
 #' @export
 EZget <- function(obj,
                   type = c("fractions", "kinetics", "readcounts",
-                           "averages", "comparisons"),
+                           "averages", "comparisons", "dynamics"),
                   features = NULL,
                   populations = NULL,
                   fraction_design = NULL,
@@ -62,6 +73,10 @@ EZget <- function(obj,
                   mean_vars = NULL,
                   sd_vars = NULL,
                   repeatID = NULL,
+                  sub_features = NULL,
+                  grouping_features = NULL,
+                  sample_feature = NULL,
+                  graph = NULL,
                   returnNameOnly = FALSE,
                   exactMatch = FALSE,
                   alwaysCheck = FALSE){
@@ -308,6 +323,49 @@ EZget <- function(obj,
 
   }
 
+  if(!is.null(sub_features)){
+
+    possible_tables_sf <- vector_ezsearch(metadata,
+                                          sub_features,
+                                          "sub_features",
+                                          exactMatch = exactMatch)
+
+    possible_tables <- intersect(possible_tables, possible_tables_sf)
+
+  }
+
+  if(!is.null(grouping_features)){
+
+    possible_tables_gf <- vector_ezsearch(metadata,
+                                          grouping_features,
+                                          "grouping_features",
+                                          exactMatch = exactMatch)
+
+    possible_tables <- intersect(possible_tables, possible_tables_gf)
+
+  }
+
+  if(!is.null(sample_feature)){
+
+    possible_tables_sf <- exact_ezsearch(metadata,
+                                         sample_feature,
+                                         "sample_feature")
+
+    possible_tables <- intersect(possible_tables, possible_tables_sf)
+
+  }
+
+  if(!is.null(graph)){
+
+    possible_tables_g <- exact_ezsearch(metadata,
+                                         graph,
+                                         "graph")
+
+    possible_tables <- intersect(possible_tables, possible_tables_g)
+
+
+  }
+
 
   # Can return multiple names of candidate tables, but can
   # only return one table
@@ -344,11 +402,9 @@ EZget <- function(obj,
 
 }
 
-
-
 vector_ezsearch <- function(metadata,
-                                    queries,
-                                    object,
+                            queries,
+                            object,
                             exactMatch){
 
 
@@ -401,7 +457,7 @@ exact_ezsearch <- function(metadata,
 
     subject <- metadata[[m]][[object]]
 
-    if(subject == query){
+    if(identical(subject, query)){
 
       possible_tables <- c(possible_tables, names(metadata)[m])
 
@@ -423,7 +479,7 @@ exact_ezsearch <- function(metadata,
 decide_output <- function(obj, proposed_name,
                           type = c("fractions", "kinetics",
                                    "readcounts", "averages",
-                                   "comparisons"),
+                                   "comparisons", "dynamics"),
                           features = NULL,
                           populations = NULL,
                           fraction_design = NULL,
@@ -435,6 +491,10 @@ decide_output <- function(obj, proposed_name,
                           experimental = NULL,
                           mean_vars = NULL,
                           sd_vars = NULL,
+                          sub_features = NULL,
+                          grouping_features = NULL,
+                          sample_feature = NULL,
+                          graph = NULL,
                           overwrite = TRUE){
 
   type = match.arg(type)
@@ -453,6 +513,10 @@ decide_output <- function(obj, proposed_name,
                            experimental = experimental,
                            mean_vars = mean_vars,
                            sd_vars = sd_vars,
+                           sub_features = sub_features,
+                           grouping_features = grouping_features,
+                           sample_feature = sample_feature,
+                           graph = graph,
                              returnNameOnly = TRUE,
                              exactMatch = TRUE,
                            alwaysCheck = TRUE)
