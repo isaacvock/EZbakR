@@ -156,7 +156,6 @@ EZDynamics <- function(obj,
 
   ### Input
 
-  browser()
 
   # Tidy averages table (currently makes hard assumption about interaction terms being only terms)
   table_name <- EZget(obj = obj, type = type, features = features,
