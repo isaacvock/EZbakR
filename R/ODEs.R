@@ -156,6 +156,13 @@ EZDynamics <- function(obj,
 
   ### Input
 
+  # Can try to infer replicate numbers to get more informative coveravge likelihood
+  metadf <- obj$metadf
+  meta_groups <- c("tl", sample_feature)
+  reps <- metadf %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(meta_groups))) %>%
+    dplyr::summarise(nreps = n())
+
 
   # Tidy averages table (currently makes hard assumption about interaction terms being only terms)
   table_name <- EZget(obj = obj, type = type, features = features,
@@ -296,6 +303,9 @@ EZDynamics <- function(obj,
 
 
     dynfit <- tidy_avgs  %>%
+      dplyr::mutate(tl = as.numeric(tl)) %>%
+      dplyr::inner_join(reps,
+                        by = meta_groups) %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group_by))) %>%
       dplyr::summarise(fit = list(I(stats::optim(starting_values,
                                           fn = dynamics_likelihood,
@@ -304,6 +314,7 @@ EZDynamics <- function(obj,
                                           logit_fn = mean,
                                           logit_fn_sd = sd,
                                           coverage = coverage,
+                                          nreps = nreps,
                                           tls = as.numeric(tl),
                                           sample_features = !!dplyr::sym(sample_feature),
                                           feature_types = measured_specie,
@@ -427,7 +438,7 @@ evaluate_formulas2 <- function(original_vector, formula) {
 # Likelihood function for generalized dynamical systems modeling
 # with averages tables
 dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
-                                logit_fn, logit_fn_sd, coverage,
+                                logit_fn, logit_fn_sd, coverage, nreps = 2,
                                 tls, sample_features, feature_types,
                                 use_coverage = TRUE){
   ### Step 1, construct A
@@ -525,7 +536,7 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
     ll <- ll +
       stats::dnorm(coverage,
             log10(all_ss),
-            1/((10^coverage)*(log(10)^2)),
+            (1/((10^coverage)*(log(10)^2)))/nreps,
             log = TRUE)
 
   }
