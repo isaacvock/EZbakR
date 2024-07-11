@@ -258,7 +258,7 @@ EZDynamics <- function(obj,
            There is not way for EZbakR to determine which measured species a row
            corresponds to in this case.")
 
-    }else if(is.null(always_assigned)){
+    }else if(length(always_assigned) == 0){
 
       sometimes_assigned <- fm_cols
 
