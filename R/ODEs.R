@@ -324,7 +324,7 @@ EZDynamics <- function(obj,
         !!par_name := purrr::map_dbl(fit, ~ .x$par[n]),
         !!par_se_name := tryCatch(
           {
-          purrr::map_dbl(fit, ~ sqrt(solve(.x$hessian)[n]))
+          purrr::map_dbl(fit, ~ sqrt(diag(solve(.x$hessian)))[n])
           },
           error = function(e) {
             Inf
