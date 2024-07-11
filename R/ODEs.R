@@ -409,7 +409,6 @@ EZDynamics <- function(obj,
 # user provided formulas
 evaluate_formulas2 <- function(original_vector, formula) {
 
-  browser()
   new_vector <- numeric()
   response <- as.character(formula[[2]])
   terms <- all.vars(formula[[3]])
@@ -431,7 +430,6 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
                                 use_coverage = TRUE){
   ### Step 1, construct A
 
-  browser()
   # Parameters are on log-scale for ease of optimization
   param_extend <- c(0, exp(parameter_ests))
   param_graph <- matrix(param_extend[graph + 1],
