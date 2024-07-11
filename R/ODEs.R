@@ -440,7 +440,8 @@ evaluate_formulas2 <- function(original_vector, formula) {
 dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
                                 logit_fn, logit_fn_sd, coverage, nreps = 2,
                                 tls, sample_features, feature_types,
-                                use_coverage = TRUE){
+                                use_coverage = TRUE, alt_coverage = FALSE,
+                                coverage_sd = NULL, scale_factor = NULL){
   ### Step 1, construct A
 
   # Parameters are on log-scale for ease of optimization
@@ -533,11 +534,31 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
   if(use_coverage){
 
-    ll <- ll +
-      stats::dnorm(coverage,
-            log10(all_ss),
-            (1/((10^coverage)*(log(10)^2)))/sqrt(nreps),
-            log = TRUE)
+    if(alt_coverage){
+
+      all_reads <- all_ss*scale_factor
+
+      ll <- ll +
+        stats::dnorm(coverage,
+                     log10(all_ss),
+                     sd = coverage_sd,
+                     log = TRUE)
+      # ll <- ll +
+      #   stats::dnorm(coverage,
+      #                log10(all_reads),
+      #                (1/((10^coverage)*(log(10)^2)))/sqrt(nreps),
+      #                log = TRUE)
+
+
+    }else{
+
+      ll <- ll +
+        stats::dnorm(coverage,
+                     log10(all_ss),
+                     (1/((10^coverage)*(log(10)^2)))/sqrt(nreps),
+                     log = TRUE)
+
+    }
 
   }
 
