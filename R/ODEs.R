@@ -7,6 +7,13 @@
 #' are assayed across a set of independent samples (e.g., subcellular fractionation
 #' involves assaying different species in different samples).
 #'
+#' When running `AverageAndRegularize()` to produce input for `EZDynamics()`, you
+#' must set `parameter` to "logit_fraction_high<muttype>" (<muttype> = type of mutation
+#' modeled by `EstimateFractions()`, e.g., TC), and you must include the label time
+#' in your regression formula. `EZDynamics()` models the logit(fraction high <muttype),
+#' and this will depend on the label time (longer label time = higher fraction), which
+#' is why these two conditions must be met.
+#'
 #' @param obj Currently must be an EZbakRData object on which `AverageAndRegularize`
 #' has been run. In the future, will also support (in case where all species are
 #' assayed in every sample) providing output of just `EstimateFractions()` as input,

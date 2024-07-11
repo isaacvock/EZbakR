@@ -143,3 +143,11 @@ can either be done for species all assayed in each sample, or species that
 are assayed across a set of independent samples (e.g., subcellular fractionation
 involves assaying different species in different samples).
 }
+\details{
+When running \code{AverageAndRegularize()} to produce input for \code{EZDynamics()}, you
+must set \code{parameter} to "logit_fraction_high\if{html}{\out{<muttype>}}" (\if{html}{\out{<muttype>}} = type of mutation
+modeled by \code{EstimateFractions()}, e.g., TC), and you must include the label time
+in your regression formula. \code{EZDynamics()} models the logit(fraction high <muttype),
+and this will depend on the label time (longer label time = higher fraction), which
+is why these two conditions must be met.
+}
