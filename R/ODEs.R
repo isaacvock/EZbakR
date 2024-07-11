@@ -185,7 +185,7 @@ EZDynamics <- function(obj,
 
     # Tidy data!
     tidy_avgs <- table %>%
-      pivot_longer(
+      tidyr::pivot_longer(
         cols = -!!features,
         names_to = c(".value", pivot_columns),
         names_pattern = pattern
@@ -285,7 +285,7 @@ EZDynamics <- function(obj,
 
     dynfit <- tidy_avgs  %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group_by))) %>%
-      summarise(fit = list(I(stats::optim(starting_values,
+      dplyr::summarise(fit = list(I(stats::optim(starting_values,
                                           fn = dynamics_likelihood,
                                           graph = graph,
                                           formula_list = modeled_to_measured,
@@ -494,15 +494,15 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
 
   ### Step 4 calculate likelihood
-  ll <- dnorm(logit_fn,
-              EZbakR:::logit(all_fns),
+  ll <- stats::dnorm(logit_fn,
+              all_fns,
               logit_fn_sd,
               log = TRUE)
 
   if(use_coverage){
 
     ll <- ll +
-      dnorm(coverage,
+      stats::dnorm(coverage,
             log10(all_ss),
             1/((10^coverage)*(log(10)^2)),
             log = TRUE)
