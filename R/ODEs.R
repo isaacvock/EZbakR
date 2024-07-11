@@ -157,7 +157,7 @@ EZDynamics <- function(obj,
   ### Input
 
   # Tidy averages table (currently makes hard assumption about interaction terms being only terms)
-  table_name <- EZget(type = type, features = features,
+  table_name <- EZget(obj = obj, type = type, features = features,
                       populations = populations, fraction_design = fraction_design,
                       parameter = parameter, mean_vars = mean_vars,
                       sd_vars = sd_vars, repeatID = repeatID,
