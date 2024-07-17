@@ -246,6 +246,412 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
 }
 
 
+# Dirichlet distribution RNG
+# Source: LaplacesDemon package (https://github.com/LaplacesDemonR/LaplacesDemon/blob/de9107d46c215a9db57ad6e9c95a9ebcaf75ef25/R/distributions.R#L327)
+rdirichlet <- function (n, alpha) {
+
+  alpha <- rbind(alpha)
+  alpha.dim <- dim(alpha)
+  if(n > alpha.dim[1])
+    alpha <- matrix(alpha, n, alpha.dim[2], byrow=TRUE)
+  x <- matrix(rgamma(alpha.dim[2]*n, alpha), ncol=alpha.dim[2])
+  sm <- x %*% rep(1, alpha.dim[2])
+
+  return(x/as.vector(sm))
+}
+
+#' Vectorized simulation of one replicate of multi-label NR-seq data
+#'
+#' Generalizes SimulateOneRep() to simulate any combination of mutation types.
+#' Currently, no kinetic model is used to relate certain parameters to the
+#' fractions of reads belonging to each simulated mutational population. Instead
+#' these fractions are drawn from a Dirichlet distribution with gene-specific
+#' parameters.
+#'
+#' @importFrom magrittr %>%
+#' @export
+VectSimulateMultiLabel <- function(nfeatures, populations = c("TC"),
+                                   fraction_design = create_fraction_design(populations),
+                                   fractions_matrix = NULL, read_vect = NULL,
+                                   sample_name = "sampleA", feature_prefix = "Gene",
+                                   kdeg_vect = NULL, ksyn_vect = NULL,
+                                   logkdeg_mean = -1.9, logkdeg_sd = 0.7,
+                                   logksyn_mean = 2.3, logksyn_sd = 0.7,
+                                   phighs = setNames(rep(0.05, times = length(populations)), populations),
+                                   plows = setNames(rep(0.002, times = length(populations)), populations),
+                                   seqdepth = nfeatures*2500, readlength = 200,
+                                   alpha_min = 3, alpha_max = 6,
+                                   Ucont = 0.25, Acont = 0.25, Gcont = 0.25, Ccont = 0.25){
+
+
+
+  npops <- sum(fraction_design$present)
+
+  # Infer fractions of each mutation type for each feature
+  if(is.null(fractions_matrix)){
+
+    # Feature-specific Dirichlet alphas
+    alphas <- matrix(runif(npops*nfeatures, min = 3, max = 6),
+                     nrow = nfeatures, ncol = npops,
+                     byrow = TRUE)
+
+    # Feature-specific fractions of each mutational population
+    fractions_matrix <- matrix(0,
+                               nrow = nfeatures,
+                               ncol = npops)
+    for(f in 1:nfeatures){
+
+      fractions_matrix[f,] <- rdirichlet(1, alphas[f,])
+
+    }
+
+
+  }
+
+  # Infer read counts
+  if(is.null(read_vect)){
+
+    if(is.null(ksyn_vect)){
+
+      ksyn_vect <- stats::rlnorm(nfeatures,
+                                 logksyn_mean,
+                                 logksyn_sd)
+
+    }
+
+    if(is.null(kdeg_vect)){
+
+      kdeg_vect <- stats::rlnorm(nfeatures,
+                                 logkdeg_mean,
+                                 logkdeg_sd)
+
+
+    }
+
+    read_vect <- round(((ksyn_vect/kdeg_vect)/sum(ksyn_vect/kdeg_vect))*seqdepth)
+
+  }
+
+
+  ### Need to figure out which nucleotide types to simulate
+  nuc_types <- substr(populations, start = 1, stop = 1)
+  nuc_cnt_names <- paste0("n", nuc_types)
+
+
+  # What is vector of nucleotide content probabilities
+  nuc_probs <- c(Ucont, Acont, Gcont, Ccont)
+  names(nuc_probs) <- c("nT", "nA", "nG", "nC")
+  nuc_probs_sim <- nuc_probs[names(nuc_probs) %in% nuc_cnt_names]
+  nuc_probs_sim <- c(nuc_probs_sim,
+                     1 - sum(nuc_probs_sim))
+
+
+  ### Simulate read status in each population
+  type_cnts <- matrix(0,
+                      nrow = nfeatures,
+                      ncol = npops)
+
+  fraction_design_present <- fraction_design %>%
+    dplyr::filter(present)
+
+
+  fraction_reads <- vector(mode = "list", length = ncol(fractions_matrix))
+  for(i in 1:ncol(fractions_matrix)){
+    fraction_reads[[i]] <- ceiling(read_vect*fractions_matrix[,i])
+  }
+
+  tot_reads <- sum(unlist(fraction_reads))
+  reads_per_fraction <- sapply(fraction_reads, sum) %>% unname()
+
+
+  # Simualte nucleotide counts
+  nt_cnts <- stats::rmultinom(tot_reads, size = readlength,
+                              prob = nuc_probs_sim)
+
+  ### Simulate nucleotide contents and mutations
+
+  mutations <- vector(mode = "list",
+                      length = length(populations))
+  nucleotides <- vector(mode = "list",
+                        length = length(populations))
+  names(mutations) <- populations
+  names(nucleotides) <- nuc_cnt_names
+  for(p in seq_along(populations)){
+
+    pvect <- rep(0, times = nrow(fraction_design_present))
+    for(r in 1:(nrow(fraction_design_present))){
+
+      if(as.logical(fraction_design_present[r,populations[p]])){
+
+        pvect[r] <- phighs[[populations[p]]]
+
+      }else{
+
+        pvect[r] <- plows[[populations[p]]]
+
+      }
+    }
+
+    mutations[[populations[p]]] <- rbinom(tot_reads,
+                                          size = nt_cnts[p,],
+                                          prob = rep(pvect,
+                                                     times = reads_per_fraction))
+
+    nucleotides[[nuc_cnt_names[p]]] <- nt_cnts[p,]
+
+  }
+
+  ### Figure out feature assignment
+  feature_vect <- c()
+  for(f in fraction_reads){
+
+    feature_vect <- c(feature_vect,
+                      rep(1:nfeatures,
+                          times = f))
+
+  }
+  feature_vect <- paste0(feature_prefix, feature_vect)
+
+
+  cB <- dplyr::bind_cols(list(
+    dplyr::tibble(feature = feature_vect),
+    dplyr::as_tibble(mutations),
+    dplyr::as_tibble(nucleotides))) %>%
+    dplyr::mutate(sample = sample_name)
+
+
+  ### What do I call each things name
+
+  nvect <- rep("", times = nrow(fraction_design_present))
+  for(r in 1:nrow(fraction_design_present)){
+
+    nvect[r] <- "true_fraction"
+    for(t in 1:(ncol(fraction_design_present)-1)){
+
+      if(as.logical(fraction_design_present[r,t])){
+
+        nvect[r] <- paste0(nvect[r], "_high", colnames(fraction_design_present)[t])
+
+      }else{
+
+        nvect[r] <- paste0(nvect[r], "_low", colnames(fraction_design_present)[t])
+
+      }
+
+    }
+
+  }
+
+  colnames(fractions_matrix) <- nvect
+  ground_truth <- dplyr::as_tibble(fractions_matrix)
+  ground_truth$feature <- paste0(feature_prefix, 1:nrow(ground_truth))
+
+  cB <- cB %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(colnames(cB)))) %>%
+    dplyr::count()
+
+  return(list(cB = cB,
+              ground_truth = ground_truth))
+
+
+}
+
+
+
+#' Simulate one replicate of multi-label NR-seq data
+#'
+#' Generalizes SimulateOneRep() to simulate any combination of mutation types.
+#' Currently, no kinetic model is used to relate certain parameters to the
+#' fractions of reads belonging to each simulated mutational population. Instead
+#' these fractions are drawn from a Dirichlet distribution with gene-specific
+#' parameters.
+#'
+#' @importFrom magrittr %>%
+#' @export
+SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
+                               fraction_design = create_fraction_design(populations),
+                               fractions_matrix = NULL, read_vect = NULL,
+                               sample_name = "sampleA", feature_prefix = "Gene",
+                               kdeg_vect = NULL, ksyn_vect = NULL,
+                               logkdeg_mean = -1.9, logkdeg_sd = 0.7,
+                               logksyn_mean = 2.3, logksyn_sd = 0.7,
+                               phighs = setNames(rep(0.05, times = length(populations)), populations),
+                               plows = setNames(rep(0.002, times = length(populations)), populations),
+                               seqdepth = nfeatures*2500, readlength = 200,
+                               alpha_min = 3, alpha_max = 6,
+                               Ucont = 0.25, Acont = 0.25, Gcont = 0.25, Ccont = 0.25){
+
+
+  npops <- sum(fraction_design$present)
+
+  # Infer fractions of each mutation type for each feature
+  if(is.null(fractions_matrix)){
+
+    # Feature-specific Dirichlet alphas
+    alphas <- matrix(runif(npops*nfeatures, min = 3, max = 6),
+                     nrow = nfeatures, ncol = npops,
+                     byrow = TRUE)
+
+    # Feature-specific fractions of each mutational population
+    fractions_matrix <- matrix(0,
+                            nrow = nfeatures,
+                            ncol = npops)
+    for(f in 1:nfeatures){
+
+      fractions_matrix[f,] <- rdirichlet(1, alphas[f,])
+
+    }
+
+
+  }
+
+  # Infer read counts
+  if(is.null(read_vect)){
+
+    if(is.null(ksyn_vect)){
+
+      ksyn_vect <- stats::rlnorm(nfeatures,
+                                 logksyn_mean,
+                                 logksyn_sd)
+
+    }
+
+    if(is.null(kdeg_vect)){
+
+      kdeg_vect <- stats::rlnorm(nfeatures,
+                                 logkdeg_mean,
+                                 logkdeg_sd)
+
+
+    }
+
+    read_vect <- round(((ksyn_vect/kdeg_vect)/sum(ksyn_vect/kdeg_vect))*seqdepth)
+
+  }
+
+
+  ### Need to figure out which nucleotide types to simulate
+  nuc_types <- substr(populations, start = 1, stop = 1)
+  nuc_cnt_names <- paste0("n", nuc_types)
+
+
+  # What is vector of nucleotide content probabilities
+  nuc_probs <- c(Ucont, Acont, Gcont, Ccont)
+  names(nuc_probs) <- c("nT", "nA", "nG", "nC")
+  nuc_probs_sim <- nuc_probs[names(nuc_probs) %in% nuc_cnt_names]
+  nuc_probs_sim <- c(nuc_probs_sim,
+                     1 - sum(nuc_probs_sim))
+
+
+  ### Simulate read status in each population
+  type_cnts <- matrix(0,
+                      nrow = nfeatures,
+                      ncol = npops)
+
+  fraction_design_present <- fraction_design %>%
+    dplyr::filter(present)
+
+
+  muts_list <- vector(mode = "list",
+                      length = length(populations))
+  names(muts_list) <- populations
+  muts_final <- dplyr::tibble()
+  for(f in 1:nfeatures){
+
+    # Simulate mutational population status
+    type_cnts <- stats::rmultinom(1, size = read_vect[f],
+                           prob = fractions_matrix[f,])
+
+    # Simualte nucleotide counts
+    nt_cnts <- stats::rmultinom(read_vect[f], size = readlength,
+                         prob = nuc_probs_sim)
+
+
+    muts_df <- dplyr::tibble()
+    # For each population, simulate counts for all mutation types
+    for(t in 1:npops){
+      if(t == 1){
+        start <- 1
+      }else{
+        start <- sum(type_cnts[1:(t-1)]) + 1
+      }
+      end <- sum(type_cnts[1:t])
+
+      population_details <- fraction_design_present[t,] %>%
+        dplyr::select(-present) %>%
+        unlist()
+
+      reads <- type_cnts[t,1]
+
+
+      for(m in seq_along(populations)){
+
+        muts_list[[populations[m]]] <-  stats::rbinom(reads,
+                                        size = nt_cnts[m,],
+                                        prob = phighs[[populations[m]]]*population_details[[populations[m]]] +
+                                          plows[[populations[m]]]*(!population_details[[populations[m]]]))
+
+
+      }
+
+      muts_temp <- dplyr::bind_cols(dplyr::as_tibble(muts_list),
+                             dplyr::as_tibble(t(nt_cnts[1:length(nuc_types), start:end])))
+      muts_df <- dplyr::bind_rows(muts_df, muts_temp)
+
+    }
+
+    muts_df <- muts_df %>%
+      dplyr::mutate(feature = rep(paste0(feature_prefix, f), times = nrow(muts_df)))
+
+
+    muts_final <- dplyr::bind_rows(muts_final, muts_df)
+
+
+  }
+
+
+  muts_final <- muts_final %>%
+    dplyr::mutate(sample = sample_name)
+
+
+  ### What do I call each things name
+
+  nvect <- rep("", times = nrow(fraction_design_present))
+  for(r in 1:nrow(fraction_design_present)){
+
+    nvect[r] <- "true_fraction"
+    for(t in 1:(ncol(fraction_design_present)-1)){
+
+      if(as.logical(fraction_design_present[r,t])){
+
+        nvect[r] <- paste0(nvect[r], "_high", colnames(fraction_design_present)[t])
+
+      }else{
+
+        nvect[r] <- paste0(nvect[r], "_low", colnames(fraction_design_present)[t])
+
+      }
+
+    }
+
+  }
+
+  colnames(fractions_matrix) <- nvect
+  ground_truth <- dplyr::as_tibble(fractions_matrix)
+  ground_truth$feature <- paste0(feature_prefix, 1:nrow(ground_truth))
+
+  cB <- muts_final %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(colnames(muts_final)))) %>%
+    dplyr::count()
+
+  return(list(cB = cB,
+              ground_truth = ground_truth))
+
+}
+
+
+
+
 #' Simulate NR-seq data for multiple replicates of multiple biological conditions
 #'
 #' `EZSimulate()` is a user friendly wrapper to `SimulateMultiCondition()`. It

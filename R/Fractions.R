@@ -780,6 +780,11 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   }else{
 
 
+    # pops_to_analyze needs to match order as it appears in mutrate_design
+    # and necessary_basecounts order needs to match relevant nucleotide as well
+    pops_to_analyze <- colnames(mutrate_design)
+    necessary_basecounts <- paste0("n", substr(pops_to_analyze, start = 1, stop = 1))
+
     fns <- cB[,.(mixture_fit = list(fit_general_mixture(dataset = .SD,
                                                         mutrate_design = mutrate_design,
                                                         mutcols = pops_to_analyze,
@@ -2651,6 +2656,10 @@ softmax <- function(vect){
 # Fit and process the output of the generalized likelihood model
 fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp = FALSE,
                                 pnew, pold, mutcols, basecols, highpop = NULL){
+
+
+  pnew <- pnew[match(colnames(mutrate_design), names(pnew))]
+  pold <- pold[match(colnames(mutrate_design), names(pold))]
 
 
   if(twocomp){

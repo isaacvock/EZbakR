@@ -161,7 +161,7 @@ EZDynamics <- function(obj,
   meta_groups <- c("tl", sample_feature)
   reps <- metadf %>%
     dplyr::group_by(dplyr::across(dplyr::all_of(meta_groups))) %>%
-    dplyr::summarise(nreps = n())
+    dplyr::summarise(nreps = dplyr::n())
 
 
   # Tidy averages table (currently makes hard assumption about interaction terms being only terms)

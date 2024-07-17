@@ -11,7 +11,7 @@ EZDynamics(
   grouping_features,
   sample_feature = NULL,
   modeled_to_measured = NULL,
-  parameter_names = paste0("k", 1:(nrow(graph) - 1)),
+  parameter_names = paste0("k", 1:max(graph)),
   unassigned_name = "__no_feature",
   type = "averages",
   features = NULL,
