@@ -791,6 +791,8 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                                                         basecols = necessary_basecounts,
                                                         Poisson = Poisson,
                                                         twocomp = FALSE,
+                                                        sample = unique(sample),
+                                                        samples_with_no_label = samples_with_no_label,
                                                         pnew = sapply(pops_to_analyze,
                                                                       function(name) mutation_rates[[name]]$pnew[mutation_rates[[name]]$sample == sample ]),
                                                         pold = sapply(pops_to_analyze,
@@ -2655,46 +2657,12 @@ softmax <- function(vect){
 
 # Fit and process the output of the generalized likelihood model
 fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp = FALSE,
-                                pnew, pold, mutcols, basecols, highpop = NULL){
+                                pnew, pold, mutcols, basecols, highpop = NULL,
+                                samples_with_no_label = NULL,
+                                sample = NULL){
 
 
-  pnew <- pnew[match(colnames(mutrate_design), names(pnew))]
-  pold <- pold[match(colnames(mutrate_design), names(pold))]
-
-
-  if(twocomp){
-
-    fit <- stats::optim(par = 0,
-                        fn = two_comp_likelihood,
-                        dataset = dataset,
-                        Poisson = Poisson,
-                        pnew = pnew,
-                        pold = pold,
-                        mutcols = mutcols,
-                        basecols = basecols,
-                        upper = 7,
-                        lower = -7,
-                        method = "L-BFGS-B")
-
-    outlist <- list(fit$par, logit(1 - inv_logit(fit$par)))
-
-    names(outlist) <- c(paste0(mutcols, "high"),
-                        paste0(mutcols, "low"))
-
-
-  }else{
-
-    fit <- stats::optim(par = rep(0, times = nrow(mutrate_design)),
-                        fn = generalized_likelihood,
-                        dataset = dataset,
-                        Poisson = Poisson,
-                        mutrate_design = mutrate_design,
-                        pnew = pnew,
-                        pold = pold,
-                        twocomp = twocomp,
-                        mutcols = mutcols,
-                        basecols = basecols,
-                        method = "L-BFGS-B")
+  if(sample %in% samples_with_no_label){
 
     # Figure out what to call each of the fractions
     # Probably "p""muttype""old/new"_"muttype""old/new"
@@ -2703,6 +2671,8 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
 
     # Get vector of population statuses (new and old) for naming the output list
     population_list <- vector(mode = "list", length = nrow(mutrate_design))
+    fvector <- rep(0, times = nrow(mutrate_design))
+    ismvector <- fsvector
     for(i in 1:nrow(mutrate_design)){
 
       population_vector <- rep("", times = ncol(mutrate_design))
@@ -2724,6 +2694,14 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
 
       }
 
+      if(all(population_vector) == "low"){
+        fvector[i] <- 1
+        ismvector[i] <- Inf
+      }else{
+        fvector[i] <- 0
+        ismvector[i] <- -Inf
+      }
+
       population_list[[i]] <- population_vector
 
     }
@@ -2734,16 +2712,126 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
     listnames <- sapply(listnames, function(x) paste(x, collapse = "_"),
                         simplify = "vector")
 
+    listnames <- paste0(rep(c("invsoftmax_",
+                              "fraction_",
+                              "se_invsoftmax_"),
+                            each = nrow(mutrate_design)),
+                        listnames)
 
-    outlist <- as.list(fit$par)
+    outlist <- c(as.list(ismvector),
+                 as.list(fvector),
+                 as.list(rep(0, times = nrow(mutrate_design))) )
+
 
 
     names(outlist) <- listnames
 
+  }else{
+
+    pnew <- pnew[match(colnames(mutrate_design), names(pnew))]
+    pold <- pold[match(colnames(mutrate_design), names(pold))]
+
+
+    if(twocomp){
+
+      fit <- stats::optim(par = 0,
+                          fn = two_comp_likelihood,
+                          dataset = dataset,
+                          Poisson = Poisson,
+                          pnew = pnew,
+                          pold = pold,
+                          mutcols = mutcols,
+                          basecols = basecols,
+                          upper = 7,
+                          lower = -7,
+                          method = "L-BFGS-B",
+                          hessian = TRUE)
+
+      outlist <- list(fit$par, logit(1 - inv_logit(fit$par)))
+
+      names(outlist) <- c(paste0(mutcols, "high"),
+                          paste0(mutcols, "low"))
+
+
+    }else{
+
+      fit <- stats::optim(par = rep(0, times = nrow(mutrate_design)),
+                          fn = generalized_likelihood,
+                          dataset = dataset,
+                          Poisson = Poisson,
+                          mutrate_design = mutrate_design,
+                          pnew = pnew,
+                          pold = pold,
+                          twocomp = twocomp,
+                          mutcols = mutcols,
+                          basecols = basecols,
+                          method = "L-BFGS-B",
+                          hessian = TRUE)
+
+      # Figure out what to call each of the fractions
+      # Probably "p""muttype""old/new"_"muttype""old/new"
+      muttypes <- colnames(mutrate_design)
+
+
+      # Get vector of population statuses (new and old) for naming the output list
+      population_list <- vector(mode = "list", length = nrow(mutrate_design))
+      for(i in 1:nrow(mutrate_design)){
+
+        population_vector <- rep("", times = ncol(mutrate_design))
+        count <- 1
+        for(j in 1:ncol(mutrate_design)){
+
+          if(as.logical(mutrate_design[i, j])){
+
+            population_vector[count] <- "high"
+
+          }else{
+
+            population_vector[count] <- "low"
+
+          }
+
+          count <- count + 1
+
+
+        }
+
+        population_list[[i]] <- population_vector
+
+      }
+
+
+      # Make names for the output list that are easily interpretable (I hope)
+      listnames <- lapply(population_list, function(x) paste0(x, muttypes))
+      listnames <- sapply(listnames, function(x) paste(x, collapse = "_"),
+                          simplify = "vector")
+
+      listnames <- paste0(rep(c("invsoftmax_",
+                                "fraction_",
+                                "se_invsoftmax_"),
+                              each = length(fit$par)),
+                          listnames)
+
+
+      uncertainties <- tryCatch(
+        {
+          sqrt(abs(diag(solve(fit$hessian))))
+        },
+        error = function(e) {
+          rep(Inf, times = length(fit$par))
+        }
+      )
+
+      outlist <- c(as.list(fit$par),
+                   as.list(softmax(fit$par)),
+                   as.list(uncertainties) )
+
+
+      names(outlist) <- listnames
+
+    }
+
   }
-
-
-
 
 
   return(outlist)
