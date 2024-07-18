@@ -14,6 +14,7 @@
 <url><loc>https://isaacvock.github.io/EZbakR/reference/AverageAndRegularize.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/CompareParameters.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/CorrectDropout.html</loc></url>
+<url><loc>https://isaacvock.github.io/EZbakR/reference/EZDynamics.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EZMAPlot.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EZSimulate.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EZVolcanoPlot.html</loc></url>
@@ -35,7 +36,9 @@
 <url><loc>https://isaacvock.github.io/EZbakR/reference/SimulateDynamics.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/SimulateIsoforms.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/SimulateMultiCondition.html</loc></url>
+<url><loc>https://isaacvock.github.io/EZbakR/reference/SimulateMultiLabel.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/SimulateOneRep.html</loc></url>
+<url><loc>https://isaacvock.github.io/EZbakR/reference/VectSimulateMultiLabel.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/create_fraction_design.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/example_cB.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/example_metadf.html</loc></url>
