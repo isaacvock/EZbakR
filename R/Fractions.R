@@ -635,7 +635,6 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
     if(strategy == "hierarchical"){
 
-
       message("FITTING HIERARCHICAL TWO-COMPONENT MIXTURE MODEL:")
 
       ### Get coverages to filter by; only want high coverage for feature-specific
