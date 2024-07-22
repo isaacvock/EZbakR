@@ -44,7 +44,7 @@ ezbdo <- EstimateFractions(ezbdo, strategy = 'hierarchical', overwrite = FALSE)
 # Estimate kinetic parameters with three different strategies
 # See EstimateKinetics vignettes for details.
 ezbdo <- EstimateKinetics(ezbdo, repeatID = 1)
-ezbdo <- EstimateKinetics(ezbdo, repeatID = 1, strategy = "NSS")
+ezbdo <- EstimateKinetics(ezbdo, repeatID = 1, strategy = "shortfeed")
 ezbdo <- EstimateKinetics(ezbdo, repeatID = 2, strategy = "shortfeed")
 ```
 
