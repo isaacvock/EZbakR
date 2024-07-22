@@ -9,7 +9,7 @@
 #'  sample. This is done via a binomial mixture model aggregating over
 #'  \item NSS: Use strategy similar to that presented in Narain et al., 2021 that
 #'  assumes provided -s4U data provides a reference for how much RNA was present
-#'  at the start of labeling. In this case, `grouping_factors` must also be set.
+#'  at the start of labeling. In this case, `grouping_factor` must also be set.
 #'  \item shortfeed: Estimate kinetic parameters assuming no degradation of labeled
 #'  RNA, most appropriate if the metabolic label feed time is much shorter than
 #'  the average half-life of an RNA in your system.
@@ -37,9 +37,13 @@
 #' those for a given fractions table for that table to be used. Means that you can't
 #' specify a subset of features or populations by default, since this is TRUE
 #' by default.
-#' @param grouping_factors Which sample-detail columns in the metadf should be used
-#' to group -s4U samples by for calculating the average -s4U RPM? The default value of
-#' `NULL` will cause all sample-detail columns to be used.
+#' @param grouping_factor Which sample-detail columns in the metadf should be used
+#' to group samples by for calculating the average RPM at a particular time point?
+#' Only relevant if `strategy = "NSS"`.
+#' @param reference_factor Which sample-detail column in the metafd should be used to
+#' determine which group of samples provide information about the starting levels of RNA
+#' for each sample? This should have values that match those in `grouping_factor`.
+#' #' Only relevant if `strategy = "NSS"`.
 #' @param character_limit Maximum number of characters for naming out fractions output. EZbakR
 #' will try to name this as a "_" separated character vector of all of the features analyzed.
 #' If this name is greater than `character_limit`, then it will default to "fraction#", where
@@ -61,7 +65,8 @@ EstimateKinetics <- function(obj,
                              fraction_design = NULL,
                              repeatID = NULL,
                              exactMatch = TRUE,
-                             grouping_factors = NULL,
+                             grouping_factor = NULL,
+                             reference_factor = NULL,
                              character_limit = 20,
                              overwrite = TRUE){
 
@@ -122,6 +127,8 @@ EstimateKinetics <- function(obj,
                                        features = features,
                                        populations = populations,
                                        fraction_design = fraction_design,
+                                       reference_factor = reference_factor,
+                                       grouping_factor = grouping_factor,
                                        repeatID = repeatID,
                                        exactMatch = exactMatch,
                                        character_limit = character_limit,
@@ -147,7 +154,8 @@ Standard_kinetic_estimation <- function(obj,
                                         repeatID = NULL,
                                         exactMatch = TRUE,
                                         character_limit = 20,
-                                        grouping_factors = NULL,
+                                        reference_factor = NULL,
+                                        grouping_factor = NULL,
                                         overwrite = TRUE){
 
   ### Hack to deal with devtools::check() NOTEs
@@ -298,48 +306,56 @@ Standard_kinetic_estimation <- function(obj,
     metadf <- obj$metadf
 
 
-    if(is.null(grouping_factors)){
+    if(is.null(grouping_factor) | is.null(reference_factor)){
 
-      grouping_factors <- colnames(metadf)[!grepl("^tl", colnames(metadf)) &
-                                             (colnames(metadf) != "sample") &
-                                             !grepl("^tpulse", colnames(metadf)) &
-                                             !grepl("^tchase", colnames(metadf))]
+      stop("Grouping factors and reference factors must both be specified if
+           using the NSS strategy!")
 
+    }else if(length(grouping_factor) != 1 | length(reference_factor) != 1){
+
+      stop("grouping_factor and reference_factor must each be a single
+           column of your metadf!")
+
+    }else if(!(grouping_factor %in% colnames(metadf)) | !(reference_factor %in% colnames(metadf))){
+
+      stop("grouping_factor and reference_factor must both share a name
+           with columns in your metadf!")
 
     }
 
     # Necessary generalizations:
     # 1) Metadf column used (e.g., pulse-chase)
-    nolabel_data <- kinetics %>%
-      dplyr::inner_join(metadf %>% dplyr::filter(tl == 0),
+    reference_data <- kinetics %>%
+      dplyr::inner_join(metadf,
                         by = "sample") %>%
       dplyr::group_by(sample) %>%
-      dplyr::mutate(nolabel_rpm = n/(sum(n)/1000000),
-                    nolabel_n = n) %>%
-      dplyr::group_by(dplyr::across(dplyr::all_of(c(grouping_factors, features_to_analyze)))) %>%
-      dplyr::summarise(nolabel_rpm = mean(nolabel_rpm),
-                       nolabel_n = mean(nolabel_n),
-                       nolabel_reps = dplyr::n()) %>%
-      dplyr::select(!!grouping_factors, !!features_to_analyze,
-                    nolabel_rpm, nolabel_n, nolabel_reps)
+      dplyr::mutate(reference_rpm = n/(sum(n)/1000000),
+                    reference_n = n) %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(c(grouping_factor, features_to_analyze)))) %>%
+      dplyr::summarise(reference_rpm = mean(reference_rpm),
+                       reference_n = mean(reference_n),
+                       reference_reps = dplyr::n()) %>%
+      dplyr::select(!!grouping_factor, !!features_to_analyze,
+                    reference_rpm, reference_n, reference_reps)
 
 
     ##### STEP 2: INTEGRATE WITH +S4U TO GET ADJUSTED FRACTION NEW
     kinetics <- kinetics %>%
       dplyr::inner_join(metadf %>% dplyr::filter(tl > 0) %>%
                           dplyr::select(sample, tl,
-                                        !!grouping_factors),
+                                        !!reference_factor),
                         by = "sample") %>%
       dplyr::group_by(sample) %>%
       dplyr::mutate(rpm = n/(sum(n)/1000000)) %>%
-      dplyr::inner_join(nolabel_data,
-                        by = c(grouping_factors, features_to_analyze)) %>%
+      dplyr::inner_join(reference_data %>%
+                          dplyr::rename(!!reference_factor := !!dplyr::sym(grouping_factor)),
+                        by = c(reference_factor, features_to_analyze)) %>%
       dplyr::ungroup() %>%
       dplyr::mutate(old_rpm = (1 - !!dplyr::sym(fraction_of_interest)) * rpm,
                     new_rpm = (!!dplyr::sym(fraction_of_interest)) * rpm) %>%
       dplyr::mutate(kdeg = dplyr::case_when(
-                      old_rpm >= nolabel_rpm ~ -log(1 - !!dplyr::sym(fraction_of_interest))/tl,
-                      .default = -log(old_rpm/nolabel_rpm)/tl
+                      old_rpm >= reference_rpm ~ -log(1 - !!dplyr::sym(fraction_of_interest))/tl,
+                      .default = -log(old_rpm/reference_rpm)/tl
                     ),
                     ksyn = new_rpm * kdeg / (1 - exp(-kdeg*tl)),
                     log_kdeg = log(kdeg),
@@ -391,7 +407,7 @@ Standard_kinetic_estimation <- function(obj,
     kinetics[, se_log_kdeg := lkdeg_uncert_nss(fn = get(fraction_of_interest),
                                            se_lfn = get(se_of_interest),
                                            Rs4U = n,
-                                           Rctl = nolabel_n,
+                                           Rctl = reference_n,
                                            tl = tl,
                                            kdeg = kdeg)]
 
@@ -399,7 +415,7 @@ Standard_kinetic_estimation <- function(obj,
     kinetics[, se_log_ksyn := lksyn_uncert_nss(fn = get(fraction_of_interest),
                                            se_lfn = get(se_of_interest),
                                            Rs4U = n,
-                                           Rctl = nolabel_n,
+                                           Rctl = reference_n,
                                            tl = tl,
                                            kdeg = kdeg)]
 
@@ -605,7 +621,7 @@ tilac_ratio_estimation <- function(obj,
                                    populations = NULL,
                                    exactMatch = TRUE,
                                    fraction_design = NULL,
-                                   grouping_factors = NULL,
+                                   grouping_factor = NULL,
                                    repeatID = NULL,
                                    character_limit = 20,
                                    overwrite = TRUE){

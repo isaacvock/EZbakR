@@ -240,30 +240,79 @@ strategy works before showcasing it. Namely:
 
 1. Instead of assuming the fraction new in a given sample is related to the
 degradation rate constant, EZbakR will compare the old read levels in the 
-labeled sample and a control from the start of the labeling.
-1. EZbakR assumes that -label data (i.e., data collected from unlabeled cells) 
-was collected at a time point equivalent to the start of labeling. This means 
-that read counts from a given set of -label replicates provides information
-about the starting levels of RNA.
-1. Technically, you could also perform an NSS-style analysis if the end of 
-a given set of labeled time points represents the start of the next set of 
-labeled time points. EZbakR does not currently support NSS-analyses in this 
-case, but it eventually will.
+labeled sample and a set of samples that provide information about RNA abundances
+at the start of the labeling.
+1. EZbakR assumes that your metadf contains two additional columns. One should
+specify which samples belong to the same biological condition/analysis time point
+and thus should assay similar RNA populations. The other should specify which
+group of samples identified by the first column provide information about the
+RNA population that existed at the start of labeling.
+
+For example, suppose you have a time course with the following samples:
+
+1. "sampleA": -s4U data collected at the start of the time course
+1. "sampleB": +s4U data collected after a 2 hour labeling period that started
+at the start of the time course.
+1. "sampleC": +s4U data collected after a 2 hour labeling period that started
+at a time point equivalent to the end of the labeling in "sampleB".
+
+In this case, "sampleA" provides information about the initial RNA concentrations
+for "sampleB", and "sampleB" provides information about the initial RNA concentrations
+for "sampleC". Therefore, your metadf could look like:
+
+```{r}
+metadf <- data.frame(
+  sample = c('sampleA',
+             'sampleB',
+             'sampleC'),
+  tl = c(0, 2, 2),
+  group = c("a", 
+            "b", 
+            "c"),
+  reference = c("a",
+                "a",
+                "c")
+)
+```
+
+One thing to note is that the value you enter for "sampleA"'s reference is
+technically arbitrary, as it is a -s4U sample that you will not be estimating
+degradation rate constants from. Thus, you could enter any string for its value
+in the column named "reference" in this example.
 
 ### How to run it
 
-The only difference in this case is that you have to tell EZbakR which -label
-samples to use as a reference for the initial concentrations of RNA. This is
-done by specicfying the `grouping_factors` parameter, which denotes the metadf
-columns that -label samples should be stratified by. In other words, old RNA
-levels in +label samples will be compared to total RNA levels in -label samples
-with the same metadf values for all of the `grouping_factors` columns specified:
+The only difference in this case is that you have to tell EZbakR which metadf
+columns correspond to the two additional columns explained above. The relevant
+parameters are:
+
+1. grouping_factor: Which column defines groups of samples which assay the same
+RNA population?
+1. reference_factor: Which column defines the groups of samples which assay the
+RNA population that existed at the start of labeling?
 
 ```{r}
+# new metadf
+metadf <- data.frame(sample = paste0('sample', 1:6),
+                 tl = c(2, 2, 2, 2, 0, 0),
+                 group = c('b', 'b',
+                           'c', 'c',
+                           'a', 'b'),
+                 ref = c('a', 'a',
+                         'b', 'b',
+                         'a', 'a'))
+
+# Create an `EZbakRData` object
+ezbdo <- EZbakRData(simdata$cB, metadf)
+
+# Estimate fractions
+ezbdo <- EstimateFractions(ezbdo)
+
 # Estimate synthesis and degradation rate constants
 ezbdo <- EstimateKinetics(ezbdo,
                           strategy = "NSS",
-                          grouping_factors = "treatment")
+                          grouping_factor = "group",
+                          reference_factor = "ref")
 ```
 
 In this case, the only experimental details column of the metadf is called
@@ -315,7 +364,6 @@ This yields the same estimator as in the steady-state case when
 $\theta = 1 - e^{-k_{\text{deg}}*\text{tl}}$. To make this strategy work, we 
 just need to estimate the starting levels of old RNA. Thus, you need some
 sort of RNA-seq data from a timepoint equivalent to the start of labeling.
-Currently, EZbakR assumes that your -label controls fulfill this role.
 
 One thing you may be wondering is just how much of non-steady-state analysis 
 this really is if we are still assuming constant rate constants? What if the

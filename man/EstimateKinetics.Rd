@@ -12,7 +12,8 @@ EstimateKinetics(
   fraction_design = NULL,
   repeatID = NULL,
   exactMatch = TRUE,
-  grouping_factors = NULL,
+  grouping_factor = NULL,
+  reference_factor = NULL,
   character_limit = 20,
   overwrite = TRUE
 )
@@ -28,7 +29,7 @@ Options include:
 sample. This is done via a binomial mixture model aggregating over
 \item NSS: Use strategy similar to that presented in Narain et al., 2021 that
 assumes provided -s4U data provides a reference for how much RNA was present
-at the start of labeling. In this case, \code{grouping_factors} must also be set.
+at the start of labeling. In this case, \code{grouping_factor} must also be set.
 \item shortfeed: Estimate kinetic parameters assuming no degradation of labeled
 RNA, most appropriate if the metabolic label feed time is much shorter than
 the average half-life of an RNA in your system.
@@ -62,9 +63,14 @@ those for a given fractions table for that table to be used. Means that you can'
 specify a subset of features or populations by default, since this is TRUE
 by default.}
 
-\item{grouping_factors}{Which sample-detail columns in the metadf should be used
-to group -s4U samples by for calculating the average -s4U RPM? The default value of
-\code{NULL} will cause all sample-detail columns to be used.}
+\item{grouping_factor}{Which sample-detail columns in the metadf should be used
+to group samples by for calculating the average RPM at a particular time point?
+Only relevant if \code{strategy = "NSS"}.}
+
+\item{reference_factor}{Which sample-detail column in the metafd should be used to
+determine which group of samples provide information about the starting levels of RNA
+for each sample? This should have values that match those in \code{grouping_factor}.
+#' Only relevant if \code{strategy = "NSS"}.}
 
 \item{character_limit}{Maximum number of characters for naming out fractions output. EZbakR
 will try to name this as a "_" separated character vector of all of the features analyzed.
