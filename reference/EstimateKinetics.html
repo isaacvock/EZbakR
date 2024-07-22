@@ -54,7 +54,8 @@
 <span>  fraction_design <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  repeatID <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  exactMatch <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  grouping_factors <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  grouping_factor <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  reference_factor <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  character_limit <span class="op">=</span> <span class="fl">20</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -75,7 +76,7 @@ Options include:</p><ul><li><p>standard: Estimate a single new read and old read
 sample. This is done via a binomial mixture model aggregating over</p></li>
 <li><p>NSS: Use strategy similar to that presented in Narain et al., 2021 that
 assumes provided -s4U data provides a reference for how much RNA was present
-at the start of labeling. In this case, <code>grouping_factors</code> must also be set.</p></li>
+at the start of labeling. In this case, <code>grouping_factor</code> must also be set.</p></li>
 <li><p>shortfeed: Estimate kinetic parameters assuming no degradation of labeled
 RNA, most appropriate if the metabolic label feed time is much shorter than
 the average half-life of an RNA in your system.</p></li>
@@ -120,10 +121,17 @@ specify a subset of features or populations by default, since this is TRUE
 by default.</p></dd>
 
 
-<dt id="arg-grouping-factors">grouping_factors<a class="anchor" aria-label="anchor" href="#arg-grouping-factors"></a></dt>
+<dt id="arg-grouping-factor">grouping_factor<a class="anchor" aria-label="anchor" href="#arg-grouping-factor"></a></dt>
 <dd><p>Which sample-detail columns in the metadf should be used
-to group -s4U samples by for calculating the average -s4U RPM? The default value of
-<code>NULL</code> will cause all sample-detail columns to be used.</p></dd>
+to group samples by for calculating the average RPM at a particular time point?
+Only relevant if <code>strategy = "NSS"</code>.</p></dd>
+
+
+<dt id="arg-reference-factor">reference_factor<a class="anchor" aria-label="anchor" href="#arg-reference-factor"></a></dt>
+<dd><p>Which sample-detail column in the metafd should be used to
+determine which group of samples provide information about the starting levels of RNA
+for each sample? This should have values that match those in <code>grouping_factor</code>.
+#' Only relevant if <code>strategy = "NSS"</code>.</p></dd>
 
 
 <dt id="arg-character-limit">character_limit<a class="anchor" aria-label="anchor" href="#arg-character-limit"></a></dt>

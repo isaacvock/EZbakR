@@ -319,33 +319,87 @@ this strategy works before showcasing it. Namely:</p>
 <ol style="list-style-type: decimal">
 <li>Instead of assuming the fraction new in a given sample is related to
 the degradation rate constant, EZbakR will compare the old read levels
-in the labeled sample and a control from the start of the labeling.</li>
-<li>EZbakR assumes that -label data (i.e., data collected from unlabeled
-cells) was collected at a time point equivalent to the start of
-labeling. This means that read counts from a given set of -label
-replicates provides information about the starting levels of RNA.</li>
-<li>Technically, you could also perform an NSS-style analysis if the end
-of a given set of labeled time points represents the start of the next
-set of labeled time points. EZbakR does not currently support
-NSS-analyses in this case, but it eventually will.</li>
+in the labeled sample and a set of samples that provide information
+about RNA abundances at the start of the labeling.</li>
+<li>EZbakR assumes that your metadf contains two additional columns. One
+should specify which samples belong to the same biological
+condition/analysis time point and thus should assay similar RNA
+populations. The other should specify which group of samples identified
+by the first column provide information about the RNA population that
+existed at the start of labeling.</li>
 </ol>
+<p>For example, suppose you have a time course with the following
+samples:</p>
+<ol style="list-style-type: decimal">
+<li>“sampleA”: -s4U data collected at the start of the time course</li>
+<li>“sampleB”: +s4U data collected after a 2 hour labeling period that
+started at the start of the time course.</li>
+<li>“sampleC”: +s4U data collected after a 2 hour labeling period that
+started at a time point equivalent to the end of the labeling in
+“sampleB”.</li>
+</ol>
+<p>In this case, “sampleA” provides information about the initial RNA
+concentrations for “sampleB”, and “sampleB” provides information about
+the initial RNA concentrations for “sampleC”. Therefore, your metadf
+could look like:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">metadf</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  sample <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'sampleA'</span>,</span>
+<span>             <span class="st">'sampleB'</span>,</span>
+<span>             <span class="st">'sampleC'</span><span class="op">)</span>,</span>
+<span>  tl <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">2</span>, <span class="fl">2</span><span class="op">)</span>,</span>
+<span>  group <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"a"</span>, </span>
+<span>            <span class="st">"b"</span>, </span>
+<span>            <span class="st">"c"</span><span class="op">)</span>,</span>
+<span>  reference <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"a"</span>,</span>
+<span>                <span class="st">"a"</span>,</span>
+<span>                <span class="st">"c"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>One thing to note is that the value you enter for “sampleA”’s
+reference is technically arbitrary, as it is a -s4U sample that you will
+not be estimating degradation rate constants from. Thus, you could enter
+any string for its value in the column named “reference” in this
+example.</p>
 </div>
 <div class="section level3">
 <h3 id="how-to-run-it-1">How to run it<a class="anchor" aria-label="anchor" href="#how-to-run-it-1"></a>
 </h3>
 <p>The only difference in this case is that you have to tell EZbakR
-which -label samples to use as a reference for the initial
-concentrations of RNA. This is done by specicfying the
-<code>grouping_factors</code> parameter, which denotes the metadf
-columns that -label samples should be stratified by. In other words, old
-RNA levels in +label samples will be compared to total RNA levels in
--label samples with the same metadf values for all of the
-<code>grouping_factors</code> columns specified:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Estimate synthesis and degradation rate constants</span></span>
+which metadf columns correspond to the two additional columns explained
+above. The relevant parameters are:</p>
+<ol style="list-style-type: decimal">
+<li>grouping_factor: Which column defines groups of samples which assay
+the same RNA population?</li>
+<li>reference_factor: Which column defines the groups of samples which
+assay the RNA population that existed at the start of labeling?</li>
+</ol>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># new metadf</span></span>
+<span><span class="va">metadf</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>sample <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">'sample'</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span>,</span>
+<span>                 tl <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span>,</span>
+<span>                 group <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'b'</span>, <span class="st">'b'</span>,</span>
+<span>                           <span class="st">'c'</span>, <span class="st">'c'</span>,</span>
+<span>                           <span class="st">'a'</span>, <span class="st">'b'</span><span class="op">)</span>,</span>
+<span>                 ref <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'a'</span>, <span class="st">'a'</span>,</span>
+<span>                         <span class="st">'b'</span>, <span class="st">'b'</span>,</span>
+<span>                         <span class="st">'a'</span>, <span class="st">'a'</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Create an `EZbakRData` object</span></span>
+<span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EZbakRData.html">EZbakRData</a></span><span class="op">(</span><span class="va">simdata</span><span class="op">$</span><span class="va">cB</span>, <span class="va">metadf</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Estimate fractions</span></span>
+<span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Estimating mutation rates</span></span>
+<span><span class="co">#&gt; Summarizing data for feature(s) of interest</span></span>
+<span><span class="co">#&gt; Averaging out the nucleotide counts for improved efficiency</span></span>
+<span><span class="co">#&gt; Estimating fractions</span></span>
+<span><span class="co">#&gt; Processing output</span></span>
+<span></span>
+<span><span class="co"># Estimate synthesis and degradation rate constants</span></span>
 <span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateKinetics.html">EstimateKinetics</a></span><span class="op">(</span><span class="va">ezbdo</span>,</span>
 <span>                          strategy <span class="op">=</span> <span class="st">"NSS"</span>,</span>
-<span>                          grouping_factors <span class="op">=</span> <span class="st">"treatment"</span><span class="op">)</span></span></code></pre></div>
+<span>                          grouping_factor <span class="op">=</span> <span class="st">"group"</span>,</span>
+<span>                          reference_factor <span class="op">=</span> <span class="st">"ref"</span><span class="op">)</span></span></code></pre></div>
 <p>In this case, the only experimental details column of the metadf is
 called “treatment”, so this is specified in
 <code>grouping_factors</code>.</p>
@@ -398,8 +452,7 @@ the steady-state case when
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>θ</mi><mo>=</mo><mn>1</mn><mo>−</mo><msup><mi>e</mi><mrow><mo>−</mo><msub><mi>k</mi><mtext mathvariant="normal">deg</mtext></msub><mo>*</mo><mtext mathvariant="normal">tl</mtext></mrow></msup></mrow><annotation encoding="application/x-tex">\theta = 1 - e^{-k_{\text{deg}}*\text{tl}}</annotation></semantics></math>.
 To make this strategy work, we just need to estimate the starting levels
 of old RNA. Thus, you need some sort of RNA-seq data from a timepoint
-equivalent to the start of labeling. Currently, EZbakR assumes that your
--label controls fulfill this role.</p>
+equivalent to the start of labeling.</p>
 <p>One thing you may be wondering is just how much of non-steady-state
 analysis this really is if we are still assuming constant rate
 constants? What if the rates of synthesis and degradation are being
