@@ -75,8 +75,9 @@ which <code><a href="EstimateFractions.html">EstimateFractions()</a></code> has 
 Options include:</p><ul><li><p>standard: Estimate a single new read and old read mutation rate for each
 sample. This is done via a binomial mixture model aggregating over</p></li>
 <li><p>NSS: Use strategy similar to that presented in Narain et al., 2021 that
-assumes provided -s4U data provides a reference for how much RNA was present
-at the start of labeling. In this case, <code>grouping_factor</code> must also be set.</p></li>
+assumes you have data which provides a reference for how much RNA was present
+at the start of each labeling. In this case, <code>grouping_factor</code> and <code>reference_factor</code>
+must also be set.</p></li>
 <li><p>shortfeed: Estimate kinetic parameters assuming no degradation of labeled
 RNA, most appropriate if the metabolic label feed time is much shorter than
 the average half-life of an RNA in your system.</p></li>
