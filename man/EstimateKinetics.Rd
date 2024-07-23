@@ -28,8 +28,9 @@ Options include:
 \item standard: Estimate a single new read and old read mutation rate for each
 sample. This is done via a binomial mixture model aggregating over
 \item NSS: Use strategy similar to that presented in Narain et al., 2021 that
-assumes provided -s4U data provides a reference for how much RNA was present
-at the start of labeling. In this case, \code{grouping_factor} must also be set.
+assumes you have data which provides a reference for how much RNA was present
+at the start of each labeling. In this case, \code{grouping_factor} and \code{reference_factor}
+must also be set.
 \item shortfeed: Estimate kinetic parameters assuming no degradation of labeled
 RNA, most appropriate if the metabolic label feed time is much shorter than
 the average half-life of an RNA in your system.
