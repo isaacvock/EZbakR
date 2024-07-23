@@ -2300,7 +2300,7 @@ tcmml <- function(param, muts, nucs, n,
                   pold_prior_mean = -6.5,
                   pold_prior_sd = 0.5,
                   fraction_prior_mean = 0,
-                  fraction_prior_sd = 1,
+                  fraction_prior_sd = 1.7,
                   Poisson = TRUE){
 
 
@@ -2412,7 +2412,7 @@ fit_tcmm <- function(muts, nucs, n, pnew = NULL, pold = NULL,
                      pold_prior_sd = 0.5,
                      Poisson = TRUE,
                      fraction_prior_mean = 0,
-                     fraction_prior_sd = 1,
+                     fraction_prior_sd = 1.7,
                      return_fit = FALSE){
 
 

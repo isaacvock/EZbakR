@@ -145,16 +145,17 @@ checkSingleLevelFactors <- function(formula, data) {
 # Currently have implemented a conservative strategy where
 # standard deviations less than the trend are regularized
 # all the way up to the trend, and standard deviations above the
-# trend are regularized as normal.
+# trend are not regularized at all. Similar to the old
+# DESeq model (pre-DESeq2).
 get_sd_posterior <- function(n = 1, sd_est, sd_var,
                              fit_var, fit_mean){
 
 
-  denom <- (n/sd_var + 1/fit_var)
-  num <- sd_est/sd_var + fit_mean/fit_var
+  # denom <- (n/sd_var + 1/fit_var)
+  # num <- sd_est/sd_var + fit_mean/fit_var
 
   output <- ifelse(sd_est > fit_mean,
-                   num/denom,
+                   sd_est,
                    fit_mean)
 
   return(output)
@@ -489,7 +490,8 @@ general_avg_and_reg <- function(obj, features, parameter,
   regression_results <- purrr::map(covariate_names, ~ {
 
     # Dynamically create formula
-    formula_str <- paste("`logsd_", .x, "`", " ~ `coverage_", .x, "`", sep = "")
+    formula_str <- paste("`logsd_", .x, "`", " ~ `coverage_", .x, "`",
+                         " + `mean_", .x, "`", sep = "")
     formula <- stats::as.formula(formula_str)
 
     # Perform linear regression
