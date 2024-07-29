@@ -151,12 +151,13 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
                              fit_var, fit_mean){
 
 
-  # denom <- (n/sd_var + 1/fit_var)
-  # num <- sd_est/sd_var + fit_mean/fit_var
+  denom <- (n/sd_var + 1/fit_var)
+  num <- sd_est/sd_var + fit_mean/fit_var
 
   output <- ifelse(sd_est > fit_mean,
-                   sd_est,
+                   num/denom,
                    fit_mean)
+  # output <- num/denom
 
   return(output)
 
@@ -329,6 +330,7 @@ general_avg_and_reg <- function(obj, features, parameter,
                                              formula_sd)
 
 
+
   message("Fitting linear model")
   if(single_level_mean | single_level_sd){
 
@@ -369,17 +371,20 @@ general_avg_and_reg <- function(obj, features, parameter,
       model_fit <- kinetics %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
         dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
-                         logsd = log(stats::sd(!!dplyr::sym(parameter))),
+                         logsd = log(stats::sd(!!dplyr::sym(parameter)) ),
                          logsd_from_uncert = log(mean(!!dplyr::sym(parameter_se))),
                          coverage = mean(log_normalized_reads),
                          replicates = dplyr::n()) %>%
-        dplyr::mutate(logsd = dplyr::case_when(
-          logsd < logsd_from_uncert ~ logsd_from_uncert,
-          .default = logsd
-        )) %>%
+        dplyr::mutate(logsd = log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(replicates))) %>%
+        # dplyr::mutate(logsd = dplyr::case_when(
+        #   logsd < logsd_from_uncert ~ log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2)),
+        #   #logsd < logsd_from_uncert ~ logsd_from_uncert,
+        #   .default = logsd
+        # )) %>%
         dplyr::select(-logsd_from_uncert) %>%
         dplyr::mutate(se_mean = exp(logsd)/sqrt(replicates),
-                      se_logsd = 1/sqrt(2*(replicates - 1)) ) %>%
+                      se_logsd = 1/sqrt(2*(replicates - 1)),
+                      logsd = log(exp(logsd)/sqrt(replicates))) %>%
         dplyr::select(-replicates) %>%
         tidyr::pivot_wider(names_from = !!mean_vars[2],
                            values_from = c(mean, logsd, coverage, se_mean, se_logsd),
@@ -399,21 +404,24 @@ general_avg_and_reg <- function(obj, features, parameter,
       model_fit <- kinetics %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
         dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
-                         logsd = log(stats::sd(!!dplyr::sym(parameter))),
+                         logsd = log(stats::sd(!!dplyr::sym(parameter)) ), # Lower MSE estimator
                          coverage = mean(coverage),
                          se_logsd = mean(se_logsd)) %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(c(features_to_analyze)))) %>%
         dplyr::mutate(logsd = mean(logsd),
                       logsd_from_uncert = log(mean(!!dplyr::sym(parameter_se))),
                       coverage = mean(log_normalized_reads)) %>%
-        dplyr::mutate(logsd = dplyr::case_when(
-          logsd < logsd_from_uncert ~ logsd_from_uncert,
-          .default = logsd
-        )) %>%
+        dplyr::mutate(logsd = log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(dplyr::n()))) %>%
+        # dplyr::mutate(logsd = dplyr::case_when(
+        #   logsd < logsd_from_uncert ~ log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2)),
+        #   #logsd < logsd_from_uncert ~ logsd_from_uncert,
+        #   .default = logsd
+        # )) %>%
         dplyr::select(-logsd_from_uncert) %>%
         dplyr::mutate(se_logsd = 1/sqrt(2*(dplyr::n() - 1))) %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
-        dplyr::mutate(se_mean = exp(logsd)/sqrt(dplyr::n())) %>%
+        dplyr::mutate(se_mean = exp(logsd)/sqrt(dplyr::n()),
+                      logsd = log(exp(logsd)/sqrt(dplyr::n()))) %>%
         tidyr::pivot_wider(names_from = !!mean_vars[2],
                            values_from = c(mean, logsd, coverage, se_mean, se_logsd),
                            names_sep = paste0("_", mean_vars[2]))
@@ -427,16 +435,19 @@ general_avg_and_reg <- function(obj, features, parameter,
       model_fit <- kinetics %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2:length(mean_vars)], features_to_analyze)))) %>%
         dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
-                         logsd = log(stats::sd(!!dplyr::sym(parameter))),
+                         logsd = log(stats::sd(!!dplyr::sym(parameter)) ),
                          logsd_from_uncert = log(mean(!!dplyr::sym(parameter_se))),
                          coverage = mean(log_normalized_reads),
                          replicates = dplyr::n()) %>%
-        dplyr::mutate(logsd = dplyr::case_when(
-          logsd < logsd_from_uncert ~ logsd_from_uncert,
-          .default = logsd
-        )) %>%
+        dplyr::mutate(logsd = log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(replicates))) %>%
+        # dplyr::mutate(logsd = dplyr::case_when(
+        #   logsd < logsd_from_uncert ~ log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2)),
+        #   #logsd < logsd_from_uncert ~ logsd_from_uncert,
+        #   .default = logsd
+        # )) %>%
         dplyr::select(-logsd_from_uncert) %>%
-        dplyr::mutate(se_mean = exp(logsd)/sqrt(replicates),
+        dplyr::mutate(logsd = log(exp(logsd)/sqrt(replicates)),
+                      se_mean = exp(logsd)/sqrt(replicates),
                       se_logsd = 1/sqrt(2*(replicates - 1)) ) %>%
         dplyr::select(-replicates) %>%
         tidyr::pivot_wider(names_from = !!mean_vars[2:length(mean_vars)],
@@ -479,6 +490,7 @@ general_avg_and_reg <- function(obj, features, parameter,
   ### Estimate coverage vs. variance trends for each standard deviation estimate
 
   message("Estimating coverage vs. variance trend")
+
 
   # Step 1: Filter column names for relevant patterns
   sd_columns <- names(model_fit)[grepl("^logsd_", names(model_fit))]
