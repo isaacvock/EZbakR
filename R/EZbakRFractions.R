@@ -110,14 +110,13 @@ validate_EZbakRFractions <- function(obj){
   ### Infer uncertainty if not provided
 
 
-  fraction_est_cols <- fraction_cols[!grepl("^fraction_", fraction_cols) &
-                                       !grepl("^logit_fraction_", fraction_cols) &
+  est_cols <- fraction_cols[!grepl("^fraction_", fraction_cols) &
+                                       grepl("^logit_fraction_", fraction_cols) &
                                        !(fraction_cols %in% c("sample", "n")) &
                                        !grepl("^se_logit_fraction_", fraction_cols)]
 
 
-  se_cols <- fraction_est_cols[grepl("^se_logit_fraction_", fraction_est_cols)]
-  est_cols <- fraction_est_cols[grepl("^logit_fraction_", fraction_est_cols)]
+  se_cols <- est_cols[grepl("^se_", est_cols)]
 
   expected_ests <- gsub("^se_", "", se_cols)
 

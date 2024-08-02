@@ -82,6 +82,7 @@ EZget <- function(obj,
                   alwaysCheck = FALSE){
 
 
+
   type <- match.arg(type)
 
   if(!is.null(counttype)){
