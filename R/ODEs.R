@@ -113,6 +113,7 @@
 #' it will be saved as a separate output with the same name + "_#" where "#" is a
 #' numerical ID to distinguish the similar outputs.
 #' @importFrom magrittr %>%
+#' @import data.table
 #' @export
 EZDynamics <- function(obj,
                      graph,
@@ -354,7 +355,7 @@ EZDynamics <- function(obj,
     fraction_cols <- colnames(table)
 
     fraction_of_interest <- fraction_cols[grepl("^logit_fraction_high", fraction_cols)]
-    fractionse <- fraction_cols[grepl("^se_logit_fraction_high", fraction_cols)]
+    fraction_se <- fraction_cols[grepl("^se_logit_fraction_high", fraction_cols)]
 
 
     ### Normalize read counts
@@ -368,12 +369,12 @@ EZDynamics <- function(obj,
 
     ### Prep tables for kinetic parameter estimation
 
-    kinetics <- setDT(data.table::copy(table))
+    kinetics <- data.table::setDT(data.table::copy(table))
 
     # Add label time info
     metadf <- obj$metadf
 
-    metadf <- setDT(data.table::copy(metadf))
+    metadf <- data.table::setDT(data.table::copy(metadf))
     setkey(metadf, sample)
     setkey(kinetics, sample)
 
@@ -485,22 +486,22 @@ EZDynamics <- function(obj,
                        )
 
 
+
     # Get parameter estimates and uncertainties
+    fits <- dynfit$fit
     for(n in 1:npars){
 
       par_name <- parameter_names[n]
       par_se_name <- paste0(par_name, "_se")
 
-      dynfit <- dynfit %>% dplyr::mutate(
-        !!par_name := purrr::map_dbl(fit, ~ .x$par[n]),
-        !!par_se_name := tryCatch(
-          {
-            purrr::map_dbl(fit, ~ sqrt(diag(solve(.x$hessian)))[n])
-          },
-          error = function(e) {
-            Inf
-          }
-        ),
+      dynfit[[par_name]] <- purrr::map_dbl(fits, ~ .x$par[n])
+      dynfit[[par_se_name]] <- tryCatch(
+        {
+          purrr::map_dbl(fits, ~ sqrt(diag(solve(.x$hessian)))[n])
+        },
+        error = function(e) {
+          Inf
+        }
       )
 
     }
@@ -718,6 +719,7 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
       ll <- ll +
         stats::dpois(coverage,
+                     all_ss,
                      log = TRUE)
 
 
