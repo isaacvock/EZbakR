@@ -602,7 +602,7 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
                                 coverage_sd = NULL, scale_factor = NULL){
 
   ### Step 0, check to see if single replicate of data is being passed
-  if(nreps == 1){
+  if(all(nreps == 1)){
     single_replicate <- TRUE
   }
 
