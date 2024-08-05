@@ -21,6 +21,7 @@ AverageAndRegularize(
   error_if_singular = TRUE,
   min_reads = 10,
   force_optim = FALSE,
+  conservative = FALSE,
   character_limit = 20,
   overwrite = TRUE
 )
@@ -85,6 +86,11 @@ all treatment Bs correspond to batch Bs).}
 
 \item{force_optim}{Perform numerical likelihood estimation, even if a more efficient,
 approximate, analytical strategy is possible given \code{formula_mean} and \code{formula_sd}.}
+
+\item{conservative}{If TRUE, conservative variance regularation will be performed.
+In this case, variances below the trend will be regularized up to the trend, and
+variances above the trend will be left unregularized. This avoids underestimation
+of variances.}
 
 \item{character_limit}{Limit on the number of characters of the name given to the
 output table. Will attempt to concatenate the parameter name with the names of all

@@ -58,6 +58,10 @@
 #' @param min_reads Minimum number of reads in all samples for a feature to be kept.
 #' @param force_optim Perform numerical likelihood estimation, even if a more efficient,
 #' approximate, analytical strategy is possible given `formula_mean` and `formula_sd`.
+#' @param conservative If TRUE, conservative variance regularation will be performed.
+#' In this case, variances below the trend will be regularized up to the trend, and
+#' variances above the trend will be left unregularized. This avoids underestimation
+#' of variances.
 #' @param character_limit Limit on the number of characters of the name given to the
 #' output table. Will attempt to concatenate the parameter name with the names of all
 #' of the features. If this is too long, only the parameter name will be used.
@@ -78,6 +82,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                  error_if_singular = TRUE,
                                  min_reads = 10,
                                  force_optim = FALSE,
+                                 conservative = FALSE,
                                  character_limit = 20,
                                  overwrite = TRUE){
 
@@ -99,6 +104,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                              sd_reg_factor = sd_reg_factor,
                              error_if_singular = error_if_singular, min_reads = min_reads,
                              force_optim = force_optim,
+                             conservative = conservative,
                              TILAC = TILAC,
                              character_limit = character_limit,
                              overwrite = overwrite)
@@ -148,16 +154,25 @@ checkSingleLevelFactors <- function(formula, data) {
 # trend are not regularized at all. Similar to the old
 # DESeq model (pre-DESeq2).
 get_sd_posterior <- function(n = 1, sd_est, sd_var,
-                             fit_var, fit_mean){
+                             fit_var, fit_mean,
+                             conservative = FALSE){
 
 
   denom <- (n/sd_var + 1/fit_var)
   num <- sd_est/sd_var + fit_mean/fit_var
 
-  output <- ifelse(sd_est > fit_mean,
-                   num/denom,
-                   fit_mean)
-  # output <- num/denom
+  if(conservative){
+
+    output <- ifelse(sd_est > fit_mean,
+                     sd_est,
+                     fit_mean)
+
+  }else{
+
+    output <- ifelse(sd_est > fit_mean,
+                     num/denom,
+                     fit_mean)
+  }
 
   return(output)
 
@@ -178,6 +193,7 @@ general_avg_and_reg <- function(obj, features, parameter,
                                 error_if_singular,
                                 TILAC = FALSE, min_reads = 10,
                                 force_optim = FALSE,
+                                conservative = FALSE,
                                 character_limit = 20,
                                 overwrite = TRUE){
 
@@ -557,7 +573,8 @@ general_avg_and_reg <- function(obj, features, parameter,
       dplyr::mutate(!!col_name := get_sd_posterior(sd_est = !!dplyr::sym(sd_est_name),
                                                    sd_var = (!!dplyr::sym(sd_var_name)) ^ 2,
                                                    fit_var = stats::var(regression_results[[c]]$lm_result$residuals) / sd_reg_factor,
-                                                   fit_mean = !!dplyr::sym(fit_mean_name))) %>%
+                                                   fit_mean = !!dplyr::sym(fit_mean_name),
+                                                   conservative = conservative)) %>%
       dplyr::mutate(!!natural_col_name := exp((!!dplyr::sym(col_name))))
 
     mean_est <- paste0("mean_", c)

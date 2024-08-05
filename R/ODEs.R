@@ -146,17 +146,16 @@ EZDynamics <- function(obj,
   # of the matrix A. NOT ANY MORE: Create a diagonal matrix from the row
   # sums of the reduced adjacency matrix and add this to the transpose of the reduced
   # adjacency matrix.
-  # 4)
 
   ##### DESIRED FEATURES
   # 1) Should be able to take averages or fractions as input. Latter only applicable
-  # if not cross-sample integration needs to be done (e.g., modeling P -> M).
+  # if no cross-sample integration needs to be done (e.g., modeling P -> M).
   # 2) Would love to assess dynamic range of parameter estimates using log-likelihood
   # profile to let users know what they can say about certain parameters
 
   ### Input
 
-  # Can try to infer replicate numbers to get more informative coveravge likelihood
+  # Can try to infer replicate numbers to get more informative coverage likelihood
   metadf <- obj$metadf
   meta_groups <- c("tl", sample_feature)
   reps <- metadf %>%
@@ -347,7 +346,165 @@ EZDynamics <- function(obj,
 
   }else{
 
-    stop("Nothing to see here yet")
+
+    features_to_analyze <- obj[["metadata"]][["fractions"]][[table_name]][["features"]]
+
+
+    # Determine which column to use for kinetic parameter estimation
+    fraction_cols <- colnames(table)
+
+    fraction_of_interest <- fraction_cols[grepl("^logit_fraction_high", fraction_cols)]
+    fractionse <- fraction_cols[grepl("^se_logit_fraction_high", fraction_cols)]
+
+
+    ### Normalize read counts
+
+
+    # TO-DO: ALLOW USERS TO JUST USE THE TPM FROM ISOFORM QUANTIFICATION
+    reads_norm <- get_normalized_read_counts(obj = obj,
+                                             features_to_analyze = features_to_analyze,
+                                             fractions_name = table_name)
+
+
+    ### Prep tables for kinetic parameter estimation
+
+    kinetics <- setDT(data.table::copy(table))
+
+    # Add label time info
+    metadf <- obj$metadf
+
+    metadf <- setDT(data.table::copy(metadf))
+    setkey(metadf, sample)
+    setkey(kinetics, sample)
+
+    kinetics <- kinetics[metadf[,c("sample", "tl")], nomatch = NULL]
+
+    # Make sure no -s4U controls made it through
+    kinetics <- kinetics[tl > 0]
+
+
+    ### Infer which measured species each row belongs to
+    feature_mat <- kinetics %>%
+      dplyr::select(!!sub_features) %>%
+      as.matrix()
+
+    feature_mat <- feature_mat == unassigned_name
+
+    # Are any species always assigned?
+    fm_cols <- colnames(feature_mat)
+    always_assigned <- fm_cols[which(colSums(feature_mat) == nrow(feature_mat))]
+
+    if(length(always_assigned) > 1){
+
+      stop("There are multiple sub_features that never have a value of `unassigned_name`!
+           There is not way for EZbakR to determine which measured species a row
+           corresponds to in this case.")
+
+    }else if(length(always_assigned) == 0){
+
+      sometimes_assigned <- fm_cols
+
+    }else{
+
+      sometimes_assigned <- fm_cols[fm_cols != always_assigned]
+
+    }
+
+
+    measured_species <- apply(feature_mat, 1, function(row) {
+
+
+      valid_cols <- sometimes_assigned[!row[!(fm_cols %in% always_assigned)]]
+
+      if(length(valid_cols) > 0){
+
+        valid_cols[1]
+
+      }else{
+
+        always_assigned
+
+      }
+
+    })
+
+    kinetics$measured_specie <- measured_species
+
+
+    ### Impute dummy value for modeled_to_measured
+    if(is.null(names(modeled_to_measured))){
+
+      modeled_to_measured <- list(total = modeled_to_measured)
+      kinetics <- kinetics %>%
+        dplyr::mutate(imputed_sample_feature = 'total')
+
+      sample_feature <- "imputed_sample_feature"
+
+    }
+
+    ### Fit model
+
+    # Determine initial vector of parameters and their upper and lower bounds
+    npars <- max(graph)
+
+    # Have to add a bit of noise because equal parameters means general solution
+    # breaks down as their aren't N eigenvalues. Could generalize to case
+    # of equal parameters, but thinking of parameter estimates as continuous
+    # random variables that thus have probability of 0 of being equal.
+    lower_bounds <- rnorm(npars,
+                          -10,
+                          0.01)
+    upper_bounds <- rnorm(npars,
+                          10,
+                          0.01)
+    starting_values <- rnorm(npars,
+                             0, 0.01)
+
+    cols_to_group_by = c("sample", grouping_features)
+
+    dynfit <- kinetics %>%
+      dplyr::mutate(tl = as.numeric(tl)) %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group_by))) %>%
+      dplyr::summarise(fit = list(I(stats::optim(starting_values,
+                                                 fn = dynamics_likelihood,
+                                                 graph = graph,
+                                                 formula_list = modeled_to_measured,
+                                                 logit_fn = !!dplyr::sym(fraction_of_interest),
+                                                 logit_fn_sd = !!dplyr::sym(fraction_se),
+                                                 coverage = n,
+                                                 nreps = 1,
+                                                 tls = as.numeric(tl),
+                                                 sample_features = !!dplyr::sym(sample_feature),
+                                                 feature_types = measured_specie,
+                                                 lower = lower_bounds,
+                                                 upper = upper_bounds,
+                                                 method = "L-BFGS-B",
+                                                 hessian = TRUE,
+                                                 use_coverage = TRUE))),
+                       n = mean(n) # I'm not sure how to calculate read counts to be passed to AverageAndRegularize(). I think average should be fine though
+                       )
+
+
+    # Get parameter estimates and uncertainties
+    for(n in 1:npars){
+
+      par_name <- parameter_names[n]
+      par_se_name <- paste0(par_name, "_se")
+
+      dynfit <- dynfit %>% dplyr::mutate(
+        !!par_name := purrr::map_dbl(fit, ~ .x$par[n]),
+        !!par_se_name := tryCatch(
+          {
+            purrr::map_dbl(fit, ~ sqrt(diag(solve(.x$hessian)))[n])
+          },
+          error = function(e) {
+            Inf
+          }
+        ),
+      )
+
+    }
+
 
   }
 
@@ -442,6 +599,13 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
                                 tls, sample_features, feature_types,
                                 use_coverage = TRUE, alt_coverage = FALSE,
                                 coverage_sd = NULL, scale_factor = NULL){
+
+  ### Step 0, check to see if single replicate of data is being passed
+  if(nreps == 1){
+    single_replicate <- TRUE
+  }
+
+
   ### Step 1, construct A
 
   # Parameters are on log-scale for ease of optimization
@@ -550,7 +714,14 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
       #                log = TRUE)
 
 
-    }else{
+    }else if(single_replicate){
+
+      ll <- ll +
+        stats::dpois(coverage,
+                     log = TRUE)
+
+
+    } else{
 
       ll <- ll +
         stats::dnorm(coverage,
