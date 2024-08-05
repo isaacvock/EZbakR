@@ -93,6 +93,7 @@ be remedied through approximation of the solution to all full models.</p>
 <span>  error_if_singular <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  min_reads <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  force_optim <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  conservative <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  character_limit <span class="op">=</span> <span class="fl">20</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -188,6 +189,13 @@ all treatment Bs correspond to batch Bs).</p></dd>
 <dt id="arg-force-optim">force_optim<a class="anchor" aria-label="anchor" href="#arg-force-optim"></a></dt>
 <dd><p>Perform numerical likelihood estimation, even if a more efficient,
 approximate, analytical strategy is possible given <code>formula_mean</code> and <code>formula_sd</code>.</p></dd>
+
+
+<dt id="arg-conservative">conservative<a class="anchor" aria-label="anchor" href="#arg-conservative"></a></dt>
+<dd><p>If TRUE, conservative variance regularation will be performed.
+In this case, variances below the trend will be regularized up to the trend, and
+variances above the trend will be left unregularized. This avoids underestimation
+of variances.</p></dd>
 
 
 <dt id="arg-character-limit">character_limit<a class="anchor" aria-label="anchor" href="#arg-character-limit"></a></dt>
