@@ -4,7 +4,12 @@
 \alias{get_normalized_read_counts.default}
 \title{Get normalized read counts from either a cB table in an \code{EZbakRData} object.}
 \usage{
-\method{get_normalized_read_counts}{default}(obj, features_to_analyze, fractions_name = NULL)
+\method{get_normalized_read_counts}{default}(
+  obj,
+  features_to_analyze,
+  fractions_name = NULL,
+  lengths = NULL
+)
 }
 \arguments{
 \item{obj}{An \code{EZbakRData} object.}
@@ -12,6 +17,10 @@
 \item{features_to_analyze}{Features in relevant table}
 
 \item{fractions_name}{Name of fractions table to use}
+
+\item{lengths}{Table of effective lengths for each feature combination in your
+data. For example, if your analysis includes features named GF and XF, this
+should be a data frame with columns GF, XF, and length.}
 }
 \description{
 Uses TMM normalization strategy, similar to that used by DESeq2 and edgeR.

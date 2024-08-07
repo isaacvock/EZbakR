@@ -107,6 +107,9 @@
 #' those for a given fractions table for that table to be used. Means that you can't
 #' specify a subset of features or populations by default, since this is TRUE
 #' by default.
+#' @param lengths Table of effective lengths for each feature combination in your
+#' data. For example, if your analysis includes features named GF and XF, this
+#' should be a data frame with columns GF, XF, and length.
 #' @param overwrite If TRUE and a fractions estimate output already exists that
 #' would possess the same metadata (features analyzed, populations analyzed,
 #' and fraction_design), then it will get overwritten with the new output. Else,
@@ -132,6 +135,7 @@ EZDynamics <- function(obj,
                      sd_vars = NULL,
                      repeatID = NULL,
                      exactMatch = TRUE,
+                     lengths = NULL,
                      overwrite = TRUE){
 
   ##### ORDER OF OPERATIONS
@@ -173,6 +177,20 @@ EZDynamics <- function(obj,
 
   if(length(table_name) > 1){
     stop("More than one table matches your search criterion!")
+  }else if(is.null(table_name)){
+    if(type == "fractions"){
+
+      stop("No table matches your search criterion! Have you run EstimateFraction() yet?")
+
+    }else if (type == "averages"){
+
+      stop("No table matches your search criterion! Have you run AverageAndRegularize() yet?")
+
+    }else{
+
+      stop("type must be 'averages' or 'fractions'!")
+
+    }
   }
 
   table <- obj[[type]][[table_name]]
@@ -254,7 +272,7 @@ EZDynamics <- function(obj,
       dplyr::select(!!sub_features) %>%
       as.matrix()
 
-    feature_mat <- feature_mat == unassigned_name
+    feature_mat <- feature_mat != unassigned_name
 
     # Are any species always assigned?
     fm_cols <- colnames(feature_mat)
@@ -280,7 +298,7 @@ EZDynamics <- function(obj,
     measured_species <- apply(feature_mat, 1, function(row) {
 
 
-      valid_cols <- sometimes_assigned[!row[!(fm_cols %in% always_assigned)]]
+      valid_cols <- sometimes_assigned[row[!(fm_cols %in% always_assigned)]]
 
       if(length(valid_cols) > 0){
 
@@ -297,9 +315,21 @@ EZDynamics <- function(obj,
     tidy_avgs$measured_specie <- measured_species
 
 
+
     # Fit model
     cols_to_group_by <- c(grouping_features,
                        pivot_columns[!(pivot_columns %in% c("tl", sample_feature))])
+
+
+    # Filter out features that don't have all measured species
+    nspecies <- length(unique(measured_species))
+
+
+    tidy_avgs <- tidy_avgs %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(c(cols_to_group_by, "tl")))) %>%
+      dplyr::filter(dplyr::n() == nspecies) %>%
+      dplyr::ungroup()
+
 
 
     dynfit <- tidy_avgs  %>%
@@ -364,7 +394,8 @@ EZDynamics <- function(obj,
     # TO-DO: ALLOW USERS TO JUST USE THE TPM FROM ISOFORM QUANTIFICATION
     reads_norm <- get_normalized_read_counts(obj = obj,
                                              features_to_analyze = features_to_analyze,
-                                             fractions_name = table_name)
+                                             fractions_name = table_name,
+                                             lengths = lengths)
 
 
     ### Prep tables for kinetic parameter estimation

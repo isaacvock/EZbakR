@@ -22,6 +22,7 @@ EZDynamics(
   sd_vars = NULL,
   repeatID = NULL,
   exactMatch = TRUE,
+  lengths = NULL,
   overwrite = TRUE
 )
 }
@@ -135,6 +136,10 @@ then this is the numerical index by which they are distinguished.}
 those for a given fractions table for that table to be used. Means that you can't
 specify a subset of features or populations by default, since this is TRUE
 by default.}
+
+\item{lengths}{Table of effective lengths for each feature combination in your
+data. For example, if your analysis includes features named GF and XF, this
+should be a data frame with columns GF, XF, and length.}
 
 \item{overwrite}{If TRUE and a fractions estimate output already exists that
 would possess the same metadata (features analyzed, populations analyzed,

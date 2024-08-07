@@ -23,6 +23,7 @@ AverageAndRegularize(
   force_optim = FALSE,
   conservative = FALSE,
   character_limit = 20,
+  lengths = lengths,
   overwrite = TRUE
 )
 }
@@ -95,6 +96,10 @@ of variances.}
 \item{character_limit}{Limit on the number of characters of the name given to the
 output table. Will attempt to concatenate the parameter name with the names of all
 of the features. If this is too long, only the parameter name will be used.}
+
+\item{lengths}{Table of effective lengths for each feature combination in your
+data. For example, if your analysis includes features named GF and XF, this
+should be a data frame with columns GF, XF, and length.}
 
 \item{overwrite}{If TRUE, identical, existing output will be overwritten.}
 }

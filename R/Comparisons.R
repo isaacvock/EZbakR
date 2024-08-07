@@ -65,6 +65,9 @@
 #' @param character_limit Limit on the number of characters of the name given to the
 #' output table. Will attempt to concatenate the parameter name with the names of all
 #' of the features. If this is too long, only the parameter name will be used.
+#' @param lengths Table of effective lengths for each feature combination in your
+#' data. For example, if your analysis includes features named GF and XF, this
+#' should be a data frame with columns GF, XF, and length.
 #' @param overwrite If TRUE, identical, existing output will be overwritten.
 #' @import data.table
 #' @importFrom magrittr %>%
@@ -84,6 +87,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                  force_optim = FALSE,
                                  conservative = FALSE,
                                  character_limit = 20,
+                                 lengths = lengths,
                                  overwrite = TRUE){
 
 
@@ -107,6 +111,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                              conservative = conservative,
                              TILAC = TILAC,
                              character_limit = character_limit,
+                             lengths = lengths,
                              overwrite = overwrite)
 
   return(obj)
@@ -195,6 +200,7 @@ general_avg_and_reg <- function(obj, features, parameter,
                                 force_optim = FALSE,
                                 conservative = FALSE,
                                 character_limit = 20,
+                                lengths = NULL,
                                 overwrite = TRUE){
 
 
@@ -240,7 +246,8 @@ general_avg_and_reg <- function(obj, features, parameter,
 
     normalized_reads <- get_normalized_read_counts(obj = obj,
                                                    features_to_analyze = features_to_analyze,
-                                                   fractions_name = param_name) %>%
+                                                   fractions_name = param_name,
+                                                   lengths = lengths) %>%
       dplyr::as_tibble()
 
     # Get the kinetic parameter data frame
@@ -333,6 +340,7 @@ general_avg_and_reg <- function(obj, features, parameter,
     dplyr::count() %>%
     dplyr::filter(n == num_samps) %>%
     dplyr::select(!!features_to_analyze)
+
 
   kinetics <- kinetics %>%
     dplyr::inner_join(features_to_keep,
@@ -517,9 +525,22 @@ general_avg_and_reg <- function(obj, features, parameter,
   # Step 2: Iterate and perform regression
   regression_results <- purrr::map(covariate_names, ~ {
 
-    # Dynamically create formula
-    formula_str <- paste("`logsd_", .x, "`", " ~ `coverage_", .x, "`",
-                         " + `mean_", .x, "`", sep = "")
+    # If modeling fraction news, then mean absolute value of fraction new should
+    # be included in the regression. In general, this is something I would like
+    # to include, but that is difficult to include if the fraction new information
+    # is not present in the object being modeled. I could go back and get it, but
+    # that is likely a large refactor
+    if(type == "fractions"){
+
+      formula_str <- paste("`logsd_", .x, "`", " ~ `coverage_", .x, "`",
+                           " + abs(`mean_", .x, "`)", sep = "")
+
+    }else{
+
+      formula_str <- paste("`logsd_", .x, "`", " ~ `coverage_", .x, "`", sep = "")
+
+    }
+
     formula <- stats::as.formula(formula_str)
 
     # Perform linear regression
