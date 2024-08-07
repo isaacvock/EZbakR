@@ -714,12 +714,16 @@ normalize_reads <- function(reads, features_to_analyze, lengths){
     features <- colnames(lengths)
     features <- features[features != "length"]
 
+    lengths <- data.table::setDT(data.table::copy(lengths))
     setkeyv(lengths, features)
     setkeyv(reads_norm, features)
     reads_norm <- reads_norm[lengths, nomatch = NULL]
 
-    # Length normalize
-    reads_norm[, normalized_reads := normalized_reads / (length / 1000)]
+    # Length normalize (and add 1 to length to avoid divide by 0)
+      # TO-DO: Figure out why there would ever be cases of XF __no_feature
+      # and GF some feature for intron-less features
+    reads_norm[, normalized_reads := normalized_reads / ((length+1) / 1000)]
+
 
   }
 
