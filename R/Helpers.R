@@ -714,7 +714,10 @@ normalize_reads <- function(reads, features_to_analyze, lengths){
     features <- colnames(lengths)
     features <- features[features != "length"]
 
+    # Want to filter out 0-length features (e.g., intronless genes)
     lengths <- data.table::setDT(data.table::copy(lengths))
+    lengths <- lengths[length > 0]
+
     setkeyv(lengths, features)
     setkeyv(reads_norm, features)
     reads_norm <- reads_norm[lengths, nomatch = NULL]
@@ -722,7 +725,7 @@ normalize_reads <- function(reads, features_to_analyze, lengths){
     # Length normalize (and add 1 to length to avoid divide by 0)
       # TO-DO: Figure out why there would ever be cases of XF __no_feature
       # and GF some feature for intron-less features
-    reads_norm[, normalized_reads := normalized_reads / ((length+1) / 1000)]
+    reads_norm[, normalized_reads := normalized_reads / (length / 1000)]
 
 
   }
