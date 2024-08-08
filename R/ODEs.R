@@ -420,7 +420,7 @@ EZDynamics <- function(obj,
       dplyr::select(!!sub_features) %>%
       as.matrix()
 
-    feature_mat <- feature_mat == unassigned_name
+    feature_mat <- feature_mat != unassigned_name
 
     # Are any species always assigned?
     fm_cols <- colnames(feature_mat)
@@ -446,7 +446,7 @@ EZDynamics <- function(obj,
     measured_species <- apply(feature_mat, 1, function(row) {
 
 
-      valid_cols <- sometimes_assigned[!row[!(fm_cols %in% always_assigned)]]
+      valid_cols <- sometimes_assigned[row[!(fm_cols %in% always_assigned)]]
 
       if(length(valid_cols) > 0){
 
@@ -459,7 +459,6 @@ EZDynamics <- function(obj,
       }
 
     })
-
     kinetics$measured_specie <- measured_species
 
 

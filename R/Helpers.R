@@ -512,6 +512,7 @@ decide_output <- function(obj, proposed_name,
                           sub_features = NULL,
                           grouping_features = NULL,
                           sample_feature = NULL,
+                          modeled_to_measured = NULL,
                           graph = NULL,
                           overwrite = TRUE){
 
@@ -534,6 +535,7 @@ decide_output <- function(obj, proposed_name,
                            sub_features = sub_features,
                            grouping_features = grouping_features,
                            sample_feature = sample_feature,
+                           modeled_to_measured = modeled_to_measured,
                            graph = graph,
                              returnNameOnly = TRUE,
                              exactMatch = TRUE,
@@ -729,12 +731,12 @@ normalize_reads <- function(reads, features_to_analyze, feature_lengths){
   # Length normalize if lengths provided
   if (!is.null(feature_lengths)){
 
-    features <- colnames(lengths)
+    features <- colnames(feature_lengths)
     features <- features[features != "length"]
 
     # Want to filter out 0-length features (e.g., intronless genes)
     feature_lengths <- data.table::setDT(data.table::copy(feature_lengths))
-    lengths <- lengths[length > 0]
+    feature_lengths <- feature_lengths[length > 0]
 
     setkeyv(feature_lengths, features)
     setkeyv(reads_norm, features)
