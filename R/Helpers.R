@@ -643,7 +643,6 @@ get_normalized_read_counts.EZbakRFractions <- function(obj,
                                                        fractions_name = NULL,
                                                        feature_lengths = NULL){
 
-  browser()
 
   reads <- data.table::setDT(data.table::copy(obj[['fractions']][[fractions_name]]))
 
