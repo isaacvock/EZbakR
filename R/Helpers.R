@@ -44,6 +44,9 @@
 #' @param sample_feature Only relevant if type == "dynamics". Name of the metadf
 #' column that distinguished the different classes of samples when running
 #' `EZDynamics()`.
+#' @param modeled_to_measured Only relevant if type == "dynamics". Specifies
+#' the relationship between `sub_features`, `sample_feature` (if specified),
+#' and the species in `graph`.
 #' @param graph Only relevant if type == "dynamics". NxN adjacency matrix,
 #' where N represents the number of species modeled when running `EZDynamics()`.
 #' @param repeatID Numerical ID for duplicate objects with same metadata.
@@ -76,6 +79,7 @@ EZget <- function(obj,
                   sub_features = NULL,
                   grouping_features = NULL,
                   sample_feature = NULL,
+                  modeled_to_measured = NULL,
                   graph = NULL,
                   returnNameOnly = FALSE,
                   exactMatch = FALSE,
@@ -355,6 +359,19 @@ EZget <- function(obj,
     possible_tables <- intersect(possible_tables, possible_tables_sf)
 
   }
+
+
+  if(!is.null(modeled_to_measured)){
+
+    possible_tables_mm <- exact_ezsearch(metadata,
+                                        modeled_to_measured,
+                                        "modeled_to_measured")
+
+    possible_tables <- intersect(possible_tables, possible_tables_mm)
+
+
+  }
+
 
   if(!is.null(graph)){
 
