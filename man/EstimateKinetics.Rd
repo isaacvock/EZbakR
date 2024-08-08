@@ -15,7 +15,7 @@ EstimateKinetics(
   grouping_factor = NULL,
   reference_factor = NULL,
   character_limit = 20,
-  lengths = NULL,
+  feature_lengths = NULL,
   overwrite = TRUE
 )
 }
@@ -79,7 +79,7 @@ will try to name this as a "_" separated character vector of all of the features
 If this name is greater than \code{character_limit}, then it will default to "fraction#", where
 "#" represents a simple numerical ID for the table.}
 
-\item{lengths}{Table of effective lengths for each feature combination in your
+\item{feature_lengths}{Table of effective lengths for each feature combination in your
 data. For example, if your analysis includes features named GF and XF, this
 should be a data frame with columns GF, XF, and length.}
 

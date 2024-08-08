@@ -23,7 +23,7 @@ AverageAndRegularize(
   force_optim = FALSE,
   conservative = FALSE,
   character_limit = 20,
-  lengths = lengths,
+  feature_lengths = NULL,
   overwrite = TRUE
 )
 }
@@ -97,7 +97,7 @@ of variances.}
 output table. Will attempt to concatenate the parameter name with the names of all
 of the features. If this is too long, only the parameter name will be used.}
 
-\item{lengths}{Table of effective lengths for each feature combination in your
+\item{feature_lengths}{Table of effective lengths for each feature combination in your
 data. For example, if your analysis includes features named GF and XF, this
 should be a data frame with columns GF, XF, and length.}
 

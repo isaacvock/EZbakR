@@ -49,7 +49,7 @@
 #' will try to name this as a "_" separated character vector of all of the features analyzed.
 #' If this name is greater than `character_limit`, then it will default to "fraction#", where
 #' "#" represents a simple numerical ID for the table.
-#' @param lengths Table of effective lengths for each feature combination in your
+#' @param feature_lengths Table of effective lengths for each feature combination in your
 #' data. For example, if your analysis includes features named GF and XF, this
 #' should be a data frame with columns GF, XF, and length.
 #' @param overwrite If TRUE and a fractions estimate output already exists that
@@ -72,7 +72,7 @@ EstimateKinetics <- function(obj,
                              grouping_factor = NULL,
                              reference_factor = NULL,
                              character_limit = 20,
-                             lengths = NULL,
+                             feature_lengths = NULL,
                              overwrite = TRUE){
 
   ### Check that input is valid
@@ -122,7 +122,7 @@ EstimateKinetics <- function(obj,
                                   repeatID = repeatID,
                                   exactMatch = exactMatch,
                                   character_limit = character_limit,
-                                  lengths = lengths,
+                                  feature_lengths = feature_lengths,
                                   overwrite = overwrite)
 
 
@@ -138,7 +138,7 @@ EstimateKinetics <- function(obj,
                                        repeatID = repeatID,
                                        exactMatch = exactMatch,
                                        character_limit = character_limit,
-                                       lengths = lengths,
+                                       feature_lengths = feature_lengths,
                                        overwrite = overwrite)
 
   }
@@ -163,7 +163,7 @@ Standard_kinetic_estimation <- function(obj,
                                         character_limit = 20,
                                         reference_factor = NULL,
                                         grouping_factor = NULL,
-                                        lengths = NULL,
+                                        feature_lengths = NULL,
                                         overwrite = TRUE){
 
   ### Hack to deal with devtools::check() NOTEs
@@ -211,7 +211,7 @@ Standard_kinetic_estimation <- function(obj,
   reads_norm <- get_normalized_read_counts(obj = obj,
                                            features_to_analyze = features_to_analyze,
                                            fractions_name = fractions_name,
-                                           lengths = lengths)
+                                           feature_lengths = feature_lengths)
 
 
 
@@ -633,7 +633,7 @@ tilac_ratio_estimation <- function(obj,
                                    grouping_factor = NULL,
                                    repeatID = NULL,
                                    character_limit = 20,
-                                   lengths = NULL,
+                                   feature_lengths = NULL,
                                    overwrite = TRUE){
 
   ### Hack to deal with devtools::check() NOTEs
@@ -732,7 +732,7 @@ tilac_ratio_estimation <- function(obj,
 
   reads_norm <- get_normalized_read_counts(obj,
                                            features_to_analyze = features_to_analyze,
-                                           lengths = lengths)
+                                           feature_lengths = feature_lengths)
 
 
   ### Estimate ksyn

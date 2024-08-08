@@ -65,7 +65,7 @@
 #' @param character_limit Limit on the number of characters of the name given to the
 #' output table. Will attempt to concatenate the parameter name with the names of all
 #' of the features. If this is too long, only the parameter name will be used.
-#' @param lengths Table of effective lengths for each feature combination in your
+#' @param feature_lengths Table of effective lengths for each feature combination in your
 #' data. For example, if your analysis includes features named GF and XF, this
 #' should be a data frame with columns GF, XF, and length.
 #' @param overwrite If TRUE, identical, existing output will be overwritten.
@@ -87,7 +87,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                  force_optim = FALSE,
                                  conservative = FALSE,
                                  character_limit = 20,
-                                 lengths = lengths,
+                                 feature_lengths = NULL,
                                  overwrite = TRUE){
 
 
@@ -111,7 +111,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                              conservative = conservative,
                              TILAC = TILAC,
                              character_limit = character_limit,
-                             lengths = lengths,
+                             feature_lengths = feature_lengths,
                              overwrite = overwrite)
 
   return(obj)
@@ -200,7 +200,7 @@ general_avg_and_reg <- function(obj, features, parameter,
                                 force_optim = FALSE,
                                 conservative = FALSE,
                                 character_limit = 20,
-                                lengths = NULL,
+                                feature_lengths = NULL,
                                 overwrite = TRUE){
 
 
@@ -247,7 +247,7 @@ general_avg_and_reg <- function(obj, features, parameter,
     normalized_reads <- get_normalized_read_counts(obj = obj,
                                                    features_to_analyze = features_to_analyze,
                                                    fractions_name = param_name,
-                                                   lengths = lengths) %>%
+                                                   feature_lengths = feature_lengths) %>%
       dplyr::as_tibble()
 
     # Get the kinetic parameter data frame

@@ -614,14 +614,14 @@ inv_logit <- function(x) exp(x)/(1+exp(x))
 #' @param obj An `EZbakRData` or `EZbakRFractions` object.
 #' @param features_to_analyze Features in relevant table
 #' @param fractions_name Name of fractions table to use
-#' @param lengths Table of effective lengths for each feature combination in your
+#' @param feature_lengths Table of effective lengths for each feature combination in your
 #' data. For example, if your analysis includes features named GF and XF, this
 #' should be a data frame with columns GF, XF, and length.
 #' @export
 get_normalized_read_counts <- function(obj,
                                        features_to_analyze,
                                        fractions_name = NULL,
-                                       lengths = NULL){
+                                       feature_lengths = NULL){
 
   UseMethod("get_normalized_read_counts")
 
@@ -634,18 +634,20 @@ get_normalized_read_counts <- function(obj,
 #' @param obj An `EZbakRFractions` object.
 #' @param features_to_analyze Features in relevant table
 #' @param fractions_name Name of fractions table to use
-#' @param lengths Table of effective lengths for each feature combination in your
+#' @param feature_lengths Table of effective lengths for each feature combination in your
 #' data. For example, if your analysis includes features named GF and XF, this
 #' should be a data frame with columns GF, XF, and length.
 #' @export
 get_normalized_read_counts.EZbakRFractions <- function(obj,
                                                        features_to_analyze,
                                                        fractions_name = NULL,
-                                                       lengths = NULL){
+                                                       feature_lengths = NULL){
+
+  browser()
 
   reads <- data.table::setDT(data.table::copy(obj[['fractions']][[fractions_name]]))
 
-  reads <- normalize_reads(reads, features_to_analyze, lengths)
+  reads <- normalize_reads(reads, features_to_analyze, feature_lengths)
 
   return(reads)
 
@@ -659,14 +661,14 @@ get_normalized_read_counts.EZbakRFractions <- function(obj,
 #' @param obj An `EZbakRData` object.
 #' @param features_to_analyze Features in relevant table
 #' @param fractions_name Name of fractions table to use
-#' @param lengths Table of effective lengths for each feature combination in your
+#' @param feature_lengths Table of effective lengths for each feature combination in your
 #' data. For example, if your analysis includes features named GF and XF, this
 #' should be a data frame with columns GF, XF, and length.
 #' @export
 get_normalized_read_counts.default <- function(obj,
                                                features_to_analyze,
                                                fractions_name = NULL,
-                                               lengths = NULL){
+                                               feature_lengths = NULL){
 
   ### Hack to deal with devtools::check() NOTEs
   n <- NULL
@@ -683,13 +685,13 @@ get_normalized_read_counts.default <- function(obj,
 
 
   # Normalize
-  reads <- normalize_reads(reads, features_to_analyze, lengths)
+  reads <- normalize_reads(reads, features_to_analyze, feature_lengths)
 
   return(reads)
 
 }
 
-normalize_reads <- function(reads, features_to_analyze, lengths){
+normalize_reads <- function(reads, features_to_analyze, feature_lengths){
 
   ### Hack to deal with devtools::check() NOTEs
   geom_mean <- n <- normalized_reads <- scale_factor <- NULL
@@ -709,18 +711,18 @@ normalize_reads <- function(reads, features_to_analyze, lengths){
 
 
   # Length normalize if lengths provided
-  if (!is.null(lengths)){
+  if (!is.null(feature_lengths)){
 
     features <- colnames(lengths)
     features <- features[features != "length"]
 
     # Want to filter out 0-length features (e.g., intronless genes)
-    lengths <- data.table::setDT(data.table::copy(lengths))
+    feature_lengths <- data.table::setDT(data.table::copy(feature_lengths))
     lengths <- lengths[length > 0]
 
-    setkeyv(lengths, features)
+    setkeyv(feature_lengths, features)
     setkeyv(reads_norm, features)
-    reads_norm <- reads_norm[lengths, nomatch = NULL]
+    reads_norm <- reads_norm[feature_lengths, nomatch = NULL]
 
     # Length normalize (and add 1 to length to avoid divide by 0)
       # TO-DO: Figure out why there would ever be cases of XF __no_feature
