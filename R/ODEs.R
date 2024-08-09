@@ -209,6 +209,7 @@ EZDynamics <- function(obj,
     # to make general pivoting strategy work
     colnames(table) <- gsub("_posterior$", "", colnames(table))
 
+
     # Tidy data!
     tidy_avgs <- table %>%
       tidyr::pivot_longer(
@@ -327,9 +328,8 @@ EZDynamics <- function(obj,
 
     tidy_avgs <- tidy_avgs %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(c(cols_to_group_by, "tl")))) %>%
-      dplyr::filter(dplyr::n() == nspecies) %>%
+      dplyr::filter(dplyr::n() >= (nrow(graph) - 1)) %>%
       dplyr::ungroup()
-
 
 
     dynfit <- tidy_avgs  %>%
@@ -633,6 +633,7 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
                                 tls, sample_features, feature_types,
                                 use_coverage = TRUE, alt_coverage = FALSE,
                                 coverage_sd = NULL, scale_factor = NULL){
+
 
   ### Step 0, check to see if single replicate of data is being passed
   if(all(nreps == 1)){
