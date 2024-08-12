@@ -9,6 +9,7 @@ EZDynamics(
   graph,
   sub_features,
   grouping_features,
+  scale_factors = NULL,
   sample_feature = NULL,
   modeled_to_measured = NULL,
   parameter_names = paste0("k", 1:max(graph)),
@@ -58,6 +59,12 @@ columns corresponding to full-gene assignments, as well as any higher order
 assignments (e.g., chromosome). A \code{sub_feature} can be included in \code{grouping_features}
 if it never has the value of \code{unassigned_name} ("__no_feature" by default). Only
 one \code{sub_feature} should ever fulfill this criterion though.}
+
+\item{scale_factors}{Data frame mapping samples to factors by which to multiply
+read counts so as ensure proper normalization between different RNA populations.
+Only relevant if you are modeling relationships between distinct RNA populations,
+for example RNA from nuclear and cytoplasmic fractions. Will eventually be inferred
+automatically.}
 
 \item{sample_feature}{If different samples involve assaying different species,
 this must be the name of the metadf column that distinguishes the different
