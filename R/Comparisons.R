@@ -281,6 +281,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     mean_vars <- all.vars(formula_mean)
     sd_vars <- all.vars(formula_sd)
 
+    median_uncert <- median(kinetics[[parameter_se]])
+
     if(length(mean_vars) == 2 & length(sd_vars) == 2 & !force_optim){
 
       # It's much faster this way
@@ -295,9 +297,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
         # That's what the `0.025/sqrt(replicates)` does
         dplyr::mutate(logsd = log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(replicates))) %>%
         # dplyr::mutate(logsd = dplyr::case_when(
-        #   logsd < logsd_from_uncert ~ log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2)),
-        #   #logsd < logsd_from_uncert ~ logsd_from_uncert,
-        #   .default = logsd
+        #   logsd < logsd_from_uncert & logsd_from_uncert < median_uncert ~ log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(replicates)),
+        #   .default = log(exp(logsd) + 0.025/sqrt(replicates))
         # )) %>%
         dplyr::select(-logsd_from_uncert) %>%
         dplyr::mutate(se_mean = exp(logsd)/sqrt(replicates),
@@ -331,10 +332,9 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                       coverage = mean(log_normalized_reads)) %>%
         dplyr::mutate(logsd = log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(dplyr::n()))) %>%
         # dplyr::mutate(logsd = dplyr::case_when(
-        #   logsd < logsd_from_uncert ~ log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2)),
-        #   #logsd < logsd_from_uncert ~ logsd_from_uncert,
-        #   .default = logsd
-        # )) %>%
+        #   logsd < logsd_from_uncert & logsd_from_uncert < median_uncert ~ log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(dplyr::n())),
+        #   .default = log(exp(logsd) + 0.025 / sqrt(dplyr::n()))
+        #   )) %>%
         dplyr::select(-logsd_from_uncert) %>%
         dplyr::mutate(se_logse = 1/sqrt(2*(dplyr::n() - 1))) %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
@@ -360,9 +360,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                          replicates = dplyr::n()) %>%
         dplyr::mutate(logsd = log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(replicates))) %>%
         # dplyr::mutate(logsd = dplyr::case_when(
-        #   logsd < logsd_from_uncert ~ log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2)),
-        #   #logsd < logsd_from_uncert ~ logsd_from_uncert,
-        #   .default = logsd
+        #   logsd < logsd_from_uncert & logsd_from_uncert < median_uncert ~ log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(replicates)),
+        #   .default = log(exp(logsd) + 0.025/sqrt(replicates))
         # )) %>%
         dplyr::select(-logsd_from_uncert) %>%
         dplyr::mutate(logse = log(exp(logsd)/sqrt(replicates)),
@@ -429,6 +428,11 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
       formula_str <- paste("`logse_", .x, "`", " ~ `coverage_", .x, "`",
                            " + abs(`mean_", .x, "`)", sep = "")
+
+    }else if(parameter == "log_kdeg"){
+
+      formula_str <- paste("`logse_", .x, "`", " ~ `coverage_", .x, "`",
+                           " + `mean_", .x, "`", sep = "")
 
     }else{
 
@@ -817,7 +821,7 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
     # I like to be conservative in bioinformatics, because there are always unaccounted
     # for sources of variance.
     X <- model.matrix(fit)
-    s2 <- sigma(fit)^2 + data[[uncertainties_col]]^2 + (0.025^2)/(nrow(data)/ncol(X))
+    s2 <- sigma(fit)^2 + data[[uncertainties_col]]^2 + (0.05^2)/(nrow(data)/ncol(X))
     vce <- solve(t(X) %*% X) %*% (t(X) %*% (s2*diag(nrow(data))) %*% X) %*% solve(t(X) %*% X)
     ses <- log(sqrt(diag(vce)))
 
@@ -850,7 +854,7 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
 
     # Robust standard errors
     X <- model.matrix(fit)
-    s2 <- sds$group_sd^2 + data[[uncertainties_col]]^2 + (0.025^2)/(nrow(data)/ncol(X))
+    s2 <- sds$group_sd^2 + data[[uncertainties_col]]^2 #+ (0.025^2)/(nrow(data)/ncol(X))
     vce <- solve(t(X) %*% X) %*% (t(X) %*% (s2*diag(nrow(data))) %*% X) %*% solve(t(X) %*% X)
     ses <- log(sqrt(diag(vce)))
     names(ses) <- paste0("logse_", names(ses))
