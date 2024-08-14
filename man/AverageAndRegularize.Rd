@@ -15,7 +15,7 @@ AverageAndRegularize(
   exactMatch = TRUE,
   repeatID = NULL,
   formula_mean = NULL,
-  formula_sd = NULL,
+  sd_grouping_factors = NULL,
   include_all_parameters = TRUE,
   sd_reg_factor = 10,
   error_if_singular = TRUE,
@@ -62,12 +62,8 @@ combination of \code{treatment} and \code{duration} values in the metadf. An exa
 case is a situation where you have two or more treatments (e.g., drug treated and untreated control)
 which were applied for different durations of time (e.g., 4 and 8 hours).}
 
-\item{formula_sd}{Same as \code{formula_mean}, but this time specifying how the variance
-in the replicate estimates of \code{parameter} depends on the sample characteristics specified
-in \code{obj}'s metadf. Unlike standard linear modeling, this allows you to specify
-a heteroskedastic model. I suggest allowing a \code{parameter}'s variance to depend on
-the "treatment" condition, as changes in relative RNA abundance can impact \code{parameter} variance,
-so differential expression caused by your "treatment" could impact \code{parameter} variance.}
+\item{sd_grouping_factors}{What metadf columns should data be grouped by when estimating
+standard deviations across replicates?}
 
 \item{include_all_parameters}{If TRUE, an additional table will be saved with the prefix \code{fullfit_},
 which includes all of the parameters estimated throughout the course of linear modeling and

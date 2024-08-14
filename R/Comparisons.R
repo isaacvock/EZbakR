@@ -38,12 +38,8 @@
 #' combination of `treatment` and `duration` values in the metadf. An example of the latter
 #' case is a situation where you have two or more treatments (e.g., drug treated and untreated control)
 #' which were applied for different durations of time (e.g., 4 and 8 hours).
-#' @param formula_sd Same as `formula_mean`, but this time specifying how the variance
-#' in the replicate estimates of `parameter` depends on the sample characteristics specified
-#' in `obj`'s metadf. Unlike standard linear modeling, this allows you to specify
-#' a heteroskedastic model. I suggest allowing a `parameter`'s variance to depend on
-#' the "treatment" condition, as changes in relative RNA abundance can impact `parameter` variance,
-#' so differential expression caused by your "treatment" could impact `parameter` variance.
+#' @param sd_grouping_factors What metadf columns should data be grouped by when estimating
+#' standard deviations across replicates?
 #' @param include_all_parameters If TRUE, an additional table will be saved with the prefix `fullfit_`,
 #' which includes all of the parameters estimated throughout the course of linear modeling and
 #' regularization. This can be nice for visualizing the regularized mean-variance trend.
@@ -79,7 +75,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                  fraction_design = NULL,
                                  exactMatch = TRUE,
                                  repeatID = NULL,
-                                 formula_mean = NULL, formula_sd = NULL,
+                                 formula_mean = NULL,
+                                 sd_grouping_factors = NULL,
                                  include_all_parameters = TRUE,
                                  sd_reg_factor = 10,
                                  error_if_singular = TRUE,
@@ -98,115 +95,10 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   }
 
-  obj <- general_avg_and_reg(obj = obj, features = features, parameter = parameter,
-                             type = type, kstrat = kstrat, populations = populations,
-                             exactMatch = exactMatch,
-                             repeatID = repeatID,
-                             fraction_design = fraction_design,
-                             formula_mean = formula_mean, formula_sd = formula_sd,
-                             include_all_parameters = include_all_parameters,
-                             sd_reg_factor = sd_reg_factor,
-                             error_if_singular = error_if_singular, min_reads = min_reads,
-                             force_optim = force_optim,
-                             conservative = conservative,
-                             TILAC = TILAC,
-                             character_limit = character_limit,
-                             feature_lengths = feature_lengths,
-                             overwrite = overwrite)
-
-  return(obj)
-
-}
-
-
-# See if a factor referenced in a formula object has only a single factor.
-# This will break the linear modeling strategies I employ in this function
-checkSingleLevelFactors <- function(formula, data) {
-
-  variables <- all.vars(formula)
-
-  # Initialize a vector to keep track of single-level factors
-  singleLevelFactors <- logical(length = 0)
-
-  # Loop through each variable to check if it's a factor present
-  # in the data with only one level
-  for (var in variables) {
-
-    if (var %in% names(data) && is.factor(data[[var]])) {
-
-      if (length(levels(data[[var]])) == 1) {
-
-        singleLevelFactors <- c(singleLevelFactors, TRUE)
-
-      } else {
-
-        singleLevelFactors <- c(singleLevelFactors, FALSE)
-
-      }
-    }
-  }
-
-  # Return TRUE if any single-level factors are found, FALSE otherwise
-  any(singleLevelFactors)
-}
-
-
-# Function to get normal distribution posterior mean
-# This is log-scale standard deviation regularization
-# Currently have implemented a conservative strategy where
-# standard deviations less than the trend are regularized
-# all the way up to the trend, and standard deviations above the
-# trend are not regularized at all. Similar to the old
-# DESeq model (pre-DESeq2).
-get_sd_posterior <- function(n = 1, sd_est, sd_var,
-                             fit_var, fit_mean,
-                             conservative = FALSE){
-
-
-  denom <- (n/sd_var + 1/fit_var)
-  num <- sd_est/sd_var + fit_mean/fit_var
-
-  if(conservative){
-
-    output <- ifelse(sd_est > fit_mean,
-                     sd_est,
-                     fit_mean)
-
-  }else{
-
-    output <- ifelse(sd_est > fit_mean,
-                     num/denom,
-                     fit_mean)
-  }
-
-  return(output)
-
-}
-
-
-
-general_avg_and_reg <- function(obj, features, parameter,
-                                type = "kinetics",
-                                kstrat = NULL,
-                                populations = NULL,
-                                exactMatch = NULL,
-                                repeatID = NULL,
-                                fraction_design = NULL,
-                                formula_mean, formula_sd,
-                                include_all_parameters,
-                                sd_reg_factor,
-                                error_if_singular,
-                                TILAC = FALSE, min_reads = 10,
-                                force_optim = FALSE,
-                                conservative = FALSE,
-                                character_limit = 20,
-                                feature_lengths = NULL,
-                                overwrite = TRUE){
-
 
   ### Hack to deal with devtools::check() NOTEs
-  n <- log_normalized_reads <- logsd <- logsd_from_uncert <- replicates <- NULL
-  coverage <- se_mean <- se_logsd <- coverages <- parameters <- normalized_reads <- NULL
+  n <- log_normalized_reads <- logse <- logse_from_uncert <- replicates <- NULL
+  coverage <- se_mean <- se_logse <- coverages <- parameters <- normalized_reads <- NULL
 
   `.` <- list
 
@@ -399,6 +291,8 @@ general_avg_and_reg <- function(obj, features, parameter,
                          logsd_from_uncert = log(mean(!!dplyr::sym(parameter_se))),
                          coverage = mean(log_normalized_reads),
                          replicates = dplyr::n()) %>%
+        # Helps to be conservative set a floor on what you could expect the sd to be
+        # That's what the `0.025/sqrt(replicates)` does
         dplyr::mutate(logsd = log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(replicates))) %>%
         # dplyr::mutate(logsd = dplyr::case_when(
         #   logsd < logsd_from_uncert ~ log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2)),
@@ -407,11 +301,11 @@ general_avg_and_reg <- function(obj, features, parameter,
         # )) %>%
         dplyr::select(-logsd_from_uncert) %>%
         dplyr::mutate(se_mean = exp(logsd)/sqrt(replicates),
-                      se_logsd = 1/sqrt(2*(replicates - 1)),
-                      logsd = log(exp(logsd)/sqrt(replicates))) %>%
+                      se_logse = 1/sqrt(2*(replicates - 1)),
+                      logse = log(exp(logsd)/sqrt(replicates))) %>%
         dplyr::select(-replicates) %>%
         tidyr::pivot_wider(names_from = !!mean_vars[2],
-                           values_from = c(mean, logsd, coverage, se_mean, se_logsd),
+                           values_from = c(mean, logse, coverage, se_mean, se_logse),
                            names_sep = paste0("_", mean_vars[2]))
 
 
@@ -442,12 +336,12 @@ general_avg_and_reg <- function(obj, features, parameter,
         #   .default = logsd
         # )) %>%
         dplyr::select(-logsd_from_uncert) %>%
-        dplyr::mutate(se_logsd = 1/sqrt(2*(dplyr::n() - 1))) %>%
+        dplyr::mutate(se_logse = 1/sqrt(2*(dplyr::n() - 1))) %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
         dplyr::mutate(se_mean = exp(logsd)/sqrt(dplyr::n()),
-                      logsd = log(exp(logsd)/sqrt(dplyr::n()))) %>%
+                      logse = log(exp(logsd)/sqrt(dplyr::n()))) %>%
         tidyr::pivot_wider(names_from = !!mean_vars[2],
-                           values_from = c(mean, logsd, coverage, se_mean, se_logsd),
+                           values_from = c(mean, logse, coverage, se_mean, se_logse),
                            names_sep = paste0("_", mean_vars[2]))
 
     }else if(interaction_only(formula_mean) & interaction_only(formula_sd) & length(mean_vars) == length(sd_vars) & !force_optim){
@@ -470,12 +364,12 @@ general_avg_and_reg <- function(obj, features, parameter,
         #   .default = logsd
         # )) %>%
         dplyr::select(-logsd_from_uncert) %>%
-        dplyr::mutate(logsd = log(exp(logsd)/sqrt(replicates)),
+        dplyr::mutate(logse = log(exp(logsd)/sqrt(replicates)),
                       se_mean = exp(logsd)/sqrt(replicates),
-                      se_logsd = 1/sqrt(2*(replicates - 1)) ) %>%
+                      se_logse = 1/sqrt(2*(replicates - 1)) ) %>%
         dplyr::select(-replicates) %>%
         tidyr::pivot_wider(names_from = !!mean_vars[2:length(mean_vars)],
-                           values_from = c(mean, logsd, coverage, se_mean, se_logsd),
+                           values_from = c(mean, logse, coverage, se_mean, se_logse),
                            names_glue = paste0("{.value}_", paste(paste0(mean_vars[2:length(mean_vars)],
                                                                          "{", mean_vars[2:length(mean_vars)],"}"),
                                                                   collapse = ":") ))
@@ -483,27 +377,84 @@ general_avg_and_reg <- function(obj, features, parameter,
     }
     else{
 
-      model_fit <- kinetics %>%
-        dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
-        dplyr::do(dplyr::tibble(parameters = list(fit_heteroskedastic_linear_model(.,
-                                                                                   formula_mean = formula_mean,
-                                                                                   formula_sd = formula_sd,
-                                                                                   dependent_var = parameter,
-                                                                                   error_if_singular = error_if_singular)),
-                                coverages = list(calc_avg_coverage(.,
-                                                                   formula = formula_reads))))
+      fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
+                                          coverage_col,
+                                          uncertainties_col,
+                                          error_if_singular = TRUE){
 
-      model_fit <- model_fit %>%
-        tidyr::unnest_wider(coverages) %>%
+        fit <- lm(formula_mean, data,
+                  singular.ok = !error_if_singular)
+
+
+        if(is.null(sd_groups)){
+
+          # My version of robust se estimation: add parameter uncertainty to avoid underestimation
+          # I like to be conservative in bioinformatics, because there are always unaccounted
+          # for sources of variance.
+          X <- model.matrix(fit)
+          s2 <- sigma(fit)^2 + data[[uncertainties_col]]^2 (0.025^2)/(nrow(data)/ncol(X))
+          vce <- solve(t(X) %*% X) %*% (t(X) %*% (s2*diag(nrow(data))) %*% X) %*% solve(t(X) %*% X)
+          ses <- log(sqrt(diag(vce)))
+
+
+          # Get average coverage for regression model
+          coverage <- rep(log10(mean(data[[coverage_col]])),
+                          times = length(ses))
+
+          # Give informative names to output
+          names(coverage) <- paste0("coverage_", names(ses))
+          names(ses) <- paste0("logse_", names(ses))
+
+          estimates <- c(summary(fit)$coef[,"Estimate"], ses, log10(coverage))
+
+        }else{
+
+          # Estimate standard deviations in each group
+          sds <- data %>%
+            dplyr::group_by(dplyr::across(dplyr::all_of(sd_groups))) %>%
+            mutate(group_sd = sd(!!dplyr::sym(parameter)),
+                   group_coverage = mean(!!dplyr::sym(coverage_col)))
+
+          # Robust standard errors
+          X <- model.matrix(fit)
+          s2 <- sds$group_sd^2 + data[[uncertainties_col]]^2 + (0.025^2)/(nrow(data)/ncol(X))
+          vce <- solve(t(X) %*% X) %*% (t(X) %*% (s2*diag(nrow(data))) %*% X) %*% solve(t(X) %*% X)
+          ses <- log(sqrt(diag(vce)))
+          names(ses) <- paste0("logse_", names(ses))
+
+
+          # Idea: Average coverages over group presence in each's parameter column of design
+          # matrix.
+          coverages <- t(X) %*% matrix(sds$group_coverage, nrow = nrow(data))
+          coverages <- coverages / rowSums(t(X))
+          rownames(coverages) <- paste0("coverage_", rownames(coverages))
+
+          estimates <- c(summary(fit)$coef[,"Estimate"], ses, log10(coverages[,1]))
+
+        }
+
+        return(as.list(estimates))
+      }
+
+
+      parameter_se_col <- paste0("se_", parameter)
+
+      lmanalysis <- kinetics %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
+        dplyr::do(dplyr::tibble(parameters = list(
+          fit_ezbakR_linear_model(.,
+                                  formula_mean = formula_mean,
+                                  sd_groups = sd_grouping_factors,
+                                  coverage_col = "normalized_reads",
+                                  uncertainties_col = parameter_se_col,
+                                  error_if_singular = TRUE)
+        ))) %>%
         tidyr::unnest_wider(parameters)
 
       # Add carriage return so next message is separate from progress bar
       message("")
 
     }
-
-
-
 
 
 
@@ -517,7 +468,7 @@ general_avg_and_reg <- function(obj, features, parameter,
 
 
   # Step 1: Filter column names for relevant patterns
-  sd_columns <- names(model_fit)[grepl("^logsd_", names(model_fit))]
+  sd_columns <- names(model_fit)[grepl("^logse_", names(model_fit))]
   covariate_names <- substring(sd_columns, 7)
   coverage_columns <- names(model_fit)[grepl("^coverage_", names(model_fit))]
   relevant_columns <- union(sd_columns, coverage_columns)
@@ -532,12 +483,12 @@ general_avg_and_reg <- function(obj, features, parameter,
     # that is likely a large refactor
     if(type == "fractions"){
 
-      formula_str <- paste("`logsd_", .x, "`", " ~ `coverage_", .x, "`",
+      formula_str <- paste("`logse_", .x, "`", " ~ `coverage_", .x, "`",
                            " + abs(`mean_", .x, "`)", sep = "")
 
     }else{
 
-      formula_str <- paste("`logsd_", .x, "`", " ~ `coverage_", .x, "`", sep = "")
+      formula_str <- paste("`logse_", .x, "`", " ~ `coverage_", .x, "`", sep = "")
 
     }
 
@@ -562,7 +513,7 @@ general_avg_and_reg <- function(obj, features, parameter,
     fitted_values <- stats::predict(result$lm_result)
 
     # Create the new column name
-    new_column_name <- paste("logsd_", covariate, "_fit", sep = "")
+    new_column_name <- paste("logse_", covariate, "_fit", sep = "")
 
     # Add the fitted values to the dataframe as a new column
     model_fit[[new_column_name]] <- fitted_values
@@ -580,11 +531,11 @@ general_avg_and_reg <- function(obj, features, parameter,
   for(c in covariate_names){
 
     # Names of columns to pass to regularization function
-    col_name <- paste0("logsd_", c, "_posterior")
+    col_name <- paste0("logse_", c, "_posterior")
     natural_col_name <- paste0("sd_", c, "_posterior")
-    sd_est_name <- paste0("logsd_", c)
-    sd_var_name <- paste0("se_logsd_", c)
-    fit_mean_name <- paste0("logsd_", c, "_fit")
+    sd_est_name <- paste0("logse_", c)
+    sd_var_name <- paste0("se_logse_", c)
+    fit_mean_name <- paste0("logse_", c, "_fit")
     sd_mean_name <- paste0("se_mean_", c)
 
 
@@ -690,6 +641,72 @@ general_avg_and_reg <- function(obj, features, parameter,
 
 
 }
+
+
+# See if a factor referenced in a formula object has only a single factor.
+# This will break the linear modeling strategies I employ in this function
+checkSingleLevelFactors <- function(formula, data) {
+
+  variables <- all.vars(formula)
+
+  # Initialize a vector to keep track of single-level factors
+  singleLevelFactors <- logical(length = 0)
+
+  # Loop through each variable to check if it's a factor present
+  # in the data with only one level
+  for (var in variables) {
+
+    if (var %in% names(data) && is.factor(data[[var]])) {
+
+      if (length(levels(data[[var]])) == 1) {
+
+        singleLevelFactors <- c(singleLevelFactors, TRUE)
+
+      } else {
+
+        singleLevelFactors <- c(singleLevelFactors, FALSE)
+
+      }
+    }
+  }
+
+  # Return TRUE if any single-level factors are found, FALSE otherwise
+  any(singleLevelFactors)
+}
+
+
+# Function to get normal distribution posterior mean
+# This is log-scale standard deviation regularization
+# Currently have implemented a conservative strategy where
+# standard deviations less than the trend are regularized
+# all the way up to the trend, and standard deviations above the
+# trend are not regularized at all. Similar to the old
+# DESeq model (pre-DESeq2).
+get_sd_posterior <- function(n = 1, sd_est, sd_var,
+                             fit_var, fit_mean,
+                             conservative = FALSE){
+
+
+  denom <- (n/sd_var + 1/fit_var)
+  num <- sd_est/sd_var + fit_mean/fit_var
+
+  if(conservative){
+
+    output <- ifelse(sd_est > fit_mean,
+                     sd_est,
+                     fit_mean)
+
+  }else{
+
+    output <- ifelse(sd_est > fit_mean,
+                     num/denom,
+                     fit_mean)
+  }
+
+  return(output)
+
+}
+
 
 
 #' Get contrasts of estimated parameters
@@ -951,9 +968,9 @@ fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
 
   estimates <- c(opt$par, ses)
   names(estimates) <- c(paste0("mean_", colnames(designMatrix_mean)),
-                        paste0("logsd_", colnames(designMatrix_sd)),
+                        paste0("logse_", colnames(designMatrix_sd)),
                         paste0("se_mean_", colnames(designMatrix_mean)),
-                        paste0("se_logsd_", colnames(designMatrix_sd)))
+                        paste0("se_logse_", colnames(designMatrix_sd)))
 
   return(as.list(estimates))
 }
