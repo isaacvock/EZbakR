@@ -303,7 +303,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
         dplyr::mutate(se_mean = exp(logsd)/sqrt(replicates),
                       se_logse = 1/sqrt(2*(replicates - 1)),
                       logse = log(exp(logsd)/sqrt(replicates))) %>%
-        dplyr::select(-replicates) %>%
+        dplyr::select(-replicates, -logsd) %>%
         tidyr::pivot_wider(names_from = !!mean_vars[2],
                            values_from = c(mean, logse, coverage, se_mean, se_logse),
                            names_sep = paste0("_", mean_vars[2]))
@@ -340,6 +340,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
         dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
         dplyr::mutate(se_mean = exp(logsd)/sqrt(dplyr::n()),
                       logse = log(exp(logsd)/sqrt(dplyr::n()))) %>%
+        dplyr::select(-logsd) %>%
         tidyr::pivot_wider(names_from = !!mean_vars[2],
                            values_from = c(mean, logse, coverage, se_mean, se_logse),
                            names_sep = paste0("_", mean_vars[2]))
@@ -367,7 +368,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
         dplyr::mutate(logse = log(exp(logsd)/sqrt(replicates)),
                       se_mean = exp(logsd)/sqrt(replicates),
                       se_logse = 1/sqrt(2*(replicates - 1)) ) %>%
-        dplyr::select(-replicates) %>%
+        dplyr::select(-replicates, -logsd) %>%
         tidyr::pivot_wider(names_from = !!mean_vars[2:length(mean_vars)],
                            values_from = c(mean, logse, coverage, se_mean, se_logse),
                            names_glue = paste0("{.value}_", paste(paste0(mean_vars[2:length(mean_vars)],
@@ -377,69 +378,12 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     }
     else{
 
-      fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
-                                          coverage_col,
-                                          uncertainties_col,
-                                          error_if_singular = TRUE){
 
-        fit <- lm(formula_mean, data,
-                  singular.ok = !error_if_singular)
-
-
-        if(is.null(sd_groups)){
-
-          # My version of robust se estimation: add parameter uncertainty to avoid underestimation
-          # I like to be conservative in bioinformatics, because there are always unaccounted
-          # for sources of variance.
-          X <- model.matrix(fit)
-          s2 <- sigma(fit)^2 + data[[uncertainties_col]]^2 (0.025^2)/(nrow(data)/ncol(X))
-          vce <- solve(t(X) %*% X) %*% (t(X) %*% (s2*diag(nrow(data))) %*% X) %*% solve(t(X) %*% X)
-          ses <- log(sqrt(diag(vce)))
-
-
-          # Get average coverage for regression model
-          coverage <- rep(log10(mean(data[[coverage_col]])),
-                          times = length(ses))
-
-          # Give informative names to output
-          names(coverage) <- paste0("coverage_", names(ses))
-          names(ses) <- paste0("logse_", names(ses))
-
-          estimates <- c(summary(fit)$coef[,"Estimate"], ses, log10(coverage))
-
-        }else{
-
-          # Estimate standard deviations in each group
-          sds <- data %>%
-            dplyr::group_by(dplyr::across(dplyr::all_of(sd_groups))) %>%
-            mutate(group_sd = sd(!!dplyr::sym(parameter)),
-                   group_coverage = mean(!!dplyr::sym(coverage_col)))
-
-          # Robust standard errors
-          X <- model.matrix(fit)
-          s2 <- sds$group_sd^2 + data[[uncertainties_col]]^2 + (0.025^2)/(nrow(data)/ncol(X))
-          vce <- solve(t(X) %*% X) %*% (t(X) %*% (s2*diag(nrow(data))) %*% X) %*% solve(t(X) %*% X)
-          ses <- log(sqrt(diag(vce)))
-          names(ses) <- paste0("logse_", names(ses))
-
-
-          # Idea: Average coverages over group presence in each's parameter column of design
-          # matrix.
-          coverages <- t(X) %*% matrix(sds$group_coverage, nrow = nrow(data))
-          coverages <- coverages / rowSums(t(X))
-          rownames(coverages) <- paste0("coverage_", rownames(coverages))
-
-          estimates <- c(summary(fit)$coef[,"Estimate"], ses, log10(coverages[,1]))
-
-        }
-
-        return(as.list(estimates))
-      }
 
 
       parameter_se_col <- paste0("se_", parameter)
 
-      lmanalysis <- kinetics %>%
+      model_fit <- kinetics %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
         dplyr::do(dplyr::tibble(parameters = list(
           fit_ezbakR_linear_model(.,
@@ -854,140 +798,67 @@ CompareParameters <- function(obj, condition, reference, experimental,
 }
 
 
-# Define the likelihood function
-heteroskedastic_likelihood <- function(params, y, X_mean, X_sd, debug = FALSE) {
+fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
+                                    coverage_col,
+                                    uncertainties_col,
+                                    error_if_singular = TRUE){
 
-  if(debug){
-    browser()
-  }
+  browser()
 
-  n <- length(y)
-  beta <- params[1:ncol(X_mean)]
-  log_sigma <- params[(ncol(X_mean) + 1):length(params)]
-
-  mu <- X_mean %*% beta
-  sigma <- exp(X_sd %*% log_sigma)
-
-  # Gaussian log-likelihood
-  logL <- -sum(stats::dnorm(y, mean=mu, sd=sigma, log=TRUE))
-  return(logL)
-}
+  fit <- lm(formula_mean, data,
+            singular.ok = !error_if_singular)
 
 
-fit_heteroskedastic_linear_model <- function(formula_mean, formula_sd, data,
-                                             dependent_var,
-                                             error_if_singular = TRUE) {
+  if(is.null(sd_groups)){
+
+    # My version of robust se estimation: add parameter uncertainty to avoid underestimation
+    # I like to be conservative in bioinformatics, because there are always unaccounted
+    # for sources of variance.
+    X <- model.matrix(fit)
+    s2 <- sigma(fit)^2 + data[[uncertainties_col]]^2 + (0.025^2)/(nrow(data)/ncol(X))
+    vce <- solve(t(X) %*% X) %*% (t(X) %*% (s2*diag(nrow(data))) %*% X) %*% solve(t(X) %*% X)
+    ses <- log(sqrt(diag(vce)))
 
 
-  # Parse formula objects into model matrices
-  designMatrix_mean <- stats::model.matrix(formula_mean, data)
-  designMatrix_sd <- stats::model.matrix(formula_sd, data)
+    # Get average coverage for regression model
+    coverage <- rep(log10(mean(data[[coverage_col]])),
+                    times = length(ses))
+
+    # Give informative names to output
+    names(coverage) <- paste0("coverage_", names(ses))
+    names(ses) <- paste0("logse_", names(ses))
+
+    estimates <- c(summary(fit)$coef[,"Estimate"], ses, log10(coverage))
+
+  }else{
+
+    # Estimate standard deviations in each group
+    sds <- data %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(sd_groups))) %>%
+      mutate(group_sd = sd(!!dplyr::sym(parameter)),
+             group_coverage = mean(!!dplyr::sym(coverage_col)))
+
+    # Robust standard errors
+    X <- model.matrix(fit)
+    s2 <- sds$group_sd^2 + data[[uncertainties_col]]^2 + (0.025^2)/(nrow(data)/ncol(X))
+    vce <- solve(t(X) %*% X) %*% (t(X) %*% (s2*diag(nrow(data))) %*% X) %*% solve(t(X) %*% X)
+    ses <- log(sqrt(diag(vce)))
+    names(ses) <- paste0("logse_", names(ses))
 
 
-  if(error_if_singular){
+    # Idea: Average coverages over group presence in each's parameter column of design
+    # matrix.
+    coverages <- t(X) %*% matrix(sds$group_coverage, nrow = nrow(data))
+    coverages <- coverages / rowSums(t(X))
+    rownames(coverages) <- paste0("coverage_", rownames(coverages))
 
-    # Check for singularity in the design matrices
-    if(qr(designMatrix_mean)$rank < ncol(designMatrix_mean)) {
-      stop("Design matrix for mean is singular")
-    }
-    if(qr(designMatrix_sd)$rank < ncol(designMatrix_sd)) {
-      stop("Design matrix for standard deviation is singular")
-    }
-
-  }
-
-
-  # Initial parameter guesses; keeping it realistic to hopefully increase odds of convergence
-  startParams <- c(rep(mean(data[[dependent_var]]), times = ncol(designMatrix_mean)),
-                   rep(log(stats::sd(data[[dependent_var]]) + 0.001), times = ncol(designMatrix_sd)))
-
-  # Try BFGS
-  opt <- stats::optim(startParams, heteroskedastic_likelihood,
-                      #gr = heteroskedastic_gradient,
-                      y = data[[dependent_var]],
-                      X_mean = designMatrix_mean,
-                      X_sd = designMatrix_sd,
-                      method = "BFGS",
-                      hessian = TRUE)
-
-
-
-  if(opt$convergence != 0) {
-
-
-
-    # Sometimes L-BFGS-B converges when BFGS doesn't, just out of pure luck
-    # of it being a rougher approximation I guess.
-    # The reason I try BFGS first is because I found that it was far more
-    # likely to converge on any given data subset. Kinda surprised by how often
-    # L-BFGS-B doesn't converge, but these are some quasi-non-trivial models I am
-    # fitting.
-    # I will note that "failed convergence" almost always meant that the
-    # max number of iterations was hit (code 1).
-    opt <- stats::optim(startParams, heteroskedastic_likelihood,
-                        #\gr = heteroskedastic_gradient,
-                        y = data[[dependent_var]],
-                        X_mean = designMatrix_mean,
-                        X_sd = designMatrix_sd,
-                        method = "L-BFGS-B",
-                        upper = rep(7, times = length(startParams)),
-                        lower = rep(-7, times = length(startParams)),
-                        hessian = TRUE)
-
-
-    if(opt$convergence != 0){
-
-      warning("Model did not converge for one feature set!")
-
-
-    }
+    estimates <- c(summary(fit)$coef[,"Estimate"], ses, log10(coverages[,1]))
 
   }
-
-  if(error_if_singular){
-
-    # Singularity check using the determinant of the Hessian matrix
-    svd_hessian <- svd(opt$hessian)
-    if(min(svd_hessian$d) < 1e-10){
-      stop("Model parameters are unidentifiable! Specify a simpler
-         design matrix.")
-    }
-
-  }
-
-  tryCatch({
-    solve(opt$hessian)
-  }, error = function(e) {
-    print(e)
-    print("Looks like you don't have enough data to estimate all of your parameters!
-          Specify a simpler model and try again.")
-  })
-
-  # Estimate uncertainty from Hessian
-  ses <- sqrt(diag(solve(opt$hessian)))
-
-  estimates <- c(opt$par, ses)
-  names(estimates) <- c(paste0("mean_", colnames(designMatrix_mean)),
-                        paste0("logse_", colnames(designMatrix_sd)),
-                        paste0("se_mean_", colnames(designMatrix_mean)),
-                        paste0("se_logse_", colnames(designMatrix_sd)))
 
   return(as.list(estimates))
 }
 
-calc_avg_coverage <- function(data, formula){
-
-  # Calculate average read counts in each group
-  fit <- stats::lm(formula = formula,
-                   data = data)
-
-
-  estimates <- fit$coefficient
-  names(estimates) <- c(paste0("coverage_", names(estimates)))
-
-  return(as.list(estimates))
-
-}
 
 
 # Are there only interaction terms in a formula?
@@ -1006,49 +877,4 @@ interaction_only <- function(formula) {
 
   return(all_interactions_or_no_intercept)
 }
-
-
-# Heteroskedastic regression log-likelihood gradient
-heteroskedastic_gradient <- function(params, y, X_mean, X_sd){
-
-
-  n <- length(y)
-  beta <- params[1:ncol(X_mean)]
-  log_sigma <- params[(ncol(X_mean) + 1):length(params)]
-
-  mu <- X_mean %*% beta
-  sigma <- exp(X_sd %*% log_sigma)
-
-  # Vectors to be Hadamard multiplied with desigm matrices
-  b_vects <- ((y - mu)/(sigma^2))
-  s_vects <- ((y - mu)^2)/(sigma^3)
-
-  # Hadamard product for betas
-  # Because derivative is 0 if design matrix is 0 and derivative of
-  # normal log-likelihood otherwise
-  nr <- nrow(X_mean)
-  ncb <- ncol(X_mean)
-  ncs <- ncol(X_sd)
-
-  dprod_beta <- matrix(0,ncol=ncb, nrow=nr)
-  dprod_sigma <- matrix(0,ncol=ncs, nrow=nr)
-  for(i in 1:nr){
-
-    dprod_beta[i,] <- X_mean[i,1:ncb]*b_vects[i]
-    dprod_sigma[i,] <- X_sd[i,1:ncs]*s_vects[i]*sigma[i]
-
-  }
-
-
-  # Sum derivatives of each data point to get total log-likelihood derivatives
-  dlldlb <- colSums(dprod_beta)
-  dlldls <- colSums(dprod_sigma)
-
-
-  return(c(-dlldlb, -dlldls))
-
-
-
-}
-
 
