@@ -803,7 +803,6 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
                                     uncertainties_col,
                                     error_if_singular = TRUE){
 
-  browser()
 
   fit <- lm(formula_mean, data,
             singular.ok = !error_if_singular)
