@@ -807,6 +807,9 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
   fit <- lm(formula_mean, data,
             singular.ok = !error_if_singular)
 
+  means <- summary(fit)$coef[,"Estimate"]
+  names(means) <- paste0("mean_", names(means))
+
 
   if(is.null(sd_groups)){
 
@@ -819,6 +822,13 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
     ses <- log(sqrt(diag(vce)))
 
 
+    # Standard errors in the standard error. Accuracy of this is not super important
+    # as it only slighly influences the strength of regularization and nothing else.
+    # Result is delta approximation for log(standard devitation)
+    replicates <- colSums(X)
+    se_logses <- 1/sqrt(2*replicates - 1)
+    names(se_logses) <- paste0("se_logse_", names(se_logses))
+
     # Get average coverage for regression model
     coverage <- rep(log10(mean(data[[coverage_col]])),
                     times = length(ses))
@@ -827,7 +837,8 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
     names(coverage) <- paste0("coverage_", names(ses))
     names(ses) <- paste0("logse_", names(ses))
 
-    estimates <- c(summary(fit)$coef[,"Estimate"], ses, log10(coverage))
+    estimates <- c(means,
+                   ses, log10(coverage), se_logses)
 
   }else{
 
@@ -844,14 +855,23 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
     ses <- log(sqrt(diag(vce)))
     names(ses) <- paste0("logse_", names(ses))
 
+    # Standard errors in the standard error. Accuracy of this is not super important
+    # as it only slighly influences the strength of regularization and nothing else.
+    # Result is delta approximation for log(standard devitation)
+    replicates <- colSums(X)
+    se_logses <- 1/sqrt(2*replicates - 1)
+    names(se_logses) <- paste0("se_logse_", names(se_logses))
+
 
     # Idea: Average coverages over group presence in each's parameter column of design
     # matrix.
     coverages <- t(X) %*% matrix(sds$group_coverage, nrow = nrow(data))
-    coverages <- coverages / rowSums(t(X))
+    coverages <- coverages / replicates
     rownames(coverages) <- paste0("coverage_", rownames(coverages))
 
-    estimates <- c(summary(fit)$coef[,"Estimate"], ses, log10(coverages[,1]))
+    estimates <- c(means, ses,
+                   log10(coverages[,1]),
+                   se_logses)
 
   }
 
