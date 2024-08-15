@@ -123,6 +123,12 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
   # metadf for covariates
   metadf <- obj$metadf
 
+
+  # Which samples need to get filtered out
+  mcols <- colnames(metadf)
+  tl_cols <- mcols[grepl("^tl", mcols) | grepl("^tpulse", mcols)]
+
+
   ### Figure out which table to use
 
 
@@ -160,10 +166,6 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                         by = c("sample", features_to_analyze)) %>%
       dplyr::mutate(log_normalized_reads = log10(normalized_reads))
 
-
-    # Which samples need to get filtered out
-    mcols <- colnames(metadf)
-    tl_cols <- mcols[grepl("^tl", mcols) | grepl("^tpulse", mcols)]
 
     samples_with_no_label <- metadf %>%
       dplyr::rowwise() %>%
@@ -203,27 +205,43 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
   formula_mean <- stats::as.formula(paste0(paste(c(parameter, formula_mean), collapse = ""), "-1"))
 
 
-  if(is.null(formula_sd)){
+  ### Check to see if simple averaging is compatible with specified model
 
-    # Add kinetic parameter column to formula\
-    condition_vars <- colnames(metadf)[!grepl("tl", colnames(metadf)) &
-                                         (colnames(metadf) != "sample")]
+  X <- model.matrix(formula_mean,
+                    metadf  %>%
+                      dplyr::rowwise() %>%
+                      dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) == 0)))
+
+  if(is.null(sd_grouping_factors)){
 
 
-    formula_sd <- stats::as.formula(paste0("~", paste(condition_vars, collapse = "+")))
+    # If there is a clean parameter to sample mapping, we can infer
+    # sd_grouping_factors
+    if(all(rowSums(X) == 1)){
+
+      variables <- all.vars(formula_mean)
+      sd_grouping_factors <- variables[2:length(variables)]
+      can_simply_average <- TRUE
+
+    }
+
+  }else{
+
+    # Easiest case to accommodate is if sd_grouping factors was set to all of
+    # the factors in formula_mean and formula_mean permits simple averaging.
+    # Could also accommodate case where sd_grouping_factors are distinct from
+    # formula_mean factors, but won't worry about that for now as it would be
+    # a weird decision for a user to seek out anyway.
+    variables <- all.vars(formula_mean)
+    variables <- variables[2:length(variables)]
+    can_simply_average <- identical(sd_grouping_factors, variables) &
+      all(rowSums(X) == 1)
 
   }
-
-  formula_reads <- stats::as.formula(paste0(paste(c("log_normalized_reads", formula_sd), collapse = ""), "-1"))
-
-
-  formula_sd <- stats::as.formula(paste0(paste(c(parameter, formula_sd), collapse = ""), "-1"))
 
 
 
   ### Fit linear, potentially heteroskedastic model
-  meta_cols <- colnames(metadf)
-  tl_cols <- meta_cols[grepl("^tl", meta_cols)]
 
   # Add covariates to kinetics
   kinetics <- kinetics %>%
@@ -252,15 +270,12 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
   ### Need to cover for edge case where there are single level factors
   single_level_mean <- checkSingleLevelFactors(kinetics,
                                                formula_mean)
-  single_level_sd <- checkSingleLevelFactors(kinetics,
-                                             formula_sd)
-
 
 
   message("Fitting linear model")
   if(single_level_mean | single_level_sd){
 
-    if(length(all.vars(formula_mean)) != 2 | length(all.vars(formula_sd)) != 2 ){
+    if(length(all.vars(formula_mean)) != 2 ){
 
       stop("You have specified a multi-covariate model where one or more of the covariates
            has a single level. The mean and standard deviations of all of the groups
@@ -287,17 +302,18 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
   }else{
 
     ### If there is only one element of formula, then just do simple averaging.
-    ### Else, will have to estimate maximum likelihood parameters
+    ### Else, will have to run lm()
     mean_vars <- all.vars(formula_mean)
-    sd_vars <- all.vars(formula_sd)
+    sd_vars <- sd_grouping_factors
 
-    median_uncert <- median(kinetics[[parameter_se]])
+    # median_uncert <- median(kinetics[[parameter_se]])
 
-    if(length(mean_vars) == 2 & length(sd_vars) == 2 & !force_optim){
+    if(can_simply_average & !force_optim){
+
 
       # It's much faster this way
       model_fit <- kinetics %>%
-        dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2:length(mean_vars)], features_to_analyze)))) %>%
         dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
                          logsd = log(stats::sd(!!dplyr::sym(parameter)) ),
                          logsd_from_uncert = log(mean(!!dplyr::sym(parameter_se))),
@@ -313,81 +329,34 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
         dplyr::select(-logsd_from_uncert) %>%
         dplyr::mutate(se_mean = exp(logsd)/sqrt(replicates),
                       se_logse = 1/sqrt(2*(replicates - 1)),
-                      logse = log(exp(logsd)/sqrt(replicates))) %>%
-        dplyr::select(-replicates, -logsd) %>%
-        tidyr::pivot_wider(names_from = !!mean_vars[2],
-                           values_from = c(mean, logse, coverage, se_mean, se_logse),
-                           names_sep = paste0("_", mean_vars[2]))
+                      logse = log(exp(logsd)/sqrt(replicates)))
+
+      # Only two possibilities: you have exclusively interaction terms
+      # or you have a single independent variable
+      if(length(mean_vars) == 2){
+
+        model_fit <- model_fit %>%
+          dplyr::select(-replicates, -logsd) %>%
+          tidyr::pivot_wider(names_from = !!mean_vars[2],
+                             values_from = c(mean, logse, coverage, se_mean, se_logse),
+                             names_sep = paste0("_", mean_vars[2]))
 
 
-    }else if(length(mean_vars) == 2 & length(sd_vars) == 1 & !force_optim){
-
-      # It's faster this way
-      # Bit tricky as you have to:
-      # 1) Estimate mean of sd in each group
-      # 2) Average sd across groups
-      # Can't just do sd across all groups, as this will be a function of both
-      # replicate variability and difference across groups. So will overestimate sd.
-      # 3) Calculate se of sd based on number of replicates across all groups
-      # 4) Calculate se of mean based on number of replicates within a group
-      model_fit <- kinetics %>%
-        dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
-        dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
-                         logsd = log(stats::sd(!!dplyr::sym(parameter)) ), # Lower MSE estimator
-                         coverage = mean(coverage),
-                         se_logsd = mean(se_logsd)) %>%
-        dplyr::group_by(dplyr::across(dplyr::all_of(c(features_to_analyze)))) %>%
-        dplyr::mutate(logsd = mean(logsd),
-                      logsd_from_uncert = log(mean(!!dplyr::sym(parameter_se))),
-                      coverage = mean(log_normalized_reads)) %>%
-        dplyr::mutate(logsd = log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(dplyr::n()))) %>%
-        # dplyr::mutate(logsd = dplyr::case_when(
-        #   logsd < logsd_from_uncert & logsd_from_uncert < median_uncert ~ log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(dplyr::n())),
-        #   .default = log(exp(logsd) + 0.025 / sqrt(dplyr::n()))
-        #   )) %>%
-        dplyr::select(-logsd_from_uncert) %>%
-        dplyr::mutate(se_logse = 1/sqrt(2*(dplyr::n() - 1))) %>%
-        dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2], features_to_analyze)))) %>%
-        dplyr::mutate(se_mean = exp(logsd)/sqrt(dplyr::n()),
-                      logse = log(exp(logsd)/sqrt(dplyr::n()))) %>%
-        dplyr::select(-logsd) %>%
-        tidyr::pivot_wider(names_from = !!mean_vars[2],
-                           values_from = c(mean, logse, coverage, se_mean, se_logse),
-                           names_sep = paste0("_", mean_vars[2]))
-
-    }else if(interaction_only(formula_mean) & interaction_only(formula_sd) & length(mean_vars) == length(sd_vars) & !force_optim){
-
-      ### CURRENTLY A SLIGHT OVERSIMPLIFICATION THAT ASSUMES A USER WILL HAVE THE
-      ### SAME MEAN AND SD FORMULAS
-
-      # It's much faster this way
-      model_fit <- kinetics %>%
-        dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2:length(mean_vars)], features_to_analyze)))) %>%
-        dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
-                         logsd = log(stats::sd(!!dplyr::sym(parameter)) ),
-                         logsd_from_uncert = log(mean(!!dplyr::sym(parameter_se))),
-                         coverage = mean(log_normalized_reads),
-                         replicates = dplyr::n()) %>%
-        dplyr::mutate(logsd = log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(replicates))) %>%
-        # dplyr::mutate(logsd = dplyr::case_when(
-        #   logsd < logsd_from_uncert & logsd_from_uncert < median_uncert ~ log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(replicates)),
-        #   .default = log(exp(logsd) + 0.025/sqrt(replicates))
-        # )) %>%
-        dplyr::select(-logsd_from_uncert) %>%
-        dplyr::mutate(logse = log(exp(logsd)/sqrt(replicates)),
-                      se_mean = exp(logsd)/sqrt(replicates),
-                      se_logse = 1/sqrt(2*(replicates - 1)) ) %>%
-        dplyr::select(-replicates, -logsd) %>%
-        tidyr::pivot_wider(names_from = !!mean_vars[2:length(mean_vars)],
-                           values_from = c(mean, logse, coverage, se_mean, se_logse),
-                           names_glue = paste0("{.value}_", paste(paste0(mean_vars[2:length(mean_vars)],
-                                                                         "{", mean_vars[2:length(mean_vars)],"}"),
-                                                                  collapse = ":") ))
-
-    }
-    else{
+      }else{
 
 
+        model_fit <- model_fit %>%
+          tidyr::pivot_wider(names_from = !!mean_vars[2:length(mean_vars)],
+                             values_from = c(mean, logse, coverage, se_mean, se_logse),
+                             names_glue = paste0("{.value}_", paste(paste0(mean_vars[2:length(mean_vars)],
+                                                                           "{", mean_vars[2:length(mean_vars)],"}"),
+                                                                    collapse = ":") ))
+
+      }
+
+
+
+    }else{
 
 
       parameter_se_col <- paste0("se_", parameter)
