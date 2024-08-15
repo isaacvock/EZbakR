@@ -756,7 +756,7 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
   if(strategy == "contrast"){
 
     ref_mean <- paste0("mean_", design_factor, reference)
-    ref_sd <- paste0("sd_", design_factor, design_factor, "_posterior")
+    ref_sd <- paste0("sd_", design_factor, reference, "_posterior")
     ref_cov <- paste0("coverage_", design_factor, reference)
 
     exp_mean <- paste0("mean_", design_factor, experimental)
@@ -824,8 +824,8 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
   if(missing(param_name)){
     param_name <- NULL
   }
-  if(missing(design_factor)){
-    design_factor <- NULL
+  if(missing(param_function)){
+    param_function <- NULL
   }
 
 
