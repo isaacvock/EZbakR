@@ -57,6 +57,7 @@
 <span>  grouping_factor <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  reference_factor <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  character_limit <span class="op">=</span> <span class="fl">20</span>,</span>
+<span>  feature_lengths <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -140,6 +141,12 @@ for each sample? This should have values that match those in <code>grouping_fact
 will try to name this as a "_" separated character vector of all of the features analyzed.
 If this name is greater than <code>character_limit</code>, then it will default to "fraction#", where
 "#" represents a simple numerical ID for the table.</p></dd>
+
+
+<dt id="arg-feature-lengths">feature_lengths<a class="anchor" aria-label="anchor" href="#arg-feature-lengths"></a></dt>
+<dd><p>Table of effective lengths for each feature combination in your
+data. For example, if your analysis includes features named GF and XF, this
+should be a data frame with columns GF, XF, and length.</p></dd>
 
 
 <dt id="arg-overwrite">overwrite<a class="anchor" aria-label="anchor" href="#arg-overwrite"></a></dt>

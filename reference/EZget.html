@@ -65,6 +65,7 @@
 <span>  sub_features <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  grouping_features <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  sample_feature <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  modeled_to_measured <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  graph <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  returnNameOnly <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  exactMatch <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -167,6 +168,12 @@ when running <code><a href="EZDynamics.html">EZDynamics()</a></code>.</p></dd>
 <dd><p>Only relevant if type == "dynamics". Name of the metadf
 column that distinguished the different classes of samples when running
 <code><a href="EZDynamics.html">EZDynamics()</a></code>.</p></dd>
+
+
+<dt id="arg-modeled-to-measured">modeled_to_measured<a class="anchor" aria-label="anchor" href="#arg-modeled-to-measured"></a></dt>
+<dd><p>Only relevant if type == "dynamics". Specifies
+the relationship between <code>sub_features</code>, <code>sample_feature</code> (if specified),
+and the species in <code>graph</code>.</p></dd>
 
 
 <dt id="arg-graph">graph<a class="anchor" aria-label="anchor" href="#arg-graph"></a></dt>

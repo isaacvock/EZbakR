@@ -66,6 +66,7 @@ involves assaying different species in different samples).</p>
 <span>  <span class="va">graph</span>,</span>
 <span>  <span class="va">sub_features</span>,</span>
 <span>  <span class="va">grouping_features</span>,</span>
+<span>  scale_factors <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  sample_feature <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  modeled_to_measured <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  parameter_names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"k"</span>, <span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">graph</span><span class="op">)</span><span class="op">)</span>,</span>
@@ -79,6 +80,7 @@ involves assaying different species in different samples).</p>
 <span>  sd_vars <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  repeatID <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  exactMatch <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  lengths <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -124,6 +126,14 @@ columns corresponding to full-gene assignments, as well as any higher order
 assignments (e.g., chromosome). A <code>sub_feature</code> can be included in <code>grouping_features</code>
 if it never has the value of <code>unassigned_name</code> ("__no_feature" by default). Only
 one <code>sub_feature</code> should ever fulfill this criterion though.</p></dd>
+
+
+<dt id="arg-scale-factors">scale_factors<a class="anchor" aria-label="anchor" href="#arg-scale-factors"></a></dt>
+<dd><p>Data frame mapping samples to factors by which to multiply
+read counts so as ensure proper normalization between different RNA populations.
+Only relevant if you are modeling relationships between distinct RNA populations,
+for example RNA from nuclear and cytoplasmic fractions. Will eventually be inferred
+automatically.</p></dd>
 
 
 <dt id="arg-sample-feature">sample_feature<a class="anchor" aria-label="anchor" href="#arg-sample-feature"></a></dt>
@@ -226,6 +236,12 @@ then this is the numerical index by which they are distinguished.</p></dd>
 those for a given fractions table for that table to be used. Means that you can't
 specify a subset of features or populations by default, since this is TRUE
 by default.</p></dd>
+
+
+<dt id="arg-lengths">lengths<a class="anchor" aria-label="anchor" href="#arg-lengths"></a></dt>
+<dd><p>Table of effective lengths for each feature combination in your
+data. For example, if your analysis includes features named GF and XF, this
+should be a data frame with columns GF, XF, and length.</p></dd>
 
 
 <dt id="arg-overwrite">overwrite<a class="anchor" aria-label="anchor" href="#arg-overwrite"></a></dt>
