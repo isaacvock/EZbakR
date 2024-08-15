@@ -27,13 +27,22 @@ CompareParameters(
 which \code{AverageAndRegularize()} has been run.}
 
 \item{design_factor}{Name of factor from \code{metadf} whose parameter estimates at
-different factor values you would like to compare.}
+different factor values you would like to compare. If you specify this, you need
+to also specify \code{reference} and \code{experimental}.}
 
 \item{reference}{Name of reference \code{condition} factor level value. Difference
 will be calculated as \code{experimental} - \code{reference}.}
 
 \item{experimental}{Name of \code{condition} factor level value to compare to reference.
 Difference will be calculated as \code{experimental} - \code{reference}.}
+
+\item{param_name}{If you want to assess the significance of a single parameter,
+rather than the comparison of two parameters, specify that one parameter's name
+here.}
+
+\item{param_function}{NOT YET IMPLEMENTED. Will allow you to specify more complicated
+functions of parameters when hypotheses you need to test are combinations of parameters
+rather than individual parameters or simple differences in two parameters.}
 
 \item{condition}{Same as \code{design_factor}, will be deprecated in favor of the
 former in later release.}

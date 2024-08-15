@@ -651,11 +651,18 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 #' @param obj An `EZbakRFit` object, which is an `EZbakRFractions` object on
 #' which `AverageAndRegularize()` has been run.
 #' @param design_factor Name of factor from `metadf` whose parameter estimates at
-#' different factor values you would like to compare.
+#' different factor values you would like to compare. If you specify this, you need
+#' to also specify `reference` and `experimental`.
 #' @param reference Name of reference `condition` factor level value. Difference
 #' will be calculated as `experimental` - `reference`.
 #' @param experimental Name of `condition` factor level value to compare to reference.
 #' Difference will be calculated as `experimental` - `reference`.
+#' @param param_name If you want to assess the significance of a single parameter,
+#' rather than the comparison of two parameters, specify that one parameter's name
+#' here.
+#' @param param_function NOT YET IMPLEMENTED. Will allow you to specify more complicated
+#' functions of parameters when hypotheses you need to test are combinations of parameters
+#' rather than individual parameters or simple differences in two parameters.
 #' @param condition Same as `design_factor`, will be deprecated in favor of the
 #' former in later release.
 #' @param features Character vector of the set of features you want to stratify
