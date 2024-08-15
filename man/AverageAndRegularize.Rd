@@ -15,20 +15,22 @@ AverageAndRegularize(
   exactMatch = TRUE,
   repeatID = NULL,
   formula_mean = NULL,
-  formula_sd = NULL,
+  sd_grouping_factors = NULL,
   include_all_parameters = TRUE,
   sd_reg_factor = 10,
   error_if_singular = TRUE,
   min_reads = 10,
-  force_optim = FALSE,
+  force_lm = FALSE,
+  force_optim = force_lm,
   conservative = FALSE,
   character_limit = 20,
+  feature_lengths = NULL,
   overwrite = TRUE
 )
 }
 \arguments{
-\item{obj}{An \code{EZbakRFractions} object, which is an \code{EZbakRData} object on
-which \code{EstimateFractions()} has been run.}
+\item{obj}{An \code{EZbakRFractions} or \code{EZbakRKinetics} object, which is an \code{EZbakRData} object on
+which \code{EstimateFractions()} or \code{EstimateKinetics()} has been run.}
 
 \item{features}{Character vector of the set of features you want to stratify
 reads by and estimate proportions of each RNA population. The default of "all"
@@ -59,14 +61,19 @@ set of samples with the same value for \code{treatment} in the metadf. \code{~ t
 that an average value of \code{parameter} should be estimated for each set of samples with the same
 combination of \code{treatment} and \code{duration} values in the metadf. An example of the latter
 case is a situation where you have two or more treatments (e.g., drug treated and untreated control)
-which were applied for different durations of time (e.g., 4 and 8 hours).}
+which were applied for different durations of time (e.g., 4 and 8 hours).
 
-\item{formula_sd}{Same as \code{formula_mean}, but this time specifying how the variance
-in the replicate estimates of \code{parameter} depends on the sample characteristics specified
-in \code{obj}'s metadf. Unlike standard linear modeling, this allows you to specify
-a heteroskedastic model. I suggest allowing a \code{parameter}'s variance to depend on
-the "treatment" condition, as changes in relative RNA abundance can impact \code{parameter} variance,
-so differential expression caused by your "treatment" could impact \code{parameter} variance.}
+NOTE: EZbakR automatically removes any intercept terms from the model. That way,
+there is no ambiguity about what parameter is defined as the reference.}
+
+\item{sd_grouping_factors}{What metadf columns should data be grouped by when estimating
+standard deviations across replicates? If this is NULL, then EZbakR will check to see
+if the \code{formula_mean} specifies a formula that cleanly stratifies samples into disjoint
+groups. For example, the formula \code{~ treatment} will assign each sample to a single factor
+(its value for the metadf's \code{treatment} column). In this case, standard deviations can
+be calculated for sets of replicates in each \code{treatment} group. If such a stratification
+does not exist, a single standard deviation will be estimated for each feature (i.e.,
+homoskedasticity will be assumed as in standard linear modeling).}
 
 \item{include_all_parameters}{If TRUE, an additional table will be saved with the prefix \code{fullfit_},
 which includes all of the parameters estimated throughout the course of linear modeling and
@@ -84,8 +91,14 @@ all treatment Bs correspond to batch Bs).}
 
 \item{min_reads}{Minimum number of reads in all samples for a feature to be kept.}
 
-\item{force_optim}{Perform numerical likelihood estimation, even if a more efficient,
-approximate, analytical strategy is possible given \code{formula_mean} and \code{formula_sd}.}
+\item{force_lm}{Certain formula lend them selves to efficient approximations of the
+full call to \code{lm()}. Namely, formulas that stratify samples into disjoint groups where
+a single parameter of the model is effectively estimated from each group can be tackled
+via simple averaging of data from each from group. If you would like to force EZbakR
+to fit the fully rigorous linear model though, set \code{force_lm} to \code{TRUE}.}
+
+\item{force_optim}{Old parameter that is now passed the value \code{force_lm} and will be
+deprecated in later releases}
 
 \item{conservative}{If TRUE, conservative variance regularation will be performed.
 In this case, variances below the trend will be regularized up to the trend, and
@@ -96,18 +109,17 @@ of variances.}
 output table. Will attempt to concatenate the parameter name with the names of all
 of the features. If this is too long, only the parameter name will be used.}
 
+\item{feature_lengths}{Table of effective lengths for each feature combination in your
+data. For example, if your analysis includes features named GF and XF, this
+should be a data frame with columns GF, XF, and length.}
+
 \item{overwrite}{If TRUE, identical, existing output will be overwritten.}
 }
 \description{
-\code{AverageAndRegularize} uses a linear model to average estimates of a parameter
-of interest over replicates, and to get averages for all of a set of conditions
-specified by the user. This specification is done through formulas that will
-be used to create a design matrix for parameters to estimate. Currently,
-some design matrices will yield much longer runtimes than others. This is due
-to some design matrices necessitating numerically estimating a set of maximum
-likelihood parameters, while others yield simple, analytic approximations that
-are quick to calculate. For example, formulas such as \code{~ treatment} or
-\code{~ treatment:duration} will be quick to fit, and formulas such as
-\code{~ treatment + batch} are currently much slower to fit. This will eventually
-be remedied through approximation of the solution to all full models.
+\code{AverageAndRegularize} fits a generalized linear model to your data to effectively
+average parameter estimates across replicates and get overall uncertainty estimates
+for those parameters. The linear model to which your data is fit is specified via
+an R formula object supplied to the \code{formula_mean} parameter. Uncertainty estimates
+are regularized via a hierarchical modeling strategy originally introduced with
+bakR, though slightly improved upon since then.
 }

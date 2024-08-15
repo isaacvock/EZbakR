@@ -42,6 +42,11 @@
 #' assignments (e.g., chromosome). A `sub_feature` can be included in `grouping_features`
 #' if it never has the value of `unassigned_name` ("__no_feature" by default). Only
 #' one `sub_feature` should ever fulfill this criterion though.
+#' @param scale_factors Data frame mapping samples to factors by which to multiply
+#' read counts so as ensure proper normalization between different RNA populations.
+#' Only relevant if you are modeling relationships between distinct RNA populations,
+#' for example RNA from nuclear and cytoplasmic fractions. Will eventually be inferred
+#' automatically.
 #' @param sample_feature If different samples involve assaying different species,
 #' this must be the name of the metadf column that distinguishes the different
 #' classes of samples. For example, if analyzing a subcellular fractionation
@@ -107,17 +112,22 @@
 #' those for a given fractions table for that table to be used. Means that you can't
 #' specify a subset of features or populations by default, since this is TRUE
 #' by default.
+#' @param lengths Table of effective lengths for each feature combination in your
+#' data. For example, if your analysis includes features named GF and XF, this
+#' should be a data frame with columns GF, XF, and length.
 #' @param overwrite If TRUE and a fractions estimate output already exists that
 #' would possess the same metadata (features analyzed, populations analyzed,
 #' and fraction_design), then it will get overwritten with the new output. Else,
 #' it will be saved as a separate output with the same name + "_#" where "#" is a
 #' numerical ID to distinguish the similar outputs.
 #' @importFrom magrittr %>%
+#' @import data.table
 #' @export
 EZDynamics <- function(obj,
                      graph,
                      sub_features,
                      grouping_features,
+                     scale_factors = NULL,
                      sample_feature = NULL,
                      modeled_to_measured = NULL,
                      parameter_names = paste0("k", 1:max(graph)),
@@ -131,6 +141,7 @@ EZDynamics <- function(obj,
                      sd_vars = NULL,
                      repeatID = NULL,
                      exactMatch = TRUE,
+                     lengths = NULL,
                      overwrite = TRUE){
 
   ##### ORDER OF OPERATIONS
@@ -172,6 +183,20 @@ EZDynamics <- function(obj,
 
   if(length(table_name) > 1){
     stop("More than one table matches your search criterion!")
+  }else if(is.null(table_name)){
+    if(type == "fractions"){
+
+      stop("No table matches your search criterion! Have you run EstimateFraction() yet?")
+
+    }else if (type == "averages"){
+
+      stop("No table matches your search criterion! Have you run AverageAndRegularize() yet?")
+
+    }else{
+
+      stop("type must be 'averages' or 'fractions'!")
+
+    }
   }
 
   table <- obj[[type]][[table_name]]
@@ -189,6 +214,7 @@ EZDynamics <- function(obj,
     # Need to remove _posterior suffix (maybe shouldn't be there at all?)
     # to make general pivoting strategy work
     colnames(table) <- gsub("_posterior$", "", colnames(table))
+
 
     # Tidy data!
     tidy_avgs <- table %>%
@@ -253,7 +279,7 @@ EZDynamics <- function(obj,
       dplyr::select(!!sub_features) %>%
       as.matrix()
 
-    feature_mat <- feature_mat == unassigned_name
+    feature_mat <- feature_mat != unassigned_name
 
     # Are any species always assigned?
     fm_cols <- colnames(feature_mat)
@@ -279,7 +305,7 @@ EZDynamics <- function(obj,
     measured_species <- apply(feature_mat, 1, function(row) {
 
 
-      valid_cols <- sometimes_assigned[!row[!(fm_cols %in% always_assigned)]]
+      valid_cols <- sometimes_assigned[row[!(fm_cols %in% always_assigned)]]
 
       if(length(valid_cols) > 0){
 
@@ -296,32 +322,78 @@ EZDynamics <- function(obj,
     tidy_avgs$measured_specie <- measured_species
 
 
+
     # Fit model
     cols_to_group_by <- c(grouping_features,
                        pivot_columns[!(pivot_columns %in% c("tl", sample_feature))])
 
 
-    dynfit <- tidy_avgs  %>%
-      dplyr::mutate(tl = as.numeric(tl)) %>%
-      dplyr::inner_join(reps,
-                        by = meta_groups) %>%
-      dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group_by))) %>%
-      dplyr::summarise(fit = list(I(stats::optim(starting_values,
-                                          fn = dynamics_likelihood,
-                                          graph = graph,
-                                          formula_list = modeled_to_measured,
-                                          logit_fn = mean,
-                                          logit_fn_sd = sd,
-                                          coverage = coverage,
-                                          nreps = nreps,
-                                          tls = as.numeric(tl),
-                                          sample_features = !!dplyr::sym(sample_feature),
-                                          feature_types = measured_specie,
-                                          lower = lower_bounds,
-                                          upper = upper_bounds,
-                                          method = "L-BFGS-B",
-                                          hessian = TRUE,
-                                          use_coverage = TRUE))))
+    # Filter out features that don't have all measured species
+    nspecies <- length(unique(measured_species))
+
+
+    tidy_avgs <- tidy_avgs %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(c(cols_to_group_by, "tl")))) %>%
+      dplyr::filter(dplyr::n() >= (nrow(graph) - 1)) %>%
+      dplyr::ungroup()
+
+
+    if(is.null(scale_factors)){
+
+      dynfit <- tidy_avgs  %>%
+        dplyr::mutate(tl = as.numeric(tl)) %>%
+        dplyr::inner_join(reps,
+                          by = meta_groups) %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group_by))) %>%
+        dplyr::summarise(fit = list(I(stats::optim(starting_values,
+                                                   fn = dynamics_likelihood,
+                                                   graph = graph,
+                                                   formula_list = modeled_to_measured,
+                                                   logit_fn = mean,
+                                                   logit_fn_sd = sd,
+                                                   coverage = coverage,
+                                                   nreps = nreps,
+                                                   tls = as.numeric(tl),
+                                                   sample_features = !!dplyr::sym(sample_feature),
+                                                   feature_types = measured_specie,
+                                                   lower = lower_bounds,
+                                                   upper = upper_bounds,
+                                                   scale_factor = 1,
+                                                   method = "L-BFGS-B",
+                                                   hessian = TRUE,
+                                                   use_coverage = TRUE))))
+
+    }else{
+
+      scale_column <- colnames(scale_factors)
+      scale_column <- scale_column[scale_column != sample_feature]
+
+      dynfit <- tidy_avgs  %>%
+        dplyr::inner_join(scale_factors, by = sample_feature) %>%
+        dplyr::mutate(tl = as.numeric(tl)) %>%
+        dplyr::inner_join(reps,
+                          by = meta_groups) %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group_by))) %>%
+        dplyr::summarise(fit = list(I(stats::optim(starting_values,
+                                                   fn = dynamics_likelihood,
+                                                   graph = graph,
+                                                   formula_list = modeled_to_measured,
+                                                   logit_fn = mean,
+                                                   logit_fn_sd = sd,
+                                                   coverage = coverage,
+                                                   nreps = nreps,
+                                                   tls = as.numeric(tl),
+                                                   scale_factor = !!dplyr::sym(scale_column),
+                                                   sample_features = !!dplyr::sym(sample_feature),
+                                                   feature_types = measured_specie,
+                                                   lower = lower_bounds,
+                                                   upper = upper_bounds,
+                                                   method = "L-BFGS-B",
+                                                   hessian = TRUE,
+                                                   use_coverage = TRUE))))
+
+    }
+
 
 
     # Get parameter estimates and uncertainties
@@ -354,7 +426,7 @@ EZDynamics <- function(obj,
     fraction_cols <- colnames(table)
 
     fraction_of_interest <- fraction_cols[grepl("^logit_fraction_high", fraction_cols)]
-    fractionse <- fraction_cols[grepl("^se_logit_fraction_high", fraction_cols)]
+    fraction_se <- fraction_cols[grepl("^se_logit_fraction_high", fraction_cols)]
 
 
     ### Normalize read counts
@@ -363,17 +435,18 @@ EZDynamics <- function(obj,
     # TO-DO: ALLOW USERS TO JUST USE THE TPM FROM ISOFORM QUANTIFICATION
     reads_norm <- get_normalized_read_counts(obj = obj,
                                              features_to_analyze = features_to_analyze,
-                                             fractions_name = table_name)
+                                             fractions_name = table_name,
+                                             lengths = lengths)
 
 
     ### Prep tables for kinetic parameter estimation
 
-    kinetics <- setDT(data.table::copy(table))
+    kinetics <- data.table::setDT(data.table::copy(table))
 
     # Add label time info
     metadf <- obj$metadf
 
-    metadf <- setDT(data.table::copy(metadf))
+    metadf <- data.table::setDT(data.table::copy(metadf))
     setkey(metadf, sample)
     setkey(kinetics, sample)
 
@@ -388,7 +461,7 @@ EZDynamics <- function(obj,
       dplyr::select(!!sub_features) %>%
       as.matrix()
 
-    feature_mat <- feature_mat == unassigned_name
+    feature_mat <- feature_mat != unassigned_name
 
     # Are any species always assigned?
     fm_cols <- colnames(feature_mat)
@@ -414,7 +487,7 @@ EZDynamics <- function(obj,
     measured_species <- apply(feature_mat, 1, function(row) {
 
 
-      valid_cols <- sometimes_assigned[!row[!(fm_cols %in% always_assigned)]]
+      valid_cols <- sometimes_assigned[row[!(fm_cols %in% always_assigned)]]
 
       if(length(valid_cols) > 0){
 
@@ -427,7 +500,6 @@ EZDynamics <- function(obj,
       }
 
     })
-
     kinetics$measured_specie <- measured_species
 
 
@@ -485,22 +557,22 @@ EZDynamics <- function(obj,
                        )
 
 
+
     # Get parameter estimates and uncertainties
+    fits <- dynfit$fit
     for(n in 1:npars){
 
       par_name <- parameter_names[n]
       par_se_name <- paste0(par_name, "_se")
 
-      dynfit <- dynfit %>% dplyr::mutate(
-        !!par_name := purrr::map_dbl(fit, ~ .x$par[n]),
-        !!par_se_name := tryCatch(
-          {
-            purrr::map_dbl(fit, ~ sqrt(diag(solve(.x$hessian)))[n])
-          },
-          error = function(e) {
-            Inf
-          }
-        ),
+      dynfit[[par_name]] <- purrr::map_dbl(fits, ~ .x$par[n])
+      dynfit[[par_se_name]] <- tryCatch(
+        {
+          purrr::map_dbl(fits, ~ sqrt(diag(solve(.x$hessian)))[n])
+        },
+        error = function(e) {
+          Inf
+        }
       )
 
     }
@@ -522,6 +594,7 @@ EZDynamics <- function(obj,
                                  sub_features = sub_features,
                                  grouping_features = grouping_features,
                                  sample_feature = sample_feature,
+                                 modeled_to_measured = modeled_to_measured,
                                  graph = graph, parameter = parameter,
                                  mean_vars = mean_vars, sd_vars = sd_vars)
 
@@ -538,6 +611,7 @@ EZDynamics <- function(obj,
                                sub_features = sub_features,
                                grouping_features = grouping_features,
                                sample_feature = sample_feature,
+                               modeled_to_measured = modeled_to_measured,
                                graph = graph, parameter = parameter,
                                mean_vars = mean_vars, sd_vars = sd_vars,
                                returnNameOnly = TRUE,
@@ -557,6 +631,7 @@ EZDynamics <- function(obj,
                                                          sub_features = sub_features,
                                                          grouping_features = grouping_features,
                                                          sample_feature = sample_feature,
+                                                         modeled_to_measured = modeled_to_measured,
                                                          graph = graph, parameter = parameter,
                                                          mean_vars = mean_vars, sd_vars = sd_vars,
                                                          repeatID = repeatID)
@@ -600,9 +675,12 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
                                 use_coverage = TRUE, alt_coverage = FALSE,
                                 coverage_sd = NULL, scale_factor = NULL){
 
+
   ### Step 0, check to see if single replicate of data is being passed
-  if(nreps == 1){
+  if(all(nreps == 1)){
     single_replicate <- TRUE
+  }else{
+    single_replicate <- FALSE
   }
 
 
@@ -690,6 +768,7 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
   )
 
 
+
   ### Step 4 calculate likelihood
   ll <- stats::dnorm(logit_fn,
               logit(all_fns),
@@ -700,10 +779,10 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
     if(alt_coverage){
 
-      all_reads <- all_ss*scale_factor
+      # all_reads <- all_ss*scale_factor
 
       ll <- ll +
-        stats::dnorm(coverage,
+        stats::dnorm(coverage + log10(scale_factor),
                      log10(all_ss),
                      sd = coverage_sd,
                      log = TRUE)
@@ -717,14 +796,15 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
     }else if(single_replicate){
 
       ll <- ll +
-        stats::dpois(coverage,
+        stats::dpois(coverage * scale_factor,
+                     all_ss,
                      log = TRUE)
 
 
     } else{
 
       ll <- ll +
-        stats::dnorm(coverage,
+        stats::dnorm(coverage + log10(scale_factor),
                      log10(all_ss),
                      sqrt((1/((10^coverage)*(log(10)^2))))/sqrt(nreps),
                      log = TRUE)

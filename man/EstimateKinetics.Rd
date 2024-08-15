@@ -15,6 +15,7 @@ EstimateKinetics(
   grouping_factor = NULL,
   reference_factor = NULL,
   character_limit = 20,
+  feature_lengths = NULL,
   overwrite = TRUE
 )
 }
@@ -77,6 +78,10 @@ for each sample? This should have values that match those in \code{grouping_fact
 will try to name this as a "_" separated character vector of all of the features analyzed.
 If this name is greater than \code{character_limit}, then it will default to "fraction#", where
 "#" represents a simple numerical ID for the table.}
+
+\item{feature_lengths}{Table of effective lengths for each feature combination in your
+data. For example, if your analysis includes features named GF and XF, this
+should be a data frame with columns GF, XF, and length.}
 
 \item{overwrite}{If TRUE and a fractions estimate output already exists that
 would possess the same metadata (features analyzed, populations analyzed,

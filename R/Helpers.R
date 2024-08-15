@@ -44,6 +44,9 @@
 #' @param sample_feature Only relevant if type == "dynamics". Name of the metadf
 #' column that distinguished the different classes of samples when running
 #' `EZDynamics()`.
+#' @param modeled_to_measured Only relevant if type == "dynamics". Specifies
+#' the relationship between `sub_features`, `sample_feature` (if specified),
+#' and the species in `graph`.
 #' @param graph Only relevant if type == "dynamics". NxN adjacency matrix,
 #' where N represents the number of species modeled when running `EZDynamics()`.
 #' @param repeatID Numerical ID for duplicate objects with same metadata.
@@ -76,6 +79,7 @@ EZget <- function(obj,
                   sub_features = NULL,
                   grouping_features = NULL,
                   sample_feature = NULL,
+                  modeled_to_measured = NULL,
                   graph = NULL,
                   returnNameOnly = FALSE,
                   exactMatch = FALSE,
@@ -356,6 +360,19 @@ EZget <- function(obj,
 
   }
 
+
+  if(!is.null(modeled_to_measured)){
+
+    possible_tables_mm <- exact_ezsearch(metadata,
+                                        modeled_to_measured,
+                                        "modeled_to_measured")
+
+    possible_tables <- intersect(possible_tables, possible_tables_mm)
+
+
+  }
+
+
   if(!is.null(graph)){
 
     possible_tables_g <- exact_ezsearch(metadata,
@@ -495,6 +512,7 @@ decide_output <- function(obj, proposed_name,
                           sub_features = NULL,
                           grouping_features = NULL,
                           sample_feature = NULL,
+                          modeled_to_measured = NULL,
                           graph = NULL,
                           overwrite = TRUE){
 
@@ -517,6 +535,7 @@ decide_output <- function(obj, proposed_name,
                            sub_features = sub_features,
                            grouping_features = grouping_features,
                            sample_feature = sample_feature,
+                           modeled_to_measured = modeled_to_measured,
                            graph = graph,
                              returnNameOnly = TRUE,
                              exactMatch = TRUE,
@@ -614,10 +633,14 @@ inv_logit <- function(x) exp(x)/(1+exp(x))
 #' @param obj An `EZbakRData` or `EZbakRFractions` object.
 #' @param features_to_analyze Features in relevant table
 #' @param fractions_name Name of fractions table to use
+#' @param feature_lengths Table of effective lengths for each feature combination in your
+#' data. For example, if your analysis includes features named GF and XF, this
+#' should be a data frame with columns GF, XF, and length.
 #' @export
 get_normalized_read_counts <- function(obj,
                                        features_to_analyze,
-                                       fractions_name = NULL){
+                                       fractions_name = NULL,
+                                       feature_lengths = NULL){
 
   UseMethod("get_normalized_read_counts")
 
@@ -630,14 +653,19 @@ get_normalized_read_counts <- function(obj,
 #' @param obj An `EZbakRFractions` object.
 #' @param features_to_analyze Features in relevant table
 #' @param fractions_name Name of fractions table to use
+#' @param feature_lengths Table of effective lengths for each feature combination in your
+#' data. For example, if your analysis includes features named GF and XF, this
+#' should be a data frame with columns GF, XF, and length.
 #' @export
 get_normalized_read_counts.EZbakRFractions <- function(obj,
                                                        features_to_analyze,
-                                                       fractions_name = NULL){
+                                                       fractions_name = NULL,
+                                                       feature_lengths = NULL){
+
 
   reads <- data.table::setDT(data.table::copy(obj[['fractions']][[fractions_name]]))
 
-  reads <- normalize_reads(reads, features_to_analyze)
+  reads <- normalize_reads(reads, features_to_analyze, feature_lengths)
 
   return(reads)
 
@@ -651,10 +679,14 @@ get_normalized_read_counts.EZbakRFractions <- function(obj,
 #' @param obj An `EZbakRData` object.
 #' @param features_to_analyze Features in relevant table
 #' @param fractions_name Name of fractions table to use
+#' @param feature_lengths Table of effective lengths for each feature combination in your
+#' data. For example, if your analysis includes features named GF and XF, this
+#' should be a data frame with columns GF, XF, and length.
 #' @export
 get_normalized_read_counts.default <- function(obj,
                                                features_to_analyze,
-                                               fractions_name = NULL){
+                                               fractions_name = NULL,
+                                               feature_lengths = NULL){
 
   ### Hack to deal with devtools::check() NOTEs
   n <- NULL
@@ -671,13 +703,13 @@ get_normalized_read_counts.default <- function(obj,
 
 
   # Normalize
-  reads <- normalize_reads(reads, features_to_analyze)
+  reads <- normalize_reads(reads, features_to_analyze, feature_lengths)
 
   return(reads)
 
 }
 
-normalize_reads <- function(reads, features_to_analyze){
+normalize_reads <- function(reads, features_to_analyze, feature_lengths){
 
   ### Hack to deal with devtools::check() NOTEs
   geom_mean <- n <- normalized_reads <- scale_factor <- NULL
@@ -693,8 +725,31 @@ normalize_reads <- function(reads, features_to_analyze){
 
   # Normalize read counts
   reads_norm <- reads[scales, nomatch = NULL]
-
   reads_norm[,normalized_reads := n/scale_factor]
+
+
+  # Length normalize if lengths provided
+  if (!is.null(feature_lengths)){
+
+    features <- colnames(feature_lengths)
+    features <- features[features != "length"]
+
+    # Want to filter out 0-length features (e.g., intronless genes)
+    feature_lengths <- data.table::setDT(data.table::copy(feature_lengths))
+    feature_lengths <- feature_lengths[length > 0]
+
+    setkeyv(feature_lengths, features)
+    setkeyv(reads_norm, features)
+    reads_norm <- reads_norm[feature_lengths, nomatch = NULL]
+
+    # Length normalize (and add 1 to length to avoid divide by 0)
+      # TO-DO: Figure out why there would ever be cases of XF __no_feature
+      # and GF some feature for intron-less features
+    reads_norm[, normalized_reads := normalized_reads / (length / 1000)]
+
+
+  }
+
 
   return(reads_norm)
 

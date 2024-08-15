@@ -23,6 +23,7 @@ EZget(
   sub_features = NULL,
   grouping_features = NULL,
   sample_feature = NULL,
+  modeled_to_measured = NULL,
   graph = NULL,
   returnNameOnly = FALSE,
   exactMatch = FALSE,
@@ -86,6 +87,10 @@ when running \code{EZDynamics()}.}
 \item{sample_feature}{Only relevant if type == "dynamics". Name of the metadf
 column that distinguished the different classes of samples when running
 \code{EZDynamics()}.}
+
+\item{modeled_to_measured}{Only relevant if type == "dynamics". Specifies
+the relationship between \code{sub_features}, \code{sample_feature} (if specified),
+and the species in \code{graph}.}
 
 \item{graph}{Only relevant if type == "dynamics". NxN adjacency matrix,
 where N represents the number of species modeled when running \code{EZDynamics()}.}

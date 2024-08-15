@@ -14,7 +14,8 @@ SimulateDynamics(
   unassigned_name = "__no_feature",
   seqdepth = nfeatures * 2500,
   dispersion = 100,
-  lfn_sd = 0.2
+  lfn_sd = 0.2,
+  ...
 )
 }
 \arguments{
@@ -52,6 +53,8 @@ feature-specific parameters will be drawn from.}
 \item{dispersion}{Negative binomial \code{size} parameter to use for simulating read counts}
 
 \item{lfn_sd}{Logit(fn) replicate variability.}
+
+\item{...}{Parameters passed to \code{SimulateOneRep()}.}
 }
 \description{
 \code{SimulateDynamics()} simulates any specified dynamical system of interconverting

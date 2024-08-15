@@ -2142,6 +2142,7 @@ check_SimulateMultiCondition_input <- function(args){
 #' @param seqdepth Total number of reads in each sample.
 #' @param dispersion Negative binomial `size` parameter to use for simulating read counts
 #' @param lfn_sd Logit(fn) replicate variability.
+#' @param ... Parameters passed to `SimulateOneRep()`.
 #' @importFrom magrittr %>%
 #' @export
 SimulateDynamics <- function(nfeatures, graph, metadf,
@@ -2149,7 +2150,8 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
                              log_means, log_sds,
                              unassigned_name = "__no_feature",
                              seqdepth = nfeatures * 2500,
-                             dispersion = 100, lfn_sd = 0.2){
+                             dispersion = 100, lfn_sd = 0.2,
+                             ...){
 
 
   ### Step 0, generate parameters for each feature
@@ -2168,7 +2170,6 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
   # Loop over each feature
   sim_df <- dplyr::tibble()
   for(i in 1:nfeatures){
-
 
     ### Step 1, construct A
     param_extend <- c(0, sapply(param_list, function(x) x[i]))
@@ -2240,6 +2241,7 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
 
     }
 
+
     sample_details <- metadf %>%
       dplyr::select(-tl)
 
@@ -2299,7 +2301,8 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
       simdata <- SimulateOneRep(nfeatures = NF,
                                 read_vect = feature_sim$reads,
                                 fn_vect = feature_sim$fn_rep,
-                                sample_name = sample_name)
+                                sample_name = sample_name,
+                                ...)
 
       cB <- dplyr::bind_rows(cB, simdata$cB %>%
                         dplyr::rename(!!ft := feature))

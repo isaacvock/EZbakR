@@ -9,6 +9,7 @@ EZDynamics(
   graph,
   sub_features,
   grouping_features,
+  scale_factors = NULL,
   sample_feature = NULL,
   modeled_to_measured = NULL,
   parameter_names = paste0("k", 1:max(graph)),
@@ -22,6 +23,7 @@ EZDynamics(
   sd_vars = NULL,
   repeatID = NULL,
   exactMatch = TRUE,
+  lengths = NULL,
   overwrite = TRUE
 )
 }
@@ -57,6 +59,12 @@ columns corresponding to full-gene assignments, as well as any higher order
 assignments (e.g., chromosome). A \code{sub_feature} can be included in \code{grouping_features}
 if it never has the value of \code{unassigned_name} ("__no_feature" by default). Only
 one \code{sub_feature} should ever fulfill this criterion though.}
+
+\item{scale_factors}{Data frame mapping samples to factors by which to multiply
+read counts so as ensure proper normalization between different RNA populations.
+Only relevant if you are modeling relationships between distinct RNA populations,
+for example RNA from nuclear and cytoplasmic fractions. Will eventually be inferred
+automatically.}
 
 \item{sample_feature}{If different samples involve assaying different species,
 this must be the name of the metadf column that distinguishes the different
@@ -135,6 +143,10 @@ then this is the numerical index by which they are distinguished.}
 those for a given fractions table for that table to be used. Means that you can't
 specify a subset of features or populations by default, since this is TRUE
 by default.}
+
+\item{lengths}{Table of effective lengths for each feature combination in your
+data. For example, if your analysis includes features named GF and XF, this
+should be a data frame with columns GF, XF, and length.}
 
 \item{overwrite}{If TRUE and a fractions estimate output already exists that
 would possess the same metadata (features analyzed, populations analyzed,
