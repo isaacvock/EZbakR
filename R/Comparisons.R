@@ -211,7 +211,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                     metadf  %>%
                       dplyr::mutate(!!parameter := 1) %>%
                       dplyr::rowwise() %>%
-                      dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) == 0)))
+                      dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) != 0)))
 
   if(is.null(sd_grouping_factors)){
 
@@ -223,6 +223,10 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
       variables <- all.vars(formula_mean)
       sd_grouping_factors <- variables[2:length(variables)]
       can_simply_average <- TRUE
+
+    }else{
+
+      can_simply_average <- FALSE
 
     }
 
