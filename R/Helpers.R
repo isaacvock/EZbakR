@@ -31,10 +31,11 @@
 #' Therefore, only relevant if type == "comparisons".
 #' @param reference Reference condition specified in relevant run of `CompareParameters()`.
 #' Therefore, only relevant if type == "comparisons".
-#' @param mean_vars Sample features from metadf that were used in formula for
-#' parameter average linear model. Only relevant if type == "averages".
-#' @param sd_vars Sample features from metadf that were used in formula for
-#' parameter standard deviation linear model. Only relevant if type == "averages".
+#' @param formula_mean An R formula object specifying how the `parameter` of interest
+#' depends on the sample characteristics specified in `obj`'s metadf. Therefore,
+#' only relevant if type == "averages".
+#' @param sd_grouping_factors What metadf columns should data be grouped by when estimating
+#' standard deviations across replicates? Therefore, only relevant if type == "averages".
 #' @param sub_features Only relevant if type == "dynamics". Feature columns
 #' that distinguished between the different measured species when running
 #' `EZDynamics()`.
@@ -73,8 +74,8 @@ EZget <- function(obj,
                   condition = NULL,
                   experimental = NULL,
                   reference = NULL,
-                  mean_vars = NULL,
-                  sd_vars = NULL,
+                  formula_mean = NULL,
+                  sd_grouping_factors = NULL,
                   repeatID = NULL,
                   sub_features = NULL,
                   grouping_features = NULL,
@@ -303,31 +304,6 @@ EZget <- function(obj,
   }
 
 
-  if(!is.null(mean_vars)){
-
-    possible_tables_mv <- vector_ezsearch(metadata,
-                                          mean_vars,
-                                          "mean_vars",
-                                          exactMatch = exactMatch)
-
-    possible_tables <- intersect(possible_tables, possible_tables_mv)
-
-
-  }
-
-
-  if(!is.null(sd_vars)){
-
-    possible_tables_sd <- vector_ezsearch(metadata,
-                                          sd_vars,
-                                          "sd_vars",
-                                          exactMatch = exactMatch)
-
-    possible_tables <- intersect(possible_tables, possible_tables_sd)
-
-
-  }
-
   if(!is.null(sub_features)){
 
     possible_tables_sf <- vector_ezsearch(metadata,
@@ -357,6 +333,28 @@ EZget <- function(obj,
                                          "sample_feature")
 
     possible_tables <- intersect(possible_tables, possible_tables_sf)
+
+  }
+
+
+  if(!is.null(formula_mean)){
+
+    possible_tables_fm <- exact_ezsearch(metadata,
+                                         formula_mean,
+                                         "formula_mean")
+
+    possible_tables <- intersect(possible_tables, possible_tables_fm)
+
+  }
+
+  if(!is.null(sd_grouping_factors)){
+
+    possible_tables_sgf <- vector_ezsearch(metadata,
+                                         sd_grouping_factors,
+                                         "sd_grouping_factors",
+                                         exactMatch = exactMatch)
+
+    possible_tables <- intersect(possible_tables, possible_tables_sgf)
 
   }
 
@@ -507,8 +505,8 @@ decide_output <- function(obj, proposed_name,
                           condition = NULL,
                           reference = NULL,
                           experimental = NULL,
-                          mean_vars = NULL,
-                          sd_vars = NULL,
+                          formula_mean = NULL,
+                          sd_grouping_factors = NULL,
                           sub_features = NULL,
                           grouping_features = NULL,
                           sample_feature = NULL,
@@ -530,8 +528,8 @@ decide_output <- function(obj, proposed_name,
                            condition = condition,
                            reference = reference,
                            experimental = experimental,
-                           mean_vars = mean_vars,
-                           sd_vars = sd_vars,
+                           formula_mean = formula_mean,
+                           sd_grouping_factors = sd_grouping_factors,
                            sub_features = sub_features,
                            grouping_features = grouping_features,
                            sample_feature = sample_feature,

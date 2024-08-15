@@ -516,8 +516,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                               type = "averages",
                               features = features_to_analyze,
                               parameter = parameter,
-                              mean_vars = mean_vars[2:length(mean_vars)], # 1st element == parameter
-                              sd_vars = sd_vars[2:length(sd_vars)], # 1st element == parameter
+                              formula_mean = formula_mean,
+                              sd_grouping_factors = sd_grouping_factors,
                               overwrite = overwrite)
 
     # How many identical tables already exist?
@@ -532,8 +532,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                features = features_to_analyze,
                                parameter = parameter,
                                returnNameOnly = TRUE,
-                               mean_vars = mean_vars[2:length(mean_vars)], # 1st element == parameter
-                               sd_vars = sd_vars[2:length(sd_vars)], # 1st element == parameter
+                               formula_mean = formula_mean,
+                               sd_grouping_factors = sd_grouping_factors,
                                exactMatch = TRUE,
                                alwaysCheck = TRUE)) + 1
     }
@@ -551,8 +551,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
   # Save metadata
   obj[['metadata']][['averages']][[avg_vect]] <- list(features = features_to_analyze,
                                                       parameter = parameter,
-                                                      mean_vars = mean_vars[2:length(mean_vars)], # 1st element == parameter
-                                                      sd_vars = sd_vars[2:length(sd_vars)], # 1st element == parameter
+                                                      formula_mean = formula_mean,
+                                                      sd_grouping_factors = sd_grouping_factors,
                                                       repeatID = repeatID)
 
 
