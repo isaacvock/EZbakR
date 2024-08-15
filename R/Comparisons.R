@@ -209,6 +209,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   X <- model.matrix(formula_mean,
                     metadf  %>%
+                      dplyr::mutate(!!parameter := 1) %>%
                       dplyr::rowwise() %>%
                       dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) == 0)))
 
@@ -273,7 +274,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
 
   message("Fitting linear model")
-  if(single_level_mean | single_level_sd){
+  if(single_level_mean){
 
     if(length(all.vars(formula_mean)) != 2 ){
 
