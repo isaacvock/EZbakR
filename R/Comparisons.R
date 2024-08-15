@@ -201,7 +201,6 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   }
 
-
   formula_mean <- stats::as.formula(paste0(paste(c(parameter, formula_mean), collapse = ""), "-1"))
 
 
@@ -507,6 +506,9 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     avg_vect <- paste0("averages", num_avgs + 1)
 
   }
+
+  # Strip formula of environment to ensure easy comparisons via EZget()
+  environment(formula_mean) <- NULL
 
   # Are there any metadata or fractions objects at this point?
   if(length(obj[['metadata']][['averages']]) > 0){
