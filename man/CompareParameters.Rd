@@ -6,14 +6,18 @@
 \usage{
 CompareParameters(
   obj,
-  condition,
+  design_factor,
   reference,
   experimental,
+  param_name,
+  param_function,
+  condition = NULL,
   features = NULL,
   exactMatch = TRUE,
   repeatID = NULL,
-  mean_vars = NULL,
-  sd_vars = NULL,
+  formula_mean = NULL,
+  sd_grouping_factors = NULL,
+  fit_params = NULL,
   overwrite = TRUE,
   parameter = "log_kdeg"
 )
@@ -22,7 +26,7 @@ CompareParameters(
 \item{obj}{An \code{EZbakRFit} object, which is an \code{EZbakRFractions} object on
 which \code{AverageAndRegularize()} has been run.}
 
-\item{condition}{Name of factor from \code{metadf} whose parameter estimates at
+\item{design_factor}{Name of factor from \code{metadf} whose parameter estimates at
 different factor values you would like to compare.}
 
 \item{reference}{Name of reference \code{condition} factor level value. Difference
@@ -30,6 +34,9 @@ will be calculated as \code{experimental} - \code{reference}.}
 
 \item{experimental}{Name of \code{condition} factor level value to compare to reference.
 Difference will be calculated as \code{experimental} - \code{reference}.}
+
+\item{condition}{Same as \code{design_factor}, will be deprecated in favor of the
+former in later release.}
 
 \item{features}{Character vector of the set of features you want to stratify
 reads by and estimate proportions of each RNA population. The default of "all"
@@ -43,15 +50,15 @@ by default.}
 \item{repeatID}{If multiple \code{averages} tables exist with the same metadata,
 then this is the numerical index by which they are distinguished.}
 
+\item{overwrite}{If TRUE, then identical output will be overwritten if it exists.}
+
+\item{parameter}{Parameter to average across replicates of a given condition.}
+
 \item{mean_vars}{Sample features from metadf that were used in formula for
 parameter average linear model.}
 
 \item{sd_vars}{Sample features from metadf that were used in formula for
 parameter standard deviation linear model.}
-
-\item{overwrite}{If TRUE, then identical output will be overwritten if it exists.}
-
-\item{parameter}{Parameter to average across replicates of a given condition.}
 }
 \description{
 Get contrasts of estimated parameters

@@ -516,6 +516,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                               type = "averages",
                               features = features_to_analyze,
                               parameter = parameter,
+                              fit_params = covariate_names,
                               formula_mean = formula_mean,
                               sd_grouping_factors = sd_grouping_factors,
                               overwrite = overwrite)
@@ -532,6 +533,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                features = features_to_analyze,
                                parameter = parameter,
                                returnNameOnly = TRUE,
+                               fit_params = covariate_names,
                                formula_mean = formula_mean,
                                sd_grouping_factors = sd_grouping_factors,
                                exactMatch = TRUE,
@@ -551,6 +553,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
   # Save metadata
   obj[['metadata']][['averages']][[avg_vect]] <- list(features = features_to_analyze,
                                                       parameter = parameter,
+                                                      fit_params = covariate_names,
                                                       formula_mean = formula_mean,
                                                       sd_grouping_factors = sd_grouping_factors,
                                                       repeatID = repeatID)
@@ -645,12 +648,14 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 #'
 #' @param obj An `EZbakRFit` object, which is an `EZbakRFractions` object on
 #' which `AverageAndRegularize()` has been run.
-#' @param condition Name of factor from `metadf` whose parameter estimates at
+#' @param design_factor Name of factor from `metadf` whose parameter estimates at
 #' different factor values you would like to compare.
 #' @param reference Name of reference `condition` factor level value. Difference
 #' will be calculated as `experimental` - `reference`.
 #' @param experimental Name of `condition` factor level value to compare to reference.
 #' Difference will be calculated as `experimental` - `reference`.
+#' @param condition Same as `design_factor`, will be deprecated in favor of the
+#' former in later release.
 #' @param features Character vector of the set of features you want to stratify
 #' reads by and estimate proportions of each RNA population. The default of "all"
 #' will use all feature columns in the `obj`'s cB.
@@ -669,16 +674,52 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
-CompareParameters <- function(obj, condition, reference, experimental,
+CompareParameters <- function(obj, design_factor, reference, experimental,
+                              param_name, param_function,
+                              condition = NULL,
                               features = NULL, exactMatch = TRUE, repeatID = NULL,
-                              mean_vars = NULL, sd_vars = NULL,
-                              overwrite = TRUE, parameter = "log_kdeg"){
+                              formula_mean = NULL, sd_grouping_factors = NULL,
+                              fit_params = NULL, overwrite = TRUE, parameter = "log_kdeg"){
 
 
   ### Hack to deal with annoying devtools::check() NOTE
 
   difference <- uncertainty <- pval <- padj <- avg_coverage <- NULL
 
+
+  ### Determine what strategy to use for "comparisons"
+
+  # Deal with parameter name change to make life easier for older users
+  if(missing(design_factor) & !is.null(condition)){
+    design_factor <- condition
+  }
+
+  if(missing(design_factor) | missing(reference) | missing(experimental)){
+
+    if(missing(param_name)){
+
+      if(missing(param_function)){
+
+        stop("You either need to specify: 1) condition, reference, and experimental,
+             2) param_name or 3) param_function!")
+
+      }else{
+
+        strategy = "function"
+
+      }
+
+    }else{
+
+      strategy = "single_param"
+
+    }
+
+  }else{
+
+    strategy = "contrast"
+
+  }
 
   ### Extract kinetic parameters of interest
 
@@ -691,8 +732,9 @@ CompareParameters <- function(obj, condition, reference, experimental,
                          type = "averages",
                          features = features,
                          parameter = parameter,
-                         mean_vars = mean_vars,
-                         sd_vars = sd_vars,
+                         formula_mean = formula_mean,
+                         fit_params = fit_params,
+                         sd_grouping_factors = sd_grouping_factors,
                          exactMatch = exactMatch,
                          repeatID = repeatID,
                          returnNameOnly = TRUE)
@@ -706,22 +748,54 @@ CompareParameters <- function(obj, condition, reference, experimental,
 
   ### Perform comparative analysis of interest
 
-  ref_mean <- paste0("mean_", condition, reference)
-  ref_sd <- paste0("sd_", condition, reference, "_posterior")
-  ref_cov <- paste0("coverage_", condition, reference)
+  if(strategy == "contrast"){
 
-  exp_mean <- paste0("mean_", condition, experimental)
-  exp_sd <- paste0("sd_", condition, experimental, "_posterior")
-  exp_cov <- paste0("coverage_", condition, experimental)
+    ref_mean <- paste0("mean_", design_factor, reference)
+    ref_sd <- paste0("sd_", design_factor, design_factor, "_posterior")
+    ref_cov <- paste0("coverage_", design_factor, reference)
 
-  comparison <- parameter_est %>%
-    dplyr::mutate(difference = !!dplyr::sym(exp_mean) - !!dplyr::sym(ref_mean),
-                  uncertainty = sqrt( (!!dplyr::sym(ref_sd))^2 + (!!dplyr::sym(exp_sd))^2 ),
-                  stat = difference/uncertainty,
-                  pval = 2*stats::pnorm(-abs(stat)),
-                  avg_coverage = ((!!dplyr::sym(ref_cov)) + (!!dplyr::sym(exp_cov))) / 2) %>%
-    dplyr::mutate(padj = stats::p.adjust(pval, method = "BH")) %>%
-    dplyr::select(!!features_to_analyze, difference, uncertainty, stat, pval, padj, avg_coverage)
+    exp_mean <- paste0("mean_", design_factor, experimental)
+    exp_sd <- paste0("sd_", design_factor, experimental, "_posterior")
+    exp_cov <- paste0("coverage_", design_factor, experimental)
+
+    comparison <- parameter_est %>%
+      dplyr::mutate(difference = !!dplyr::sym(exp_mean) - !!dplyr::sym(ref_mean),
+                    uncertainty = sqrt( (!!dplyr::sym(ref_sd))^2 + (!!dplyr::sym(exp_sd))^2 ),
+                    stat = difference/uncertainty,
+                    pval = 2*stats::pnorm(-abs(stat)),
+                    avg_coverage = ((!!dplyr::sym(ref_cov)) + (!!dplyr::sym(exp_cov))) / 2) %>%
+      dplyr::mutate(padj = stats::p.adjust(pval, method = "BH")) %>%
+      dplyr::select(!!features_to_analyze, difference, uncertainty, stat, pval, padj, avg_coverage)
+
+
+  }
+
+  if(strategy == "single_param"){
+
+    param_mean <- paste0("mean_", param_name)
+    param_sd <- paste0("sd_", param_name, "_posterior")
+    param_cov <- paste0("coverage_", param_name)
+
+    comparison <- parameter_est %>%
+      dplyr::mutate(difference = !!dplyr::sym(param_mean),
+                    uncertainty = !!dplyr::sym(param_sd),
+                    stat = difference/uncertainty,
+                    pval = 2*stats::pnorm(-abs(stat)),
+                    avg_coverage = !!dplyr::sym(param_cov)) %>%
+      dplyr::mutate(padj = stats::p.adjust(pval, method = "BH")) %>%
+      dplyr::select(!!features_to_analyze, difference, uncertainty, stat, pval, padj, avg_coverage)
+
+
+  }
+
+
+  if(strategy == "function"){
+
+
+    stop("Not implemented yet!!!")
+
+
+  }
 
 
 
@@ -732,11 +806,34 @@ CompareParameters <- function(obj, condition, reference, experimental,
   output_name <- paste0("comparison", num_comparisons + 1)
 
 
+  # Impute missing values
+  if(missing(design_factor)){
+    design_factor <- NULL
+  }
+  if(missing(reference)){
+    reference <- NULL
+  }
+  if(missing(experimental)){
+    experimental <- NULL
+  }
+  if(missing(param_name)){
+    param_name <- NULL
+  }
+  if(missing(design_factor)){
+    design_factor <- NULL
+  }
+
+
+
+
   if(length(obj[['comparisons']]) > 0){
     output_name <- decide_output(obj, output_name, type = "comparisons",
                                  features = features, parameter = parameter,
-                                 reference = reference, experimental = experimental,
-                                 condition = condition,
+                                 design_factor = design_factor,
+                                 reference = reference,
+                                 experimental = experimental,
+                                 param_name = param_name,
+                                 param_function = param_function,
                                  overwrite = overwrite)
 
     # How many identical tables already exist?
@@ -750,9 +847,11 @@ CompareParameters <- function(obj, condition, reference, experimental,
                                type = 'comparisons',
                                features = features,
                                parameter = parameter,
-                               condition = condition,
+                               design_factor = design_factor,
                                reference = reference,
                                experimental = experimental,
+                               param_name = param_name,
+                               param_function = param_function,
                                returnNameOnly = TRUE,
                                exactMatch = TRUE,
                                alwaysCheck = TRUE)) + 1
@@ -766,9 +865,11 @@ CompareParameters <- function(obj, condition, reference, experimental,
 
   obj[["comparisons"]][[output_name]] <- dplyr::as_tibble(comparison)
 
-  obj[["metadata"]][["comparisons"]][[output_name]] <- list(condition = condition,
+  obj[["metadata"]][["comparisons"]][[output_name]] <- list(design_factor = design_factor,
                                                             reference = reference,
                                                             experimental = experimental,
+                                                            param_name = param_name,
+                                                            param_function = param_function,
                                                             features = features_to_analyze,
                                                             parameter = parameter,
                                                             repeatID = repeatID)

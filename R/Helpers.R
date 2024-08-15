@@ -25,11 +25,15 @@
 #' @param counttype String denoting what type of read count information you are looking
 #' for. Current options are "TMM_normalized", "transcript", and "matrix". TO-DO:
 #' Not sure this is being used in any way currently...
-#' @param condition Condition specified in relevant run of `CompareParameters()`.
+#' @param design_factor design_factor specified in relevant run of `CompareParameters()`.
 #' Therefore, only relevant if type == "comparisons".
 #' @param experimental Experimental condition specified in relevant run of `CompareParameters()`.
 #' Therefore, only relevant if type == "comparisons".
 #' @param reference Reference condition specified in relevant run of `CompareParameters()`.
+#' Therefore, only relevant if type == "comparisons".
+#' @param param_name Parameter name specified in relevant run of `CompareParameters()`.
+#' Therefore, only relevant if type == "comparisons"
+#' @param param_function Function of parameters specified in relevant run of `CompareParameters()`.
 #' Therefore, only relevant if type == "comparisons".
 #' @param formula_mean An R formula object specifying how the `parameter` of interest
 #' depends on the sample characteristics specified in `obj`'s metadf. Therefore,
@@ -71,11 +75,14 @@ EZget <- function(obj,
                   kstrat = NULL,
                   parameter = NULL,
                   counttype = NULL,
-                  condition = NULL,
+                  design_factor = NULL,
                   experimental = NULL,
                   reference = NULL,
+                  param_name = NULL,
+                  param_function = NULL,
                   formula_mean = NULL,
                   sd_grouping_factors = NULL,
+                  fit_params = NULL,
                   repeatID = NULL,
                   sub_features = NULL,
                   grouping_features = NULL,
@@ -257,11 +264,11 @@ EZget <- function(obj,
 
   }
 
-  if(!is.null(condition)){
+  if(!is.null(design_factor)){
 
     possible_tables_c <- exact_ezsearch(metadata,
-                                          query = condition,
-                                          object = "condition")
+                                          query = design_factor,
+                                          object = "design_factor")
 
 
     possible_tables <- intersect(possible_tables, possible_tables_c)
@@ -292,6 +299,31 @@ EZget <- function(obj,
 
 
   }
+
+  if(!is.null(param_name)){
+
+    possible_tables_pn <- exact_ezsearch(metadata,
+                                        query = param_name,
+                                        object = "param_name")
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_pn)
+
+
+  }
+
+  if(!is.null(param_function)){
+
+    possible_tables_pf <- exact_ezsearch(metadata,
+                                         query = param_function,
+                                         object = "param_function")
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_pf)
+
+
+  }
+
 
   if(!is.null(repeatID)){
 
@@ -355,6 +387,18 @@ EZget <- function(obj,
                                          exactMatch = exactMatch)
 
     possible_tables <- intersect(possible_tables, possible_tables_sgf)
+
+  }
+
+
+  if(!is.null(fit_params)){
+
+    possible_tables_fp <- vector_ezsearch(metadata,
+                                           fit_params,
+                                           "fit_params",
+                                           exactMatch = exactMatch)
+
+    possible_tables <- intersect(possible_tables, possible_tables_fp)
 
   }
 
@@ -502,11 +546,14 @@ decide_output <- function(obj, proposed_name,
                           counttype = NULL,
                           kstrat = NULL,
                           parameter = NULL,
-                          condition = NULL,
+                          design_factor = NULL,
                           reference = NULL,
                           experimental = NULL,
+                          param_name = NULL,
+                          param_function = NULL,
                           formula_mean = NULL,
                           sd_grouping_factors = NULL,
+                          fit_params = NULL,
                           sub_features = NULL,
                           grouping_features = NULL,
                           sample_feature = NULL,
@@ -525,11 +572,14 @@ decide_output <- function(obj, proposed_name,
                              parameter = parameter,
                              kstrat = kstrat,
                              counttype = counttype,
-                           condition = condition,
+                           design_factor = design_factor,
                            reference = reference,
                            experimental = experimental,
+                           param_name = param_name,
+                           param_function = param_function,
                            formula_mean = formula_mean,
                            sd_grouping_factors = sd_grouping_factors,
+                           fit_params = fit_params,
                            sub_features = sub_features,
                            grouping_features = grouping_features,
                            sample_feature = sample_feature,
