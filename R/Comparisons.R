@@ -730,7 +730,9 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
 
 
   # Function is in Helpers.R
-  environment(formula_mean) <- NULL
+  if(!is.null(formula_mean)){
+    environment(formula_mean) <- NULL
+  }
   averages_name <- EZget(obj,
                          type = "averages",
                          features = features,
