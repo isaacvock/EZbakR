@@ -37,6 +37,10 @@ different factor values you would like to compare.}
 rather than the comparison of two parameters, specify that one parameter's name
 here.}
 
+\item{param_function}{NOT YET IMPLEMENTED. Will allow you to specify more complicated
+functions of parameters when hypotheses you need to test are combinations of parameters
+rather than individual parameters or simple differences in two parameters.}
+
 \item{features}{Character vector of feature names for which comparisons were made.}
 
 \item{exactMatch}{If TRUE, then \code{features} and \code{populations} have to exactly match
