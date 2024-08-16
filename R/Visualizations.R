@@ -14,6 +14,8 @@
 #' functions of parameters when hypotheses you need to test are combinations of parameters
 #' rather than individual parameters or simple differences in two parameters.
 #' @param features Character vector of feature names for which comparisons were made.
+#' @param condition Defunct parameter that has been replaced with `design_factor`. If provided
+#' gets passed to `design_factor` if `design_factor` is not already specified.
 #' @param exactMatch If TRUE, then `features` has to exactly match
 #' those for a given comparisons table for that table to be used. Means that you can't
 #' specify a subset of features by default, since this is TRUE
@@ -37,12 +39,17 @@ EZVolcanoPlot <- function(obj,
                           param_name = NULL,
                           param_function = NULL,
                           features = NULL,
+                          condition = NULL,
                           exactMatch = TRUE,
                           plotlog2 = TRUE,
                           FDR_cutoff = 0.05,
                           difference_cutoff = 0,
                           size = NULL){
 
+  # Check for backwards compatibility
+  if(!is.null(condition) & is.null(design_factor)){
+    design_factor <- condition
+  }
 
   ### Hack to deal with devtools::check() NOTEs
   comparison_name <- difference <- padj <- conclusion <- NULL
@@ -52,12 +59,13 @@ EZVolcanoPlot <- function(obj,
 
   # Function in Helpers.R
   comparison_name <- EZget(obj, type = "comparisons",
+                           parameter = parameter,
+                           features = features,
                           design_factor = design_factor,
                           reference = reference,
                           experimental = experimental,
                           param_name = param_name,
                           param_function = param_function,
-                          features = features,
                           exactMatch = exactMatch,
                           returnNameOnly = TRUE)
 
@@ -160,6 +168,8 @@ EZVolcanoPlot <- function(obj,
 #' functions of parameters when hypotheses you need to test are combinations of parameters
 #' rather than individual parameters or simple differences in two parameters.
 #' @param features Character vector of feature names for which comparisons were made.
+#' @param condition Defunct parameter that has been replaced with `design_factor`. If provided
+#' gets passed to `design_factor` if `design_factor` is not already specified.
 #' @param exactMatch If TRUE, then `features` and `populations` have to exactly match
 #' those for a given fractions table for that table to be used. Means that you can't
 #' specify a subset of features or populations by default, since this is TRUE
@@ -181,11 +191,18 @@ EZMAPlot <- function(obj,
                      param_name = NULL,
                      param_function = NULL,
                          features = NULL,
+                     condition = NULL,
                      exactMatch = TRUE,
                          plotlog2 = TRUE,
                          FDR_cutoff = 0.05,
                          difference_cutoff = 0,
                          size = NULL){
+
+
+  # Check for backwards compatibility
+  if(!is.null(condition) & is.null(design_factor)){
+    design_factor <- condition
+  }
 
   ### Hack to deal with devtools::check() NOTEs
   comparison_name <- difference <- avg_coverage <- conclusion <- NULL
@@ -195,12 +212,13 @@ EZMAPlot <- function(obj,
 
   # Function in Helpers.R
   comparison_name <- EZget(obj, type = "comparisons",
+                           parameter = parameter,
+                           features = features,
                            design_factor = design_factor,
                            reference = reference,
                            experimental = experimental,
                            param_name = param_name,
                            param_function = param_function,
-                           features = features,
                            exactMatch = exactMatch,
                            returnNameOnly = TRUE)
 

@@ -254,7 +254,7 @@ rdirichlet <- function (n, alpha) {
   alpha.dim <- dim(alpha)
   if(n > alpha.dim[1])
     alpha <- matrix(alpha, n, alpha.dim[2], byrow=TRUE)
-  x <- matrix(rgamma(alpha.dim[2]*n, alpha), ncol=alpha.dim[2])
+  x <- matrix(stats::rgamma(alpha.dim[2]*n, alpha), ncol=alpha.dim[2])
   sm <- x %*% rep(1, alpha.dim[2])
 
   return(x/as.vector(sm))
@@ -277,8 +277,8 @@ VectSimulateMultiLabel <- function(nfeatures, populations = c("TC"),
                                    kdeg_vect = NULL, ksyn_vect = NULL,
                                    logkdeg_mean = -1.9, logkdeg_sd = 0.7,
                                    logksyn_mean = 2.3, logksyn_sd = 0.7,
-                                   phighs = setNames(rep(0.05, times = length(populations)), populations),
-                                   plows = setNames(rep(0.002, times = length(populations)), populations),
+                                   phighs = stats::setNames(rep(0.05, times = length(populations)), populations),
+                                   plows = stats::setNames(rep(0.002, times = length(populations)), populations),
                                    seqdepth = nfeatures*2500, readlength = 200,
                                    alpha_min = 3, alpha_max = 6,
                                    Ucont = 0.25, Acont = 0.25, Gcont = 0.25, Ccont = 0.25){
@@ -291,7 +291,7 @@ VectSimulateMultiLabel <- function(nfeatures, populations = c("TC"),
   if(is.null(fractions_matrix)){
 
     # Feature-specific Dirichlet alphas
-    alphas <- matrix(runif(npops*nfeatures, min = 3, max = 6),
+    alphas <- matrix(stats::runif(npops*nfeatures, min = 3, max = 6),
                      nrow = nfeatures, ncol = npops,
                      byrow = TRUE)
 
@@ -392,7 +392,7 @@ VectSimulateMultiLabel <- function(nfeatures, populations = c("TC"),
       }
     }
 
-    mutations[[populations[p]]] <- rbinom(tot_reads,
+    mutations[[populations[p]]] <- stats::rbinom(tot_reads,
                                           size = nt_cnts[p,],
                                           prob = rep(pvect,
                                                      times = reads_per_fraction))
@@ -475,8 +475,8 @@ SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
                                kdeg_vect = NULL, ksyn_vect = NULL,
                                logkdeg_mean = -1.9, logkdeg_sd = 0.7,
                                logksyn_mean = 2.3, logksyn_sd = 0.7,
-                               phighs = setNames(rep(0.05, times = length(populations)), populations),
-                               plows = setNames(rep(0.002, times = length(populations)), populations),
+                               phighs = stats::setNames(rep(0.05, times = length(populations)), populations),
+                               plows = stats::setNames(rep(0.002, times = length(populations)), populations),
                                seqdepth = nfeatures*2500, readlength = 200,
                                alpha_min = 3, alpha_max = 6,
                                Ucont = 0.25, Acont = 0.25, Gcont = 0.25, Ccont = 0.25){
@@ -488,7 +488,7 @@ SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
   if(is.null(fractions_matrix)){
 
     # Feature-specific Dirichlet alphas
-    alphas <- matrix(runif(npops*nfeatures, min = 3, max = 6),
+    alphas <- matrix(stats::runif(npops*nfeatures, min = 3, max = 6),
                      nrow = nfeatures, ncol = npops,
                      byrow = TRUE)
 
@@ -2279,7 +2279,7 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
 
     # Add some fn variance
     sample_sim$fn_rep <- inv_logit(
-      rnorm(n = nrow(sample_sim),
+      stats::rnorm(n = nrow(sample_sim),
             mean = logit(sample_sim$fn),
             sd = lfn_sd)
     )

@@ -13,6 +13,7 @@ EZMAPlot(
   param_name = NULL,
   param_function = NULL,
   features = NULL,
+  condition = NULL,
   exactMatch = TRUE,
   plotlog2 = TRUE,
   FDR_cutoff = 0.05,
@@ -42,6 +43,9 @@ functions of parameters when hypotheses you need to test are combinations of par
 rather than individual parameters or simple differences in two parameters.}
 
 \item{features}{Character vector of feature names for which comparisons were made.}
+
+\item{condition}{Defunct parameter that has been replaced with \code{design_factor}. If provided
+gets passed to \code{design_factor} if \code{design_factor} is not already specified.}
 
 \item{exactMatch}{If TRUE, then \code{features} and \code{populations} have to exactly match
 those for a given fractions table for that table to be used. Means that you can't

@@ -45,6 +45,12 @@ but can also set to "fractions".}
 \item{kstrat}{If \code{type == "kinetics"}, then \code{kstrat} specifies the kinetic parameter
 inference strategy.}
 
+\item{populations}{Character vector of the set of mutational populations
+that you want to infer the fractions of. Only relevant if type == "fractions".}
+
+\item{fraction_design}{"Design matrix" specifying which RNA populations exist
+in your samples. Only relevant if type == "fractions".}
+
 \item{exactMatch}{If TRUE, then \code{features} and \code{populations} have to exactly match
 those for a given fractions table for that table to be used. Means that you can't
 specify a subset of features or populations by default, since this is TRUE

@@ -59,15 +59,18 @@ by default.}
 \item{repeatID}{If multiple \code{averages} tables exist with the same metadata,
 then this is the numerical index by which they are distinguished.}
 
+\item{formula_mean}{An R formula object specifying how the \code{parameter} of interest
+depends on the sample characteristics for the averages object you want to use.}
+
+\item{sd_grouping_factors}{Metadf columns should data was grouped by when estimating
+standard deviations across replicates for the averages object you want to use.}
+
+\item{fit_params}{Character vector of parameter names in the averages object
+you would like to use.}
+
 \item{overwrite}{If TRUE, then identical output will be overwritten if it exists.}
 
 \item{parameter}{Parameter to average across replicates of a given condition.}
-
-\item{mean_vars}{Sample features from metadf that were used in formula for
-parameter average linear model.}
-
-\item{sd_vars}{Sample features from metadf that were used in formula for
-parameter standard deviation linear model.}
 }
 \description{
 Get contrasts of estimated parameters

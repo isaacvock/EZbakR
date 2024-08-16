@@ -40,6 +40,8 @@
 #' only relevant if type == "averages".
 #' @param sd_grouping_factors What metadf columns should data be grouped by when estimating
 #' standard deviations across replicates? Therefore, only relevant if type == "averages".
+#' @param fit_params Character vector of names of parameters in linear model fit. Therefore,
+#' only relevant if type == "averages".
 #' @param sub_features Only relevant if type == "dynamics". Feature columns
 #' that distinguished between the different measured species when running
 #' `EZDynamics()`.

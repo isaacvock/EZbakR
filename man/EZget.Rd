@@ -84,6 +84,9 @@ only relevant if type == "averages".}
 \item{sd_grouping_factors}{What metadf columns should data be grouped by when estimating
 standard deviations across replicates? Therefore, only relevant if type == "averages".}
 
+\item{fit_params}{Character vector of names of parameters in linear model fit. Therefore,
+only relevant if type == "averages".}
+
 \item{repeatID}{Numerical ID for duplicate objects with same metadata.}
 
 \item{sub_features}{Only relevant if type == "dynamics". Feature columns

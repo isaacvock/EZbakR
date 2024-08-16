@@ -21,6 +21,10 @@
 #' but can also set to "fractions".
 #' @param kstrat If `type == "kinetics"`, then `kstrat` specifies the kinetic parameter
 #' inference strategy.
+#' @param populations Character vector of the set of mutational populations
+#' that you want to infer the fractions of. Only relevant if type == "fractions".
+#' @param fraction_design "Design matrix" specifying which RNA populations exist
+#' in your samples. Only relevant if type == "fractions".
 #' @param repeatID If multiple `kinetics` or `fractions` tables exist with the same metadata,
 #' then this is the numerical index by which they are distinguished.
 #' @param formula_mean An R formula object specifying how the `parameter` of interest
@@ -226,7 +230,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   }
 
-  X <- model.matrix(formula_mean,
+  X <- stats::model.matrix(formula_mean,
                     metadf %>%
                       dplyr::mutate(!!parameter := 1))
 
@@ -690,12 +694,14 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 #' those for a given fractions table for that table to be used. Means that you can't
 #' specify a subset of features or populations by default, since this is TRUE
 #' by default.
-#' @param mean_vars Sample features from metadf that were used in formula for
-#' parameter average linear model.
-#' @param sd_vars Sample features from metadf that were used in formula for
-#' parameter standard deviation linear model.
 #' @param repeatID If multiple `averages` tables exist with the same metadata,
 #' then this is the numerical index by which they are distinguished.
+#' @param formula_mean An R formula object specifying how the `parameter` of interest
+#' depends on the sample characteristics for the averages object you want to use.
+#' @param sd_grouping_factors Metadf columns should data was grouped by when estimating
+#' standard deviations across replicates for the averages object you want to use.
+#' @param fit_params Character vector of parameter names in the averages object
+#' you would like to use.
 #' @param parameter Parameter to average across replicates of a given condition.
 #' @param overwrite If TRUE, then identical output will be overwritten if it exists.
 #' @import data.table
@@ -895,7 +901,9 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
 
   obj[["comparisons"]][[output_name]] <- dplyr::as_tibble(comparison)
 
-  obj[["metadata"]][["comparisons"]][[output_name]] <- list(design_factor = design_factor,
+  obj[["metadata"]][["comparisons"]][[output_name]] <- list(features = features,
+                                                            parameter = parameter,
+                                                            design_factor = design_factor,
                                                             reference = reference,
                                                             experimental = experimental,
                                                             param_name = param_name,
@@ -923,7 +931,7 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
                                     error_if_singular = TRUE){
 
 
-  fit <- lm(formula_mean, data,
+  fit <- stats::lm(formula_mean, data,
             singular.ok = !error_if_singular)
 
   means <- summary(fit)$coef[,"Estimate"]
@@ -935,8 +943,8 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
     # My version of robust se estimation: add parameter uncertainty to avoid underestimation
     # I like to be conservative in bioinformatics, because there are always unaccounted
     # for sources of variance.
-    X <- model.matrix(fit)
-    s2 <- sigma(fit)^2 + data[[uncertainties_col]]^2 + (0.05^2)/(nrow(data)/ncol(X))
+    X <- stats::model.matrix(fit)
+    s2 <- stats::sigma(fit)^2 + data[[uncertainties_col]]^2 + (0.05^2)/(nrow(data)/ncol(X))
     vce <- solve(t(X) %*% X) %*% (t(X) %*% (s2*diag(nrow(data))) %*% X) %*% solve(t(X) %*% X)
     ses <- log(sqrt(diag(vce)))
 
@@ -964,11 +972,11 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
     # Estimate standard deviations in each group
     sds <- data %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(sd_groups))) %>%
-      mutate(group_sd = sd(!!dplyr::sym(parameter)),
+      dplyr::mutate(group_sd = stats::sd(!!dplyr::sym(parameter)),
              group_coverage = mean(!!dplyr::sym(coverage_col)))
 
     # Robust standard errors
-    X <- model.matrix(fit)
+    X <- stats::model.matrix(fit)
     s2 <- sds$group_sd^2 + data[[uncertainties_col]]^2 #+ (0.025^2)/(nrow(data)/ncol(X))
     vce <- solve(t(X) %*% X) %*% (t(X) %*% (s2*diag(nrow(data))) %*% X) %*% solve(t(X) %*% X)
     ses <- log(sqrt(diag(vce)))
