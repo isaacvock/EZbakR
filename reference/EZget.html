@@ -22,8 +22,7 @@
     <li><a class="dropdown-item" href="../articles/EZget.html">EZget</a></li>
     <li><a class="dropdown-item" href="../articles/EstimateFractions.html">EstimateFractions</a></li>
     <li><a class="dropdown-item" href="../articles/EstimateKinetics.html">EstimateKinetics</a></li>
-    <li><a class="dropdown-item" href="../articles/AverageAndRegularize.html">AverageAndRegularize</a></li>
-    <li><a class="dropdown-item" href="../articles/CompareParameters.html">CompareParameters</a></li>
+    <li><a class="dropdown-item" href="../articles/Linear-modeling.html">Linear modeling in EZbakR</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -56,11 +55,14 @@
 <span>  kstrat <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  parameter <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  counttype <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  condition <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  design_factor <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  experimental <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  reference <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  mean_vars <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  sd_vars <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  param_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  param_function <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  formula_mean <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  sd_grouping_factors <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  fit_params <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  repeatID <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  sub_features <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  grouping_features <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -123,8 +125,8 @@ for. Current options are "TMM_normalized", "transcript", and "matrix". TO-DO:
 Not sure this is being used in any way currently...</p></dd>
 
 
-<dt id="arg-condition">condition<a class="anchor" aria-label="anchor" href="#arg-condition"></a></dt>
-<dd><p>Condition specified in relevant run of <code><a href="CompareParameters.html">CompareParameters()</a></code>.
+<dt id="arg-design-factor">design_factor<a class="anchor" aria-label="anchor" href="#arg-design-factor"></a></dt>
+<dd><p>design_factor specified in relevant run of <code><a href="CompareParameters.html">CompareParameters()</a></code>.
 Therefore, only relevant if type == "comparisons".</p></dd>
 
 
@@ -138,14 +140,30 @@ Therefore, only relevant if type == "comparisons".</p></dd>
 Therefore, only relevant if type == "comparisons".</p></dd>
 
 
-<dt id="arg-mean-vars">mean_vars<a class="anchor" aria-label="anchor" href="#arg-mean-vars"></a></dt>
-<dd><p>Sample features from metadf that were used in formula for
-parameter average linear model. Only relevant if type == "averages".</p></dd>
+<dt id="arg-param-name">param_name<a class="anchor" aria-label="anchor" href="#arg-param-name"></a></dt>
+<dd><p>Parameter name specified in relevant run of <code><a href="CompareParameters.html">CompareParameters()</a></code>.
+Therefore, only relevant if type == "comparisons"</p></dd>
 
 
-<dt id="arg-sd-vars">sd_vars<a class="anchor" aria-label="anchor" href="#arg-sd-vars"></a></dt>
-<dd><p>Sample features from metadf that were used in formula for
-parameter standard deviation linear model. Only relevant if type == "averages".</p></dd>
+<dt id="arg-param-function">param_function<a class="anchor" aria-label="anchor" href="#arg-param-function"></a></dt>
+<dd><p>Function of parameters specified in relevant run of <code><a href="CompareParameters.html">CompareParameters()</a></code>.
+Therefore, only relevant if type == "comparisons".</p></dd>
+
+
+<dt id="arg-formula-mean">formula_mean<a class="anchor" aria-label="anchor" href="#arg-formula-mean"></a></dt>
+<dd><p>An R formula object specifying how the <code>parameter</code> of interest
+depends on the sample characteristics specified in <code>obj</code>'s metadf. Therefore,
+only relevant if type == "averages".</p></dd>
+
+
+<dt id="arg-sd-grouping-factors">sd_grouping_factors<a class="anchor" aria-label="anchor" href="#arg-sd-grouping-factors"></a></dt>
+<dd><p>What metadf columns should data be grouped by when estimating
+standard deviations across replicates? Therefore, only relevant if type == "averages".</p></dd>
+
+
+<dt id="arg-fit-params">fit_params<a class="anchor" aria-label="anchor" href="#arg-fit-params"></a></dt>
+<dd><p>Character vector of names of parameters in linear model fit. Therefore,
+only relevant if type == "averages".</p></dd>
 
 
 <dt id="arg-repeatid">repeatID<a class="anchor" aria-label="anchor" href="#arg-repeatid"></a></dt>

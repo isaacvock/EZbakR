@@ -32,8 +32,7 @@ bakR, though slightly improved upon since then."></head><body>
     <li><a class="dropdown-item" href="../articles/EZget.html">EZget</a></li>
     <li><a class="dropdown-item" href="../articles/EstimateFractions.html">EstimateFractions</a></li>
     <li><a class="dropdown-item" href="../articles/EstimateKinetics.html">EstimateKinetics</a></li>
-    <li><a class="dropdown-item" href="../articles/AverageAndRegularize.html">AverageAndRegularize</a></li>
-    <li><a class="dropdown-item" href="../articles/CompareParameters.html">CompareParameters</a></li>
+    <li><a class="dropdown-item" href="../articles/Linear-modeling.html">Linear modeling in EZbakR</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -77,6 +76,7 @@ bakR, though slightly improved upon since then.</p>
 <span>  sd_reg_factor <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  error_if_singular <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  min_reads <span class="op">=</span> <span class="fl">10</span>,</span>
+<span>  convert_tl_to_factor <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  force_lm <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  force_optim <span class="op">=</span> <span class="va">force_lm</span>,</span>
 <span>  conservative <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -113,6 +113,16 @@ but can also set to "fractions".</p></dd>
 <dt id="arg-kstrat">kstrat<a class="anchor" aria-label="anchor" href="#arg-kstrat"></a></dt>
 <dd><p>If <code>type == "kinetics"</code>, then <code>kstrat</code> specifies the kinetic parameter
 inference strategy.</p></dd>
+
+
+<dt id="arg-populations">populations<a class="anchor" aria-label="anchor" href="#arg-populations"></a></dt>
+<dd><p>Character vector of the set of mutational populations
+that you want to infer the fractions of. Only relevant if type == "fractions".</p></dd>
+
+
+<dt id="arg-fraction-design">fraction_design<a class="anchor" aria-label="anchor" href="#arg-fraction-design"></a></dt>
+<dd><p>"Design matrix" specifying which RNA populations exist
+in your samples. Only relevant if type == "fractions".</p></dd>
 
 
 <dt id="arg-exactmatch">exactMatch<a class="anchor" aria-label="anchor" href="#arg-exactmatch"></a></dt>
@@ -175,6 +185,13 @@ all treatment Bs correspond to batch Bs).</p></dd>
 
 <dt id="arg-min-reads">min_reads<a class="anchor" aria-label="anchor" href="#arg-min-reads"></a></dt>
 <dd><p>Minimum number of reads in all samples for a feature to be kept.</p></dd>
+
+
+<dt id="arg-convert-tl-to-factor">convert_tl_to_factor<a class="anchor" aria-label="anchor" href="#arg-convert-tl-to-factor"></a></dt>
+<dd><p>If a label time variable is included in the <code>formula_mean</code>,
+convert its values to factors so as to avoid performing continuous regression on label
+times. Defaults to TRUE as including label time in the regression is often meant to
+stratify samples by their label time if, for example, you are averaging logit(fractions).</p></dd>
 
 
 <dt id="arg-force-lm">force_lm<a class="anchor" aria-label="anchor" href="#arg-force-lm"></a></dt>

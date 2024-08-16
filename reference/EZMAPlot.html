@@ -22,8 +22,7 @@
     <li><a class="dropdown-item" href="../articles/EZget.html">EZget</a></li>
     <li><a class="dropdown-item" href="../articles/EstimateFractions.html">EstimateFractions</a></li>
     <li><a class="dropdown-item" href="../articles/EstimateKinetics.html">EstimateKinetics</a></li>
-    <li><a class="dropdown-item" href="../articles/AverageAndRegularize.html">AverageAndRegularize</a></li>
-    <li><a class="dropdown-item" href="../articles/CompareParameters.html">CompareParameters</a></li>
+    <li><a class="dropdown-item" href="../articles/Linear-modeling.html">Linear modeling in EZbakR</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -49,10 +48,13 @@
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">EZMAPlot</span><span class="op">(</span></span>
 <span>  <span class="va">obj</span>,</span>
 <span>  parameter <span class="op">=</span> <span class="st">"log_kdeg"</span>,</span>
-<span>  condition <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  design_factor <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  reference <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  experimental <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  param_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  param_function <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  features <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  condition <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  exactMatch <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  plotlog2 <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  FDR_cutoff <span class="op">=</span> <span class="fl">0.05</span>,</span>
@@ -74,22 +76,38 @@ on which you have run <code>CompareParameters</code></p></dd>
 <dd><p>Name of parameter whose comparison you want to plot.</p></dd>
 
 
-<dt id="arg-condition">condition<a class="anchor" aria-label="anchor" href="#arg-condition"></a></dt>
-<dd><p>Name of condition for which you want to plot the comparison of
-two of its levels. Condition should be the name of a column that appears in
-your metadf table.</p></dd>
+<dt id="arg-design-factor">design_factor<a class="anchor" aria-label="anchor" href="#arg-design-factor"></a></dt>
+<dd><p>Name of factor from <code>metadf</code> whose parameter estimates at
+different factor values you would like to compare.</p></dd>
 
 
 <dt id="arg-reference">reference<a class="anchor" aria-label="anchor" href="#arg-reference"></a></dt>
-<dd><p>Name of reference level for comparison.</p></dd>
+<dd><p>Name of reference <code>condition</code> factor level value.</p></dd>
 
 
 <dt id="arg-experimental">experimental<a class="anchor" aria-label="anchor" href="#arg-experimental"></a></dt>
-<dd><p>Name of experimental level for comparison.</p></dd>
+<dd><p>Name of <code>condition</code> factor level value to compare to reference.</p></dd>
+
+
+<dt id="arg-param-name">param_name<a class="anchor" aria-label="anchor" href="#arg-param-name"></a></dt>
+<dd><p>If you want to assess the significance of a single parameter,
+rather than the comparison of two parameters, specify that one parameter's name
+here.</p></dd>
+
+
+<dt id="arg-param-function">param_function<a class="anchor" aria-label="anchor" href="#arg-param-function"></a></dt>
+<dd><p>NOT YET IMPLEMENTED. Will allow you to specify more complicated
+functions of parameters when hypotheses you need to test are combinations of parameters
+rather than individual parameters or simple differences in two parameters.</p></dd>
 
 
 <dt id="arg-features">features<a class="anchor" aria-label="anchor" href="#arg-features"></a></dt>
 <dd><p>Character vector of feature names for which comparisons were made.</p></dd>
+
+
+<dt id="arg-condition">condition<a class="anchor" aria-label="anchor" href="#arg-condition"></a></dt>
+<dd><p>Defunct parameter that has been replaced with <code>design_factor</code>. If provided
+gets passed to <code>design_factor</code> if <code>design_factor</code> is not already specified.</p></dd>
 
 
 <dt id="arg-exactmatch">exactMatch<a class="anchor" aria-label="anchor" href="#arg-exactmatch"></a></dt>
