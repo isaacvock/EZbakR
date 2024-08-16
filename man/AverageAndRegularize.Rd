@@ -21,6 +21,7 @@ AverageAndRegularize(
   error_if_singular = TRUE,
   min_reads = 10,
   convert_tl_to_factor = TRUE,
+  regress_se_with_abs = TRUE,
   force_lm = FALSE,
   force_optim = force_lm,
   conservative = FALSE,
@@ -102,6 +103,11 @@ all treatment Bs correspond to batch Bs).}
 convert its values to factors so as to avoid performing continuous regression on label
 times. Defaults to TRUE as including label time in the regression is often meant to
 stratify samples by their label time if, for example, you are averaging logit(fractions).}
+
+\item{regress_se_with_abs}{If TRUE, and if \code{type == "fractions"}, then standard error
+will be regressed against logit fraction rather than magnitude of logit fraction.
+Makes sense to set this to FALSE if analyzing certain site-specific mutational probing
+methods when high mutation content things are likely low variance SNPs.}
 
 \item{force_lm}{Certain formula lend them selves to efficient approximations of the
 full call to \code{lm()}. Namely, formulas that stratify samples into disjoint groups where

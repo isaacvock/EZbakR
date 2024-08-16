@@ -64,6 +64,10 @@
 #' convert its values to factors so as to avoid performing continuous regression on label
 #' times. Defaults to TRUE as including label time in the regression is often meant to
 #' stratify samples by their label time if, for example, you are averaging logit(fractions).
+#' @param regress_se_with_abs If TRUE, and if `type == "fractions"`, then standard error
+#' will be regressed against logit fraction rather than magnitude of logit fraction.
+#' Makes sense to set this to FALSE if analyzing certain site-specific mutational probing
+#' methods when high mutation content things are likely low variance SNPs.
 #' @param force_lm Certain formula lend them selves to efficient approximations of the
 #' full call to `lm()`. Namely, formulas that stratify samples into disjoint groups where
 #' a single parameter of the model is effectively estimated from each group can be tackled
@@ -99,6 +103,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                  error_if_singular = TRUE,
                                  min_reads = 10,
                                  convert_tl_to_factor = TRUE,
+                                 regress_se_with_abs = TRUE,
                                  force_lm = FALSE,
                                  force_optim = force_lm,
                                  conservative = FALSE,
@@ -431,8 +436,18 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     # that is likely a large refactor
     if(type == "fractions"){
 
-      formula_str <- paste("`logse_", .x, "`", " ~ `coverage_", .x, "`",
-                           " + abs(`mean_", .x, "`)", sep = "")
+      if(regress_se_with_abs){
+
+        formula_str <- paste("`logse_", .x, "`", " ~ `coverage_", .x, "`",
+                             " + abs(`mean_", .x, "`)", sep = "")
+
+      }else{
+
+        formula_str <- paste("`logse_", .x, "`", " ~ `coverage_", .x, "`",
+                             " + `mean_", .x, "`", sep = "")
+
+      }
+
 
     }else if(parameter == "log_kdeg"){
 
