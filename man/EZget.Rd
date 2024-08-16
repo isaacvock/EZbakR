@@ -14,11 +14,14 @@ EZget(
   kstrat = NULL,
   parameter = NULL,
   counttype = NULL,
-  condition = NULL,
+  design_factor = NULL,
   experimental = NULL,
   reference = NULL,
-  mean_vars = NULL,
-  sd_vars = NULL,
+  param_name = NULL,
+  param_function = NULL,
+  formula_mean = NULL,
+  sd_grouping_factors = NULL,
+  fit_params = NULL,
   repeatID = NULL,
   sub_features = NULL,
   grouping_features = NULL,
@@ -59,7 +62,7 @@ parameter was being averaged or compared?}
 for. Current options are "TMM_normalized", "transcript", and "matrix". TO-DO:
 Not sure this is being used in any way currently...}
 
-\item{condition}{Condition specified in relevant run of \code{CompareParameters()}.
+\item{design_factor}{design_factor specified in relevant run of \code{CompareParameters()}.
 Therefore, only relevant if type == "comparisons".}
 
 \item{experimental}{Experimental condition specified in relevant run of \code{CompareParameters()}.
@@ -68,11 +71,21 @@ Therefore, only relevant if type == "comparisons".}
 \item{reference}{Reference condition specified in relevant run of \code{CompareParameters()}.
 Therefore, only relevant if type == "comparisons".}
 
-\item{mean_vars}{Sample features from metadf that were used in formula for
-parameter average linear model. Only relevant if type == "averages".}
+\item{param_name}{Parameter name specified in relevant run of \code{CompareParameters()}.
+Therefore, only relevant if type == "comparisons"}
 
-\item{sd_vars}{Sample features from metadf that were used in formula for
-parameter standard deviation linear model. Only relevant if type == "averages".}
+\item{param_function}{Function of parameters specified in relevant run of \code{CompareParameters()}.
+Therefore, only relevant if type == "comparisons".}
+
+\item{formula_mean}{An R formula object specifying how the \code{parameter} of interest
+depends on the sample characteristics specified in \code{obj}'s metadf. Therefore,
+only relevant if type == "averages".}
+
+\item{sd_grouping_factors}{What metadf columns should data be grouped by when estimating
+standard deviations across replicates? Therefore, only relevant if type == "averages".}
+
+\item{fit_params}{Character vector of names of parameters in linear model fit. Therefore,
+only relevant if type == "averages".}
 
 \item{repeatID}{Numerical ID for duplicate objects with same metadata.}
 

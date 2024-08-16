@@ -3,12 +3,19 @@
 #' @param obj An object of class `EZbakRCompare`, which is an `EZbakRData` object
 #' on which you have run `CompareParameters`
 #' @param parameter Name of parameter whose comparison you want to plot.
-#' @param condition Name of condition for which you want to plot the comparison of
-#' two of its levels. Condition should be the name of a column that appears in
-#' your metadf table.
-#' @param reference Name of reference level for comparison.
-#' @param experimental Name of experimental level for comparison.
+#' @param design_factor Name of factor from `metadf` whose parameter estimates at
+#' different factor values you would like to compare.
+#' @param reference Name of reference `condition` factor level value.
+#' @param experimental Name of `condition` factor level value to compare to reference.
+#' @param param_name If you want to assess the significance of a single parameter,
+#' rather than the comparison of two parameters, specify that one parameter's name
+#' here.
+#' @param param_function NOT YET IMPLEMENTED. Will allow you to specify more complicated
+#' functions of parameters when hypotheses you need to test are combinations of parameters
+#' rather than individual parameters or simple differences in two parameters.
 #' @param features Character vector of feature names for which comparisons were made.
+#' @param condition Defunct parameter that has been replaced with `design_factor`. If provided
+#' gets passed to `design_factor` if `design_factor` is not already specified.
 #' @param exactMatch If TRUE, then `features` has to exactly match
 #' those for a given comparisons table for that table to be used. Means that you can't
 #' specify a subset of features by default, since this is TRUE
@@ -25,17 +32,24 @@
 #' @importFrom magrittr %>%
 #' @export
 EZVolcanoPlot <- function(obj,
-                              parameter = "log_kdeg",
-                              condition = NULL,
-                              reference = NULL,
-                              experimental = NULL,
-                              features = NULL,
+                          parameter = "log_kdeg",
+                          design_factor = NULL,
+                          reference = NULL,
+                          experimental = NULL,
+                          param_name = NULL,
+                          param_function = NULL,
+                          features = NULL,
+                          condition = NULL,
                           exactMatch = TRUE,
-                              plotlog2 = TRUE,
-                              FDR_cutoff = 0.05,
-                              difference_cutoff = 0,
-                              size = NULL){
+                          plotlog2 = TRUE,
+                          FDR_cutoff = 0.05,
+                          difference_cutoff = 0,
+                          size = NULL){
 
+  # Check for backwards compatibility
+  if(!is.null(condition) & is.null(design_factor)){
+    design_factor <- condition
+  }
 
   ### Hack to deal with devtools::check() NOTEs
   comparison_name <- difference <- padj <- conclusion <- NULL
@@ -45,10 +59,13 @@ EZVolcanoPlot <- function(obj,
 
   # Function in Helpers.R
   comparison_name <- EZget(obj, type = "comparisons",
-                          condition = condition,
+                           parameter = parameter,
+                           features = features,
+                          design_factor = design_factor,
                           reference = reference,
                           experimental = experimental,
-                          features = features,
+                          param_name = param_name,
+                          param_function = param_function,
                           exactMatch = exactMatch,
                           returnNameOnly = TRUE)
 
@@ -111,6 +128,9 @@ EZVolcanoPlot <- function(obj,
   }
 
   # Make Volcano plot
+  colors <- c("Decreased" = "deepskyblue4",
+              "Increased" = "darkorange",
+              "Not Sig." = "darkgray")
   ggv <- comparison %>%
     dplyr::mutate(conclusion = factor(dplyr::case_when(
       difference < -abs(difference_cutoff) & padj < FDR_cutoff ~ "Decreased",
@@ -119,9 +139,7 @@ EZVolcanoPlot <- function(obj,
     ), levels = c("Decreased", "Increased", "Not Sig."))) %>%
     ggplot(aes(x = difference*scale_factor, y = -log10(padj), color = conclusion)) +
     geom_point(size = size) +
-    scale_color_manual(values = c("deepskyblue4",
-                                  "darkorange",
-                                  "darkgray")) +
+    scale_color_manual(values = colors) +
     theme_classic() +
     xlab(axislabel) +
     ylab("-log10(padj)") +
@@ -139,12 +157,19 @@ EZVolcanoPlot <- function(obj,
 #' @param obj An object of class `EZbakRCompare`, which is an `EZbakRData` object
 #' on which you have run `CompareParameters`
 #' @param parameter Name of parameter whose comparison you want to plot.
-#' @param condition Name of condition for which you want to plot the comparison of
-#' two of its levels. Condition should be the name of a column that appears in
-#' your metadf table.
-#' @param reference Name of reference level for comparison.
-#' @param experimental Name of experimental level for comparison.
+#' @param design_factor Name of factor from `metadf` whose parameter estimates at
+#' different factor values you would like to compare.
+#' @param reference Name of reference `condition` factor level value.
+#' @param experimental Name of `condition` factor level value to compare to reference.
+#' @param param_name If you want to assess the significance of a single parameter,
+#' rather than the comparison of two parameters, specify that one parameter's name
+#' here.
+#' @param param_function NOT YET IMPLEMENTED. Will allow you to specify more complicated
+#' functions of parameters when hypotheses you need to test are combinations of parameters
+#' rather than individual parameters or simple differences in two parameters.
 #' @param features Character vector of feature names for which comparisons were made.
+#' @param condition Defunct parameter that has been replaced with `design_factor`. If provided
+#' gets passed to `design_factor` if `design_factor` is not already specified.
 #' @param exactMatch If TRUE, then `features` and `populations` have to exactly match
 #' those for a given fractions table for that table to be used. Means that you can't
 #' specify a subset of features or populations by default, since this is TRUE
@@ -160,15 +185,24 @@ EZVolcanoPlot <- function(obj,
 #' @export
 EZMAPlot <- function(obj,
                          parameter = "log_kdeg",
-                         condition = NULL,
-                         reference = NULL,
-                         experimental = NULL,
+                     design_factor = NULL,
+                     reference = NULL,
+                     experimental = NULL,
+                     param_name = NULL,
+                     param_function = NULL,
                          features = NULL,
+                     condition = NULL,
                      exactMatch = TRUE,
                          plotlog2 = TRUE,
                          FDR_cutoff = 0.05,
                          difference_cutoff = 0,
                          size = NULL){
+
+
+  # Check for backwards compatibility
+  if(!is.null(condition) & is.null(design_factor)){
+    design_factor <- condition
+  }
 
   ### Hack to deal with devtools::check() NOTEs
   comparison_name <- difference <- avg_coverage <- conclusion <- NULL
@@ -178,12 +212,15 @@ EZMAPlot <- function(obj,
 
   # Function in Helpers.R
   comparison_name <- EZget(obj, type = "comparisons",
-                          condition = condition,
-                          reference = reference,
-                          experimental = experimental,
-                          features = features,
-                          exactMatch = exactMatch,
-                          returnNameOnly = TRUE)
+                           parameter = parameter,
+                           features = features,
+                           design_factor = design_factor,
+                           reference = reference,
+                           experimental = experimental,
+                           param_name = param_name,
+                           param_function = param_function,
+                           exactMatch = exactMatch,
+                           returnNameOnly = TRUE)
 
   comparison <- obj[['comparisons']][[comparison_name]]
   metadata <- obj[['metadata']][['comparisons']][[comparison_name]]
@@ -244,6 +281,9 @@ EZMAPlot <- function(obj,
   }
 
   # Make Volcano plot
+  colors <- c("Decreased" = "deepskyblue4",
+              "Increased" = "darkorange",
+              "Not Sig." = "darkgray")
   ggma <- comparison %>%
     dplyr::mutate(conclusion = factor(dplyr::case_when(
       difference < -abs(difference_cutoff) & padj < FDR_cutoff ~ "Decreased",
@@ -252,9 +292,7 @@ EZMAPlot <- function(obj,
     ), levels = c("Decreased", "Increased", "Not Sig."))) %>%
     ggplot(aes(y = difference*scale_factor, x = avg_coverage, color = conclusion)) +
     geom_point(size = size) +
-    scale_color_manual(values = c("deepskyblue4",
-                                  "darkorange",
-                                  "darkgray")) +
+    scale_color_manual(values = colors) +
     theme_classic() +
     xlab("Avgerage coverage") +
     ylab(axislabel)

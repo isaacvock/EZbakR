@@ -25,16 +25,23 @@
 #' @param counttype String denoting what type of read count information you are looking
 #' for. Current options are "TMM_normalized", "transcript", and "matrix". TO-DO:
 #' Not sure this is being used in any way currently...
-#' @param condition Condition specified in relevant run of `CompareParameters()`.
+#' @param design_factor design_factor specified in relevant run of `CompareParameters()`.
 #' Therefore, only relevant if type == "comparisons".
 #' @param experimental Experimental condition specified in relevant run of `CompareParameters()`.
 #' Therefore, only relevant if type == "comparisons".
 #' @param reference Reference condition specified in relevant run of `CompareParameters()`.
 #' Therefore, only relevant if type == "comparisons".
-#' @param mean_vars Sample features from metadf that were used in formula for
-#' parameter average linear model. Only relevant if type == "averages".
-#' @param sd_vars Sample features from metadf that were used in formula for
-#' parameter standard deviation linear model. Only relevant if type == "averages".
+#' @param param_name Parameter name specified in relevant run of `CompareParameters()`.
+#' Therefore, only relevant if type == "comparisons"
+#' @param param_function Function of parameters specified in relevant run of `CompareParameters()`.
+#' Therefore, only relevant if type == "comparisons".
+#' @param formula_mean An R formula object specifying how the `parameter` of interest
+#' depends on the sample characteristics specified in `obj`'s metadf. Therefore,
+#' only relevant if type == "averages".
+#' @param sd_grouping_factors What metadf columns should data be grouped by when estimating
+#' standard deviations across replicates? Therefore, only relevant if type == "averages".
+#' @param fit_params Character vector of names of parameters in linear model fit. Therefore,
+#' only relevant if type == "averages".
 #' @param sub_features Only relevant if type == "dynamics". Feature columns
 #' that distinguished between the different measured species when running
 #' `EZDynamics()`.
@@ -70,11 +77,14 @@ EZget <- function(obj,
                   kstrat = NULL,
                   parameter = NULL,
                   counttype = NULL,
-                  condition = NULL,
+                  design_factor = NULL,
                   experimental = NULL,
                   reference = NULL,
-                  mean_vars = NULL,
-                  sd_vars = NULL,
+                  param_name = NULL,
+                  param_function = NULL,
+                  formula_mean = NULL,
+                  sd_grouping_factors = NULL,
+                  fit_params = NULL,
                   repeatID = NULL,
                   sub_features = NULL,
                   grouping_features = NULL,
@@ -256,11 +266,11 @@ EZget <- function(obj,
 
   }
 
-  if(!is.null(condition)){
+  if(!is.null(design_factor)){
 
     possible_tables_c <- exact_ezsearch(metadata,
-                                          query = condition,
-                                          object = "condition")
+                                          query = design_factor,
+                                          object = "design_factor")
 
 
     possible_tables <- intersect(possible_tables, possible_tables_c)
@@ -292,6 +302,31 @@ EZget <- function(obj,
 
   }
 
+  if(!is.null(param_name)){
+
+    possible_tables_pn <- exact_ezsearch(metadata,
+                                        query = param_name,
+                                        object = "param_name")
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_pn)
+
+
+  }
+
+  if(!is.null(param_function)){
+
+    possible_tables_pf <- exact_ezsearch(metadata,
+                                         query = param_function,
+                                         object = "param_function")
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_pf)
+
+
+  }
+
+
   if(!is.null(repeatID)){
 
     possible_tables_rep <- exact_ezsearch(metadata,
@@ -302,31 +337,6 @@ EZget <- function(obj,
 
   }
 
-
-  if(!is.null(mean_vars)){
-
-    possible_tables_mv <- vector_ezsearch(metadata,
-                                          mean_vars,
-                                          "mean_vars",
-                                          exactMatch = exactMatch)
-
-    possible_tables <- intersect(possible_tables, possible_tables_mv)
-
-
-  }
-
-
-  if(!is.null(sd_vars)){
-
-    possible_tables_sd <- vector_ezsearch(metadata,
-                                          sd_vars,
-                                          "sd_vars",
-                                          exactMatch = exactMatch)
-
-    possible_tables <- intersect(possible_tables, possible_tables_sd)
-
-
-  }
 
   if(!is.null(sub_features)){
 
@@ -357,6 +367,40 @@ EZget <- function(obj,
                                          "sample_feature")
 
     possible_tables <- intersect(possible_tables, possible_tables_sf)
+
+  }
+
+
+  if(!is.null(formula_mean)){
+
+    possible_tables_fm <- exact_ezsearch(metadata,
+                                         formula_mean,
+                                         "formula_mean")
+
+    possible_tables <- intersect(possible_tables, possible_tables_fm)
+
+  }
+
+  if(!is.null(sd_grouping_factors)){
+
+    possible_tables_sgf <- vector_ezsearch(metadata,
+                                         sd_grouping_factors,
+                                         "sd_grouping_factors",
+                                         exactMatch = exactMatch)
+
+    possible_tables <- intersect(possible_tables, possible_tables_sgf)
+
+  }
+
+
+  if(!is.null(fit_params)){
+
+    possible_tables_fp <- vector_ezsearch(metadata,
+                                           fit_params,
+                                           "fit_params",
+                                           exactMatch = exactMatch)
+
+    possible_tables <- intersect(possible_tables, possible_tables_fp)
 
   }
 
@@ -504,11 +548,14 @@ decide_output <- function(obj, proposed_name,
                           counttype = NULL,
                           kstrat = NULL,
                           parameter = NULL,
-                          condition = NULL,
+                          design_factor = NULL,
                           reference = NULL,
                           experimental = NULL,
-                          mean_vars = NULL,
-                          sd_vars = NULL,
+                          param_name = NULL,
+                          param_function = NULL,
+                          formula_mean = NULL,
+                          sd_grouping_factors = NULL,
+                          fit_params = NULL,
                           sub_features = NULL,
                           grouping_features = NULL,
                           sample_feature = NULL,
@@ -527,11 +574,14 @@ decide_output <- function(obj, proposed_name,
                              parameter = parameter,
                              kstrat = kstrat,
                              counttype = counttype,
-                           condition = condition,
+                           design_factor = design_factor,
                            reference = reference,
                            experimental = experimental,
-                           mean_vars = mean_vars,
-                           sd_vars = sd_vars,
+                           param_name = param_name,
+                           param_function = param_function,
+                           formula_mean = formula_mean,
+                           sd_grouping_factors = sd_grouping_factors,
+                           fit_params = fit_params,
                            sub_features = sub_features,
                            grouping_features = grouping_features,
                            sample_feature = sample_feature,

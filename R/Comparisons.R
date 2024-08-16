@@ -21,6 +21,10 @@
 #' but can also set to "fractions".
 #' @param kstrat If `type == "kinetics"`, then `kstrat` specifies the kinetic parameter
 #' inference strategy.
+#' @param populations Character vector of the set of mutational populations
+#' that you want to infer the fractions of. Only relevant if type == "fractions".
+#' @param fraction_design "Design matrix" specifying which RNA populations exist
+#' in your samples. Only relevant if type == "fractions".
 #' @param repeatID If multiple `kinetics` or `fractions` tables exist with the same metadata,
 #' then this is the numerical index by which they are distinguished.
 #' @param formula_mean An R formula object specifying how the `parameter` of interest
@@ -56,6 +60,10 @@
 #' sample characteristics (i.e., all treatment As also correspond to batch As, and
 #' all treatment Bs correspond to batch Bs).
 #' @param min_reads Minimum number of reads in all samples for a feature to be kept.
+#' @param convert_tl_to_factor If a label time variable is included in the `formula_mean`,
+#' convert its values to factors so as to avoid performing continuous regression on label
+#' times. Defaults to TRUE as including label time in the regression is often meant to
+#' stratify samples by their label time if, for example, you are averaging logit(fractions).
 #' @param force_lm Certain formula lend them selves to efficient approximations of the
 #' full call to `lm()`. Namely, formulas that stratify samples into disjoint groups where
 #' a single parameter of the model is effectively estimated from each group can be tackled
@@ -90,6 +98,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                  sd_reg_factor = 10,
                                  error_if_singular = TRUE,
                                  min_reads = 10,
+                                 convert_tl_to_factor = TRUE,
                                  force_lm = FALSE,
                                  force_optim = force_lm,
                                  conservative = FALSE,
@@ -201,27 +210,39 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   }
 
-
   formula_mean <- stats::as.formula(paste0(paste(c(parameter, formula_mean), collapse = ""), "-1"))
 
 
   ### Check to see if simple averaging is compatible with specified model
+  variables <- all.vars(formula_mean)
+  variables <- variables[2:length(variables)]
 
-  X <- model.matrix(formula_mean,
-                    metadf  %>%
-                      dplyr::mutate(!!parameter := 1) %>%
-                      dplyr::rowwise() %>%
-                      dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) != 0)))
+  # Filter out -label data
+  metadf <- metadf  %>%
+    dplyr::rowwise() %>%
+    dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) != 0))
+
+  # Convert tl to factor if necessary
+  if(convert_tl_to_factor & any(tl_cols %in% variables)){
+
+    cols_to_convert <- tl_cols[tl_cols %in% variables]
+    metadf[cols_to_convert] <- lapply(metadf[cols_to_convert], as.factor)
+
+  }
+
+  X <- stats::model.matrix(formula_mean,
+                    metadf %>%
+                      dplyr::mutate(!!parameter := 1))
+
 
   if(is.null(sd_grouping_factors)){
 
 
     # If there is a clean parameter to sample mapping, we can infer
     # sd_grouping_factors
-    if(all(rowSums(X) == 1)){
+    if(all(rowSums(X!= 0) == 1)){
 
-      variables <- all.vars(formula_mean)
-      sd_grouping_factors <- variables[2:length(variables)]
+      sd_grouping_factors <- variables
       can_simply_average <- TRUE
 
     }else{
@@ -237,8 +258,6 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     # Could also accommodate case where sd_grouping_factors are distinct from
     # formula_mean factors, but won't worry about that for now as it would be
     # a weird decision for a user to seek out anyway.
-    variables <- all.vars(formula_mean)
-    variables <- variables[2:length(variables)]
     can_simply_average <- identical(sd_grouping_factors, variables) &
       all(rowSums(X) == 1)
 
@@ -278,6 +297,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
 
   message("Fitting linear model")
+
   if(single_level_mean){
 
     if(length(all.vars(formula_mean)) != 2 ){
@@ -351,6 +371,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
 
         model_fit <- model_fit %>%
+          dplyr::select(-logsd, -replicates) %>%
           tidyr::pivot_wider(names_from = !!mean_vars[2:length(mean_vars)],
                              values_from = c(mean, logse, coverage, se_mean, se_logse),
                              names_glue = paste0("{.value}_", paste(paste0(mean_vars[2:length(mean_vars)],
@@ -508,6 +529,9 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   }
 
+  # Strip formula of environment to ensure easy comparisons via EZget()
+  environment(formula_mean) <- NULL
+
   # Are there any metadata or fractions objects at this point?
   if(length(obj[['metadata']][['averages']]) > 0){
 
@@ -516,8 +540,9 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                               type = "averages",
                               features = features_to_analyze,
                               parameter = parameter,
-                              mean_vars = mean_vars[2:length(mean_vars)], # 1st element == parameter
-                              sd_vars = sd_vars[2:length(sd_vars)], # 1st element == parameter
+                              fit_params = covariate_names,
+                              formula_mean = formula_mean,
+                              sd_grouping_factors = sd_grouping_factors,
                               overwrite = overwrite)
 
     # How many identical tables already exist?
@@ -532,8 +557,9 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                features = features_to_analyze,
                                parameter = parameter,
                                returnNameOnly = TRUE,
-                               mean_vars = mean_vars[2:length(mean_vars)], # 1st element == parameter
-                               sd_vars = sd_vars[2:length(sd_vars)], # 1st element == parameter
+                               fit_params = covariate_names,
+                               formula_mean = formula_mean,
+                               sd_grouping_factors = sd_grouping_factors,
                                exactMatch = TRUE,
                                alwaysCheck = TRUE)) + 1
     }
@@ -551,8 +577,9 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
   # Save metadata
   obj[['metadata']][['averages']][[avg_vect]] <- list(features = features_to_analyze,
                                                       parameter = parameter,
-                                                      mean_vars = mean_vars[2:length(mean_vars)], # 1st element == parameter
-                                                      sd_vars = sd_vars[2:length(sd_vars)], # 1st element == parameter
+                                                      fit_params = covariate_names,
+                                                      formula_mean = formula_mean,
+                                                      sd_grouping_factors = sd_grouping_factors,
                                                       repeatID = repeatID)
 
 
@@ -645,12 +672,21 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 #'
 #' @param obj An `EZbakRFit` object, which is an `EZbakRFractions` object on
 #' which `AverageAndRegularize()` has been run.
-#' @param condition Name of factor from `metadf` whose parameter estimates at
-#' different factor values you would like to compare.
+#' @param design_factor Name of factor from `metadf` whose parameter estimates at
+#' different factor values you would like to compare. If you specify this, you need
+#' to also specify `reference` and `experimental`.
 #' @param reference Name of reference `condition` factor level value. Difference
 #' will be calculated as `experimental` - `reference`.
 #' @param experimental Name of `condition` factor level value to compare to reference.
 #' Difference will be calculated as `experimental` - `reference`.
+#' @param param_name If you want to assess the significance of a single parameter,
+#' rather than the comparison of two parameters, specify that one parameter's name
+#' here.
+#' @param param_function NOT YET IMPLEMENTED. Will allow you to specify more complicated
+#' functions of parameters when hypotheses you need to test are combinations of parameters
+#' rather than individual parameters or simple differences in two parameters.
+#' @param condition Same as `design_factor`, will be deprecated in favor of the
+#' former in later release.
 #' @param features Character vector of the set of features you want to stratify
 #' reads by and estimate proportions of each RNA population. The default of "all"
 #' will use all feature columns in the `obj`'s cB.
@@ -658,27 +694,65 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 #' those for a given fractions table for that table to be used. Means that you can't
 #' specify a subset of features or populations by default, since this is TRUE
 #' by default.
-#' @param mean_vars Sample features from metadf that were used in formula for
-#' parameter average linear model.
-#' @param sd_vars Sample features from metadf that were used in formula for
-#' parameter standard deviation linear model.
 #' @param repeatID If multiple `averages` tables exist with the same metadata,
 #' then this is the numerical index by which they are distinguished.
+#' @param formula_mean An R formula object specifying how the `parameter` of interest
+#' depends on the sample characteristics for the averages object you want to use.
+#' @param sd_grouping_factors Metadf columns should data was grouped by when estimating
+#' standard deviations across replicates for the averages object you want to use.
+#' @param fit_params Character vector of parameter names in the averages object
+#' you would like to use.
 #' @param parameter Parameter to average across replicates of a given condition.
 #' @param overwrite If TRUE, then identical output will be overwritten if it exists.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
-CompareParameters <- function(obj, condition, reference, experimental,
+CompareParameters <- function(obj, design_factor, reference, experimental,
+                              param_name, param_function,
+                              condition = NULL,
                               features = NULL, exactMatch = TRUE, repeatID = NULL,
-                              mean_vars = NULL, sd_vars = NULL,
-                              overwrite = TRUE, parameter = "log_kdeg"){
+                              formula_mean = NULL, sd_grouping_factors = NULL,
+                              fit_params = NULL, overwrite = TRUE, parameter = "log_kdeg"){
 
 
   ### Hack to deal with annoying devtools::check() NOTE
 
   difference <- uncertainty <- pval <- padj <- avg_coverage <- NULL
 
+
+  ### Determine what strategy to use for "comparisons"
+
+  # Deal with parameter name change to make life easier for older users
+  if(missing(design_factor) & !is.null(condition)){
+    design_factor <- condition
+  }
+
+  if(missing(design_factor) | missing(reference) | missing(experimental)){
+
+    if(missing(param_name)){
+
+      if(missing(param_function)){
+
+        stop("You either need to specify: 1) condition, reference, and experimental,
+             2) param_name or 3) param_function!")
+
+      }else{
+
+        strategy = "function"
+
+      }
+
+    }else{
+
+      strategy = "single_param"
+
+    }
+
+  }else{
+
+    strategy = "contrast"
+
+  }
 
   ### Extract kinetic parameters of interest
 
@@ -687,12 +761,16 @@ CompareParameters <- function(obj, condition, reference, experimental,
 
 
   # Function is in Helpers.R
+  if(!is.null(formula_mean)){
+    environment(formula_mean) <- NULL
+  }
   averages_name <- EZget(obj,
                          type = "averages",
                          features = features,
                          parameter = parameter,
-                         mean_vars = mean_vars,
-                         sd_vars = sd_vars,
+                         formula_mean = formula_mean,
+                         fit_params = fit_params,
+                         sd_grouping_factors = sd_grouping_factors,
                          exactMatch = exactMatch,
                          repeatID = repeatID,
                          returnNameOnly = TRUE)
@@ -706,22 +784,54 @@ CompareParameters <- function(obj, condition, reference, experimental,
 
   ### Perform comparative analysis of interest
 
-  ref_mean <- paste0("mean_", condition, reference)
-  ref_sd <- paste0("sd_", condition, reference, "_posterior")
-  ref_cov <- paste0("coverage_", condition, reference)
+  if(strategy == "contrast"){
 
-  exp_mean <- paste0("mean_", condition, experimental)
-  exp_sd <- paste0("sd_", condition, experimental, "_posterior")
-  exp_cov <- paste0("coverage_", condition, experimental)
+    ref_mean <- paste0("mean_", design_factor, reference)
+    ref_sd <- paste0("sd_", design_factor, reference, "_posterior")
+    ref_cov <- paste0("coverage_", design_factor, reference)
 
-  comparison <- parameter_est %>%
-    dplyr::mutate(difference = !!dplyr::sym(exp_mean) - !!dplyr::sym(ref_mean),
-                  uncertainty = sqrt( (!!dplyr::sym(ref_sd))^2 + (!!dplyr::sym(exp_sd))^2 ),
-                  stat = difference/uncertainty,
-                  pval = 2*stats::pnorm(-abs(stat)),
-                  avg_coverage = ((!!dplyr::sym(ref_cov)) + (!!dplyr::sym(exp_cov))) / 2) %>%
-    dplyr::mutate(padj = stats::p.adjust(pval, method = "BH")) %>%
-    dplyr::select(!!features_to_analyze, difference, uncertainty, stat, pval, padj, avg_coverage)
+    exp_mean <- paste0("mean_", design_factor, experimental)
+    exp_sd <- paste0("sd_", design_factor, experimental, "_posterior")
+    exp_cov <- paste0("coverage_", design_factor, experimental)
+
+    comparison <- parameter_est %>%
+      dplyr::mutate(difference = !!dplyr::sym(exp_mean) - !!dplyr::sym(ref_mean),
+                    uncertainty = sqrt( (!!dplyr::sym(ref_sd))^2 + (!!dplyr::sym(exp_sd))^2 ),
+                    stat = difference/uncertainty,
+                    pval = 2*stats::pnorm(-abs(stat)),
+                    avg_coverage = ((!!dplyr::sym(ref_cov)) + (!!dplyr::sym(exp_cov))) / 2) %>%
+      dplyr::mutate(padj = stats::p.adjust(pval, method = "BH")) %>%
+      dplyr::select(!!features_to_analyze, difference, uncertainty, stat, pval, padj, avg_coverage)
+
+
+  }
+
+  if(strategy == "single_param"){
+
+    param_mean <- paste0("mean_", param_name)
+    param_sd <- paste0("sd_", param_name, "_posterior")
+    param_cov <- paste0("coverage_", param_name)
+
+    comparison <- parameter_est %>%
+      dplyr::mutate(difference = !!dplyr::sym(param_mean),
+                    uncertainty = !!dplyr::sym(param_sd),
+                    stat = difference/uncertainty,
+                    pval = 2*stats::pnorm(-abs(stat)),
+                    avg_coverage = !!dplyr::sym(param_cov)) %>%
+      dplyr::mutate(padj = stats::p.adjust(pval, method = "BH")) %>%
+      dplyr::select(!!features_to_analyze, difference, uncertainty, stat, pval, padj, avg_coverage)
+
+
+  }
+
+
+  if(strategy == "function"){
+
+
+    stop("Not implemented yet!!!")
+
+
+  }
 
 
 
@@ -732,11 +842,34 @@ CompareParameters <- function(obj, condition, reference, experimental,
   output_name <- paste0("comparison", num_comparisons + 1)
 
 
+  # Impute missing values
+  if(missing(design_factor)){
+    design_factor <- NULL
+  }
+  if(missing(reference)){
+    reference <- NULL
+  }
+  if(missing(experimental)){
+    experimental <- NULL
+  }
+  if(missing(param_name)){
+    param_name <- NULL
+  }
+  if(missing(param_function)){
+    param_function <- NULL
+  }
+
+
+
+
   if(length(obj[['comparisons']]) > 0){
     output_name <- decide_output(obj, output_name, type = "comparisons",
                                  features = features, parameter = parameter,
-                                 reference = reference, experimental = experimental,
-                                 condition = condition,
+                                 design_factor = design_factor,
+                                 reference = reference,
+                                 experimental = experimental,
+                                 param_name = param_name,
+                                 param_function = param_function,
                                  overwrite = overwrite)
 
     # How many identical tables already exist?
@@ -750,9 +883,11 @@ CompareParameters <- function(obj, condition, reference, experimental,
                                type = 'comparisons',
                                features = features,
                                parameter = parameter,
-                               condition = condition,
+                               design_factor = design_factor,
                                reference = reference,
                                experimental = experimental,
+                               param_name = param_name,
+                               param_function = param_function,
                                returnNameOnly = TRUE,
                                exactMatch = TRUE,
                                alwaysCheck = TRUE)) + 1
@@ -766,9 +901,13 @@ CompareParameters <- function(obj, condition, reference, experimental,
 
   obj[["comparisons"]][[output_name]] <- dplyr::as_tibble(comparison)
 
-  obj[["metadata"]][["comparisons"]][[output_name]] <- list(condition = condition,
+  obj[["metadata"]][["comparisons"]][[output_name]] <- list(features = features,
+                                                            parameter = parameter,
+                                                            design_factor = design_factor,
                                                             reference = reference,
                                                             experimental = experimental,
+                                                            param_name = param_name,
+                                                            param_function = param_function,
                                                             features = features_to_analyze,
                                                             parameter = parameter,
                                                             repeatID = repeatID)
@@ -792,7 +931,7 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
                                     error_if_singular = TRUE){
 
 
-  fit <- lm(formula_mean, data,
+  fit <- stats::lm(formula_mean, data,
             singular.ok = !error_if_singular)
 
   means <- summary(fit)$coef[,"Estimate"]
@@ -804,8 +943,8 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
     # My version of robust se estimation: add parameter uncertainty to avoid underestimation
     # I like to be conservative in bioinformatics, because there are always unaccounted
     # for sources of variance.
-    X <- model.matrix(fit)
-    s2 <- sigma(fit)^2 + data[[uncertainties_col]]^2 + (0.05^2)/(nrow(data)/ncol(X))
+    X <- stats::model.matrix(fit)
+    s2 <- stats::sigma(fit)^2 + data[[uncertainties_col]]^2 + (0.05^2)/(nrow(data)/ncol(X))
     vce <- solve(t(X) %*% X) %*% (t(X) %*% (s2*diag(nrow(data))) %*% X) %*% solve(t(X) %*% X)
     ses <- log(sqrt(diag(vce)))
 
@@ -833,11 +972,11 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
     # Estimate standard deviations in each group
     sds <- data %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(sd_groups))) %>%
-      mutate(group_sd = sd(!!dplyr::sym(parameter)),
+      dplyr::mutate(group_sd = stats::sd(!!dplyr::sym(parameter)),
              group_coverage = mean(!!dplyr::sym(coverage_col)))
 
     # Robust standard errors
-    X <- model.matrix(fit)
+    X <- stats::model.matrix(fit)
     s2 <- sds$group_sd^2 + data[[uncertainties_col]]^2 #+ (0.025^2)/(nrow(data)/ncol(X))
     vce <- solve(t(X) %*% X) %*% (t(X) %*% (s2*diag(nrow(data))) %*% X) %*% solve(t(X) %*% X)
     ses <- log(sqrt(diag(vce)))

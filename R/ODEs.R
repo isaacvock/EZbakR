@@ -102,17 +102,13 @@
 #' @param parameter Parameter to average across replicates of a given condition.
 #' Has to be "logit_fraction_high<muttype>", where <muttype> is the type of
 #' mutation modeled in `EstimateFractions()` (e.g, TC) in this case.
-#' @param mean_vars Sample features from metadf that were used in formula for
-#' parameter average linear model.
-#' @param sd_vars Sample features from metadf that were used in formula for
-#' parameter standard deviation linear model.
 #' @param repeatID If multiple `fractions` tables exist with the same metadata,
 #' then this is the numerical index by which they are distinguished.
 #' @param exactMatch If TRUE, then `features` and `populations` have to exactly match
 #' those for a given fractions table for that table to be used. Means that you can't
 #' specify a subset of features or populations by default, since this is TRUE
 #' by default.
-#' @param lengths Table of effective lengths for each feature combination in your
+#' @param feature_lengths Table of effective lengths for each feature combination in your
 #' data. For example, if your analysis includes features named GF and XF, this
 #' should be a data frame with columns GF, XF, and length.
 #' @param overwrite If TRUE and a fractions estimate output already exists that
@@ -137,11 +133,9 @@ EZDynamics <- function(obj,
                      populations = NULL,
                      fraction_design = NULL,
                      parameter = NULL,
-                     mean_vars = NULL,
-                     sd_vars = NULL,
                      repeatID = NULL,
                      exactMatch = TRUE,
-                     lengths = NULL,
+                     feature_lengths = NULL,
                      overwrite = TRUE){
 
   ##### ORDER OF OPERATIONS
@@ -177,8 +171,7 @@ EZDynamics <- function(obj,
   # Tidy averages table (currently makes hard assumption about interaction terms being only terms)
   table_name <- EZget(obj = obj, type = type, features = features,
                       populations = populations, fraction_design = fraction_design,
-                      parameter = parameter, mean_vars = mean_vars,
-                      sd_vars = sd_vars, repeatID = repeatID,
+                      parameter = parameter, repeatID = repeatID,
                       exactMatch = exactMatch, returnNameOnly = TRUE)
 
   if(length(table_name) > 1){
@@ -231,7 +224,7 @@ EZDynamics <- function(obj,
       species <- rownames(graph)[rownames(graph) != "0"]
       modeled_to_measured <- vector(mode = "list", length = length(species))
       for(s in seq_along(species)){
-        modeled_to_measured[[s]] <- as.formula(paste0(species[s], "~", species[s]))
+        modeled_to_measured[[s]] <- stats::as.formula(paste0(species[s], "~", species[s]))
       }
 
     }
@@ -264,13 +257,13 @@ EZDynamics <- function(obj,
     # breaks down as their aren't N eigenvalues. Could generalize to case
     # of equal parameters, but thinking of parameter estimates as continuous
     # random variables that thus have probability of 0 of being equal.
-    lower_bounds <- rnorm(npars,
+    lower_bounds <- stats::rnorm(npars,
                           -10,
                           0.01)
-    upper_bounds <- rnorm(npars,
+    upper_bounds <- stats::rnorm(npars,
                           10,
                           0.01)
-    starting_values <- rnorm(npars,
+    starting_values <- stats::rnorm(npars,
                              0, 0.01)
 
 
@@ -436,7 +429,7 @@ EZDynamics <- function(obj,
     reads_norm <- get_normalized_read_counts(obj = obj,
                                              features_to_analyze = features_to_analyze,
                                              fractions_name = table_name,
-                                             lengths = lengths)
+                                             feature_lengths = feature_lengths)
 
 
     ### Prep tables for kinetic parameter estimation
@@ -523,13 +516,13 @@ EZDynamics <- function(obj,
     # breaks down as their aren't N eigenvalues. Could generalize to case
     # of equal parameters, but thinking of parameter estimates as continuous
     # random variables that thus have probability of 0 of being equal.
-    lower_bounds <- rnorm(npars,
+    lower_bounds <- stats::rnorm(npars,
                           -10,
                           0.01)
-    upper_bounds <- rnorm(npars,
+    upper_bounds <- stats::rnorm(npars,
                           10,
                           0.01)
-    starting_values <- rnorm(npars,
+    starting_values <- stats::rnorm(npars,
                              0, 0.01)
 
     cols_to_group_by = c("sample", grouping_features)
@@ -595,8 +588,7 @@ EZDynamics <- function(obj,
                                  grouping_features = grouping_features,
                                  sample_feature = sample_feature,
                                  modeled_to_measured = modeled_to_measured,
-                                 graph = graph, parameter = parameter,
-                                 mean_vars = mean_vars, sd_vars = sd_vars)
+                                 graph = graph, parameter = parameter)
 
     # How many identical tables already exist?
     if(overwrite){
@@ -613,7 +605,6 @@ EZDynamics <- function(obj,
                                sample_feature = sample_feature,
                                modeled_to_measured = modeled_to_measured,
                                graph = graph, parameter = parameter,
-                               mean_vars = mean_vars, sd_vars = sd_vars,
                                returnNameOnly = TRUE,
                                exactMatch = TRUE,
                                alwaysCheck = TRUE)) + 1
@@ -633,7 +624,6 @@ EZDynamics <- function(obj,
                                                          sample_feature = sample_feature,
                                                          modeled_to_measured = modeled_to_measured,
                                                          graph = graph, parameter = parameter,
-                                                         mean_vars = mean_vars, sd_vars = sd_vars,
                                                          repeatID = repeatID)
 
 

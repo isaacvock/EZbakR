@@ -19,11 +19,9 @@ EZDynamics(
   populations = NULL,
   fraction_design = NULL,
   parameter = NULL,
-  mean_vars = NULL,
-  sd_vars = NULL,
   repeatID = NULL,
   exactMatch = TRUE,
-  lengths = NULL,
+  feature_lengths = NULL,
   overwrite = TRUE
 )
 }
@@ -130,12 +128,6 @@ to create one manually. See docs for \code{EstimateFractions} (run ?EstimateFrac
 Has to be "logit_fraction_high\if{html}{\out{<muttype>}}", where \if{html}{\out{<muttype>}} is the type of
 mutation modeled in \code{EstimateFractions()} (e.g, TC) in this case.}
 
-\item{mean_vars}{Sample features from metadf that were used in formula for
-parameter average linear model.}
-
-\item{sd_vars}{Sample features from metadf that were used in formula for
-parameter standard deviation linear model.}
-
 \item{repeatID}{If multiple \code{fractions} tables exist with the same metadata,
 then this is the numerical index by which they are distinguished.}
 
@@ -144,7 +136,7 @@ those for a given fractions table for that table to be used. Means that you can'
 specify a subset of features or populations by default, since this is TRUE
 by default.}
 
-\item{lengths}{Table of effective lengths for each feature combination in your
+\item{feature_lengths}{Table of effective lengths for each feature combination in your
 data. For example, if your analysis includes features named GF and XF, this
 should be a data frame with columns GF, XF, and length.}
 
