@@ -20,6 +20,7 @@ AverageAndRegularize(
   sd_reg_factor = 10,
   error_if_singular = TRUE,
   min_reads = 10,
+  convert_tl_to_factor = TRUE,
   force_lm = FALSE,
   force_optim = force_lm,
   conservative = FALSE,
@@ -90,6 +91,11 @@ sample characteristics (i.e., all treatment As also correspond to batch As, and
 all treatment Bs correspond to batch Bs).}
 
 \item{min_reads}{Minimum number of reads in all samples for a feature to be kept.}
+
+\item{convert_tl_to_factor}{If a label time variable is included in the \code{formula_mean},
+convert its values to factors so as to avoid performing continuous regression on label
+times. Defaults to TRUE as including label time in the regression is often meant to
+stratify samples by their label time if, for example, you are averaging logit(fractions).}
 
 \item{force_lm}{Certain formula lend them selves to efficient approximations of the
 full call to \code{lm()}. Namely, formulas that stratify samples into disjoint groups where

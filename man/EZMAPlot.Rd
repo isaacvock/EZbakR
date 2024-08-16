@@ -7,9 +7,11 @@
 EZMAPlot(
   obj,
   parameter = "log_kdeg",
-  condition = NULL,
+  design_factor = NULL,
   reference = NULL,
   experimental = NULL,
+  param_name = NULL,
+  param_function = NULL,
   features = NULL,
   exactMatch = TRUE,
   plotlog2 = TRUE,
@@ -24,13 +26,16 @@ on which you have run \code{CompareParameters}}
 
 \item{parameter}{Name of parameter whose comparison you want to plot.}
 
-\item{condition}{Name of condition for which you want to plot the comparison of
-two of its levels. Condition should be the name of a column that appears in
-your metadf table.}
+\item{design_factor}{Name of factor from \code{metadf} whose parameter estimates at
+different factor values you would like to compare.}
 
-\item{reference}{Name of reference level for comparison.}
+\item{reference}{Name of reference \code{condition} factor level value.}
 
-\item{experimental}{Name of experimental level for comparison.}
+\item{experimental}{Name of \code{condition} factor level value to compare to reference.}
+
+\item{param_name}{If you want to assess the significance of a single parameter,
+rather than the comparison of two parameters, specify that one parameter's name
+here.}
 
 \item{features}{Character vector of feature names for which comparisons were made.}
 

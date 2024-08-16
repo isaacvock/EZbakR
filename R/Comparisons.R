@@ -56,6 +56,10 @@
 #' sample characteristics (i.e., all treatment As also correspond to batch As, and
 #' all treatment Bs correspond to batch Bs).
 #' @param min_reads Minimum number of reads in all samples for a feature to be kept.
+#' @param convert_tl_to_factor If a label time variable is included in the `formula_mean`,
+#' convert its values to factors so as to avoid performing continuous regression on label
+#' times. Defaults to TRUE as including label time in the regression is often meant to
+#' stratify samples by their label time if, for example, you are averaging logit(fractions).
 #' @param force_lm Certain formula lend them selves to efficient approximations of the
 #' full call to `lm()`. Namely, formulas that stratify samples into disjoint groups where
 #' a single parameter of the model is effectively estimated from each group can be tackled
@@ -90,6 +94,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                  sd_reg_factor = 10,
                                  error_if_singular = TRUE,
                                  min_reads = 10,
+                                 convert_tl_to_factor = TRUE,
                                  force_lm = FALSE,
                                  force_optim = force_lm,
                                  conservative = FALSE,
@@ -205,22 +210,35 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
 
   ### Check to see if simple averaging is compatible with specified model
+  variables <- all.vars(formula_mean)
+  variables <- variables[2:length(variables)]
+
+  # Filter out -label data
+  metadf <- metadf  %>%
+    dplyr::rowwise() %>%
+    dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) != 0))
+
+  # Convert tl to factor if necessary
+  if(convert_tl_to_factor & any(tl_cols %in% variables)){
+
+    cols_to_convert <- tl_cols[tl_cols %in% variables]
+    metadf[cols_to_convert] <- lapply(metadf[cols_to_convert], as.factor)
+
+  }
 
   X <- model.matrix(formula_mean,
-                    metadf  %>%
-                      dplyr::mutate(!!parameter := 1) %>%
-                      dplyr::rowwise() %>%
-                      dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) != 0)))
+                    metadf %>%
+                      dplyr::mutate(!!parameter := 1))
+
 
   if(is.null(sd_grouping_factors)){
 
 
     # If there is a clean parameter to sample mapping, we can infer
     # sd_grouping_factors
-    if(all(rowSums(X) == 1)){
+    if(all(rowSums(X!= 0) == 1)){
 
-      variables <- all.vars(formula_mean)
-      sd_grouping_factors <- variables[2:length(variables)]
+      sd_grouping_factors <- variables
       can_simply_average <- TRUE
 
     }else{
@@ -236,8 +254,6 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     # Could also accommodate case where sd_grouping_factors are distinct from
     # formula_mean factors, but won't worry about that for now as it would be
     # a weird decision for a user to seek out anyway.
-    variables <- all.vars(formula_mean)
-    variables <- variables[2:length(variables)]
     can_simply_average <- identical(sd_grouping_factors, variables) &
       all(rowSums(X) == 1)
 
@@ -277,6 +293,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
 
   message("Fitting linear model")
+
   if(single_level_mean){
 
     if(length(all.vars(formula_mean)) != 2 ){
@@ -350,6 +367,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
 
         model_fit <- model_fit %>%
+          dplyr::select(-logsd, -replicates) %>%
           tidyr::pivot_wider(names_from = !!mean_vars[2:length(mean_vars)],
                              values_from = c(mean, logse, coverage, se_mean, se_logse),
                              names_glue = paste0("{.value}_", paste(paste0(mean_vars[2:length(mean_vars)],
