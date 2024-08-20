@@ -16,6 +16,8 @@
 #' @param features Character vector of feature names for which comparisons were made.
 #' @param condition Defunct parameter that has been replaced with `design_factor`. If provided
 #' gets passed to `design_factor` if `design_factor` is not already specified.
+#' @param repeatID If multiple `kinetics` or `fractions` tables exist with the same metadata,
+#' then this is the numerical index by which they are distinguished.
 #' @param exactMatch If TRUE, then `features` has to exactly match
 #' those for a given comparisons table for that table to be used. Means that you can't
 #' specify a subset of features by default, since this is TRUE
@@ -40,6 +42,7 @@ EZVolcanoPlot <- function(obj,
                           param_function = NULL,
                           features = NULL,
                           condition = NULL,
+                          repeatID = NULL,
                           exactMatch = TRUE,
                           plotlog2 = TRUE,
                           FDR_cutoff = 0.05,
@@ -66,6 +69,7 @@ EZVolcanoPlot <- function(obj,
                           experimental = experimental,
                           param_name = param_name,
                           param_function = param_function,
+                          repeatID = repeatID,
                           exactMatch = exactMatch,
                           returnNameOnly = TRUE)
 
@@ -170,6 +174,8 @@ EZVolcanoPlot <- function(obj,
 #' @param features Character vector of feature names for which comparisons were made.
 #' @param condition Defunct parameter that has been replaced with `design_factor`. If provided
 #' gets passed to `design_factor` if `design_factor` is not already specified.
+#' @param repeatID If multiple `kinetics` or `fractions` tables exist with the same metadata,
+#' then this is the numerical index by which they are distinguished.
 #' @param exactMatch If TRUE, then `features` and `populations` have to exactly match
 #' those for a given fractions table for that table to be used. Means that you can't
 #' specify a subset of features or populations by default, since this is TRUE
@@ -192,6 +198,7 @@ EZMAPlot <- function(obj,
                      param_function = NULL,
                          features = NULL,
                      condition = NULL,
+                     repeatID = NULL,
                      exactMatch = TRUE,
                          plotlog2 = TRUE,
                          FDR_cutoff = 0.05,
@@ -219,6 +226,7 @@ EZMAPlot <- function(obj,
                            experimental = experimental,
                            param_name = param_name,
                            param_function = param_function,
+                           repeatID = repeatID,
                            exactMatch = exactMatch,
                            returnNameOnly = TRUE)
 

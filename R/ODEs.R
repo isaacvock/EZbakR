@@ -196,7 +196,10 @@ EZDynamics <- function(obj,
 
   if(type == "averages"){
 
-    pivot_columns <- obj[['metadata']][['averages']][[table_name]][['mean_vars']]
+    formula_mean <- obj[['metadata']][['averages']][[table_name]][['formula_mean']]
+    pivot_columns <- all.vars(formula_mean)
+    pivot_columns <- pivot_columns[2:length(pivot_columns)]
+
     features <- obj[['metadata']][['averages']][[table_name]][['features']]
 
     # Currently making hard assumption of interactions only...
