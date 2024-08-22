@@ -88,6 +88,16 @@
 #' was not assigned to said feature? "__no_feature" by default.
 #' @param type What type of table would you like to use? Currently only supports
 #' "averages", but will support "fractions" in the near future.
+#' @param avg_params_tokeep Names of parameters in averages table that you would
+#' like to keep. Other parameters will be discarded. Don't include the prefixes "mean_",
+#' "sd_", or "coverage_"; these will be imputed automatically. In other words,
+#' this should be the base parameter names.
+#' @param avg_params_todrop Names of parameters in averages table that you would
+#' like to drop. Other parameters will be kept. Don't include the prefixes "mean_",
+#' "sd_", or "coverage_"; these will be imputed automatically. In other words,
+#' this should be the base parameter names.
+#' @param label_time_name Name of relevant label time column that will be found
+#' in the parameter names. Defaults to the standard "tl".
 #' @param features Character vector of the set of features you want to stratify
 #' reads by and estimate proportions of each RNA population. The default of "all"
 #' will use all feature columns in the `obj`'s cB.
@@ -129,6 +139,9 @@ EZDynamics <- function(obj,
                      parameter_names = paste0("k", 1:max(graph)),
                      unassigned_name = "__no_feature",
                      type = "averages",
+                     avg_params_tokeep = NULL,
+                     avg_params_todrop = NULL,
+                     label_time_name = "tl",
                      features = NULL,
                      populations = NULL,
                      fraction_design = NULL,
@@ -162,7 +175,7 @@ EZDynamics <- function(obj,
 
   # Can try to infer replicate numbers to get more informative coverage likelihood
   metadf <- obj$metadf
-  meta_groups <- c("tl", sample_feature)
+  meta_groups <- c(label_time_name, sample_feature)
   reps <- metadf %>%
     dplyr::group_by(dplyr::across(dplyr::all_of(meta_groups))) %>%
     dplyr::summarise(nreps = dplyr::n())
@@ -202,9 +215,63 @@ EZDynamics <- function(obj,
 
     features <- obj[['metadata']][['averages']][[table_name]][['features']]
 
+    # Get rid of columns for parameters users don't want to model
+    if(!is.null(avg_params_tokeep) | !is.null(avg_params_todrop)){
+
+      all_cols <- colnames(table)
+
+      # All columns user wants to keep
+      cols_keep <- c(features,
+                     paste0("mean_", avg_params_tokeep),
+                     paste0("sd_", avg_params_tokeep, "_posterior"),
+                     paste0("coverage_", avg_params_tokeep))
+
+      # All columns user wants to drop
+      cols_drop <- c(paste0("mean_", avg_params_todrop),
+                     paste0("sd_", avg_params_todrop, "_posterior"),
+                     paste0("coverage_", avg_params_todrop))
+
+
+      cols_keep <- cols_keep[cols_keep %in% all_cols]
+      cols_drop <- cols_drop[cols_drop %in% all_cols]
+
+      # Don't perform filtering if relevant param was NULL
+      if(!is.null(avg_params_tokeep)){
+
+        table <- table %>%
+          dplyr::select(!!cols_keep)
+
+      }
+
+      if(!is.null(avg_params_todrop)){
+
+        table <- table %>%
+          dplyr::select(-!!cols_drop)
+
+      }
+
+      # Need to filter out no longer extant factors
+      all_cols <- colnames(table)
+      count <- 1
+      final_pivot <- c()
+
+      for(p in seq_along(pivot_columns)){
+
+        if(any(grepl(pivot_columns[p], all_cols))){
+
+          final_pivot[count] <- pivot_columns[p]
+          count <- count + 1
+
+        }
+
+      }
+
+      pivot_columns <- final_pivot
+
+    }
+
     # Currently making hard assumption of interactions only...
     # TO-DO: Loosen this restriction
-    # Also assuming that mean_formula == sd_formula
     pattern <- paste0("(.*)_", paste(paste0(pivot_columns, "(.+)"), collapse = ":"))
 
     # Need to remove _posterior suffix (maybe shouldn't be there at all?)
@@ -216,9 +283,57 @@ EZDynamics <- function(obj,
     tidy_avgs <- table %>%
       tidyr::pivot_longer(
         cols = -!!features,
-        names_to = c(".value", pivot_columns),
-        names_pattern = pattern
-      )
+        names_to = "parameter"
+      ) %>%
+      dplyr::mutate(
+        param_type = dplyr::case_when(
+          grepl("^mean", parameter) ~ "mean",
+          grepl("^sd", parameter) ~ "sd",
+          grepl("^coverage", parameter) ~ "coverage"
+        )
+      ) %>%
+      dplyr::mutate(
+        parameter = sub("^(mean_|sd_|coverage_)", "", parameter)
+      ) %>%
+      tidyr::pivot_wider(names_from = param_type,
+                         values_from = "value")
+
+    # Look for substrings corresponding to modeled factors
+    substrings <- pivot_columns
+    query_strings <- tidy_avgs$parameter
+
+    # Need to extract values of all factors (including label time)
+    # associated with a parameter. This assumes that a given parameter
+    # will have a set of factors separated by ":". So parameter names
+    # are of the form "substr1<value>:substr2<value>:...".
+    extract_values <- function(query, substrings) {
+
+      parts <- strsplit(query, ":")[[1]]
+
+      results <- vector("list", length(substrings))
+      names(results) <- substrings
+
+      # Look for each possible factor
+      for (substr in substrings) {
+
+        matched <- grep(paste0("^", substr), parts, value = TRUE)
+
+        # Return NA if substring is not found
+        if (length(matched) > 0) {
+          results[[substr]] <- sub(paste0("^", substr), "", matched)
+        } else {
+          results[[substr]] <- NA
+        }
+      }
+
+      return(results)
+    }
+
+    extracted_values <- lapply(query_strings, extract_values, substrings = substrings)
+
+    # Annotate parameters with factor values
+    tidy_avgs <- dplyr::bind_cols(tidy_avgs, dplyr::bind_rows(extracted_values))
+
 
 
     # formula list
@@ -321,7 +436,7 @@ EZDynamics <- function(obj,
 
     # Fit model
     cols_to_group_by <- c(grouping_features,
-                       pivot_columns[!(pivot_columns %in% c("tl", sample_feature))])
+                       pivot_columns[!(pivot_columns %in% c(label_time_name, sample_feature))])
 
 
     # Filter out features that don't have all measured species
@@ -329,7 +444,7 @@ EZDynamics <- function(obj,
 
 
     tidy_avgs <- tidy_avgs %>%
-      dplyr::group_by(dplyr::across(dplyr::all_of(c(cols_to_group_by, "tl")))) %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(c(cols_to_group_by, label_time_name)))) %>%
       dplyr::filter(dplyr::n() >= (nrow(graph) - 1)) %>%
       dplyr::ungroup()
 
@@ -337,7 +452,7 @@ EZDynamics <- function(obj,
     if(is.null(scale_factors)){
 
       dynfit <- tidy_avgs  %>%
-        dplyr::mutate(tl = as.numeric(tl)) %>%
+        dplyr::mutate(tl = as.numeric(!!dplyr::sym(label_time_name))) %>%
         dplyr::inner_join(reps,
                           by = meta_groups) %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group_by))) %>%
@@ -366,7 +481,7 @@ EZDynamics <- function(obj,
 
       dynfit <- tidy_avgs  %>%
         dplyr::inner_join(scale_factors, by = sample_feature) %>%
-        dplyr::mutate(tl = as.numeric(tl)) %>%
+        dplyr::mutate(tl = as.numeric(!!dplyr::sym(label_time_name))) %>%
         dplyr::inner_join(reps,
                           by = meta_groups) %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group_by))) %>%
@@ -446,7 +561,7 @@ EZDynamics <- function(obj,
     setkey(metadf, sample)
     setkey(kinetics, sample)
 
-    kinetics <- kinetics[metadf[,c("sample", "tl")], nomatch = NULL]
+    kinetics <- kinetics[metadf[,c("sample", label_time_name)], nomatch = NULL]
 
     # Make sure no -s4U controls made it through
     kinetics <- kinetics[tl > 0]

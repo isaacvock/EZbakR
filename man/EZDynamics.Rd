@@ -15,6 +15,9 @@ EZDynamics(
   parameter_names = paste0("k", 1:max(graph)),
   unassigned_name = "__no_feature",
   type = "averages",
+  avg_params_tokeep = NULL,
+  avg_params_todrop = NULL,
+  label_time_name = "tl",
   features = NULL,
   populations = NULL,
   fraction_design = NULL,
@@ -109,6 +112,19 @@ was not assigned to said feature? "__no_feature" by default.}
 
 \item{type}{What type of table would you like to use? Currently only supports
 "averages", but will support "fractions" in the near future.}
+
+\item{avg_params_tokeep}{Names of parameters in averages table that you would
+like to keep. Other parameters will be discarded. Don't include the prefixes "mean_",
+"sd_", or "coverage_"; these will be imputed automatically. In other words,
+this should be the base parameter names.}
+
+\item{avg_params_todrop}{Names of parameters in averages table that you would
+like to drop. Other parameters will be kept. Don't include the prefixes "mean_",
+"sd_", or "coverage_"; these will be imputed automatically. In other words,
+this should be the base parameter names.}
+
+\item{label_time_name}{Name of relevant label time column that will be found
+in the parameter names. Defaults to the standard "tl".}
 
 \item{features}{Character vector of the set of features you want to stratify
 reads by and estimate proportions of each RNA population. The default of "all"
