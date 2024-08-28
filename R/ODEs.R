@@ -88,6 +88,10 @@
 #' was not assigned to said feature? "__no_feature" by default.
 #' @param type What type of table would you like to use? Currently only supports
 #' "averages", but will support "fractions" in the near future.
+#' @param prior_means Mean of log-Normal prior for kinetic parameters. Should
+#' be vector where ith value is mean for ith parameter, i = index in `graph`
+#' @param prior_sds Std. dev. of log-Normal prior for kinetic parameter.
+#' Should be vector where ith value is mean for ith parameter, i = index in `graph`.
 #' @param avg_params_tokeep Names of parameters in averages table that you would
 #' like to keep. Other parameters will be discarded. Don't include the prefixes "mean_",
 #' "sd_", or "coverage_"; these will be imputed automatically. In other words,
@@ -139,6 +143,8 @@ EZDynamics <- function(obj,
                      parameter_names = paste0("k", 1:max(graph)),
                      unassigned_name = "__no_feature",
                      type = "averages",
+                     prior_means = rep(-3, times = max(graph)),
+                     prior_sds = c(3, rep(1, times = max(graph)-1)),
                      avg_params_tokeep = NULL,
                      avg_params_todrop = NULL,
                      label_time_name = "tl",
@@ -497,6 +503,8 @@ EZDynamics <- function(obj,
                                                    scale_factor = !!dplyr::sym(scale_column),
                                                    sample_features = !!dplyr::sym(sample_feature),
                                                    feature_types = measured_specie,
+                                                   prior_means = prior_means,
+                                                   prior_sds = prior_sds,
                                                    lower = lower_bounds,
                                                    upper = upper_bounds,
                                                    method = "L-BFGS-B",
@@ -517,7 +525,7 @@ EZDynamics <- function(obj,
         !!par_name := purrr::map_dbl(fit, ~ .x$par[n]),
         !!par_se_name := tryCatch(
           {
-          purrr::map_dbl(fit, ~ sqrt(diag(solve(.x$hessian)))[n])
+          purrr::map_dbl(fit, ~ sqrt(abs(diag(solve(.x$hessian))))[n])
           },
           error = function(e) {
             Inf
@@ -659,6 +667,8 @@ EZDynamics <- function(obj,
                                                  tls = as.numeric(tl),
                                                  sample_features = !!dplyr::sym(sample_feature),
                                                  feature_types = measured_specie,
+                                                 prior_means = prior_means,
+                                                 prior_sds = prior_sds,
                                                  lower = lower_bounds,
                                                  upper = upper_bounds,
                                                  method = "L-BFGS-B",
@@ -780,6 +790,8 @@ evaluate_formulas2 <- function(original_vector, formula) {
 dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
                                 logit_fn, logit_fn_sd, coverage, nreps = 2,
                                 tls, sample_features, feature_types,
+                                prior_means = rep(-3, times = max(graph)),
+                                prior_sds = c(3, rep(1, times = max(graph)-1)),
                                 use_coverage = TRUE, alt_coverage = FALSE,
                                 coverage_sd = NULL, scale_factor = NULL){
 
@@ -920,6 +932,12 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
     }
 
   }
+
+  # Add prior
+  ll <- ll + stats::dnorm(parameter_ests,
+                          mean = prior_means,
+                          sd = prior_sds,
+                          log = TRUE)
 
   if(!is.finite(sum(ll))){
     browser()

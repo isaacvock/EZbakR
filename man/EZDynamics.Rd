@@ -15,6 +15,8 @@ EZDynamics(
   parameter_names = paste0("k", 1:max(graph)),
   unassigned_name = "__no_feature",
   type = "averages",
+  prior_means = rep(-3, times = max(graph)),
+  prior_sds = c(3, rep(1, times = max(graph) - 1)),
   avg_params_tokeep = NULL,
   avg_params_todrop = NULL,
   label_time_name = "tl",
@@ -112,6 +114,12 @@ was not assigned to said feature? "__no_feature" by default.}
 
 \item{type}{What type of table would you like to use? Currently only supports
 "averages", but will support "fractions" in the near future.}
+
+\item{prior_means}{Mean of log-Normal prior for kinetic parameters. Should
+be vector where ith value is mean for ith parameter, i = index in \code{graph}}
+
+\item{prior_sds}{Std. dev. of log-Normal prior for kinetic parameter.
+Should be vector where ith value is mean for ith parameter, i = index in \code{graph}.}
 
 \item{avg_params_tokeep}{Names of parameters in averages table that you would
 like to keep. Other parameters will be discarded. Don't include the prefixes "mean_",
