@@ -10,6 +10,8 @@ CompareParameters(
   reference,
   experimental,
   param_name,
+  reference_levels = NULL,
+  experimental_levels = NULL,
   param_function,
   condition = NULL,
   features = NULL,
@@ -19,7 +21,8 @@ CompareParameters(
   sd_grouping_factors = NULL,
   fit_params = NULL,
   overwrite = TRUE,
-  parameter = "log_kdeg"
+  parameter = "log_kdeg",
+  type = "averages"
 )
 }
 \arguments{
@@ -39,6 +42,31 @@ Difference will be calculated as \code{experimental} - \code{reference}.}
 \item{param_name}{If you want to assess the significance of a single parameter,
 rather than the comparison of two parameters, specify that one parameter's name
 here.}
+
+\item{reference_levels}{If type == "dynamics", then this should specify the levels
+of the \code{design_factor}(s) reference group. For example, if you have a single
+\code{design_factor} called "genotype" and you would like to compare "WT" (reference)
+to "KO" (experimental), then \code{reference_levels} should be "WT". If you have
+multiple \code{design_factor}'s, then \code{reference_levels} must be a list with one element
+per \code{design_factor}, with elements named the corresponding \code{design_factor}. For
+example, if \code{design_factor} is c("genotype", "treatment"), and you would like
+to compare genotype = "WT" and treatment = "untreated" (reference) to genotype = "KO" and
+treatment = "treated", then \code{reference_levels} would need to be a list with
+one element named "genotype", equal to "WT" and one element named "treatment"
+equal to "untreated".}
+
+\item{experimental_levels}{Same idea as \code{reference_levels}.
+If type == "dynamics", then this should specify the levels
+of the \code{design_factor}(s) experimental group. For example, if you have a single
+\code{design_factor} called "genotype" and you would like to compare "WT" (reference)
+to "KO" (experimental), then \code{experimental_levels} should be "KO". If you have
+multiple \code{design_factor}'s, then \code{experimental_levels} must be a list with one element
+per \code{design_factor}, with elements named the corresponding \code{design_factor}. For
+example, if \code{design_factor} is c("genotype", "treatment"), and you would like
+to compare genotype = "WT" and treatment = "untreated" (reference) to genotype = "KO" and
+treatment = "treated", then \code{experimental_levels} would need to be a list with
+one element named "genotype", equal to "KO" and one element named "treatment"
+equal to "treated".}
 
 \item{param_function}{NOT YET IMPLEMENTED. Will allow you to specify more complicated
 functions of parameters when hypotheses you need to test are combinations of parameters

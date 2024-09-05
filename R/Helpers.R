@@ -27,6 +27,17 @@
 #' Not sure this is being used in any way currently...
 #' @param design_factor design_factor specified in relevant run of `CompareParameters()`.
 #' Therefore, only relevant if type == "comparisons".
+#' @param dynamics_design_factors design_factors included in final `EZDynamics()` output.
+#' Therefore, only relevant if type == "dynamics".
+#' @param scale_factors Sample group scale factors used in `EZDynamics()`.
+#' Therefore, only relevant if type == "dynamics"
+#' @param feature_lengths Table of feature lengths used for length normalization.
+#' @param reference_levels Reference factor levels used for comparative analysis
+#' of dynamical systems model fit parameter.
+#' Therefore, only relevant if type == "comparisons".
+#' @param experimental_levels Experimental factor levels used for comparative analysis
+#' of dynamical systems model fit parameter.
+#' Therefore, only relevant if type == "comparisons".
 #' @param experimental Experimental condition specified in relevant run of `CompareParameters()`.
 #' Therefore, only relevant if type == "comparisons".
 #' @param reference Reference condition specified in relevant run of `CompareParameters()`.
@@ -78,6 +89,11 @@ EZget <- function(obj,
                   parameter = NULL,
                   counttype = NULL,
                   design_factor = NULL,
+                  dynamics_design_factors = NULL,
+                  scale_factors = NULL,
+                  reference_levels = NULL,
+                  experimental_levels = NULL,
+                  feature_lengths = NULL,
                   experimental = NULL,
                   reference = NULL,
                   param_name = NULL,
@@ -277,6 +293,70 @@ EZget <- function(obj,
 
 
   }
+
+
+  if(!is.null(dynamics_design_factors)){
+
+    possible_tables_d <- vector_ezsearch(metadata,
+                                         dynamics_design_factors,
+                                         "dynamics_design_factors",
+                                         exactMatch = exactMatch)
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_d)
+
+
+  }
+
+  if(!is.null(scale_factors)){
+
+    possible_tables_s <- exact_ezsearch(metadata,
+                                        query = scale_factors,
+                                        object = "scale_factors")
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_s)
+
+
+  }
+
+
+  if(!is.null(feature_lengths)){
+
+    possible_tables_f <- exact_ezsearch(metadata,
+                                        query = scale_factors,
+                                        object = "feature_lengths")
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_f)
+
+
+  }
+
+  if(!is.null(reference_levels)){
+
+    possible_tables_f <- exact_ezsearch(metadata,
+                                        query = reference_levels,
+                                        object = "reference_levels")
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_f)
+
+
+  }
+
+  if(!is.null(experimental_levels)){
+
+    possible_tables_f <- exact_ezsearch(metadata,
+                                        query = experimental_levels,
+                                        object = "experimental_levels")
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_f)
+
+
+  }
+
 
   if(!is.null(experimental)){
 

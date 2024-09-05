@@ -15,6 +15,11 @@ EZget(
   parameter = NULL,
   counttype = NULL,
   design_factor = NULL,
+  dynamics_design_factors = NULL,
+  scale_factors = NULL,
+  reference_levels = NULL,
+  experimental_levels = NULL,
+  feature_lengths = NULL,
   experimental = NULL,
   reference = NULL,
   param_name = NULL,
@@ -64,6 +69,22 @@ Not sure this is being used in any way currently...}
 
 \item{design_factor}{design_factor specified in relevant run of \code{CompareParameters()}.
 Therefore, only relevant if type == "comparisons".}
+
+\item{dynamics_design_factors}{design_factors included in final \code{EZDynamics()} output.
+Therefore, only relevant if type == "dynamics".}
+
+\item{scale_factors}{Sample group scale factors used in \code{EZDynamics()}.
+Therefore, only relevant if type == "dynamics"}
+
+\item{reference_levels}{Reference factor levels used for comparative analysis
+of dynamical systems model fit parameter.
+Therefore, only relevant if type == "comparisons".}
+
+\item{experimental_levels}{Experimental factor levels used for comparative analysis
+of dynamical systems model fit parameter.
+Therefore, only relevant if type == "comparisons".}
+
+\item{feature_lengths}{Table of feature lengths used for length normalization.}
 
 \item{experimental}{Experimental condition specified in relevant run of \code{CompareParameters()}.
 Therefore, only relevant if type == "comparisons".}

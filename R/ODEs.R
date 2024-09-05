@@ -456,6 +456,8 @@ EZDynamics <- function(obj,
     cols_to_group_by <- c(grouping_features,
                        pivot_columns[!(pivot_columns %in% c(label_time_name, sample_feature))])
 
+    # For metadata
+    design_factors <- pivot_columns[!(pivot_columns %in% c(label_time_name, sample_feature))]
 
     # Filter out features that don't have all measured species
     nspecies <- length(unique(measured_species))
@@ -564,6 +566,8 @@ EZDynamics <- function(obj,
 
   }else{
 
+    # For metadata later
+    design_factors <- NULL
 
     features_to_analyze <- obj[["metadata"]][["fractions"]][[table_name]][["features"]]
 
@@ -743,7 +747,11 @@ EZDynamics <- function(obj,
                                  grouping_features = grouping_features,
                                  sample_feature = sample_feature,
                                  modeled_to_measured = modeled_to_measured,
-                                 graph = graph, parameter = parameter)
+                                 graph = graph,
+                                 dynamics_design_factors = design_factors,
+                                 scale_factors = scale_factors,
+                                 feature_lengths = feature_lengths,
+                                 parameter = parameter)
 
     # How many identical tables already exist?
     if(overwrite){
@@ -760,6 +768,9 @@ EZDynamics <- function(obj,
                                sample_feature = sample_feature,
                                modeled_to_measured = modeled_to_measured,
                                graph = graph, parameter = parameter,
+                               dynamics_design_factors = design_factors,
+                               scale_factors = scale_factors,
+                               feature_lengths = feature_lengths,
                                returnNameOnly = TRUE,
                                exactMatch = TRUE,
                                alwaysCheck = TRUE)) + 1
@@ -779,6 +790,9 @@ EZDynamics <- function(obj,
                                                          sample_feature = sample_feature,
                                                          modeled_to_measured = modeled_to_measured,
                                                          graph = graph, parameter = parameter,
+                                                         dynamics_design_factors = design_factors,
+                                                         scale_factors = scale_factors,
+                                                         feature_lengths = feature_lengths,
                                                          repeatID = repeatID)
 
 

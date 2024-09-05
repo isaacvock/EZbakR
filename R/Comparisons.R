@@ -698,6 +698,29 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 #' @param param_name If you want to assess the significance of a single parameter,
 #' rather than the comparison of two parameters, specify that one parameter's name
 #' here.
+#' @param reference_levels If type == "dynamics", then this should specify the levels
+#' of the `design_factor`(s) reference group. For example, if you have a single
+#' `design_factor` called "genotype" and you would like to compare "WT" (reference)
+#' to "KO" (experimental), then `reference_levels` should be "WT". If you have
+#' multiple `design_factor`'s, then `reference_levels` must be a list with one element
+#' per `design_factor`, with elements named the corresponding `design_factor`. For
+#' example, if `design_factor` is c("genotype", "treatment"), and you would like
+#' to compare genotype = "WT" and treatment = "untreated" (reference) to genotype = "KO" and
+#' treatment = "treated", then `reference_levels` would need to be a list with
+#' one element named "genotype", equal to "WT" and one element named "treatment"
+#' equal to "untreated".
+#' @param  experimental_levels Same idea as `reference_levels`.
+#' If type == "dynamics", then this should specify the levels
+#' of the `design_factor`(s) experimental group. For example, if you have a single
+#' `design_factor` called "genotype" and you would like to compare "WT" (reference)
+#' to "KO" (experimental), then `experimental_levels` should be "KO". If you have
+#' multiple `design_factor`'s, then `experimental_levels` must be a list with one element
+#' per `design_factor`, with elements named the corresponding `design_factor`. For
+#' example, if `design_factor` is c("genotype", "treatment"), and you would like
+#' to compare genotype = "WT" and treatment = "untreated" (reference) to genotype = "KO" and
+#' treatment = "treated", then `experimental_levels` would need to be a list with
+#' one element named "genotype", equal to "KO" and one element named "treatment"
+#' equal to "treated".
 #' @param param_function NOT YET IMPLEMENTED. Will allow you to specify more complicated
 #' functions of parameters when hypotheses you need to test are combinations of parameters
 #' rather than individual parameters or simple differences in two parameters.
@@ -724,11 +747,15 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 #' @importFrom magrittr %>%
 #' @export
 CompareParameters <- function(obj, design_factor, reference, experimental,
-                              param_name, param_function,
+                              param_name,
+                              reference_levels = NULL,
+                              experimental_levels = NULL,
+                              param_function,
                               condition = NULL,
                               features = NULL, exactMatch = TRUE, repeatID = NULL,
                               formula_mean = NULL, sd_grouping_factors = NULL,
-                              fit_params = NULL, overwrite = TRUE, parameter = "log_kdeg"){
+                              fit_params = NULL, overwrite = TRUE, parameter = "log_kdeg",
+                              type = "averages"){
 
 
   ### Hack to deal with annoying devtools::check() NOTE
@@ -743,32 +770,49 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
     design_factor <- condition
   }
 
-  if(missing(design_factor) | missing(reference) | missing(experimental)){
+  if(type == "dynamics"){
 
-    if(missing(param_name)){
+    strategy <- "dynamics"
 
-      if(missing(param_function)){
+    if(missing(reference_levels) | missing(experimental_levels)){
 
-        stop("You either need to specify: 1) condition, reference, and experimental,
-             2) param_name or 3) param_function!")
-
-      }else{
-
-        strategy = "function"
-
-      }
-
-    }else{
-
-      strategy = "single_param"
+      stop("Need to specify reference_levels and experimental_levels if
+           type == 'dynamics'")
 
     }
 
   }else{
 
-    strategy = "contrast"
+    if(missing(design_factor) | missing(reference) | missing(experimental)){
+
+      if(missing(param_name)){
+
+        if(missing(param_function)){
+
+          stop("You either need to specify: 1) condition, reference, and experimental,
+             2) param_name or 3) param_function!")
+
+        }else{
+
+          strategy = "function"
+
+        }
+
+      }else{
+
+        strategy = "single_param"
+
+      }
+
+    }else{
+
+      strategy = "contrast"
+
+    }
 
   }
+
+
 
   ### Extract kinetic parameters of interest
 
@@ -781,7 +825,7 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
     environment(formula_mean) <- NULL
   }
   averages_name <- EZget(obj,
-                         type = "averages",
+                         type = type,
                          features = features,
                          parameter = parameter,
                          formula_mean = formula_mean,
@@ -793,9 +837,9 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
 
 
   # Get fractions
-  parameter_est <- obj[["averages"]][[averages_name]]
+  parameter_est <- obj[[type]][[averages_name]]
 
-  features_to_analyze <- obj[["metadata"]][["averages"]][[averages_name]][["features"]]
+  features_to_analyze <- obj[["metadata"]][[type]][[averages_name]][["features"]]
 
 
   ### Perform comparative analysis of interest
@@ -840,6 +884,74 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
 
   }
 
+  if(strategy == "dynamics"){
+
+    # See if design_factor needs to be imputed
+    if(missing(design_factor)){
+
+      design_factors <- obj[["metadata"]][[type]][[averages_name]][["dynamics_design_factors"]]
+
+      if(length(design_factors) > 1){
+        stop("Need to specify design_factor if you have more than one such
+             factor in your 'dynamics' table!")
+      }else{
+
+        design_factor <- design_factors
+
+      }
+
+
+    }
+
+    # Makes more sense for it to be plural in this context
+    design_factors <- design_factor
+
+
+
+    # Helper function to create a filter expression for the given levels
+    create_filter_expr <- function(cols, levels) {
+      exprs <- map2(cols, cols, ~rlang::expr(!!sym(.x) == !!levels[[.y]]))
+      reduce(exprs, `&`)
+    }
+
+    # Convert reference_levels and experimental_levels to named lists if they are not already
+    if (!is.list(reference_levels)) {
+      reference_levels <- setNames(as.list(reference_levels), design_factors)
+    }
+    if (!is.list(experimental_levels)) {
+      experimental_levels <- setNames(as.list(experimental_levels), design_factors)
+    }
+
+
+    # Names of new columns
+    par_se <- paste0(parameter, "_se")
+
+
+    # Calculate the differences for each unique set of feature values
+    comparison <- parameter_est %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
+      dplyr::summarise(
+        ref_par = weighted.mean(!!dplyr::sym(parameter)[create_filter_expr(design_factors, reference_levels)],
+                                w = !!dplyr::sym(par_se),
+                                na.rm = TRUE),
+        exp_par = weighted.mean(!!dplyr::sym(parameter)[create_filter_expr(design_factors, experimental_levels)],
+                                w = !!dplyr::sym(par_se),
+                                na.rm = TRUE),
+        ref_se = sqrt(sum( (!!dplyr::sym(par_se)[create_filter_expr(design_factors, reference_levels)])^2 ))/sqrt(dplyr::n()),
+        exp_se = sqrt(sum( (!!dplyr::sym(par_se)[create_filter_expr(design_factors, experimental_levels)])^2 ))/sqrt(dplyr::n()),
+      ) %>%
+      dplyr::mutate(
+        difference = exp_par - ref_par,
+        uncertainty = sqrt(exp_se^2 + ref_se^2),
+        stat = difference/uncertainty,
+        pval = 2*stats::pnorm(-abs(stat))
+      ) %>%
+      dplyr::mutate(
+        padj = stats::p.adjust(pval, method = "BH")
+      )
+
+  }
+
 
   if(strategy == "function"){
 
@@ -848,6 +960,8 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
 
 
   }
+
+
 
 
 
@@ -886,6 +1000,8 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                                  experimental = experimental,
                                  param_name = param_name,
                                  param_function = param_function,
+                                 reference_levels = reference_levels,
+                                 experimental_levels = experimental_levels,
                                  overwrite = overwrite)
 
     # How many identical tables already exist?
@@ -904,6 +1020,8 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                                experimental = experimental,
                                param_name = param_name,
                                param_function = param_function,
+                               reference_levels = reference_levels,
+                               experimental_levels = experimental_levels,
                                returnNameOnly = TRUE,
                                exactMatch = TRUE,
                                alwaysCheck = TRUE)) + 1
@@ -926,6 +1044,8 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                                                             param_function = param_function,
                                                             features = features_to_analyze,
                                                             parameter = parameter,
+                                                            reference_levels = reference_levels,
+                                                            experimental_levels = experimental_levels,
                                                             repeatID = repeatID)
 
 
@@ -939,6 +1059,7 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
 
 
 }
+
 
 
 fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
