@@ -215,6 +215,18 @@ EZDynamics <- function(obj,
 
   if(type == "averages"){
 
+    # Is there only one label time? will have to impute later
+    label_times <- metadf %>%
+      dplyr::filter(!!dplyr::sym(label_time_name) > 0) %>%
+      dplyr::select(!!label_time_name) %>%
+      unlist() %>%
+      unname()
+
+    only_one_tl <- length(unique(label_times)) == 1
+
+
+    # Figure out what sample details were included and thus need to be pivoted on
+
     formula_mean <- obj[['metadata']][['averages']][[table_name]][['formula_mean']]
     pivot_columns <- all.vars(formula_mean)
     pivot_columns <- pivot_columns[2:length(pivot_columns)]
@@ -449,12 +461,27 @@ EZDynamics <- function(obj,
     nspecies <- length(unique(measured_species))
 
 
+
+    # Impute label time if there is only one
+    if(only_one_tl){
+
+      tidy_avgs <- tidy_avgs %>%
+        dplyr::mutate(!!label_time_name := unique(label_times))
+
+    }
+
+
+    # Remove underspecified features
+      # Maybe not the move as multi-label times
+      # could render some systems identifiable;
+      # need to test if this is the case though...
     tidy_avgs <- tidy_avgs %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(c(cols_to_group_by, label_time_name)))) %>%
       dplyr::filter(dplyr::n() >= (nrow(graph) - 1)) %>%
       dplyr::ungroup()
 
 
+    # Fit model
     if(is.null(scale_factors)){
 
       dynfit <- tidy_avgs  %>%
@@ -818,8 +845,8 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
               nrow = nrow(graph) - 1,
               ncol = ncol(graph) - 1)
 
-  rownames(A) <- rownames(graph[-1,])
-  colnames(A) <- rownames(graph[-1,])
+  rownames(A) <- rownames(graph[-1,,drop=FALSE])
+  colnames(A) <- rownames(graph[-1,,drop=FALSE])
 
 
 
@@ -829,14 +856,14 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
   # Just kidding, I'll document this somewhere.
   # TO-DO: Should really compile documentation for all
   # non-obvious mathematical results
-  diag(A) <- -rowSums(param_graph[-zero_index,])
-  A <- A + t(param_graph[-zero_index,-zero_index])
+  diag(A) <- -rowSums(param_graph[-zero_index,,drop=FALSE])
+  A <- A + t(param_graph[-zero_index,-zero_index,drop=FALSE])
 
 
   ### Step 2: infer general solution
 
   Rss <- solve(a = A,
-               b = -param_graph[zero_index,-zero_index])
+               b = -param_graph[zero_index,-zero_index,drop=FALSE])
 
 
   ev <- eigen(A)
@@ -934,16 +961,16 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
   }
 
   # Add prior
-  ll <- ll + stats::dnorm(parameter_ests,
+  ll <- sum(ll) + sum(stats::dnorm(parameter_ests,
                           mean = prior_means,
                           sd = prior_sds,
-                          log = TRUE)
+                          log = TRUE))
 
-  if(!is.finite(sum(ll))){
+  if(!is.finite(ll)){
     browser()
   }
 
-  return(-sum(ll))
+  return(-ll)
 
 
 

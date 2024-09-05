@@ -296,6 +296,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                       by = features_to_analyze)
 
 
+
   ### Need to cover for edge case where there are single level factors
   single_level_mean <- checkSingleLevelFactors(kinetics,
                                                formula_mean)
