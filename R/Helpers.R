@@ -38,6 +38,16 @@
 #' @param experimental_levels Experimental factor levels used for comparative analysis
 #' of dynamical systems model fit parameter.
 #' Therefore, only relevant if type == "comparisons".
+#' @param cstrat Strategy used for comparative analyses. Can be:
+#' \itemize{
+#'  \item contrast: If two parameters were compared via specifying the reference
+#'  and experimental levels in `CompareParameters()` (for type == "averages").
+#'  \item single_param: If a single parameter was passed to `CompareParameters()`
+#'  via its `param_name` option.
+#'  \item dynamics: If output of `EZDynamics()` was passed to `CompareParameters()`
+#'  \item function: If function of multiple parameters was passed to `CompareParameter()`
+#'  via its `param_function` option.
+#' }
 #' @param experimental Experimental condition specified in relevant run of `CompareParameters()`.
 #' Therefore, only relevant if type == "comparisons".
 #' @param reference Reference condition specified in relevant run of `CompareParameters()`.
@@ -93,6 +103,7 @@ EZget <- function(obj,
                   scale_factors = NULL,
                   reference_levels = NULL,
                   experimental_levels = NULL,
+                  cstrat = NULL,
                   feature_lengths = NULL,
                   experimental = NULL,
                   reference = NULL,
@@ -125,6 +136,13 @@ EZget <- function(obj,
 
     kstrat <- match.arg(kstrat, c("standard", "tilac", "NSS",
                                   "shortfeed", "pulse-chase"))
+
+  }
+
+  if(!is.null(cstrat)){
+
+    cstrat <- match.arg(cstrat, c("contrast", "single_param",
+                                  "dynamics", "function"))
 
   }
 
@@ -252,6 +270,19 @@ EZget <- function(obj,
 
 
     possible_tables <- intersect(possible_tables, possible_tables_ks)
+
+
+  }
+
+
+  if(!is.null(cstrat)){
+
+    possible_tables_c <- exact_ezsearch(metadata,
+                                         query = cstrat,
+                                         object = "cstrat")
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_c)
 
 
   }
@@ -622,53 +653,16 @@ decide_output <- function(obj, proposed_name,
                           type = c("fractions", "kinetics",
                                    "readcounts", "averages",
                                    "comparisons", "dynamics"),
-                          features = NULL,
-                          populations = NULL,
-                          fraction_design = NULL,
-                          counttype = NULL,
-                          kstrat = NULL,
-                          parameter = NULL,
-                          design_factor = NULL,
-                          reference = NULL,
-                          experimental = NULL,
-                          param_name = NULL,
-                          param_function = NULL,
-                          formula_mean = NULL,
-                          sd_grouping_factors = NULL,
-                          fit_params = NULL,
-                          sub_features = NULL,
-                          grouping_features = NULL,
-                          sample_feature = NULL,
-                          modeled_to_measured = NULL,
-                          graph = NULL,
-                          overwrite = TRUE){
+                          overwrite = TRUE,
+                          ...){
 
   type = match.arg(type)
 
   ### Does same analysis output already exist?
   existing_output <- EZget(obj,
-                             type = type,
-                             features = features,
-                             populations = populations,
-                             fraction_design = fraction_design,
-                             parameter = parameter,
-                             kstrat = kstrat,
-                             counttype = counttype,
-                           design_factor = design_factor,
-                           reference = reference,
-                           experimental = experimental,
-                           param_name = param_name,
-                           param_function = param_function,
-                           formula_mean = formula_mean,
-                           sd_grouping_factors = sd_grouping_factors,
-                           fit_params = fit_params,
-                           sub_features = sub_features,
-                           grouping_features = grouping_features,
-                           sample_feature = sample_feature,
-                           modeled_to_measured = modeled_to_measured,
-                           graph = graph,
-                             returnNameOnly = TRUE,
-                             exactMatch = TRUE,
+                           ...,
+                           returnNameOnly = TRUE,
+                           exactMatch = TRUE,
                            alwaysCheck = TRUE)
 
   if(is.null(existing_output)){

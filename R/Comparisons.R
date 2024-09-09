@@ -910,16 +910,16 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
 
     # Helper function to create a filter expression for the given levels
     create_filter_expr <- function(cols, levels) {
-      exprs <- map2(cols, cols, ~rlang::expr(!!sym(.x) == !!levels[[.y]]))
-      reduce(exprs, `&`)
+      exprs <- purrr::map2(cols, cols, ~rlang::expr(!!sym(.x) == !!levels[[.y]]))
+      purrr::reduce(exprs, `&`)
     }
 
     # Convert reference_levels and experimental_levels to named lists if they are not already
     if (!is.list(reference_levels)) {
-      reference_levels <- setNames(as.list(reference_levels), design_factors)
+      reference_levels <- stats::setNames(as.list(reference_levels), design_factors)
     }
     if (!is.list(experimental_levels)) {
-      experimental_levels <- setNames(as.list(experimental_levels), design_factors)
+      experimental_levels <- stats::setNames(as.list(experimental_levels), design_factors)
     }
 
 
@@ -931,14 +931,14 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
     comparison <- parameter_est %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
       dplyr::summarise(
-        ref_par = weighted.mean(!!dplyr::sym(parameter)[create_filter_expr(design_factors, reference_levels)],
-                                w = !!dplyr::sym(par_se),
+        ref_par = stats::weighted.mean( (!!dplyr::sym(parameter))[!!create_filter_expr(design_factors, reference_levels)],
+                                w = (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, reference_levels)],
                                 na.rm = TRUE),
-        exp_par = weighted.mean(!!dplyr::sym(parameter)[create_filter_expr(design_factors, experimental_levels)],
-                                w = !!dplyr::sym(par_se),
+        exp_par = stats::weighted.mean( (!!dplyr::sym(parameter))[!!create_filter_expr(design_factors, experimental_levels)],
+                                w = (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, experimental_levels)],
                                 na.rm = TRUE),
-        ref_se = sqrt(sum( (!!dplyr::sym(par_se)[create_filter_expr(design_factors, reference_levels)])^2 ))/sqrt(dplyr::n()),
-        exp_se = sqrt(sum( (!!dplyr::sym(par_se)[create_filter_expr(design_factors, experimental_levels)])^2 ))/sqrt(dplyr::n()),
+        ref_se = sqrt(sum( ( (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, reference_levels)])^2 )),
+        exp_se = sqrt(sum( ( (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, experimental_levels)])^2 )),
       ) %>%
       dplyr::mutate(
         difference = exp_par - ref_par,
@@ -1002,6 +1002,7 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                                  param_function = param_function,
                                  reference_levels = reference_levels,
                                  experimental_levels = experimental_levels,
+                                 cstrat = strategy,
                                  overwrite = overwrite)
 
     # How many identical tables already exist?
@@ -1022,6 +1023,7 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                                param_function = param_function,
                                reference_levels = reference_levels,
                                experimental_levels = experimental_levels,
+                               cstrat = strategy,
                                returnNameOnly = TRUE,
                                exactMatch = TRUE,
                                alwaysCheck = TRUE)) + 1
@@ -1046,6 +1048,7 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                                                             parameter = parameter,
                                                             reference_levels = reference_levels,
                                                             experimental_levels = experimental_levels,
+                                                            cstrat = strategy,
                                                             repeatID = repeatID)
 
 

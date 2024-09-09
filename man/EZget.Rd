@@ -19,6 +19,7 @@ EZget(
   scale_factors = NULL,
   reference_levels = NULL,
   experimental_levels = NULL,
+  cstrat = NULL,
   feature_lengths = NULL,
   experimental = NULL,
   reference = NULL,
@@ -83,6 +84,17 @@ Therefore, only relevant if type == "comparisons".}
 \item{experimental_levels}{Experimental factor levels used for comparative analysis
 of dynamical systems model fit parameter.
 Therefore, only relevant if type == "comparisons".}
+
+\item{cstrat}{Strategy used for comparative analyses. Can be:
+\itemize{
+\item contrast: If two parameters were compared via specifying the reference
+and experimental levels in \code{CompareParameters()} (for type == "averages").
+\item single_param: If a single parameter was passed to \code{CompareParameters()}
+via its \code{param_name} option.
+\item dynamics: If output of \code{EZDynamics()} was passed to \code{CompareParameters()}
+\item function: If function of multiple parameters was passed to \code{CompareParameter()}
+via its \code{param_function} option.
+}}
 
 \item{feature_lengths}{Table of feature lengths used for length normalization.}
 

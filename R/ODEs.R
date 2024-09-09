@@ -548,7 +548,7 @@ EZDynamics <- function(obj,
     for(n in 1:npars){
 
       par_name <- parameter_names[n]
-      par_se_name <- paste0(par_name, "_se")
+      par_se_name <- paste0("se_", par_name)
 
       dynfit <- dynfit %>% dplyr::mutate(
         !!par_name := purrr::map_dbl(fit, ~ .x$par[n]),
@@ -715,7 +715,7 @@ EZDynamics <- function(obj,
     for(n in 1:npars){
 
       par_name <- parameter_names[n]
-      par_se_name <- paste0(par_name, "_se")
+      par_se_name <- paste0("se_", par_name)
 
       dynfit[[par_name]] <- purrr::map_dbl(fits, ~ .x$par[n])
       dynfit[[par_se_name]] <- tryCatch(
