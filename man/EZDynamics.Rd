@@ -27,6 +27,7 @@ EZDynamics(
   repeatID = NULL,
   exactMatch = TRUE,
   feature_lengths = NULL,
+  use_coverage = TRUE,
   overwrite = TRUE
 )
 }
@@ -169,6 +170,11 @@ would possess the same metadata (features analyzed, populations analyzed,
 and fraction_design), then it will get overwritten with the new output. Else,
 it will be saved as a separate output with the same name + "_#" where "#" is a
 numerical ID to distinguish the similar outputs.}
+
+\item{use_coveage}{If TRUE, normalized read counts will be used to inform
+kinetic parameter estimates. If FALSE, only fraction news will be used, which
+will leave some parameters (e.g., synthesis rate) unidentifiable, though has
+the advantage of avoiding the potential biases induced by normalization problems.}
 }
 \description{
 \code{EZDynamics()} estimates parameters of a user-specified dynamical systems

@@ -125,6 +125,10 @@
 #' @param feature_lengths Table of effective lengths for each feature combination in your
 #' data. For example, if your analysis includes features named GF and XF, this
 #' should be a data frame with columns GF, XF, and length.
+#' @param use_coveage If TRUE, normalized read counts will be used to inform
+#' kinetic parameter estimates. If FALSE, only fraction news will be used, which
+#' will leave some parameters (e.g., synthesis rate) unidentifiable, though has
+#' the advantage of avoiding the potential biases induced by normalization problems.
 #' @param overwrite If TRUE and a fractions estimate output already exists that
 #' would possess the same metadata (features analyzed, populations analyzed,
 #' and fraction_design), then it will get overwritten with the new output. Else,
@@ -155,6 +159,7 @@ EZDynamics <- function(obj,
                      repeatID = NULL,
                      exactMatch = TRUE,
                      feature_lengths = NULL,
+                     use_coverage = TRUE,
                      overwrite = TRUE){
 
   ##### ORDER OF OPERATIONS
@@ -507,7 +512,7 @@ EZDynamics <- function(obj,
                                                    scale_factor = 1,
                                                    method = "L-BFGS-B",
                                                    hessian = TRUE,
-                                                   use_coverage = TRUE))))
+                                                   use_coverage = use_coverage))))
 
     }else{
 
@@ -538,7 +543,7 @@ EZDynamics <- function(obj,
                                                    upper = upper_bounds,
                                                    method = "L-BFGS-B",
                                                    hessian = TRUE,
-                                                   use_coverage = TRUE))))
+                                                   use_coverage = use_coverage))))
 
     }
 
@@ -877,7 +882,7 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
   ### Step 2: infer general solution
 
   Rss <- solve(a = A,
-               b = -param_graph[zero_index,-zero_index,drop=FALSE])
+               b = -param_graph[zero_index,-zero_index])
 
 
   ev <- eigen(A)
