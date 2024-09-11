@@ -656,7 +656,6 @@ decide_output <- function(obj, proposed_name,
                           overwrite = TRUE,
                           ...){
 
-  browser()
   type = match.arg(type)
 
   ### Does same analysis output already exist?
