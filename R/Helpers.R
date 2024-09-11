@@ -656,10 +656,12 @@ decide_output <- function(obj, proposed_name,
                           overwrite = TRUE,
                           ...){
 
+  browser()
   type = match.arg(type)
 
   ### Does same analysis output already exist?
   existing_output <- EZget(obj,
+                           type = type,
                            ...,
                            returnNameOnly = TRUE,
                            exactMatch = TRUE,

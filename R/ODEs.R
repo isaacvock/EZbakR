@@ -852,6 +852,13 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
   ### Step 1, construct A
 
+  # Make sure parameters are all different values
+  if(length(unique(round(parameter_ests, digits = 5))) != length(parameter_ests)){
+    parameter_ests <- rnorm(length(parameter_ests),
+                            mean = parameter_ests,
+                            sd = 0.001)
+  }
+
   # Parameters are on log-scale for ease of optimization
   param_extend <- c(0, exp(parameter_ests))
   param_graph <- matrix(param_extend[graph + 1],
@@ -889,6 +896,8 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
   lambda <- ev$values
   V<- ev$vectors
+
+
   cs <- solve(V, -Rss)
 
 

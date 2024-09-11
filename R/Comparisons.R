@@ -551,6 +551,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
   # Are there any metadata or fractions objects at this point?
   if(length(obj[['metadata']][['averages']]) > 0){
 
+    browser()
+
     avg_vect <- decide_output(obj,
                               proposed_name = avg_vect,
                               type = "averages",
