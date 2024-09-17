@@ -394,6 +394,18 @@ EZDynamics <- function(obj,
     # Determine initial vector of parameters and their upper and lower bounds
     npars <- max(graph)
 
+    # Don't estimate ksyn if coverage is not being modeled
+    if(!use_coverage){
+      npars <- npars - 1
+
+      ksyn_index <- unique(graph["0",])
+      ksyn_index <- ksyn_index[ksyn_index != 0]
+
+      prior_means <- prior_means[-ksyn_index]
+      prior_sds <- prior_sds[-ksyn_index]
+
+    }
+
     # Have to add a bit of noise because equal parameters means general solution
     # breaks down as their aren't N eigenvalues. Could generalize to case
     # of equal parameters, but thinking of parameter estimates as continuous
@@ -404,8 +416,8 @@ EZDynamics <- function(obj,
     upper_bounds <- stats::rnorm(npars,
                           10,
                           0.01)
-    starting_values <- stats::rnorm(npars,
-                             0, 0.01)
+    starting_values <- seq(from = -5, to = -2,
+                           length.out = npars)
 
 
     ### Infer which measured species each row of tidy_avgs belongs to
@@ -853,14 +865,31 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
   ### Step 1, construct A
 
   # Make sure parameters are all different values
-  if(length(unique(round(parameter_ests, digits = 5))) != length(parameter_ests)){
+  count = 1
+  while(length(unique(round(parameter_ests, digits = 6))) != length(parameter_ests)){
     parameter_ests <- rnorm(length(parameter_ests),
                             mean = parameter_ests,
                             sd = 0.001)
+    count = count + 1
+    if(count > 5){
+      stop("Infinite while loop!!")
+    }
   }
+
+
+
 
   # Parameters are on log-scale for ease of optimization
   param_extend <- c(0, exp(parameter_ests))
+
+  # Add back ksyn as dummy value if not modeling it
+  if(!use_coverage){
+    ksyn_index <- unique(graph["0",])
+    ksyn_index <- ksyn_index[ksyn_index != 0]
+
+    param_extend <- append(param_extend, 1, after = ksyn_index)
+  }
+
   param_graph <- matrix(param_extend[graph + 1],
                         nrow = nrow(graph),
                         ncol = ncol(graph),
