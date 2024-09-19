@@ -666,7 +666,7 @@ decide_output <- function(obj, proposed_name,
                            exactMatch = TRUE,
                            alwaysCheck = TRUE)
 
-  if(is.null(existing_output)){
+  if(length(existing_output) == 0){
 
     # Have to find a name that doesn't exist
     if(proposed_name %in% names(obj[[type]])){
