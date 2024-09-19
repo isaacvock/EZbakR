@@ -123,7 +123,6 @@ EZget <- function(obj,
                   alwaysCheck = FALSE){
 
 
-
   type <- match.arg(type)
 
   if(!is.null(counttype)){
@@ -148,8 +147,6 @@ EZget <- function(obj,
 
   metadata <- obj[['metadata']][[type]]
 
-
-  table_of_interest <- NULL
 
 
   # If only one table is present, that's the one you want
@@ -550,7 +547,16 @@ EZget <- function(obj,
 
     }
 
-    return(possible_tables)
+    if(length(possible_tables) == 0){
+
+      return(NULL)
+
+    }else{
+
+      return(possible_tables)
+
+    }
+
 
   }else{
 
@@ -655,6 +661,7 @@ decide_output <- function(obj, proposed_name,
                                    "comparisons", "dynamics"),
                           overwrite = TRUE,
                           ...){
+
 
   type = match.arg(type)
 
