@@ -1,5 +1,5 @@
 pandoc: 3.1.11
-pkgdown: 2.1.0
+pkgdown: 2.1.1
 pkgdown_sha: ~
 articles:
   EstimateFractions: EstimateFractions.html
@@ -7,7 +7,7 @@ articles:
   EZget: EZget.html
   Linear-modeling: Linear-modeling.html
   Quickstart: Quickstart.html
-last_built: 2024-08-16T20:01Z
+last_built: 2024-09-19T17:18Z
 urls:
   reference: https://isaacvock.github.io/EZbakR/reference
   article: https://isaacvock.github.io/EZbakR/articles
