@@ -22,8 +22,9 @@
   pold_prior_mean = -6.5,
   pold_prior_sd = 0.5,
   hier_readcutoff = 300,
-  init_pnew_prior_sd = 0.8,
+  init_pnew_prior_sd = 0.3,
   pnew_prior_sd_min = 0.01,
+  pnew_prior_sd_max = 0.15,
   pold_est = NULL,
   pold_from_nolabel = FALSE,
   grouping_factors = NULL,
@@ -154,6 +155,9 @@ is set to "hierarchcial". EZbakR will try to estimate this empirically as the st
 of initial feature-specific logit(pnew) estimates using high coverage features, minus the
 average uncertainty in the logit(pnew) estimates. As this difference can sometimes be negative,
 a value of \code{pnew_prior_sd_min} will be imputed in that case.}
+
+\item{pnew_prior_sd_max}{Similar to \code{pnew_prior_sd_min}, but now representing the
+maximum allowed logit(pnew) prior sd.}
 
 \item{pold_est}{Background mutation rate estimates if you have them. Can either be a single
 number applied to all samples or a named vector of values, where the names should be sample

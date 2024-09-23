@@ -144,6 +144,8 @@ create_fraction_design <- function(mutrate_populations){
 #' of initial feature-specific logit(pnew) estimates using high coverage features, minus the
 #' average uncertainty in the logit(pnew) estimates. As this difference can sometimes be negative,
 #' a value of `pnew_prior_sd_min` will be imputed in that case.
+#' @param pnew_prior_sd_max Similar to `pnew_prior_sd_min`, but now representing the
+#' maximum allowed logit(pnew) prior sd.
 #' @param pold_est Background mutation rate estimates if you have them. Can either be a single
 #' number applied to all samples or a named vector of values, where the names should be sample
 #' names.
@@ -185,6 +187,7 @@ EstimateFractions <- function(obj, features = "all",
                               hier_readcutoff = 300,
                               init_pnew_prior_sd = 0.8,
                               pnew_prior_sd_min = 0.01,
+                              pnew_prior_sd_max = 0.15,
                               pold_est = NULL,
                               pold_from_nolabel = FALSE,
                               grouping_factors = NULL,
@@ -364,6 +367,8 @@ EstimateMutRates <- function(obj,
 #' of initial feature-specific logit(pnew) estimates using high coverage features, minus the
 #' average uncertainty in the logit(pnew) estimates. As this difference can sometimes be negative,
 #' a value of `pnew_prior_sd_min` will be imputed in that case.
+#' @param pnew_prior_sd_max Similar to `pnew_prior_sd_min`, but now representing the
+#' maximum allowed logit(pnew) prior sd.
 #' @param pold_est Background mutation rate estimates if you have them. Can either be a single
 #' number applied to all samples or a named vector of values, where the names should be sample
 #' names.
@@ -403,8 +408,9 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                                          pold_prior_mean = -6.5,
                                          pold_prior_sd = 0.5,
                                          hier_readcutoff = 300,
-                                         init_pnew_prior_sd = 0.8,
+                                         init_pnew_prior_sd = 0.3,
                                          pnew_prior_sd_min = 0.01,
+                                         pnew_prior_sd_max = 0.15,
                                          pold_est = NULL,
                                          pold_from_nolabel = FALSE,
                                          grouping_factors = NULL,
@@ -418,6 +424,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   rm(..colvect)
 
   pnew_prior_sd_min <- pnew_prior_sd_min
+  pnew_prior_sd_max <- pnew_prior_sd_max
 
   `.` <- list
 
@@ -662,6 +669,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                                       Poisson = Poisson,
                                       pold = unique(pold),
                                       pnew_prior_mean = unique(pnew),
+                                 fraction_prior_sd = 1,
                                       pnew_prior_sd = init_pnew_prior_sd)),
           pold = unique(pold)),
         by = c("sample", features_to_analyze)
@@ -676,14 +684,20 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
       message("Estimating fractions with feature-specific pnews")
 
-      global_est <- feature_specific[,.(pnew_prior = mean(logit(pnew)),
+      ## Mean should really be the estimated sample wide value
+      pnew_prior_df <- mutrates %>%
+        dplyr::rename(pnew_prior = pnew) %>%
+        dplyr::select(sample, pnew_prior)
+      global_est <- feature_specific[pnew_prior_df][pnew < 0.3 & pnew > max(cB$pold, na.rm = TRUE)][,.(pnew_prior = mean(logit(pnew_prior)),
                                     pnew_prior_sd = stats::sd(logit(pnew)) - mean(lpnew_uncert),
                                     pold = mean(pold)),
                                  by = sample]
 
       global_est[, pnew_prior_sd := ifelse(pnew_prior_sd < 0,
                                            pnew_prior_sd_min,
-                                           pnew_prior_sd)
+                                           ifelse(pnew_prior_sd > pnew_prior_sd_max,
+                                                  pnew_prior_sd_max,
+                                                  pnew_prior_sd))
       ]
 
       global_est[, pnew_prior_sd := min(pnew_prior_sd)]
@@ -1262,6 +1276,8 @@ EstimateMutRates.EZbakRData <- function(obj,
 #' of initial feature-specific logit(pnew) estimates using high coverage features, minus the
 #' average uncertainty in the logit(pnew) estimates. As this difference can sometimes be negative,
 #' a value of `pnew_prior_sd_min` will be imputed in that case.
+#' @param pnew_prior_sd_max Similar to `pnew_prior_sd_min`, but now representing the
+#' maximum allowed logit(pnew) prior sd.
 #' @param pold_est Background mutation rate estimates if you have them. Can either be a single
 #' number applied to all samples or a named vector of values, where the names should be sample
 #' names.
@@ -1304,6 +1320,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                               hier_readcutoff = 300,
                                               init_pnew_prior_sd = 0.8,
                                               pnew_prior_sd_min = 0.01,
+                                              pnew_prior_sd_max = 0.15,
                                               pold_est = NULL,
                                               pold_from_nolabel = FALSE,
                                               grouping_factors = NULL,
@@ -1692,7 +1709,9 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
           global_est[, pnew_prior_sd := ifelse(pnew_prior_sd < 0,
                                                pnew_prior_sd_min,
-                                               pnew_prior_sd)
+                                               ifelse(pnew_prior_sd > pnew_prior_sd_max,
+                                                      pnew_prior_sd_max,
+                                                      pnew_prior_sd))
           ]
 
           global_est[, pnew_prior_sd := min(pnew_prior_sd)]
