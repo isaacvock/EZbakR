@@ -129,6 +129,14 @@
 #' kinetic parameter estimates. If FALSE, only fraction news will be used, which
 #' will leave some parameters (e.g., synthesis rate) unidentifiable, though has
 #' the advantage of avoiding the potential biases induced by normalization problems.
+#' @param normalization_repeatID For extracting the `fractions` table needed for
+#' normalization of multi-sample data. If multiple `fractions` tables exist with the same metadata,
+#' then this is the numerical index by which they are distinguished.
+#' @param normalization_exactMatch For extracting the `fractions` table needed for
+#' normalization of multi-sample data. If TRUE, then `features` and `populations`
+#' have to exactly match those for a given fractions table for that table to be used.
+#' Means that you can't specify a subset of features or populations by default, since this is TRUE
+#' by default.
 #' @param overwrite If TRUE and a fractions estimate output already exists that
 #' would possess the same metadata (features analyzed, populations analyzed,
 #' and fraction_design), then it will get overwritten with the new output. Else,
@@ -160,6 +168,8 @@ EZDynamics <- function(obj,
                      exactMatch = TRUE,
                      feature_lengths = NULL,
                      use_coverage = TRUE,
+                     normalization_repeatID = NULL,
+                     normalization_exactMatch = TRUE,
                      overwrite = TRUE){
 
   ##### ORDER OF OPERATIONS
@@ -219,6 +229,9 @@ EZDynamics <- function(obj,
   table <- obj[[type]][[table_name]]
 
   if(type == "averages"){
+
+
+    ### Process input data for model
 
     # Is there only one label time? will have to impute later
     label_times <- metadf %>%
@@ -469,7 +482,7 @@ EZDynamics <- function(obj,
 
 
 
-    # Fit model
+    # Metadata columns retained in the final output
     cols_to_group_by <- c(grouping_features,
                        pivot_columns[!(pivot_columns %in% c(label_time_name, sample_feature))])
 
@@ -502,6 +515,34 @@ EZDynamics <- function(obj,
 
     # Fit model
     if(is.null(scale_factors)){
+
+      ### Get scale factors if not provided,
+      ### and if sample_feature is specified (as this indicates normalization
+      ### across distinct RNA populations)
+      if(!is.null(sample_feature)){
+
+        species <- colnames(graph)
+        species <- species[species != "0"]
+
+        ### Summarise data for groups
+        norm_df <- tidy_avgs %>%
+          dplyr::group_by(dplyr::across(dplyr::all_of(c(design_factors, sample_feature, label_time_name)))) %>%
+          dplyr::summarise(
+            global_logit_fraction = logit(sum(inv_logit(mean)*(10^coverage))/sum(10^coverage)),
+            global_lf_sigma = mean(sd)/sqrt(dplyr::n())
+          )
+
+        browser()
+        normalize_EZDynamics(norm_df,
+                             modeled_to_measured,
+                             sample_feature = sample_feature,
+                             species = species,
+                             label_time_name = label_time_name)
+
+
+      }
+
+
 
       dynfit <- tidy_avgs  %>%
         dplyr::mutate(tl = as.numeric(!!dplyr::sym(label_time_name))) %>%
@@ -1032,3 +1073,239 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
 
 }
+
+
+# TO-DO: Generalize for multi-factor designs
+normalize_EZDynamics <- function(norm_df,
+                                 modeled_to_measured,
+                                 sample_feature,
+                                 label_time_name,
+                                 species){
+
+
+  browser()
+  ### What label times are present across all compartments
+  # TO-DO: Add design factor to this, and loop over each design factor
+  # to calculate scale factors for each design factor group, then modify
+  # fitting function to accept scale_factors as either a list (with one
+  # element per design_factor level) or a vector (current)
+  valid_label_times <- norm_df %>%
+    dplyr::select(!!label_time_name, !!sample_feature) %>%
+    dplyr::distinct() %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(c(label_time_name)))) %>%
+    dplyr::count() %>%
+    dplyr::filter(n >= length(modeled_to_measured)) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(!!label_time_name) %>%
+    unlist() %>%
+    unname() %>%
+    unique()
+
+  if(length(valid_label_times) == 0){
+    stop("You don't have a set of samples from all sample_features with
+         the same label time! Can't estimate scale factors")
+  }
+
+  ### Get scale factors for each label time
+  scale_list <- list()
+  uncertainty_vect <- c()
+  count <- 1
+  for(t in valid_label_times){
+
+    # Data for particular label time
+    norm_df_t <- norm_df %>%
+      dplyr::filter(!!dplyr::sym(label_time_name) == t)
+
+    # Repeat equations if there are repeat compartments
+    actual_mtom <- sapply(norm_df_t[[sample_feature]],
+                          function(x) modeled_to_measured[[x]],
+                          simplify = FALSE)
+
+    ### Infer system of equations
+
+    # Number of unique sample types
+    ns <- length(actual_mtom)
+
+
+    M <- matrix(0, nrow = length(actual_mtom),
+                ncol = length(species))
+
+    # f is for formula
+    for(f in seq_along(actual_mtom)){
+
+      M[f,] <- get_coefficients(as.formula(actual_mtom[[f]][[1]]), species)
+
+    }
+
+
+    ### Estimate scale factors (and some nuisance parameters)
+    # 2*N - 1 parameters; N = number of species:
+      # N global length-normalized fractions (nuisance)
+      # N - 1 scale factors representing the relative molecular abundances of each specie
+    fit <- stats::optim(
+      rep(0, times = 2*length(species) - 1),
+      fn = scale_likelihood,
+      M = M,
+      y = norm_df[['global_logit_fraction']],
+      sig = norm_df[['global_lf_sigma']],
+      method = "L-BFGS-B",
+      upper = c(rep(7, times = length(species)),
+                rep(5, times = length(species) - 1)),
+      lower = c(rep(-7, times = length(species)),
+                rep(-5, times = length(species) - 1)),
+      hessian = TRUE
+    )
+
+
+    # Check if singular; if so, go to next label time
+    uncertainties <- tryCatch(
+      {
+        sqrt(diag(solve(fit$hessian)))
+      },
+      error = function(x){
+        Inf
+      }
+
+    )
+
+    # Check if any of the parameters are at bounds
+
+
+    if(!any(is.infinite(uncertainties))){
+
+      uncertainty_vect[count] <- sqrt(sum(uncertainties[(length(species)+1):(length(fit$par))]^2))
+
+
+      # Return estiamted scale factors
+      scale_factors <- c(1, exp(fit$par[(length(species)+1):(length(fit$par))]))
+      names(scale_factors) <- species
+      scale_list[[count]] <- scale_factors
+      count <- count + 1
+
+    }
+
+
+  }
+
+  if(count == 1){
+    stop("Set of species sampled is insufficient to estimate
+         scale factors with!")
+  }
+
+
+
+
+  ### Return scale factors with lowest uncertainty
+  # Could "average" these, but a bit unsure as to how to
+  # do this rigorously
+  element_to_keep <- which(uncertainty_vect == min(uncertainty_vect))[1]
+
+  scale_factors <- scale_list[[element_to_keep]]
+
+
+}
+
+
+# Bit of recursive (dark) magic
+parse_expr <- function(expr) {
+  if (is.call(expr)) {
+    if (expr[[1]] == as.name("+")) {
+
+      # Sum: parse each operand and combine
+      lhs <- parse_expr(expr[[2]])
+      rhs <- parse_expr(expr[[3]])
+      return(c(lhs, rhs))
+
+    } else if (expr[[1]] == as.name("*")) {
+
+      # Product: extract coefficient and variable
+      if (is.numeric(expr[[2]])) {
+
+        coeff <- expr[[2]]
+        var <- parse_expr(expr[[3]])
+
+      } else if (is.numeric(expr[[3]])) {
+
+        coeff <- expr[[3]]
+        var <- parse_expr(expr[[2]])
+
+      } else {
+
+        # Multiplication of variables, not supported
+        stop("Unsupported expression format: variables multiplied together")
+
+      }
+
+      var_name <- names(var)
+      if (!is.null(var_name)) {
+
+        return(setNames(coeff, var_name))
+
+      } else {
+
+        stop("Unsupported expression format in multiplication")
+
+      }
+    } else {
+
+      stop("Unsupported operator: ", expr[[1]])
+
+    }
+  } else if (is.name(expr)) {
+
+    # Variable with implicit coefficient 1
+    return(setNames(1, as.character(expr)))
+
+  } else if (is.numeric(expr)) {
+
+    # Constant term, ignore it
+    return(NULL)
+
+  } else {
+
+    stop("Unsupported expression type")
+
+  }
+}
+
+
+get_coefficients <- function(formula, species) {
+
+  coeffs <- parse_expr(formula[[3]])
+  output_vector <- numeric(length(species))
+  names(output_vector) <- species
+  if (!is.null(coeffs)) {
+    output_vector[names(coeffs)] <- coeffs
+  }
+
+  return(output_vector)
+
+}
+
+
+# Simple likelihood function
+scale_likelihood <- function(pars, M, y, sig){
+
+  ns <- ncol(M)
+  v1 <- EZbakR:::inv_logit(pars[1:ns])
+  v2 <- c(1, exp(pars[(ns+1):length(pars)]))
+
+  yest <- M%*%(v1*v2) / (M%*%v2)
+
+  yest <- ifelse(
+    yest == 1,
+    0.99999,
+    ifelse(yest == 0,
+           0.00001,
+           yest))
+
+
+  ll <- dnorm(y, logit(yest),
+              sd = sig,
+              log = TRUE)
+
+  return(-sum(ll))
+
+
+}
+
