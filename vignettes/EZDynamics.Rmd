@@ -1,0 +1,482 @@
+---
+title: "Dynamical systems modeling in EZbakR"
+output: 
+  rmarkdown::html_vignette:
+    code_folding: hide
+vignette: >
+  %\VignetteIndexEntry{EZDynamics}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.dim = c(6, 4)
+)
+```
+
+```{r setup}
+library(EZbakR)
+library(dplyr)
+library(ggplot2)
+library(MASS) # For plotting
+
+# For coloring points by density:
+# Source: https://slowkow.com/notes/ggplot2-color-by-density/
+get_density <- function(x, y, ...) {
+  dens <- MASS::kde2d(x, y, ...)
+  ix <- findInterval(x, dens$x)
+  iy <- findInterval(y, dens$y)
+  ii <- cbind(ix, iy)
+  return(dens$z[ii])
+}
+```
+
+## Introduction
+
+Increasingly, subcellular fractionation is being combined with NR-seq, allowing
+researchers to probe the kinetics of flow between subcellular compartments. EZbakR's
+`EZDynamics()` function supports the analysis of this kind of data through generalized
+dynamical systems modeling. In addition, `EZDyamics()`, when combined with fastq2EZbakR's
+flexible feature assignment strategy, opens the door for analyses of both premature and
+mature RNA dynamics. It is even possible to combine these two. In this vignette,
+we will learn how to run `EZDynamics()`.
+
+## Quickstart
+
+Here we will quickly cover a couple use cases to efficiently showcase the full
+extent of `EZDynamics()` functionality. In the sections that follow, a more detailed
+description of everything shown here will be provided.
+
+
+### Create some simulated datasets
+
+We will analyze the following datasets throughout this section.
+
+Cytoplasmic to nuclear flow, no nuclear degradation:
+
+
+Cytoplasmic to nuclear flow, nuclear RNA can degrade:
+
+
+Pre-RNA is processed to mature RNA:
+
+
+Nuclear and cytoplasmic pre-RNA and mature RNA dynamics:
+
+
+### Modeling cytoplasmic to nuclear flow
+
+Data: Whole cell, cytoplasmic fraction, and nuclear fraction NR-seq data. 
+
+Goal: Fit the simple model 0 -> N -> C -> 0; nuclear RNA (N) is synthesized, exported
+to the cytoplasm (C), and degraded (0).
+
+Pre-requisites:
+
+1. Create EZbakRData object
+2. Run EstimateFractions
+3. Create table of feature lengths from annotation
+4. Run AverageAndRegularize to average fractions across replicates
+
+```{r class.source = 'fold-show', eval=TRUE}
+
+##### SIMULATE DATA
+
+# Number of features to simulate
+nfeatures <- 250
+
+# graph describing relationships between modeled species
+graph <- matrix(c(0, 1, 0,
+                  0, 0, 2,
+                  3, 0, 0),
+                nrow = 3,
+                ncol = 3,
+                byrow = TRUE)
+
+colnames(graph) <- c("0", "N", "C")
+rownames(graph) <- colnames(graph)
+
+# formula list relating measured species to modeled species
+total_list <- list(GF ~ C + N)
+nuc_list <- list(GF ~ N)
+cyt_list <- list(GF ~ C)
+
+formula_list <- list(sampleA = total_list,
+                     sampleB = total_list,
+                     sampleC = total_list,
+                     sampleD = total_list,
+                     sampleE = nuc_list,
+                     sampleF = nuc_list,
+                     sampleG = nuc_list,
+                     sampleH = nuc_list,
+                     sampleI = cyt_list,
+                     sampleJ = cyt_list,
+                     sampleK = cyt_list,
+                     sampleL = cyt_list)
+
+# metadf
+metadf <- dplyr::tibble(sample = paste0("sample", LETTERS[1:length(formula_list)]),
+                        compartment = rep(c("total", "nuclear", "cytoplasm"),
+                                          each = 4),
+                        tl = rep(c(3, 3,
+                                   1, 1), times = 3))
+
+# means of log of parameters
+log_means <- c(1, -0.3, -2)
+
+# population sds on log scale of parameters
+log_sds <- rep(0.4, times = max(graph))
+
+# Unassigned indicator
+unassigned_name <- "__no_feature"
+
+# Sequencing depth
+seqdepth <- nfeatures * 2500
+
+# Negative binomial dispersion parameter (size in `rnbinom()`)
+dispersion <- 1000
+
+# Logit(fn) replicate variability (homoskedastic for now)
+lfn_sd <- 0.2
+
+
+
+simdata <- SimulateDynamics(nfeatures,
+                            graph,
+                            metadf,
+                            formula_list,
+                            log_means,
+                            log_sds,
+                            unassigned_name,
+                            seqdepth,
+                            dispersion,
+                            lfn_sd)
+
+
+##### EZBAKR ANALYSES
+
+metadf <- metadf
+
+ezbdo <- EZbakRData(simdata$cB, metadf)
+
+ezbdo <- EstimateFractions(ezbdo)
+
+
+# Lengths of features:
+# In simulation, all features are same length, so this is here for illustrative
+# purposes only
+feature_lengths <- tibble(
+  GF = unique(simdata$cB$GF),
+  length = 1000
+)
+
+
+# Averaging fractions rather than kinetics
+# Note the model, which specifies that we want to average data for a given
+# compartment AND label time (tl).
+ezbdo <- AverageAndRegularize(ezbdo,
+                              formula_mean = ~tl:compartment - 1,
+                              type = "fractions",
+                              feature_lengths = feature_lengths,
+                              parameter = "logit_fraction_highTC")
+
+```
+
+
+Input to EZDynamics():
+
+1. EZbakRData object on which you have run AverageAndRegularize
+1. A matrix, referred to as a "graph", describing the species you are modeling
+and their relationships to one another:
+
+```{r class.source = 'fold-show', eval=TRUE}
+### Input #2: the graph
+graph <- matrix(c(0, 1, 0,
+                  0, 0, 2,
+                  3, 0, 0),
+                nrow = 3,
+                ncol = 3,
+                byrow = TRUE)
+colnames(graph) <- c("0", "N", "C")
+rownames(graph) <- colnames(graph)
+
+# Each row and column represents an RNA species being modeled
+# Here we are modeling the dynamics of nuclear (N) and cytoplasmic (C)
+# RNA. "0" represents no RNA, and must appear in the graph. N is synthesized
+# from 0 (i.e., its synthesis kinetics are 0-th order), and C is degraded to 0
+#
+# Numbers in graph should range from 0 to the number of parameters in your model.
+# Order is arbitrary
+```
+
+
+1. A list of equations describing how the RNA you actually measured is related to
+the species you are modeling:
+
+```{r class.source = 'fold-show', eval=TRUE}
+modeled_to_measured <- list(
+  nuclear = GF ~ N,
+  cytoplasm = GF ~ C,
+  total = GF ~ C + N # total RNA is a combination of C and N
+)
+```
+
+
+Running EZDynamics:
+
+```{r class.source = 'fold-show', eval=TRUE}
+# See documentation (?EZDynamics()) for descriptions of all parameters
+# specified
+ezbdo_ez <- EZDynamics(ezbdo,
+                    graph = graph,
+                    sub_features = "GF",
+                    grouping_features = "GF",
+                    sample_feature = "compartment",
+                    modeled_to_measured = list(
+                      total = total_list,
+                      nuclear = nuc_list,
+                      cytoplasm = cyt_list
+                    ))
+
+```
+
+
+Assessing accuracy since this is simulated data with known ground truth:
+
+```{r pressure1, fig.width=6, out.width="40%", fig.align="default", fig.show='hold', eval=TRUE}
+gt <- simdata$ground_truth$parameter_truth
+
+dynfit <- ezbdo_ez$dynamics$dynamics1 
+
+compare <- dplyr::inner_join(dynfit, gt %>% dplyr::rename(GF = feature),
+                             by = "GF")
+
+
+true_scale_factor <- mean(exp(compare$k1[compare$k1 < 9.9]) / compare$true_k1[compare$k1 < 9.9])
+
+
+gPk1 <- compare %>%
+  dplyr::mutate(density = get_density(
+    x = log(true_k1),
+    y = log(exp(k1)/true_scale_factor),
+    n = 200
+  )) %>%
+  ggplot(aes(x = log(true_k1),
+             y = log(exp(k1)/true_scale_factor),
+             color = density)) +
+  geom_point(size=0.9) +
+  theme_classic() +
+  scale_color_viridis_c() +
+  xlab("log(true ksyn)") +
+  ylab("log(estimated ksyn)") +
+  geom_abline(slope =1,
+              intercept = 0,
+              color = 'darkred',
+              linewidth = 0.75,
+              linetype = 'dotted') +
+  theme(axis.text=element_text(size=10),
+    axis.title=element_text(size=12),
+    legend.text=element_text(size=10),
+    legend.title=element_text(size=12))
+
+
+
+
+gPk2 <- compare %>%
+  dplyr::mutate(density = get_density(
+    x = log(true_k2),
+    y = k2,
+    n = 200
+  )) %>%
+  ggplot(aes(x = log(true_k2),
+             y = k2,
+             color = density)) +
+  geom_point(size=0.9) +
+  theme_classic() +
+  scale_color_viridis_c() +
+  xlab("log(true kexp)") +
+  ylab("log(estimated kexp)") +
+  geom_abline(slope =1,
+              intercept = 0,
+              color = 'darkred',
+              linewidth = 0.75,
+              linetype = 'dotted') +
+  theme(axis.text=element_text(size=10),
+    axis.title=element_text(size=12),
+    legend.text=element_text(size=10),
+    legend.title=element_text(size=12))
+
+gPk3 <- compare %>%
+  dplyr::mutate(density = get_density(
+    x = log(true_k3),
+    y = k3,
+    n = 200
+  )) %>%
+  ggplot(aes(x = log(true_k3),
+             y = k3,
+             color = density)) +
+  geom_point(size=0.9) +
+  theme_classic() +
+  scale_color_viridis_c() +
+  xlab("log(true kdeg)") +
+  ylab("log(estimated kdeg)") +
+  geom_abline(slope =1,
+              intercept = 0,
+              color = 'darkred',
+              linewidth = 0.75,
+              linetype = 'dotted') +
+  theme(axis.text=element_text(size=10),
+    axis.title=element_text(size=12),
+    legend.text=element_text(size=10),
+    legend.title=element_text(size=12))
+
+gPk1
+gPk2
+gPk3
+```
+
+
+### Modeling nuclear degradation
+
+Above, we fit a model where nuclear RNA cannot degrade. What if we no longer want
+to make that assumption? Just change the graph to specify that N can degrade to
+0:
+
+```{r class.source = 'fold-show', eval=FALSE}
+### Input #2: the graph
+graph <- matrix(c(0, 1, 0,
+                  3, 0, 2,
+                  4, 0, 0),
+                nrow = 3,
+                ncol = 3,
+                byrow = TRUE)
+colnames(graph) <- c("0", "N", "C")
+rownames(graph) <- colnames(graph)
+
+# Each row and column represents an RNA species being modeled
+# Here we are modeling the dynamics of nuclear (N) and cytoplasmic (C)
+# RNA. "0" represents no RNA, and must appear in the graph. N is synthesized
+# from 0 (i.e., its synthesis kinetics are 0-th order), and C is degraded to 0
+#
+# Numbers in graph should range from 0 to the number of parameters in your model.
+# Order is arbitrary
+```
+
+
+```{r, eval=FALSE}
+
+##### SIMULATE DATA
+
+# Number of features to simulate
+nfeatures <- 250
+
+# formula list relating measured species to modeled species
+total_list <- list(GF ~ C + N)
+nuc_list <- list(GF ~ N)
+cyt_list <- list(GF ~ C)
+
+formula_list <- list(sampleA = total_list,
+                     sampleB = total_list,
+                     sampleC = total_list,
+                     sampleD = total_list,
+                     sampleE = nuc_list,
+                     sampleF = nuc_list,
+                     sampleG = nuc_list,
+                     sampleH = nuc_list,
+                     sampleI = cyt_list,
+                     sampleJ = cyt_list,
+                     sampleK = cyt_list,
+                     sampleL = cyt_list)
+
+# metadf
+metadf <- dplyr::tibble(sample = paste0("sample", LETTERS[1:length(formula_list)]),
+                        compartment = rep(c("total", "nuclear", "cytoplasm"),
+                                          each = 4),
+                        tl = rep(c(3, 3,
+                                   1, 1), times = 3))
+
+# means of log of parameters
+log_means <- c(1, -0.3, -1, -2)
+
+# population sds on log scale of parameters
+log_sds <- rep(0.4, times = max(graph))
+
+# Unassigned indicator
+unassigned_name <- "__no_feature"
+
+# Sequencing depth
+seqdepth <- nfeatures * 2500
+
+# Negative binomial dispersion parameter (size in `rnbinom()`)
+dispersion <- 1000
+
+# Logit(fn) replicate variability (homoskedastic for now)
+lfn_sd <- 0.2
+
+
+
+simdata <- SimulateDynamics(nfeatures,
+                            graph,
+                            metadf,
+                            formula_list,
+                            log_means,
+                            log_sds,
+                            unassigned_name,
+                            seqdepth,
+                            dispersion,
+                            lfn_sd)
+
+
+##### EZBAKR ANALYSES
+
+metadf <- metadf
+
+ezbdo <- EZbakRData(simdata$cB, metadf)
+
+ezbdo <- EstimateFractions(ezbdo)
+
+
+# Lengths of features:
+# In simulation, all features are same length, so this is here for illustrative
+# purposes only
+feature_lengths <- tibble(
+  GF = unique(simdata$cB$GF),
+  length = 1000
+)
+
+
+# Averaging fractions rather than kinetics
+# Note the model, which specifies that we want to average data for a given
+# compartment AND label time (tl).
+ezbdo <- AverageAndRegularize(ezbdo,
+                              formula_mean = ~tl:compartment - 1,
+                              type = "fractions",
+                              feature_lengths = feature_lengths,
+                              parameter = "logit_fraction_highTC")
+
+# See documentation (?EZDynamics()) for descriptions of all parameters
+# specified
+ezbdo_ez <- EZDynamics(ezbdo,
+                    graph = graph,
+                    sub_features = "GF",
+                    grouping_features = "GF",
+                    sample_feature = "compartment",
+                    modeled_to_measured = list(
+                      total = total_list,
+                      nuclear = nuc_list,
+                      cytoplasm = cyt_list
+                    ))
+
+```
+
+### Modeling pre- and mature RNA dynamics
+
+
+
+
+
+### Cytoplasmic to nuclear flow of pre- and mature RNA
+

@@ -28,6 +28,8 @@ EZDynamics(
   exactMatch = TRUE,
   feature_lengths = NULL,
   use_coverage = TRUE,
+  normalization_repeatID = NULL,
+  normalization_exactMatch = TRUE,
   overwrite = TRUE
 )
 }
@@ -164,6 +166,16 @@ by default.}
 \item{feature_lengths}{Table of effective lengths for each feature combination in your
 data. For example, if your analysis includes features named GF and XF, this
 should be a data frame with columns GF, XF, and length.}
+
+\item{normalization_repeatID}{For extracting the \code{fractions} table needed for
+normalization of multi-sample data. If multiple \code{fractions} tables exist with the same metadata,
+then this is the numerical index by which they are distinguished.}
+
+\item{normalization_exactMatch}{For extracting the \code{fractions} table needed for
+normalization of multi-sample data. If TRUE, then \code{features} and \code{populations}
+have to exactly match those for a given fractions table for that table to be used.
+Means that you can't specify a subset of features or populations by default, since this is TRUE
+by default.}
 
 \item{overwrite}{If TRUE and a fractions estimate output already exists that
 would possess the same metadata (features analyzed, populations analyzed,

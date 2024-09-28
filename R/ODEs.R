@@ -407,17 +407,6 @@ EZDynamics <- function(obj,
     # Determine initial vector of parameters and their upper and lower bounds
     npars <- max(graph)
 
-    # Don't estimate ksyn if coverage is not being modeled
-    if(!use_coverage){
-      npars <- npars - 1
-
-      ksyn_index <- unique(graph["0",])
-      ksyn_index <- ksyn_index[ksyn_index != 0]
-
-      prior_means <- prior_means[-ksyn_index]
-      prior_sds <- prior_sds[-ksyn_index]
-
-    }
 
     # Have to add a bit of noise because equal parameters means general solution
     # breaks down as their aren't N eigenvalues. Could generalize to case
@@ -513,36 +502,61 @@ EZDynamics <- function(obj,
       dplyr::ungroup()
 
 
+    ### Get scale factors if not provided,
+    ### and if sample_feature is specified (as this indicates normalization
+    ### across distinct RNA populations)
+    if(!is.null(sample_feature) & is.null(scale_factors)){
+
+      species <- colnames(graph)
+      species <- species[species != "0"]
+
+      ### Summarise data for groups
+      norm_df <- tidy_avgs %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(c(design_factors, sample_feature, label_time_name)))) %>%
+        dplyr::summarise(
+          global_logit_fraction = logit(sum(inv_logit(mean)*(10^coverage))/sum(10^coverage)),
+          global_lf_sigma = mean(sd)/sqrt(dplyr::n())
+        )
+
+      ### Try to normalize
+      scale_factors <- tryCatch(
+        {
+          normalize_EZDynamics(norm_df,
+                               modeled_to_measured,
+                               sample_feature = sample_feature,
+                               species = species,
+                               label_time_name = label_time_name)
+        },
+        error = function(e){
+          message(e)
+          NULL
+        }
+      )
+
+    }
+
+    # Don't use reads if can't normalize
+    if(is.null(scale_factors)){
+      use_coverage <- FALSE
+    }
+
+
+    # Don't estimate ksyn if coverage is not being modeled
+    if(!use_coverage){
+
+      npars <- npars - 1
+
+      ksyn_index <- unique(graph["0",])
+      ksyn_index <- ksyn_index[ksyn_index != 0]
+
+      prior_means <- prior_means[-ksyn_index]
+      prior_sds <- prior_sds[-ksyn_index]
+
+    }
+
+
     # Fit model
     if(is.null(scale_factors)){
-
-      ### Get scale factors if not provided,
-      ### and if sample_feature is specified (as this indicates normalization
-      ### across distinct RNA populations)
-      if(!is.null(sample_feature)){
-
-        species <- colnames(graph)
-        species <- species[species != "0"]
-
-        ### Summarise data for groups
-        norm_df <- tidy_avgs %>%
-          dplyr::group_by(dplyr::across(dplyr::all_of(c(design_factors, sample_feature, label_time_name)))) %>%
-          dplyr::summarise(
-            global_logit_fraction = logit(sum(inv_logit(mean)*(10^coverage))/sum(10^coverage)),
-            global_lf_sigma = mean(sd)/sqrt(dplyr::n())
-          )
-
-        browser()
-        normalize_EZDynamics(norm_df,
-                             modeled_to_measured,
-                             sample_feature = sample_feature,
-                             species = species,
-                             label_time_name = label_time_name)
-
-
-      }
-
-
 
       dynfit <- tidy_avgs  %>%
         dplyr::mutate(tl = as.numeric(!!dplyr::sym(label_time_name))) %>%
@@ -1064,10 +1078,6 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
                           sd = prior_sds,
                           log = TRUE))
 
-  if(!is.finite(ll)){
-    browser()
-  }
-
   return(-ll)
 
 
@@ -1083,7 +1093,6 @@ normalize_EZDynamics <- function(norm_df,
                                  species){
 
 
-  browser()
   ### What label times are present across all compartments
   # TO-DO: Add design factor to this, and loop over each design factor
   # to calculate scale factors for each design factor group, then modify
@@ -1146,8 +1155,8 @@ normalize_EZDynamics <- function(norm_df,
       rep(0, times = 2*length(species) - 1),
       fn = scale_likelihood,
       M = M,
-      y = norm_df[['global_logit_fraction']],
-      sig = norm_df[['global_lf_sigma']],
+      y = norm_df_t[['global_logit_fraction']],
+      sig = norm_df_t[['global_lf_sigma']],
       method = "L-BFGS-B",
       upper = c(rep(7, times = length(species)),
                 rep(5, times = length(species) - 1)),
@@ -1168,6 +1177,10 @@ normalize_EZDynamics <- function(norm_df,
 
     )
 
+    if(any(is.nan(uncertainties))){
+      uncertainties <- Inf
+    }
+
     # Check if any of the parameters are at bounds
 
 
@@ -1178,8 +1191,10 @@ normalize_EZDynamics <- function(norm_df,
 
       # Return estiamted scale factors
       scale_factors <- c(1, exp(fit$par[(length(species)+1):(length(fit$par))]))
-      names(scale_factors) <- species
-      scale_list[[count]] <- scale_factors
+      scale_factors <- as.vector(M %*% scale_factors)
+      scale_df <- dplyr::tibble(scale = scale_factors)
+      scale_df[[sample_feature]] <- norm_df_t[[sample_feature]]
+      scale_list[[count]] <- scale_df
       count <- count + 1
 
     }
@@ -1194,13 +1209,17 @@ normalize_EZDynamics <- function(norm_df,
 
 
 
-
   ### Return scale factors with lowest uncertainty
   # Could "average" these, but a bit unsure as to how to
   # do this rigorously
   element_to_keep <- which(uncertainty_vect == min(uncertainty_vect))[1]
 
-  scale_factors <- scale_list[[element_to_keep]]
+  scale_df <- scale_list[[element_to_keep]]
+
+  ### Currently, scale_factors is in terms of modeled species
+  ### Need to convert it to a scale factor for each compartment
+
+  return(scale_df)
 
 
 }

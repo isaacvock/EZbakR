@@ -6,6 +6,7 @@
 \usage{
 EZSimulate(
   nfeatures,
+  mode = c("standard", "dynamics"),
   ntreatments = 2,
   nreps = 3,
   nctlreps = 1,
@@ -36,7 +37,9 @@ EZSimulate(
   pdiff_kd = 0.1,
   pdiff_ks = 0,
   pdiff_both = 0,
-  pdo = 0
+  pdo = 0,
+  dynamics_preset = c("none", "preRNA", "nuc2cyto", "preRNAwithPdeg", "nuc2cytowithNdeg",
+    "subtlseq", "nuc2cytowithpreRNA")
 )
 }
 \arguments{

@@ -779,7 +779,9 @@ SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
-EZSimulate <- function(nfeatures, ntreatments = 2, nreps = 3, nctlreps = 1,
+EZSimulate <- function(nfeatures,
+                       mode = c("standard", "dynamics"),
+                       ntreatments = 2, nreps = 3, nctlreps = 1,
                        metadf = NULL,
                        mean_formula = NULL,
                        param_details = NULL,
@@ -797,86 +799,182 @@ EZSimulate <- function(nfeatures, ntreatments = 2, nreps = 3, nctlreps = 1,
                        logkdeg_diff_avg = 0, logksyn_diff_avg = 0,
                        logkdeg_diff_sd = 0.5, logksyn_diff_sd = 0.5,
                        pdiff_kd = 0.1, pdiff_ks = 0, pdiff_both = 0,
-                       pdo = 0){
+                       pdo = 0,
+                       dynamics_preset = c("none", "preRNA", "nuc2cyto",
+                                           "preRNAwithPdeg", "nuc2cytowithNdeg",
+                                           "subtlseq", "nuc2cytowithpreRNA")){
 
 
-  ### NOTE: This is obviously currently a very trivial wrapper that could
-  ### just be the default behavior of SimulateMultiCondition(). That being said,
-  ### I suspect that there will be other aspects of simulation parameter setting
-  ### that I would like to automate, so for now I will keep this as is
-
-  ### Set parameters
-  if(is.null(metadf)){
-
-    mean_formula <- stats::as.formula('~treatment-1')
-    metadf_s4U <- dplyr::tibble(sample = paste0('sample', 1:(nreps*ntreatments)),
-                            treatment = rep(paste0('treatment', 1:ntreatments),
-                                            each = nreps),
-                            label_time = label_time)
-
-    ctl_start <- nreps*ntreatments + 1
-    ctl_end <- nreps*ntreatments + nctlreps*ntreatments
-
-    metadf_ctl <- dplyr::tibble(sample = paste0('sample', ctl_start:ctl_end),
-                                treatment = rep(paste0('treatment', 1:ntreatments),
-                                                each = nctlreps),
-                                label_time = 0)
-
-    metadf <- dplyr::bind_rows(metadf_s4U,
-                               metadf_ctl)
+  mode <- match.arg(mode)
 
 
-    simdata <- SimulateMultiCondition(nfeatures = nfeatures, metadf = metadf,
-                                      mean_formula = mean_formula,
-                                      param_details = param_details,
-                                      seqdepth = seqdepth, label_time = label_time,
-                                      pnew = pnew, pold = pold, readlength = readlength,
-                                      Ucont = Ucont, feature_prefix = feature_prefix,
-                                      dispslope = dispslope, dispint = dispint,
-                                      logkdegsdtrend_slope = logkdegsdtrend_slope,
-                                      logkdegsdtrend_intercept = logkdegsdtrend_intercept,
-                                      logksynsdtrend_slope = logksynsdtrend_slope,
-                                      logksynsdtrend_intercept = logksynsdtrend_intercept,
-                                      logkdeg_mean = logkdeg_mean, logkdeg_sd = logkdeg_sd,
-                                      logksyn_mean = logksyn_mean, logksyn_sd = logksyn_sd,
-                                      logkdeg_diff_avg = logkdeg_diff_avg,
-                                      logksyn_diff_avg = logksyn_diff_avg,
-                                      logkdeg_diff_sd = logkdeg_diff_sd,
-                                      logksyn_diff_sd = logksyn_diff_sd,
-                                      pdiff_kd = pdiff_kd, pdiff_ks = pdiff_ks,
-                                      pdiff_both = pdiff_both, pdo = pdo)
+  if(mode == "standard"){
+
+    ### NOTE: This is obviously currently a very trivial wrapper that could
+    ### just be the default behavior of SimulateMultiCondition(). That being said,
+    ### I suspect that there will be other aspects of simulation parameter setting
+    ### that I would like to automate, so for now I will keep this as is
+
+    ### Set parameters
+    if(is.null(metadf)){
+
+      mean_formula <- stats::as.formula('~treatment-1')
+      metadf_s4U <- dplyr::tibble(sample = paste0('sample', 1:(nreps*ntreatments)),
+                                  treatment = rep(paste0('treatment', 1:ntreatments),
+                                                  each = nreps),
+                                  label_time = label_time)
+
+      ctl_start <- nreps*ntreatments + 1
+      ctl_end <- nreps*ntreatments + nctlreps*ntreatments
+
+      metadf_ctl <- dplyr::tibble(sample = paste0('sample', ctl_start:ctl_end),
+                                  treatment = rep(paste0('treatment', 1:ntreatments),
+                                                  each = nctlreps),
+                                  label_time = 0)
+
+      metadf <- dplyr::bind_rows(metadf_s4U,
+                                 metadf_ctl)
 
 
-    simdata[['metadf']] <- metadf %>%
-      dplyr::rename(tl = label_time)
-    return(simdata)
+      simdata <- SimulateMultiCondition(nfeatures = nfeatures, metadf = metadf,
+                                        mean_formula = mean_formula,
+                                        param_details = param_details,
+                                        seqdepth = seqdepth, label_time = label_time,
+                                        pnew = pnew, pold = pold, readlength = readlength,
+                                        Ucont = Ucont, feature_prefix = feature_prefix,
+                                        dispslope = dispslope, dispint = dispint,
+                                        logkdegsdtrend_slope = logkdegsdtrend_slope,
+                                        logkdegsdtrend_intercept = logkdegsdtrend_intercept,
+                                        logksynsdtrend_slope = logksynsdtrend_slope,
+                                        logksynsdtrend_intercept = logksynsdtrend_intercept,
+                                        logkdeg_mean = logkdeg_mean, logkdeg_sd = logkdeg_sd,
+                                        logksyn_mean = logksyn_mean, logksyn_sd = logksyn_sd,
+                                        logkdeg_diff_avg = logkdeg_diff_avg,
+                                        logksyn_diff_avg = logksyn_diff_avg,
+                                        logkdeg_diff_sd = logkdeg_diff_sd,
+                                        logksyn_diff_sd = logksyn_diff_sd,
+                                        pdiff_kd = pdiff_kd, pdiff_ks = pdiff_ks,
+                                        pdiff_both = pdiff_both, pdo = pdo)
+
+
+      simdata[['metadf']] <- metadf %>%
+        dplyr::rename(tl = label_time)
+      return(simdata)
+
+    }else{
+
+      simdata <- SimulateMultiCondition(nfeatures = nfeatures, metadf = metadf,
+                                        mean_formula = mean_formula,
+                                        param_details = param_details,
+                                        seqdepth = seqdepth, label_time = label_time,
+                                        pnew = pnew, pold = pold, readlength = readlength,
+                                        Ucont = Ucont, feature_prefix = feature_prefix,
+                                        dispslope = dispslope, dispint = dispint,
+                                        logkdegsdtrend_slope = logkdegsdtrend_slope,
+                                        logkdegsdtrend_intercept = logkdegsdtrend_intercept,
+                                        logksynsdtrend_slope = logksynsdtrend_slope,
+                                        logksynsdtrend_intercept = logksynsdtrend_intercept,
+                                        logkdeg_mean = logkdeg_mean, logkdeg_sd = logkdeg_sd,
+                                        logksyn_mean = logksyn_mean, logksyn_sd = logksyn_sd,
+                                        logkdeg_diff_avg = logkdeg_diff_avg,
+                                        logksyn_diff_avg = logksyn_diff_avg,
+                                        logkdeg_diff_sd = logkdeg_diff_sd,
+                                        logksyn_diff_sd = logksyn_diff_sd,
+                                        pdiff_kd = pdiff_kd, pdiff_ks = pdiff_ks,
+                                        pdiff_both = pdiff_both, pdo = pdo)
+
+      return(simdata)
+
+
+    }
+
+
 
   }else{
+    ### EZDYNAMICS WRAPPER
 
-    simdata <- SimulateMultiCondition(nfeatures = nfeatures, metadf = metadf,
-                                      mean_formula = mean_formula,
-                                      param_details = param_details,
-                                      seqdepth = seqdepth, label_time = label_time,
-                                      pnew = pnew, pold = pold, readlength = readlength,
-                                      Ucont = Ucont, feature_prefix = feature_prefix,
-                                      dispslope = dispslope, dispint = dispint,
-                                      logkdegsdtrend_slope = logkdegsdtrend_slope,
-                                      logkdegsdtrend_intercept = logkdegsdtrend_intercept,
-                                      logksynsdtrend_slope = logksynsdtrend_slope,
-                                      logksynsdtrend_intercept = logksynsdtrend_intercept,
-                                      logkdeg_mean = logkdeg_mean, logkdeg_sd = logkdeg_sd,
-                                      logksyn_mean = logksyn_mean, logksyn_sd = logksyn_sd,
-                                      logkdeg_diff_avg = logkdeg_diff_avg,
-                                      logksyn_diff_avg = logksyn_diff_avg,
-                                      logkdeg_diff_sd = logkdeg_diff_sd,
-                                      logksyn_diff_sd = logksyn_diff_sd,
-                                      pdiff_kd = pdiff_kd, pdiff_ks = pdiff_ks,
-                                      pdiff_both = pdiff_both, pdo = pdo)
+    preset <- match.arg(dynamics_preset)
 
-    return(simdata)
+    c("none", "preRNA", "nuc2cyto",
+      "preRNAwithPdeg", "nuc2cytowithNdeg",
+      "subtlseq", "nuc2cytowithpreRNA")
+
+    if(preset == "preRNA"){
+
+    }else if(preset == "nuc2cyto"){
+
+
+    }else if(preset == "preRNAwithPdeg"){
+
+
+    }else if(preset == "")
+
+
+    # graph describing relationships between modeled species
+    graph <- get_ode_graph(preset)
+
+    colnames(graph) <- c("0", "N", "C")
+    rownames(graph) <- colnames(graph)
+
+    # formula list relating measured species to modeled species
+    total_list <- list(GF ~ C + N)
+    nuc_list <- list(GF ~ N)
+    cyt_list <- list(GF ~ C)
+
+    formula_list <- list(sampleA = total_list,
+                         sampleB = total_list,
+                         sampleC = total_list,
+                         sampleD = total_list,
+                         sampleE = nuc_list,
+                         sampleF = nuc_list,
+                         sampleG = nuc_list,
+                         sampleH = nuc_list,
+                         sampleI = cyt_list,
+                         sampleJ = cyt_list,
+                         sampleK = cyt_list,
+                         sampleL = cyt_list)
+
+    # metadf
+    metadf <- dplyr::tibble(sample = paste0("sample", LETTERS[1:length(formula_list)]),
+                            compartment = rep(c("total", "nuclear", "cytoplasm"),
+                                              each = 4),
+                            tl = rep(c(3, 3,
+                                       1, 1), times = 3))
+
+    # means of log of parameters
+    log_means <- c(1, -0.3, -2)
+
+    # population sds on log scale of parameters
+    log_sds <- rep(0.4, times = max(graph))
+
+    # Unassigned indicator
+    unassigned_name <- "__no_feature"
+
+    # Sequencing depth
+    seqdepth <- nfeatures * 2500
+
+    # Negative binomial dispersion parameter (size in `rnbinom()`)
+    dispersion <- 1000
+
+    # Logit(fn) replicate variability (homoskedastic for now)
+    lfn_sd <- 0.2
+
+
+
+    simdata <- SimulateDynamics(nfeatures,
+                                graph,
+                                metadf,
+                                formula_list,
+                                log_means,
+                                log_sds,
+                                unassigned_name,
+                                seqdepth,
+                                dispersion,
+                                lfn_sd)
 
 
   }
+
 
 
 
