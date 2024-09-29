@@ -776,6 +776,32 @@ SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
 #' @param pdo Dropout rate; think of this as the probability that a s4U containing
 #' molecule is lost during library preparation and sequencing. If `pdo` is 0 (default)
 #' then there is not dropout.
+#' @param dynamics_preset Which preset model to use for simulation of dynamics.
+#' Therefore, only relevant if `mode` == `dynamics`. Options are:
+#' \describe{
+#'  \item{nuc2cyto}{Simplest model of nuclear and cytoplasmic RNA dynamics: 0 -> N -> C -> 0}
+#'  \item{preRNA}{Simplest model of pre-RNA and mature RNA dynamics: 0 -> P -> M -> 0}
+#'  \item{preRNAwithPdeg}{Same as preRNA, but now pre-RNA can also degrade.}
+#'  \item{nuc2cytowithNdeg}{Same as nuc2cyto, but now nuclear RNA can also degrade.}
+#'  \item{subtlseq}{Subcellular TimeLapse-seq model, similar to that described in Ietswaart et al., 2024.
+#'  Simplest model discussed there, lacking nuclear degradation: 0 -> CH -> NP -> CY -> PL -> 0, and CY can
+#'  also degrade.}
+#'  \item{nuc2cytowithpreRNA}{Combination of nuc2cyto and preRNA where preRNA is first synthesized,
+#'  then either processed or exported to the cytoplasm. Processing can also occur in the cytoplasm, and
+#'  mature nuclear RNA can be exported to the cytoplasm. Only  mature RNA degrades.}
+#' }
+#' @param unassigned_name String to give to reads not assigned to a given feature.
+#' @param seqdepth Total number of reads in each sample.
+#' @param dispersion Negative binomial `size` parameter to use for simulating read counts
+#' @param lfn_sd Logit(fn) replicate variability.
+#' @param log_means Vector of log-Normal logmeans from which the distribution of
+#' feature-specific parameters will be drawn from. Length of vector should be the same
+#' as max(entries in `graph`), i.e., the number of parameters in your specified model.
+#' If not provided, will by default be `c(1, seq(from = -0.3, to = -2.5, length.out = max(graph) - 1 ))`.
+#' `1` for the ksyn parameter (which is always denoted 1 in the preset `graph`) is arbitrary.
+#' Remaining parameters will make it so indices order parameters from fastest to slowest process.
+#' @param log_sds Vector of log-Normal logsds from which the distribution of
+#' feature-specific parameters will be drawn from. If not provided, will be 0.4 for all parameters.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
@@ -800,9 +826,14 @@ EZSimulate <- function(nfeatures,
                        logkdeg_diff_sd = 0.5, logksyn_diff_sd = 0.5,
                        pdiff_kd = 0.1, pdiff_ks = 0, pdiff_both = 0,
                        pdo = 0,
-                       dynamics_preset = c("none", "preRNA", "nuc2cyto",
+                       dynamics_preset = c("preRNA", "nuc2cyto",
                                            "preRNAwithPdeg", "nuc2cytowithNdeg",
-                                           "subtlseq", "nuc2cytowithpreRNA")){
+                                           "subtlseq", "nuc2cytowithpreRNA"),
+                       unassigned_name = "__no_feature",
+                       dispersion = 1000,
+                       lfn_sd = 0.2,
+                       log_means = NULL,
+                       log_sds = NULL){
 
 
   mode <- match.arg(mode)
@@ -859,7 +890,6 @@ EZSimulate <- function(nfeatures,
 
       simdata[['metadf']] <- metadf %>%
         dplyr::rename(tl = label_time)
-      return(simdata)
 
     }else{
 
@@ -883,7 +913,6 @@ EZSimulate <- function(nfeatures,
                                         pdiff_kd = pdiff_kd, pdiff_ks = pdiff_ks,
                                         pdiff_both = pdiff_both, pdo = pdo)
 
-      return(simdata)
 
 
     }
@@ -895,70 +924,44 @@ EZSimulate <- function(nfeatures,
 
     preset <- match.arg(dynamics_preset)
 
-    c("none", "preRNA", "nuc2cyto",
-      "preRNAwithPdeg", "nuc2cytowithNdeg",
-      "subtlseq", "nuc2cytowithpreRNA")
-
-    if(preset == "preRNA"){
-
-    }else if(preset == "nuc2cyto"){
+    graph <- ode_models[[preset]][["graph"]]
+    formulas <- ode_models[[preset]][["formulas"]]
 
 
-    }else if(preset == "preRNAwithPdeg"){
+    formula_list <- vector(mode = "list",
+                           length = length(label_time)*length(formulas)*nreps)
+
+    tl_vect <- rep(0, times = length(formula_list))
+    compartment_vect <- rep(0, times = length(formula_list))
+    for(i in 1:length(formula_list)){
+
+      formula_list[[i]] <- formulas[[( (i-1) %% length(formulas)) + 1 ]]
+      tl_vect[i] <- label_time[((ceiling(i/length(formulas)) - 1) %% length(label_time)) + 1]
+      compartment_vect[i] <- names(formulas)[( (i-1) %% length(formulas)) + 1 ]
+
+    }
+    names(formula_list) <- paste0("sample",  generate_pattern(length(formula_list)))
 
 
-    }else if(preset == "")
 
-
-    # graph describing relationships between modeled species
-    graph <- get_ode_graph(preset)
-
-    colnames(graph) <- c("0", "N", "C")
-    rownames(graph) <- colnames(graph)
-
-    # formula list relating measured species to modeled species
-    total_list <- list(GF ~ C + N)
-    nuc_list <- list(GF ~ N)
-    cyt_list <- list(GF ~ C)
-
-    formula_list <- list(sampleA = total_list,
-                         sampleB = total_list,
-                         sampleC = total_list,
-                         sampleD = total_list,
-                         sampleE = nuc_list,
-                         sampleF = nuc_list,
-                         sampleG = nuc_list,
-                         sampleH = nuc_list,
-                         sampleI = cyt_list,
-                         sampleJ = cyt_list,
-                         sampleK = cyt_list,
-                         sampleL = cyt_list)
-
-    # metadf
-    metadf <- dplyr::tibble(sample = paste0("sample", LETTERS[1:length(formula_list)]),
-                            compartment = rep(c("total", "nuclear", "cytoplasm"),
-                                              each = 4),
-                            tl = rep(c(3, 3,
-                                       1, 1), times = 3))
+    metadf <- dplyr::tibble(sample = paste0("sample",  generate_pattern(length(formula_list))) ,
+                            compartment = compartment_vect,
+                            tl = tl_vect)
 
     # means of log of parameters
-    log_means <- c(1, -0.3, -2)
+    if(is.null(log_means)){
+
+      log_means <- c(1, seq(from = -0.5, to = -2.5,
+                            length.out = (max(graph)-1)))
+
+    }
 
     # population sds on log scale of parameters
-    log_sds <- rep(0.4, times = max(graph))
+    if(is.null(log_sds)){
 
-    # Unassigned indicator
-    unassigned_name <- "__no_feature"
+      log_sds <- rep(0.4, times = max(graph))
 
-    # Sequencing depth
-    seqdepth <- nfeatures * 2500
-
-    # Negative binomial dispersion parameter (size in `rnbinom()`)
-    dispersion <- 1000
-
-    # Logit(fn) replicate variability (homoskedastic for now)
-    lfn_sd <- 0.2
-
+    }
 
 
     simdata <- SimulateDynamics(nfeatures,
@@ -972,11 +975,21 @@ EZSimulate <- function(nfeatures,
                                 dispersion,
                                 lfn_sd)
 
+    # Need to impute grouping feature in pre-RNA case
+    if(preset %in% c("preRNA", "preRNAwithPdeg", "nuc2cytowithpreRNA")){
+      simdata$cB <- simdata$cB %>%
+        dplyr::mutate(feature = dplyr::case_when(
+          GF == unassigned_name ~ XF,
+          .default = GF
+        ))
+    }
+
+
+    simdata$metadf <- metadf
 
   }
 
-
-
+  return(simdata)
 
 
 }
@@ -2437,6 +2450,12 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
 
 }
 
+
+####################
+# HELPER FUNCTIONS #
+####################
+
+
 # Function for relating modeled species to measured species
 evaluate_formulas <- function(original_vector, formulas) {
 
@@ -2455,3 +2474,22 @@ evaluate_formulas <- function(original_vector, formulas) {
   return(new_vector)
 
 }
+
+generate_pattern <- function(N) {
+  base_letters <- LETTERS
+  result <- character(0)  # Initialize an empty vector
+
+  # Generate pattern until the required length N is achieved
+  repeat_index <- 1
+  while(length(result) < N) {
+    result <- c(result, sapply(base_letters, function(letter) paste(rep(letter, repeat_index), collapse = "")))
+    repeat_index <- repeat_index + 1
+  }
+
+  # Subset to first N elements
+  result <- result[1:N] %>% unname()
+
+  return(result)
+}
+
+

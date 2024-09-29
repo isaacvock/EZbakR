@@ -38,8 +38,13 @@ EZSimulate(
   pdiff_ks = 0,
   pdiff_both = 0,
   pdo = 0,
-  dynamics_preset = c("none", "preRNA", "nuc2cyto", "preRNAwithPdeg", "nuc2cytowithNdeg",
-    "subtlseq", "nuc2cytowithpreRNA")
+  dynamics_preset = c("preRNA", "nuc2cyto", "preRNAwithPdeg", "nuc2cytowithNdeg",
+    "subtlseq", "nuc2cytowithpreRNA"),
+  unassigned_name = "__no_feature",
+  dispersion = 1000,
+  lfn_sd = 0.2,
+  log_means = NULL,
+  log_sds = NULL
 )
 }
 \arguments{
@@ -114,8 +119,7 @@ logkdeg_sd and logksyn_sd are set to the equivalently named parameter values
 described below for the reference and \code{logkdeg_diff_sd} and \code{logksyn_diff_sd} for all other parameters,
 and pdiff_kd, pdiff_ks, and pdiff_both are all set to the equivalently named parameter values.}
 
-\item{seqdepth}{Only relevant if \code{read_vect} is not provided; in that case, this is
-the total number of reads to simulate.}
+\item{seqdepth}{Total number of reads in each sample.}
 
 \item{label_time}{Length of s^{4}U feed to simulate.}
 
@@ -182,6 +186,37 @@ ksyns are simulated}
 \item{pdo}{Dropout rate; think of this as the probability that a s4U containing
 molecule is lost during library preparation and sequencing. If \code{pdo} is 0 (default)
 then there is not dropout.}
+
+\item{dynamics_preset}{Which preset model to use for simulation of dynamics.
+Therefore, only relevant if \code{mode} == \code{dynamics}. Options are:
+\describe{
+\item{nuc2cyto}{Simplest model of nuclear and cytoplasmic RNA dynamics: 0 -> N -> C -> 0}
+\item{preRNA}{Simplest model of pre-RNA and mature RNA dynamics: 0 -> P -> M -> 0}
+\item{preRNAwithPdeg}{Same as preRNA, but now pre-RNA can also degrade.}
+\item{nuc2cytowithNdeg}{Same as nuc2cyto, but now nuclear RNA can also degrade.}
+\item{subtlseq}{Subcellular TimeLapse-seq model, similar to that described in Ietswaart et al., 2024.
+Simplest model discussed there, lacking nuclear degradation: 0 -> CH -> NP -> CY -> PL -> 0, and CY can
+also degrade.}
+\item{nuc2cytowithpreRNA}{Combination of nuc2cyto and preRNA where preRNA is first synthesized,
+then either processed or exported to the cytoplasm. Processing can also occur in the cytoplasm, and
+mature nuclear RNA can be exported to the cytoplasm. Only  mature RNA degrades.}
+}}
+
+\item{unassigned_name}{String to give to reads not assigned to a given feature.}
+
+\item{dispersion}{Negative binomial \code{size} parameter to use for simulating read counts}
+
+\item{lfn_sd}{Logit(fn) replicate variability.}
+
+\item{log_means}{Vector of log-Normal logmeans from which the distribution of
+feature-specific parameters will be drawn from. Length of vector should be the same
+as max(entries in \code{graph}), i.e., the number of parameters in your specified model.
+If not provided, will by default be \code{c(1, seq(from = -0.3, to = -2.5, length.out = max(graph) - 1 ))}.
+\code{1} for the ksyn parameter (which is always denoted 1 in the preset \code{graph}) is arbitrary.
+Remaining parameters will make it so indices order parameters from fastest to slowest process.}
+
+\item{log_sds}{Vector of log-Normal logsds from which the distribution of
+feature-specific parameters will be drawn from. If not provided, will be 0.4 for all parameters.}
 }
 \description{
 \code{EZSimulate()} is a user friendly wrapper to \code{SimulateMultiCondition()}. It

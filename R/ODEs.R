@@ -372,27 +372,6 @@ EZDynamics <- function(obj,
 
 
 
-    # formula list
-    if(is.null(modeled_to_measured)){
-
-      species <- rownames(graph)[rownames(graph) != "0"]
-      modeled_to_measured <- vector(mode = "list", length = length(species))
-      for(s in seq_along(species)){
-        modeled_to_measured[[s]] <- stats::as.formula(paste0(species[s], "~", species[s]))
-      }
-
-    }
-
-    if(is.null(names(modeled_to_measured))){
-
-      modeled_to_measured <- list(total = modeled_to_measured)
-      tidy_avgs <- tidy_avgs %>%
-        dplyr::mutate(imputed_sample_feature = 'total')
-
-      sample_feature <- "imputed_sample_feature"
-
-    }
-
 
     ##### STEPS
     # 1) Infer general solution as I do in simulation
@@ -502,6 +481,20 @@ EZDynamics <- function(obj,
       dplyr::ungroup()
 
 
+    # formula list
+    if(is.null(modeled_to_measured)){
+
+      species <- rownames(graph)[rownames(graph) != "0"]
+      modeled_to_measured <- vector(mode = "list", length = length(species))
+      for(s in seq_along(species)){
+        modeled_to_measured[[s]] <- stats::as.formula(paste0(species[s], "~", species[s]))
+      }
+
+    }
+
+
+
+
     ### Get scale factors if not provided,
     ### and if sample_feature is specified (as this indicates normalization
     ### across distinct RNA populations)
@@ -535,10 +528,24 @@ EZDynamics <- function(obj,
 
     }
 
+
     # Don't use reads if can't normalize
-    if(is.null(scale_factors)){
+    if(is.null(scale_factors) & !is.null(sample_feature)){
       use_coverage <- FALSE
     }
+
+
+    # Add nuisance name if not multi-compartment modeling
+    if(is.null(names(modeled_to_measured))){
+
+      modeled_to_measured <- list(total = modeled_to_measured)
+      tidy_avgs <- tidy_avgs %>%
+        dplyr::mutate(imputed_sample_feature = 'total')
+
+      sample_feature <- "imputed_sample_feature"
+
+    }
+
 
 
     # Don't estimate ksyn if coverage is not being modeled
