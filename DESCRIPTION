@@ -22,6 +22,7 @@ RoxygenNote: 7.3.1
 Suggests: 
     furrr,
     knitr,
+    MASS,
     rmarkdown,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

@@ -30,6 +30,78 @@ VectSimulateMultiLabel(
   Ccont = 0.25
 )
 }
+\arguments{
+\item{nfeatures}{Number of "features" (e.g., genes) to simulate data for}
+
+\item{populations}{Vector of mutation populations you want to simulate.}
+
+\item{fraction_design}{Fraction design matrix, specifying which potential mutational
+populations should actually exist. See ?EstimateFractions for more details.}
+
+\item{fractions_matrix}{Matrix of fractions of each mutational population to simulate.
+If not provided, this will be simulated. One row for each feature, one column for each
+mutational population, rows should sum to 1.}
+
+\item{read_vect}{Vector of length = \code{nfeatures}; specifies the number of reads
+to be simulated for each feature. If this is not provided, the number of reads
+simulated is equal to \code{round(seqdepth * (ksyn_i/kdeg_i)/sum(ksyn/kdeg))}. In other words,
+the normalized steady-state abundance of a feature is multiplied by the total number
+of reads to be simulated and rounded to the nearest integer.}
+
+\item{sample_name}{Character vector to assign to \code{sample} column of output simulated
+data table (the cB table).}
+
+\item{feature_prefix}{Name given to the i-th feature is \code{paste0(feature_prefix, i)}. Shows up in the
+\code{feature} column of the output simulated data table.}
+
+\item{kdeg_vect}{Vector of length = \code{nfeatures}; specifies the degradation rate constant to use for each
+feature's simulation. If this is not provided and \code{fn_vect} is, then \code{kdeg_vect = -log(1 - fn_vect)/label_time}.
+If both \code{kdeg_vect} and \code{fn_vect} are not provided, each feature's \code{kdeg_vect} value is drawn from a log-normal distrubition
+with meanlog = \code{logkdeg_mean} and sdlog = \code{logkdeg_sd}. \code{kdeg_vect} is actually only simulated in the case
+where \code{read_vect} is also not provided, as it will be used to simulate read counts as described above.}
+
+\item{ksyn_vect}{Vector of length = \code{nfeatures}; specifies the synthesis rate constant to use for each
+feature's simulation. If this is not provided, and \code{read_vect} is also not provided, then each
+feature's \code{ksyn_vect} value is drawn from a log-normal distribution with meanlog = \code{logksyn_mean} and
+sdlog = \code{logksyn_sd}. ksyn's do not need to be simulated if \code{read_vect} is provided, as they only
+influence read counts.}
+
+\item{logkdeg_mean}{If necessary, meanlog of a log-normal distribution from which
+kdegs are simulated}
+
+\item{logkdeg_sd}{If necessary, sdlog of a log-normal distribution from which
+kdegs are simulated}
+
+\item{logksyn_mean}{If necessary, meanlog of a log-normal distribution from which
+ksyns are simulated}
+
+\item{logksyn_sd}{If necessary, sdlog of a log-normal distribution from which
+ksyns are simulated}
+
+\item{phighs}{Vector of probabilities of mutation rates in labeled reads of each type denoted in
+\code{populations}. Should be a named vector, with names being the corresponding \code{population}.}
+
+\item{plows}{Vector of probabilities of mutation rates in unlabeled reads of each type denoted in
+\code{populations}. Should be a named vector, with names being the corresponding \code{population}.}
+
+\item{seqdepth}{Only relevant if \code{read_vect} is not provided; in that case, this is
+the total number of reads to simulate.}
+
+\item{readlength}{Length of simulated reads. In this simple simulation, all reads
+are simulated as being exactly this length.}
+
+\item{alpha_min}{Minimum possible value of alpha element of Dirichlet random variable}
+
+\item{alpha_max}{Maximum possible value of alpha element of Dirichlet random variable}
+
+\item{Ucont}{Probability that a nucleotide in a simulated read is a U.}
+
+\item{Acont}{Probability that a nucleotide in a simulated read is an A.}
+
+\item{Gcont}{Probability that a nucleotide in a simulated read is a G.}
+
+\item{Ccont}{Probability that a nucleotide in a simulated read is a C.}
+}
 \description{
 Generalizes SimulateOneRep() to simulate any combination of mutation types.
 Currently, no kinetic model is used to relate certain parameters to the
