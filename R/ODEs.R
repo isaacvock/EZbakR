@@ -125,7 +125,7 @@
 #' @param feature_lengths Table of effective lengths for each feature combination in your
 #' data. For example, if your analysis includes features named GF and XF, this
 #' should be a data frame with columns GF, XF, and length.
-#' @param use_coveage If TRUE, normalized read counts will be used to inform
+#' @param use_coverage If TRUE, normalized read counts will be used to inform
 #' kinetic parameter estimates. If FALSE, only fraction news will be used, which
 #' will leave some parameters (e.g., synthesis rate) unidentifiable, though has
 #' the advantage of avoiding the potential biases induced by normalization problems.
@@ -137,6 +137,18 @@
 #' have to exactly match those for a given fractions table for that table to be used.
 #' Means that you can't specify a subset of features or populations by default, since this is TRUE
 #' by default.
+#' @param species_to_sf List mapping individual RNA species in `graph` to
+#' different sample_feature values (sf). This is relevant if you are modeling both
+#' pre- and mature RNA dynamics in subcellular fractionation data. EZbakR can usually
+#' automatically infer this, but if not, then you can manually specify this mapping.
+#' Should be a list with one element per unique sample_feature type. Each element should
+#' be a vector of the RNA species in `graph` that belong to that sample_feature type. For
+#' example, if you have whole cell, cytoplasmic, and nuclear fraction data, this should have
+#' one element called "cytoplasmic" and one element called "nuclear". The whole cell
+#' sample_feature is a sum of cytoplasmic and nuclear and thus does not apply. The "cytoplasmic"
+#' element of this list should be the set of RNA species that are present in the cytoplasm,
+#' e.g. cytoplasmic pre-RNA (maybe referred to in `graph` as CP) and cytoplasmic mature
+#' RNA (maybe referred to in `graph` as CM).
 #' @param overwrite If TRUE and a fractions estimate output already exists that
 #' would possess the same metadata (features analyzed, populations analyzed,
 #' and fraction_design), then it will get overwritten with the new output. Else,
@@ -170,7 +182,13 @@ EZDynamics <- function(obj,
                      use_coverage = TRUE,
                      normalization_repeatID = NULL,
                      normalization_exactMatch = TRUE,
+                     species_to_sf = NULL,
                      overwrite = TRUE){
+
+  # Hack to deal with devtools::check() NOTEs
+  param_type <- coverage <- sd <- nreps <- tl <- measured_specie <- NULL
+  fit <- ode_models <- GF <- NULL
+
 
   ##### ORDER OF OPERATIONS
   # 1) Infer homogeneous ODE system matrix representation (A)
@@ -494,7 +512,6 @@ EZDynamics <- function(obj,
 
 
 
-
     ### Get scale factors if not provided,
     ### and if sample_feature is specified (as this indicates normalization
     ### across distinct RNA populations)
@@ -518,7 +535,8 @@ EZDynamics <- function(obj,
                                modeled_to_measured,
                                sample_feature = sample_feature,
                                species = species,
-                               label_time_name = label_time_name)
+                               label_time_name = label_time_name,
+                               species_to_sf = species_to_sf)
         },
         error = function(e){
           message(e)
@@ -929,7 +947,7 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
   # Make sure parameters are all different values
   count = 1
   while(length(unique(round(parameter_ests, digits = 6))) != length(parameter_ests)){
-    parameter_ests <- rnorm(length(parameter_ests),
+    parameter_ests <- stats::rnorm(length(parameter_ests),
                             mean = parameter_ests,
                             sd = 0.001)
     count = count + 1
@@ -1097,7 +1115,12 @@ normalize_EZDynamics <- function(norm_df,
                                  modeled_to_measured,
                                  sample_feature,
                                  label_time_name,
-                                 species){
+                                 species,
+                                 species_to_sf = NULL){
+
+
+  # Hack to deal with devtools::check() NOTEs
+  n <- NULL
 
 
   ### What label times are present across all compartments
@@ -1128,6 +1151,7 @@ normalize_EZDynamics <- function(norm_df,
   count <- 1
   for(t in valid_label_times){
 
+
     # Data for particular label time
     norm_df_t <- norm_df %>%
       dplyr::filter(!!dplyr::sym(label_time_name) == t)
@@ -1146,12 +1170,103 @@ normalize_EZDynamics <- function(norm_df,
     M <- matrix(0, nrow = length(actual_mtom),
                 ncol = length(species))
 
-    # f is for formula
+
+
+    # Do we need to map multiple species to one sample_feature?
+    multi_mapping <- FALSE
     for(f in seq_along(actual_mtom)){
 
-      M[f,] <- get_coefficients(as.formula(actual_mtom[[f]][[1]]), species)
+      if(length(actual_mtom[[f]]) > 1){
+        multi_mapping <- TRUE
+        break
+      }
 
     }
+
+    # If so, resolve multi-species to one sample_feature
+    if(multi_mapping){
+
+      if(is.null(species_to_sf)){
+        # List where each element is a vector of species names that
+        # belong to a given sample_feature (names of the elements).
+        # For example, this might denote that nuclear pre-RNA and nuclear mature
+        # RNA come from the "nuclear" sample_feature
+        species_to_sf <- list()
+
+        infer_stosf <- TRUE
+
+      }else{
+        infer_stosf <- FALSE
+      }
+
+      # First pass, figure out which species map to which sample_features
+      for(f in seq_along(actual_mtom)){
+
+        newrow <- rep(0, times = length(species))
+        names(newrow) <- species
+        for(x in seq_along(actual_mtom[[f]])){
+          newrow <- newrow + get_coefficients(stats::as.formula(actual_mtom[[f]][[x]]), species)
+        }
+
+        M[f,] <- newrow
+
+
+        if(infer_stosf){
+
+          if(!all(newrow > 0)){
+
+            # Sanity check; make sure if this sample_feature has been seen before,
+            # that it provided the same result
+            if(length(species_to_sf[[names(actual_mtom)[f]]]) > 0){
+
+              if(!identical(newrow[newrow != 0], species_to_sf[[names(actual_mtom)[f]]])){
+                stop("Inferred species groups contradicted one another! Try specifying
+                   species_to_sf parameter manually.")
+              }
+
+            }else{
+
+              species_to_sf[[names(actual_mtom)[f]]] <- names(newrow[newrow != 0])
+
+            }
+
+          }
+        }
+
+      }
+
+
+      # Make sure that all species have been assigned to some group
+      if(!(sum(sapply(species_to_sf, length)) == length(species))){
+        stop("Was not able to automatically infer species_to_sf! Try specifying
+             it manually.")
+      }
+
+
+      colnames(M) <- species
+
+      M <- sapply(species_to_sf, function(cols){
+        rowSums(M[, cols])
+      })
+
+      # Normalize (technically maybe unnecessary... Shouldn't hurt though)
+      M <- M / rowSums(M)
+
+    }else{
+
+      ### SIMPLE MAPPING OF SPECIES TO SAMPLE_FEATURES
+
+      # f is for formula
+      for(f in seq_along(actual_mtom)){
+
+        M[f,] <- get_coefficients(stats::as.formula(actual_mtom[[f]][[1]]), species)
+
+      }
+
+    }
+
+
+
 
 
     ### Estimate scale factors (and some nuisance parameters)
@@ -1159,18 +1274,19 @@ normalize_EZDynamics <- function(norm_df,
       # N global length-normalized fractions (nuisance)
       # N - 1 scale factors representing the relative molecular abundances of each specie
     fit <- stats::optim(
-      rep(0, times = 2*length(species) - 1),
+      rep(0, times = 2*ncol(M) - 1),
       fn = scale_likelihood,
       M = M,
       y = norm_df_t[['global_logit_fraction']],
       sig = norm_df_t[['global_lf_sigma']],
       method = "L-BFGS-B",
-      upper = c(rep(7, times = length(species)),
-                rep(5, times = length(species) - 1)),
-      lower = c(rep(-7, times = length(species)),
-                rep(-5, times = length(species) - 1)),
+      upper = c(rep(7, times = ncol(M)),
+                rep(5, times = ncol(M) - 1)),
+      lower = c(rep(-7, times = ncol(M)),
+                rep(-5, times = ncol(M) - 1)),
       hessian = TRUE
     )
+
 
 
     # Check if singular; if so, go to next label time
@@ -1193,11 +1309,11 @@ normalize_EZDynamics <- function(norm_df,
 
     if(!any(is.infinite(uncertainties))){
 
-      uncertainty_vect[count] <- sqrt(sum(uncertainties[(length(species)+1):(length(fit$par))]^2))
+      uncertainty_vect[count] <- sqrt(sum(uncertainties[(ncol(M)+1):(length(fit$par))]^2))
 
 
-      # Return estiamted scale factors
-      scale_factors <- c(1, exp(fit$par[(length(species)+1):(length(fit$par))]))
+      # Return estimated scale factors
+      scale_factors <- c(1, exp(fit$par[(ncol(M)+1):(length(fit$par))]))
       scale_factors <- as.vector(M %*% scale_factors)
       scale_df <- dplyr::tibble(scale = scale_factors)
       scale_df[[sample_feature]] <- norm_df_t[[sample_feature]]
@@ -1265,7 +1381,7 @@ parse_expr <- function(expr) {
       var_name <- names(var)
       if (!is.null(var_name)) {
 
-        return(setNames(coeff, var_name))
+        return(stats::setNames(coeff, var_name))
 
       } else {
 
@@ -1280,7 +1396,7 @@ parse_expr <- function(expr) {
   } else if (is.name(expr)) {
 
     # Variable with implicit coefficient 1
-    return(setNames(1, as.character(expr)))
+    return(stats::setNames(1, as.character(expr)))
 
   } else if (is.numeric(expr)) {
 
@@ -1313,7 +1429,7 @@ get_coefficients <- function(formula, species) {
 scale_likelihood <- function(pars, M, y, sig){
 
   ns <- ncol(M)
-  v1 <- EZbakR:::inv_logit(pars[1:ns])
+  v1 <- inv_logit(pars[1:ns])
   v2 <- c(1, exp(pars[(ns+1):length(pars)]))
 
   yest <- M%*%(v1*v2) / (M%*%v2)
@@ -1326,7 +1442,7 @@ scale_likelihood <- function(pars, M, y, sig){
            yest))
 
 
-  ll <- dnorm(y, logit(yest),
+  ll <- stats::dnorm(y, logit(yest),
               sd = sig,
               log = TRUE)
 

@@ -99,6 +99,8 @@ you would like to use.}
 \item{overwrite}{If TRUE, then identical output will be overwritten if it exists.}
 
 \item{parameter}{Parameter to average across replicates of a given condition.}
+
+\item{type}{Type of table to use. Can either be "averages" or "dynamics".}
 }
 \description{
 Get contrasts of estimated parameters

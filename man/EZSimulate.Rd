@@ -50,6 +50,12 @@ EZSimulate(
 \arguments{
 \item{nfeatures}{Number of "features" (e.g., genes) for which to simulated data.}
 
+\item{mode}{Currently, EZSimulate can simulate in two modes: "standard" and "dynamics".
+The former is the default and involves simulating multiple conditions of standard NR-seq data.
+"dynamics" calls \code{SimulateDynamics()} under the hood to simulate a dynamical systems
+model of your choice. Most of the additional parameters do not apply if mode == "dynamics",
+except for those from dynamics_preset and on.}
+
 \item{ntreatments}{Number of distinct treatments to simulate. This parameter is
 only relevant if \code{metadf} is not provided.}
 

@@ -23,6 +23,7 @@ CorrectDropout <- function(obj,
   ### Hack to deal with devtools::check() NOTEs
 
   tl <- n <- nolabel_rpm <- rpm <- pdo <- fit <- global_fraction <- corrected_gf <- corrected_fraction <- corrected_n <- NULL
+  nolabel_n <- nolabel_reps <- dropout <- sig <- NULL
 
 
   ##### GENERAL STEPS:
@@ -182,7 +183,7 @@ dropout_likelihood <- function(param, dropout, theta, sig){
 
   Edropout <- log((-(scale*pdo)*theta)/((1-pdo) + theta*pdo) + scale)
 
-  ll <- dnorm(dropout,
+  ll <- stats::dnorm(dropout,
               Edropout,
               sig,
               log = TRUE)

@@ -2,7 +2,7 @@
 title: "Dynamical systems modeling in EZbakR"
 output: 
   rmarkdown::html_vignette:
-    code_folding: hide
+    code_folding: show
 vignette: >
   %\VignetteIndexEntry{EZDynamics}
   %\VignetteEngine{knitr::rmarkdown}
@@ -26,7 +26,7 @@ library(MASS) # For plotting
 # For coloring points by density:
 # Source: https://slowkow.com/notes/ggplot2-color-by-density/
 get_density <- function(x, y, ...) {
-  dens <- MASS::kde2d(x, y, ...)
+  dens <- kde2d(x, y, ...)
   ix <- findInterval(x, dens$x)
   iy <- findInterval(y, dens$y)
   ii <- cbind(ix, iy)
@@ -69,7 +69,7 @@ Pre-requisites:
 
 ### SIMULATE DATA
 
-simdata <- EZSimulate(nfeatures = 200,
+simdata <- EZSimulate(nfeatures = 50,
                       mode = "dynamics",
                       label_time = c(1, 3),
                       dynamics_preset = "nuc2cyto")
@@ -258,7 +258,7 @@ Above, we fit a model where nuclear RNA cannot degrade. What if we no longer wan
 to make that assumption? Just change the graph to specify that N can degrade to
 0:
 
-```{r class.source = 'fold-show', eval=FALSE}
+```{r class.source = 'fold-show', eval=TRUE}
 ### Input #2: the graph
 graph <- matrix(c(0, 1, 0,
                   3, 0, 2,
@@ -280,11 +280,11 @@ rownames(graph) <- colnames(graph)
 
 Analyzing the data with this model is the same as before:
 
-```{r, eval=FALSE}
+```{r, eval=TRUE}
 
 ##### SIMULATE DATA
 
-simdata <- EZSimulate(nfeatures = 200,
+simdata <- EZSimulate(nfeatures = 50,
                       mode = "dynamics",
                       label_time = c(1, 3),
                       dynamics_preset = "nuc2cytowithNdeg")
@@ -335,7 +335,7 @@ In this case, your cB file will need at least two feature columns. In this examp
 
 The graph in this case looks just like the nuclear to cytoplasmic model without nuclear degradation. In fact, it's identical but with the column and row names changed for clarity:
 
-```{r}
+```{r, eval=TRUE}
 graph <- matrix(c(0, 1, 0,
                   0, 0, 2,
                   3, 0, 0),
@@ -349,12 +349,12 @@ rownames(graph) <- colnames(graph)
 
 A couple things change this time when running the model:
 
-```{r}
+```{r, eval=TRUE}
 
 
 ##### SIMULATE DATA
 
-simdata <- EZSimulate(nfeatures = 200,
+simdata <- EZSimulate(nfeatures = 50,
                       mode = "dynamics",
                       label_time = c(1, 3),
                       dynamics_preset = "preRNA")
@@ -394,7 +394,7 @@ ezbdo <- EZDynamics(ezbdo,
                     graph = graph,
                     sub_features = c("GF", "XF"),
                     grouping_features = "feature",
-                    modeled_to_measured = ode_models$preRNA$formulas)
+                    modeled_to_measured = ode_models$preRNA$formulas$total)
 ```
 
 
@@ -411,7 +411,7 @@ The main differences to note are:
 
 We can mix and match the two types of data we have discussed thus far, namely nuclear + cytoplasmic fractionation and total RNA data. This allows us to model the nuclear and cytoplasmic dynamics of both premature and mature RNA. For example, consider a model where nuclear premature RNA (NP) is first synthesized, and then either processed to mature nuclear RNA (NM), or exported to the cytoplasm (CP). NM can then be exported to mature cytoplasmic RNA (CM), and CP can be processed to CM. The graph in this case looks like:
 
-```{r}
+```{r, eval=TRUE}
 graph <- matrix(c(0, 1, 0, 0, 0,
                   0, 0, 2, 3, 0,
                   0, 0, 0, 0, 4,
@@ -427,10 +427,10 @@ rownames(graph) <- colnames(graph)
 
 Fitting this model looks like a combination of the nuc2cyto and preRNA models:
 
-```{r}
+```{r, eval=TRUE}
 ##### SIMULATE DATA
 
-simdata <- EZSimulate(nfeatures = 200,
+simdata <- EZSimulate(nfeatures = 50,
                       mode = "dynamics",
                       label_time = c(1, 3),
                       dynamics_preset = "nuc2cytowithpreRNA")
@@ -480,6 +480,17 @@ ezbdo <- EZDynamics(ezbdo,
 In this section we will explore in greater detail the many components that make `EZDynamics` tick. We will discuss their structure and the information they convey.
 
 ### Running EZDynamics
+
+`EZDynamics` has the following important/required parameters:
+
+1. An `EZbakRData` object on which you have run `AverageAndRegularize()`.
+1. A matrix, referred to as the "graph" (like the mathematical concept, not the things you make with ggplot), specifying your RNA dynamical systems model.
+1. A list of formulas describing how each measured feature relates to the features you model in your "graph".
+1. The feature columns mentioned in your list of formulas (`sub_features`).
+1. The feature columns that will define the overarching features for which you estimate kinetic parameters (`grouping_features`).
+1. The column in your metadf that distinguishes different samples assying different species of RNA. (`sample_feature`).
+
+To read more about each of these, check out the function documentation with ?EZDynamics. The "graph" and list of formulas will be described more below.
 
 
 ### The graph
@@ -659,8 +670,53 @@ In the Quickstart documentation above, I used the formula lists stored in these 
 ### Normalization
 
 
+#### SparkNotes
+
+Below is a more detailed description of what EZbakR can do to normalize read counts.
+Here, I present a brief synopsis of the main takeaways:
+
+1. If you want to analyze subcellular fractionation NR-seq data, normalization is key.
+1. To properly normalize subcellular fractionation data, option A for normalization is to derive scale factors yourself from spike-ins, and provide them via the `scale_factors` parameter. This should be a data frame with two columns, one being
+"scale" (the scale factor), and the other being whatever your `sample_feature` is
+(e.g., "compartment"). Thus, you are providing a single scale factor for all samples
+from a given `sample_feature` value. Normalization between different samples from the same `sample_feature` value is handled by `AverageAndRegularize()`, and is mostly automatic. See discussion of exception below.
+1. Option B for normalization is to have EZbakR figure out scale factors. This is done via modeling of the global, length normalized fraction of reads that are labeled in each sample. This strategy only works if you have a sufficient set of combinations of individual sample types. For example, if you are trying to normalize cytoplasmic/nuclear fractionation NR-seq data, you would need cytoplasmic data, nuclear data, but also the combination of these two (i.e., whole cell data). The relationship between the fraction of reads labeled in these three samples gives EZbakR the information needed to infer the relative molecular abundances of species in each compartment.
+1. If you are pursuing option B, it is important that EZbakR length normalizes your read counts. This is done by passing a table of feature lengths to the `feature_lengths` parameter of `AverageAndRegularize()`. The columns of this table
+should include the names of all features you are modeling (e.g., XF), and have an additional column called "length". "length" should denote the effective length of each feature.
+
+
+#### The details
+
+
+`EZDynamics()` can use two pieces of information to infer kinetic parameters in
+a specified model for a given feature:
+
+1. The fraction of reads from a feature that are labeled (a.k.a., the fraction labeled).
+1. The number of reads from said feature.
+
+The former is an "internally normalized" quantity. It can be thought of as a ratio of
+read counts from the same sample (# of reads from labeled RNA / total # of reads).
+In RNA-seq read count normalization scale factor applied to the numerator would be
+applied to the denominator as well, and thus cancel out. Thus, the fraction labeled
+does not require read count normalization to be used effectively.
+
+Modeling the read counts on the other hand does require that read counts are normalized. This usually means multiplying read counts by sample-wide scale factors,
+such that differences in normalized read count correspond to differences in absolute
+molecular abundances of a given RNA. Read count normalization is difficult when the RNA populations in different samples differ drastically, e.g. if the total molecular abundances of RNA in one sample is greater than that in another (say if more RNA exists in the cytoplasm than in the nucleus, and you have data from cytoplasmic and nuclear fractions). Standard statistical normalization strategies will fail, as they assume that no such sample-wide differences exist. Your options for read count normalization in the setting of analyzing subcellular fractionation data are:
+
+1. Derive them from spike-ins.
+1. Don't normalize read counts, and only use the fraction labeled to infer
+kinetic parameters. This has the downside of greatly limiting the complexity of models
+you can fit.
+1. Let EZbakR infer scale factors automatically.
+
+1 is technically ideal, though getting spike-ins to work well can be a easier said than done. If scale factors are not provided, EZbakR will try 3. This strategy works by modeling the total fraction of reads that are labeled in a given sample as a function of the same value in other samples. For example, 
+
+
 ### Uncertainty quantification
 
+The output of `EZDynamics` will be a table stored in the `dynamics` element of your `EZbakRData` object. You can access it with `<obj>$dynamics$<dynamics_table_name>`,
+replacing `<obj>` with what you called your `EZbakRData` object, and `dynamics_table_name` with whatever EZbakR called that table, or using `EZget`. When interpreting the output, be mindful of the uncertainty estimates ("se_<parameter_name>") for a given parameter. Often, parameters in a model are theoretically identifiable, meaning that in theory you have enough data to estimate them, but not practically identifiable. High uncertainties can flag instances of the latter. 
 
 
 

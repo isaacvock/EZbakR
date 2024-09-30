@@ -284,6 +284,8 @@ VectSimulateMultiLabel <- function(nfeatures, populations = c("TC"),
                                    Ucont = 0.25, Acont = 0.25, Gcont = 0.25, Ccont = 0.25){
 
 
+  # Hack to deal with devtools::check() NOTEs
+  present <- NULL
 
   npops <- sum(fraction_design$present)
 
@@ -482,6 +484,10 @@ SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
                                Ucont = 0.25, Acont = 0.25, Gcont = 0.25, Ccont = 0.25){
 
 
+  # Hacks to deal with devtools::check()
+  present <- NULL
+
+
   npops <- sum(fraction_design$present)
 
   # Infer fractions of each mutation type for each feature
@@ -669,6 +675,11 @@ SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
 #' values will not differ across conditions.
 #'
 #' @param nfeatures Number of "features" (e.g., genes) for which to simulated data.
+#' @param mode Currently, EZSimulate can simulate in two modes: "standard" and "dynamics".
+#' The former is the default and involves simulating multiple conditions of standard NR-seq data.
+#' "dynamics" calls `SimulateDynamics()` under the hood to simulate a dynamical systems
+#' model of your choice. Most of the additional parameters do not apply if mode == "dynamics",
+#' except for those from dynamics_preset and on.
 #' @param ntreatments Number of distinct treatments to simulate. This parameter is
 #' only relevant if `metadf` is not provided.
 #' @param nreps Number of replicates of each treatment to simulate. This parameter is
@@ -834,6 +845,9 @@ EZSimulate <- function(nfeatures,
                        lfn_sd = 0.2,
                        log_means = NULL,
                        log_sds = NULL){
+
+  # Hack to deal with devtools::check() NOTEs
+  ode_models <- GF <- NULL
 
 
   mode <- match.arg(mode)
@@ -2264,6 +2278,9 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
                              dispersion = 100, lfn_sd = 0.2,
                              ...){
 
+
+  # Hack to deal with devtools::check() NOTEs
+  ss <- feature_type <- feature <- NULL
 
   ### Step 0, generate parameters for each feature
 

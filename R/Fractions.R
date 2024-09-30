@@ -2679,6 +2679,9 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
                                 samples_with_no_label = NULL,
                                 sample = NULL){
 
+  # Hack to deal with devtools::check()
+  fsvector <- NULL
+
 
   if(sample %in% samples_with_no_label){
 

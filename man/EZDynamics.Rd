@@ -30,6 +30,7 @@ EZDynamics(
   use_coverage = TRUE,
   normalization_repeatID = NULL,
   normalization_exactMatch = TRUE,
+  species_to_sf = NULL,
   overwrite = TRUE
 )
 }
@@ -167,6 +168,11 @@ by default.}
 data. For example, if your analysis includes features named GF and XF, this
 should be a data frame with columns GF, XF, and length.}
 
+\item{use_coverage}{If TRUE, normalized read counts will be used to inform
+kinetic parameter estimates. If FALSE, only fraction news will be used, which
+will leave some parameters (e.g., synthesis rate) unidentifiable, though has
+the advantage of avoiding the potential biases induced by normalization problems.}
+
 \item{normalization_repeatID}{For extracting the \code{fractions} table needed for
 normalization of multi-sample data. If multiple \code{fractions} tables exist with the same metadata,
 then this is the numerical index by which they are distinguished.}
@@ -177,16 +183,24 @@ have to exactly match those for a given fractions table for that table to be use
 Means that you can't specify a subset of features or populations by default, since this is TRUE
 by default.}
 
+\item{species_to_sf}{List mapping individual RNA species in \code{graph} to
+different sample_feature values (sf). This is relevant if you are modeling both
+pre- and mature RNA dynamics in subcellular fractionation data. EZbakR can usually
+automatically infer this, but if not, then you can manually specify this mapping.
+Should be a list with one element per unique sample_feature type. Each element should
+be a vector of the RNA species in \code{graph} that belong to that sample_feature type. For
+example, if you have whole cell, cytoplasmic, and nuclear fraction data, this should have
+one element called "cytoplasmic" and one element called "nuclear". The whole cell
+sample_feature is a sum of cytoplasmic and nuclear and thus does not apply. The "cytoplasmic"
+element of this list should be the set of RNA species that are present in the cytoplasm,
+e.g. cytoplasmic pre-RNA (maybe referred to in \code{graph} as CP) and cytoplasmic mature
+RNA (maybe referred to in \code{graph} as CM).}
+
 \item{overwrite}{If TRUE and a fractions estimate output already exists that
 would possess the same metadata (features analyzed, populations analyzed,
 and fraction_design), then it will get overwritten with the new output. Else,
 it will be saved as a separate output with the same name + "_#" where "#" is a
 numerical ID to distinguish the similar outputs.}
-
-\item{use_coveage}{If TRUE, normalized read counts will be used to inform
-kinetic parameter estimates. If FALSE, only fraction news will be used, which
-will leave some parameters (e.g., synthesis rate) unidentifiable, though has
-the advantage of avoiding the potential biases induced by normalization problems.}
 }
 \description{
 \code{EZDynamics()} estimates parameters of a user-specified dynamical systems

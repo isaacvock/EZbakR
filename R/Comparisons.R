@@ -123,6 +123,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
   ### Hack to deal with devtools::check() NOTEs
   n <- log_normalized_reads <- logse <- logse_from_uncert <- replicates <- NULL
   coverage <- se_mean <- se_logse <- coverages <- parameters <- normalized_reads <- NULL
+  logsd_from_uncert <- logsd <- NULL
 
   `.` <- list
 
@@ -742,6 +743,7 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 #' @param fit_params Character vector of parameter names in the averages object
 #' you would like to use.
 #' @param parameter Parameter to average across replicates of a given condition.
+#' @param type Type of table to use. Can either be "averages" or "dynamics".
 #' @param overwrite If TRUE, then identical output will be overwritten if it exists.
 #' @import data.table
 #' @importFrom magrittr %>%
@@ -761,7 +763,7 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
   ### Hack to deal with annoying devtools::check() NOTE
 
   difference <- uncertainty <- pval <- padj <- avg_coverage <- NULL
-
+  exp_par <- ref_par <- exp_se <- ref_se <- NULL
 
   ### Determine what strategy to use for "comparisons"
 
@@ -1069,6 +1071,8 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
                                     coverage_col,
                                     uncertainties_col,
                                     error_if_singular = TRUE){
+
+  parameter <- fsvector <- NULL
 
 
   fit <- stats::lm(formula_mean, data,
