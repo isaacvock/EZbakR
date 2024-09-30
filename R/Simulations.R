@@ -847,7 +847,7 @@ EZSimulate <- function(nfeatures,
                        log_sds = NULL){
 
   # Hack to deal with devtools::check() NOTEs
-  ode_models <- GF <- NULL
+  GF <- NULL
 
 
   mode <- match.arg(mode)
@@ -936,10 +936,12 @@ EZSimulate <- function(nfeatures,
   }else{
     ### EZDYNAMICS WRAPPER
 
+    ode_models_internal <- create_odemodels_internally()
+
     preset <- match.arg(dynamics_preset)
 
-    graph <- ode_models[[preset]][["graph"]]
-    formulas <- ode_models[[preset]][["formulas"]]
+    graph <- ode_models_internal[[preset]][["graph"]]
+    formulas <- ode_models_internal[[preset]][["formulas"]]
 
 
     formula_list <- vector(mode = "list",
@@ -2509,4 +2511,175 @@ generate_pattern <- function(N) {
   return(result)
 }
 
+
+
+create_odemodels_internally <- function(){
+
+  ## nuc2cyto
+  graph <- matrix(c(0, 1, 0,
+                    0, 0, 2,
+                    3, 0, 0),
+                  nrow = 3,
+                  ncol = 3,
+                  byrow = TRUE)
+
+  colnames(graph) <- c("0", "N", "C")
+  rownames(graph) <- colnames(graph)
+
+  total_list <- list(GF ~ C + N)
+  nuc_list <- list(GF ~ N)
+  cyt_list <- list(GF ~ C)
+
+  model_list <- list(nuc2cyto = list(
+    graph = graph,
+    formulas = list(
+      total = total_list,
+      nuclear = nuc_list,
+      cytoplasm = cyt_list
+    )
+  )
+  )
+
+
+  ## preRNA
+  graph <- matrix(c(0, 1, 0,
+                    0, 0, 2,
+                    3, 0, 0),
+                  nrow = 3,
+                  ncol = 3,
+                  byrow = TRUE)
+
+  colnames(graph) <- c("0", "P", "M")
+  rownames(graph) <- colnames(graph)
+
+  total_list <- list(GF ~ P,
+                     XF ~ M)
+
+  model_list[["preRNA"]] <-
+    list(
+      graph = graph,
+      formulas = list(
+        total = total_list
+      )
+    )
+
+
+  ## preRNAwithdeg
+
+  graph <- matrix(c(0, 1, 0,
+                    3, 0, 2,
+                    4, 0, 0),
+                  nrow = 3,
+                  ncol = 3,
+                  byrow = TRUE)
+
+  colnames(graph) <- c("0", "P", "M")
+  rownames(graph) <- colnames(graph)
+
+  total_list <- list(GF ~ P,
+                     XF ~ M)
+
+  model_list[["preRNAwithPdeg"]] <-
+    list(
+      graph = graph,
+      formulas = list(
+        total = total_list
+      )
+    )
+
+
+  ## nuc2cytowithNdeg
+  graph <- matrix(c(0, 1, 0,
+                    3, 0, 2,
+                    4, 0, 0),
+                  nrow = 3,
+                  ncol = 3,
+                  byrow = TRUE)
+
+  colnames(graph) <- c("0", "N", "C")
+  rownames(graph) <- colnames(graph)
+
+  total_list <- list(GF ~ C + N)
+  nuc_list <- list(GF ~ N)
+  cyt_list <- list(GF ~ C)
+
+  model_list[["nuc2cytowithNdeg"]] <- list(
+    graph = graph,
+    formulas = list(
+      total = total_list,
+      nuclear = nuc_list,
+      cytoplasm = cyt_list
+    )
+  )
+
+
+  ## subtlseq
+  graph <- matrix(c(0, 1, 0, 0, 0,
+                    0, 0, 2, 0, 0,
+                    0, 0, 0, 3, 0,
+                    5, 0, 0, 0, 4,
+                    5, 0, 0, 0, 0),
+                  nrow = 5,
+                  ncol = 5,
+                  byrow = TRUE)
+
+  colnames(graph) <- c("0", "CH", "NP", "CY", "PL")
+  rownames(graph) <- colnames(graph)
+
+
+  chr_list <- list(GF ~ CH)
+  nuc_list <- list(GF ~ NP + CH)
+  cyt_list <- list(GF ~ CY + PL)
+  poly_list <- list(GF ~ PL)
+  tot_list <- list(GF ~ CH + NP + CY + PL)
+
+
+  model_list[["subtlseq"]] <- list(
+    graph = graph,
+    formulas = list(
+      total = tot_list,
+      chromatin = chr_list,
+      nuclear = nuc_list,
+      cytoplasm = cyt_list,
+      polysome = poly_list
+    )
+  )
+
+
+  ## nuc2cytowithpreRNA
+
+  # graph
+  graph <- matrix(c(0, 1, 0, 0, 0,
+                    0, 0, 2, 3, 0,
+                    0, 0, 0, 0, 4,
+                    0, 0, 0, 0, 5,
+                    6, 0, 0, 0, 0),
+                  nrow = 5,
+                  ncol = 5,
+                  byrow = TRUE)
+
+  colnames(graph) <- c("0", "NP", "NM", "CP","CM")
+  rownames(graph) <- colnames(graph)
+
+  # formula list
+  total_list <- list(GF ~ NP + CP,
+                     XF ~ NM + CM)
+  nuc_list <- list(GF ~ NP,
+                   XF ~ NM)
+  cyt_list <- list(GF ~ CP,
+                   XF ~ CM)
+
+  model_list[["nuc2cytowithpreRNA"]] <-
+    list(
+      graph = graph,
+      formulas = list(
+        total = total_list,
+        nuclear = nuc_list,
+        cytoplasm = cyt_list
+      )
+    )
+
+  return(model_list)
+
+}
 
