@@ -703,25 +703,25 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 #' of the `design_factor`(s) reference group. For example, if you have a single
 #' `design_factor` called "genotype" and you would like to compare "WT" (reference)
 #' to "KO" (experimental), then `reference_levels` should be "WT". If you have
-#' multiple `design_factor`'s, then `reference_levels` must be a list with one element
+#' multiple `design_factor`'s, then `reference_levels` must be a named character vector with one element
 #' per `design_factor`, with elements named the corresponding `design_factor`. For
 #' example, if `design_factor` is c("genotype", "treatment"), and you would like
 #' to compare genotype = "WT" and treatment = "untreated" (reference) to genotype = "KO" and
-#' treatment = "treated", then `reference_levels` would need to be a list with
+#' treatment = "treated", then `reference_levels` would need to be a vector with
 #' one element named "genotype", equal to "WT" and one element named "treatment"
-#' equal to "untreated".
+#' equal to "untreated" (this example could be created with, `c(genotype = "WT", treatment = "untreated")`).
 #' @param  experimental_levels Same idea as `reference_levels`.
 #' If type == "dynamics", then this should specify the levels
 #' of the `design_factor`(s) experimental group. For example, if you have a single
 #' `design_factor` called "genotype" and you would like to compare "WT" (reference)
 #' to "KO" (experimental), then `experimental_levels` should be "KO". If you have
-#' multiple `design_factor`'s, then `experimental_levels` must be a list with one element
+#' multiple `design_factor`'s, then `experimental_levels` must be a named character vector with one element
 #' per `design_factor`, with elements named the corresponding `design_factor`. For
 #' example, if `design_factor` is c("genotype", "treatment"), and you would like
 #' to compare genotype = "WT" and treatment = "untreated" (reference) to genotype = "KO" and
-#' treatment = "treated", then `experimental_levels` would need to be a list with
+#' treatment = "treated", then `experimental_levels` would need to be a vector with
 #' one element named "genotype", equal to "KO" and one element named "treatment"
-#' equal to "treated".
+#' equal to "treated" (this example could be created with, `c(genotype = "KO", treatment = "treated")`).
 #' @param param_function NOT YET IMPLEMENTED. Will allow you to specify more complicated
 #' functions of parameters when hypotheses you need to test are combinations of parameters
 #' rather than individual parameters or simple differences in two parameters.
@@ -916,31 +916,36 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
       purrr::reduce(exprs, `&`)
     }
 
-    # Convert reference_levels and experimental_levels to named lists if they are not already
-    if (!is.list(reference_levels)) {
-      reference_levels <- stats::setNames(as.list(reference_levels), design_factors)
+    # Convert reference_levels and experimental_levels to named lists
+    if(is.null(names(reference_levels))){
+      reference_list <- stats::setNames(as.list(reference_levels), design_factors)
+    }else{
+      reference_list <- as.list(reference_levels)
     }
-    if (!is.list(experimental_levels)) {
-      experimental_levels <- stats::setNames(as.list(experimental_levels), design_factors)
+
+    if(is.null(names(experimental_levels))){
+      experimental_list <- stats::setNames(as.list(experimental_levels), design_factors)
+    }else{
+      experimental_list <- as.list(experimental_levels)
     }
 
 
     # Names of new columns
-    par_se <- paste0(parameter, "_se")
+    par_se <- paste0("se_", parameter)
 
 
     # Calculate the differences for each unique set of feature values
     comparison <- parameter_est %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
       dplyr::summarise(
-        ref_par = stats::weighted.mean( (!!dplyr::sym(parameter))[!!create_filter_expr(design_factors, reference_levels)],
-                                w = (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, reference_levels)],
+        ref_par = stats::weighted.mean( (!!dplyr::sym(parameter))[!!create_filter_expr(design_factors, reference_list)],
+                                w = (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, reference_list)],
                                 na.rm = TRUE),
-        exp_par = stats::weighted.mean( (!!dplyr::sym(parameter))[!!create_filter_expr(design_factors, experimental_levels)],
-                                w = (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, experimental_levels)],
+        exp_par = stats::weighted.mean( (!!dplyr::sym(parameter))[!!create_filter_expr(design_factors, experimental_list)],
+                                w = (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, experimental_list)],
                                 na.rm = TRUE),
-        ref_se = sqrt(sum( ( (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, reference_levels)])^2 )),
-        exp_se = sqrt(sum( ( (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, experimental_levels)])^2 )),
+        ref_se = sqrt(sum( ( (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, reference_list)])^2 )),
+        exp_se = sqrt(sum( ( (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, experimental_list)])^2 )),
       ) %>%
       dplyr::mutate(
         difference = exp_par - ref_par,

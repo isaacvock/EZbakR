@@ -47,26 +47,26 @@ here.}
 of the \code{design_factor}(s) reference group. For example, if you have a single
 \code{design_factor} called "genotype" and you would like to compare "WT" (reference)
 to "KO" (experimental), then \code{reference_levels} should be "WT". If you have
-multiple \code{design_factor}'s, then \code{reference_levels} must be a list with one element
+multiple \code{design_factor}'s, then \code{reference_levels} must be a named character vector with one element
 per \code{design_factor}, with elements named the corresponding \code{design_factor}. For
 example, if \code{design_factor} is c("genotype", "treatment"), and you would like
 to compare genotype = "WT" and treatment = "untreated" (reference) to genotype = "KO" and
-treatment = "treated", then \code{reference_levels} would need to be a list with
+treatment = "treated", then \code{reference_levels} would need to be a vector with
 one element named "genotype", equal to "WT" and one element named "treatment"
-equal to "untreated".}
+equal to "untreated" (this example could be created with, \code{c(genotype = "WT", treatment = "untreated")}).}
 
 \item{experimental_levels}{Same idea as \code{reference_levels}.
 If type == "dynamics", then this should specify the levels
 of the \code{design_factor}(s) experimental group. For example, if you have a single
 \code{design_factor} called "genotype" and you would like to compare "WT" (reference)
 to "KO" (experimental), then \code{experimental_levels} should be "KO". If you have
-multiple \code{design_factor}'s, then \code{experimental_levels} must be a list with one element
+multiple \code{design_factor}'s, then \code{experimental_levels} must be a named character vector with one element
 per \code{design_factor}, with elements named the corresponding \code{design_factor}. For
 example, if \code{design_factor} is c("genotype", "treatment"), and you would like
 to compare genotype = "WT" and treatment = "untreated" (reference) to genotype = "KO" and
-treatment = "treated", then \code{experimental_levels} would need to be a list with
+treatment = "treated", then \code{experimental_levels} would need to be a vector with
 one element named "genotype", equal to "KO" and one element named "treatment"
-equal to "treated".}
+equal to "treated" (this example could be created with, \code{c(genotype = "KO", treatment = "treated")}).}
 
 \item{param_function}{NOT YET IMPLEMENTED. Will allow you to specify more complicated
 functions of parameters when hypotheses you need to test are combinations of parameters

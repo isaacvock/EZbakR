@@ -189,7 +189,6 @@ EZDynamics <- function(obj,
   param_type <- coverage <- sd <- nreps <- tl <- measured_specie <- NULL
   fit <- ode_models <- GF <- NULL
 
-
   ##### ORDER OF OPERATIONS
   # 1) Infer homogeneous ODE system matrix representation (A)
   # 2) Fit model, lol.
@@ -215,9 +214,7 @@ EZDynamics <- function(obj,
   # Can try to infer replicate numbers to get more informative coverage likelihood
   metadf <- obj$metadf
   meta_groups <- c(label_time_name, sample_feature)
-  reps <- metadf %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(meta_groups))) %>%
-    dplyr::summarise(nreps = dplyr::n())
+
 
 
   # Tidy averages table (currently makes hard assumption about interaction terms being only terms)
@@ -580,6 +577,13 @@ EZDynamics <- function(obj,
     }
 
 
+    ### Infer replicate numbers
+    meta_groups <- c(label_time_name, unique(c(sample_feature, design_factors)))
+    reps <- metadf %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(meta_groups))) %>%
+      dplyr::summarise(nreps = dplyr::n())
+
+
     # Fit model
     if(is.null(scale_factors)){
 
@@ -609,10 +613,10 @@ EZDynamics <- function(obj,
     }else{
 
       scale_column <- colnames(scale_factors)
-      scale_column <- scale_column[scale_column != sample_feature]
+      scale_column <- "scale"
 
       dynfit <- tidy_avgs  %>%
-        dplyr::inner_join(scale_factors, by = sample_feature) %>%
+        dplyr::inner_join(scale_factors, by = unique(c(sample_feature, design_factors))) %>%
         dplyr::mutate(tl = as.numeric(!!dplyr::sym(label_time_name))) %>%
         dplyr::inner_join(reps,
                           by = meta_groups) %>%
@@ -928,6 +932,7 @@ evaluate_formulas2 <- function(original_vector, formula) {
 dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
                                 logit_fn, logit_fn_sd, coverage, nreps = 2,
                                 tls, sample_features, feature_types,
+                                design_factor = NULL,
                                 prior_means = rep(-3, times = max(graph)),
                                 prior_sds = c(3, rep(1, times = max(graph)-1)),
                                 use_coverage = TRUE, alt_coverage = FALSE,
@@ -1119,7 +1124,6 @@ normalize_EZDynamics <- function(norm_df,
                                  design_factors,
                                  species_to_sf = NULL){
 
-
   # Hack to deal with devtools::check() NOTEs
   n <- NULL
 
@@ -1157,10 +1161,12 @@ normalize_EZDynamics <- function(norm_df,
     if(length(design_factors) > 0){
 
       df_lookup <- norm_df %>%
+        dplyr::ungroup() %>%
         dplyr::select(!!design_factors) %>%
         dplyr::distinct()
 
       scale_df_final <- dplyr::tibble()
+      uncertainty <- 0
       for(d in 1:nrow(df_lookup)){
 
         # Data for particular label time
@@ -1214,7 +1220,7 @@ normalize_EZDynamics <- function(norm_df,
 
         if(!any(is.infinite(uncertainties))){
 
-          uncertainty_vect[count] <- c(uncertainty_vect[count], sqrt(sum(uncertainties[(ncol(M)+1):(length(fit$par))]^2)))
+          uncertainty <- uncertainty + sqrt(sum(uncertainties[(ncol(M)+1):(length(fit$par))]^2))
 
 
           # Return estimated scale factors
@@ -1239,6 +1245,7 @@ normalize_EZDynamics <- function(norm_df,
         # Only increment in this case so that it doesn't increment if normalization
         # fails for one design_factors combination
         scale_list[[count]] <- scale_df_final
+        uncertainty_vect[count] <- uncertainty
         count <- count + 1
       }
 

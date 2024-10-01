@@ -11,7 +11,7 @@ SimulateDynamics(
   log_means,
   log_sds,
   ntreatments = 1,
-  treamtent_effects = NULL,
+  treatment_effects = NULL,
   formula_list = NULL,
   unassigned_name = "__no_feature",
   seqdepth = nfeatures * 2500,
@@ -50,6 +50,16 @@ only a single "treatment" (you might refer to this as wild-type, or control) is 
 Increase this if you would like to explore performing comparative dynamical systems
 modeling.}
 
+\item{treatment_effects}{Data frame describing effects of treatment on each
+parameter. Should have five columns: "parameter_index", "treatment_index", "mean", "sd",
+and "fraction_affected".
+Each row corresponds to the effect the ith (i = treatment_index) treatment has on the
+jth (j = parameter_index) kinetic parameter. Effect sizes, on a log-scale, are drawn from
+a Normal distribution with mean and standard deviation set by the mean and sd columns,
+respectively. The number of non-zero effects is set by "fraction_affected", and is
+equal to \code{ceiling(nfeatures * fraction_affected)}. treatment_index of 1 will be ignored
+and can either be included or not.}
+
 \item{formula_list}{A list of named lists. The names of each sub-list should be
 the same as the sample names as they are found in \code{metadf}. Each sub-list should be
 a list of formula relating feature names that will show up as columns of the simulated
@@ -77,16 +87,6 @@ provided, this will be the value of \code{fraction_affected} for all treatments 
 in \code{treatment_effects}.}
 
 \item{...}{Parameters passed to \code{SimulateOneRep()}.}
-
-\item{treatment_effects}{Data frame describing effects of treatment on each
-parameter. Should have five columns: "parameter_index", "treatment_index", "mean", "sd",
-and "fraction_affected".
-Each row corresponds to the effect the ith (i = treatment_index) treatment has on the
-jth (j = parameter_index) kinetic parameter. Effect sizes, on a log-scale, are drawn from
-a Normal distribution with mean and standard deviation set by the mean and sd columns,
-respectively. The number of non-zero effects is set by "fraction_affected", and is
-equal to \code{ceiling(nfeatures * fraction_affected)}. treatment_index of 1 will be ignored
-and can either be included or not.}
 }
 \description{
 \code{SimulateDynamics()} simulates any specified dynamical system of interconverting
