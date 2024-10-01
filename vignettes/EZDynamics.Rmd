@@ -70,6 +70,7 @@ Pre-requisites:
 ### SIMULATE DATA
 
 simdata <- EZSimulate(nfeatures = 200,
+                      ntreatments = 1,
                       mode = "dynamics",
                       label_time = c(1, 3),
                       dynamics_preset = "nuc2cyto")
@@ -285,6 +286,7 @@ Analyzing the data with this model is the same as before:
 ##### SIMULATE DATA
 
 simdata <- EZSimulate(nfeatures = 50,
+                      ntreatments = 1,
                       mode = "dynamics",
                       label_time = c(1, 3),
                       dynamics_preset = "nuc2cytowithNdeg")
@@ -355,6 +357,7 @@ A couple things change this time when running the model:
 ##### SIMULATE DATA
 
 simdata <- EZSimulate(nfeatures = 50,
+                      ntreatments = 1,
                       mode = "dynamics",
                       label_time = c(1, 3),
                       dynamics_preset = "preRNA")
@@ -431,6 +434,7 @@ Fitting this model looks like a combination of the nuc2cyto and preRNA models:
 ##### SIMULATE DATA
 
 simdata <- EZSimulate(nfeatures = 50,
+                      ntreatments = 1,
                       mode = "dynamics",
                       label_time = c(1, 3),
                       dynamics_preset = "nuc2cytowithpreRNA")
