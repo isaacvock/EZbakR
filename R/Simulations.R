@@ -2516,14 +2516,19 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
   sim_df <- dplyr::tibble()
 
 
-  if(!("treatment" %in% colnames(metadf)) & ntreatments == 1){
-    metadf[["treatment"]] <- "treatment1"
-    treatment_col <- "treatment"
-  }else{
-    stop("Simulating multiple treatments but you have not specified which samples
+  if(!("treatment" %in% colnames(metadf))){
+
+    if(ntreatments == 1){
+      metadf[["treatment"]] <- "treatment1"
+      treatment_col <- "treatment"
+    }else{
+      stop("Simulating multiple treatments but you have not specified which samples
          belong to which treatments! Do so by adding a column named 'treatment'
          to your metadf.")
+    }
+
   }
+
 
   treatment_vect <- unique(metadf[[treatment_col]])
 
