@@ -2425,7 +2425,7 @@ check_SimulateMultiCondition_input <- function(args){
 SimulateDynamics <- function(nfeatures, graph, metadf,
                              log_means, log_sds,
                              ntreatments = 1,
-                             treamtent_effects = NULL,
+                             treatment_effects = NULL,
                              formula_list = NULL,
                              unassigned_name = "__no_feature",
                              seqdepth = nfeatures * 2500,
