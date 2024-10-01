@@ -511,7 +511,6 @@ EZDynamics <- function(obj,
     }
 
 
-
     ### Get scale factors if not provided,
     ### and if sample_feature is specified (as this indicates normalization
     ### across distinct RNA populations)
@@ -536,7 +535,8 @@ EZDynamics <- function(obj,
                                sample_feature = sample_feature,
                                species = species,
                                label_time_name = label_time_name,
-                               species_to_sf = species_to_sf)
+                               species_to_sf = species_to_sf,
+                               design_factors = design_factors[design_factors != sample_feature])
         },
         error = function(e){
           message(e)
@@ -1116,6 +1116,7 @@ normalize_EZDynamics <- function(norm_df,
                                  sample_feature,
                                  label_time_name,
                                  species,
+                                 design_factors,
                                  species_to_sf = NULL){
 
 
@@ -1149,178 +1150,174 @@ normalize_EZDynamics <- function(norm_df,
   scale_list <- list()
   uncertainty_vect <- c()
   count <- 1
+
+
   for(t in valid_label_times){
 
+    if(length(design_factors) > 0){
 
-    # Data for particular label time
-    norm_df_t <- norm_df %>%
-      dplyr::filter(!!dplyr::sym(label_time_name) == t)
+      df_lookup <- norm_df %>%
+        dplyr::select(!!design_factors) %>%
+        dplyr::distinct()
 
-    # Repeat equations if there are repeat compartments
-    actual_mtom <- sapply(norm_df_t[[sample_feature]],
-                          function(x) modeled_to_measured[[x]],
-                          simplify = FALSE)
+      scale_df_final <- dplyr::tibble()
+      for(d in 1:nrow(df_lookup)){
 
-    ### Infer system of equations
+        # Data for particular label time
+        norm_df_t <- norm_df %>%
+          dplyr::filter(!!dplyr::sym(label_time_name) == t) %>%
+          dplyr::inner_join(df_lookup[d,],
+                            by = design_factors)
 
-    # Number of unique sample types
-    ns <- length(actual_mtom)
+        M <- infer_eqns(norm_df_t = norm_df_t,
+                        modeled_to_measured = modeled_to_measured,
+                        species = species,
+                        species_to_sf = species_to_sf,
+                        sample_feature = sample_feature)
 
-
-    M <- matrix(0, nrow = length(actual_mtom),
-                ncol = length(species))
-
-
-
-    # Do we need to map multiple species to one sample_feature?
-    multi_mapping <- FALSE
-    for(f in seq_along(actual_mtom)){
-
-      if(length(actual_mtom[[f]]) > 1){
-        multi_mapping <- TRUE
-        break
-      }
-
-    }
-
-    # If so, resolve multi-species to one sample_feature
-    if(multi_mapping){
-
-      if(is.null(species_to_sf)){
-        # List where each element is a vector of species names that
-        # belong to a given sample_feature (names of the elements).
-        # For example, this might denote that nuclear pre-RNA and nuclear mature
-        # RNA come from the "nuclear" sample_feature
-        species_to_sf <- list()
-
-        infer_stosf <- TRUE
-
-      }else{
-        infer_stosf <- FALSE
-      }
-
-      # First pass, figure out which species map to which sample_features
-      for(f in seq_along(actual_mtom)){
-
-        newrow <- rep(0, times = length(species))
-        names(newrow) <- species
-        for(x in seq_along(actual_mtom[[f]])){
-          newrow <- newrow + get_coefficients(stats::as.formula(actual_mtom[[f]][[x]]), species)
-        }
-
-        M[f,] <- newrow
+        ### Estimate scale factors (and some nuisance parameters)
+        # 2*N - 1 parameters; N = number of species:
+        # N global length-normalized fractions (nuisance)
+        # N - 1 scale factors representing the relative molecular abundances of each specie
+        fit <- stats::optim(
+          rep(0, times = 2*ncol(M) - 1),
+          fn = scale_likelihood,
+          M = M,
+          y = norm_df_t[['global_logit_fraction']],
+          sig = norm_df_t[['global_lf_sigma']],
+          method = "L-BFGS-B",
+          upper = c(rep(7, times = ncol(M)),
+                    rep(5, times = ncol(M) - 1)),
+          lower = c(rep(-7, times = ncol(M)),
+                    rep(-5, times = ncol(M) - 1)),
+          hessian = TRUE
+        )
 
 
-        if(infer_stosf){
-
-          if(!all(newrow > 0)){
-
-            # Sanity check; make sure if this sample_feature has been seen before,
-            # that it provided the same result
-            if(length(species_to_sf[[names(actual_mtom)[f]]]) > 0){
-
-              if(!identical(newrow[newrow != 0], species_to_sf[[names(actual_mtom)[f]]])){
-                stop("Inferred species groups contradicted one another! Try specifying
-                   species_to_sf parameter manually.")
-              }
-
-            }else{
-
-              species_to_sf[[names(actual_mtom)[f]]] <- names(newrow[newrow != 0])
-
-            }
-
+        # Check if singular; if so, go to next label time
+        uncertainties <- tryCatch(
+          {
+            sqrt(diag(solve(fit$hessian)))
+          },
+          error = function(x){
+            Inf
           }
+
+        )
+
+        if(any(is.nan(uncertainties))){
+          uncertainties <- Inf
         }
 
+        # Check if any of the parameters are at bounds
+
+
+        if(!any(is.infinite(uncertainties))){
+
+          uncertainty_vect[count] <- c(uncertainty_vect[count], sqrt(sum(uncertainties[(ncol(M)+1):(length(fit$par))]^2)))
+
+
+          # Return estimated scale factors
+          scale_factors <- c(1, exp(fit$par[(ncol(M)+1):(length(fit$par))]))
+          scale_factors <- as.vector(M %*% scale_factors)
+          scale_df <- dplyr::tibble(scale = scale_factors) %>%
+            dplyr::bind_cols(df_lookup[d,])
+          scale_df[[sample_feature]] <- norm_df_t[[sample_feature]]
+          scale_df_final <- scale_df %>%
+            dplyr::bind_rows(scale_df_final)
+
+
+
+        }else{
+          break
+        }
+
+
       }
 
-
-      # Make sure that all species have been assigned to some group
-      if(!(sum(sapply(species_to_sf, length)) == length(species))){
-        stop("Was not able to automatically infer species_to_sf! Try specifying
-             it manually.")
+      if(d == nrow(df_lookup)){
+        # Only increment in this case so that it doesn't increment if normalization
+        # fails for one design_factors combination
+        scale_list[[count]] <- scale_df_final
+        count <- count + 1
       }
 
-
-      colnames(M) <- species
-
-      M <- sapply(species_to_sf, function(cols){
-        rowSums(M[, cols])
-      })
-
-      # Normalize (technically maybe unnecessary... Shouldn't hurt though)
-      M <- M / rowSums(M)
 
     }else{
 
-      ### SIMPLE MAPPING OF SPECIES TO SAMPLE_FEATURES
-
-      # f is for formula
-      for(f in seq_along(actual_mtom)){
-
-        M[f,] <- get_coefficients(stats::as.formula(actual_mtom[[f]][[1]]), species)
-
-      }
-
-    }
+      # Data for particular label time
+      norm_df_t <- norm_df %>%
+        dplyr::filter(!!dplyr::sym(label_time_name) == t)
 
 
 
+      M <- infer_eqns(norm_df_t = norm_df_t,
+                      modeled_to_measured = modeled_to_measured,
+                      species = species,
+                      species_to_sf = species_to_sf,
+                      sample_feature = sample_feature)
 
-
-    ### Estimate scale factors (and some nuisance parameters)
-    # 2*N - 1 parameters; N = number of species:
+      ### Estimate scale factors (and some nuisance parameters)
+      # 2*N - 1 parameters; N = number of species:
       # N global length-normalized fractions (nuisance)
       # N - 1 scale factors representing the relative molecular abundances of each specie
-    fit <- stats::optim(
-      rep(0, times = 2*ncol(M) - 1),
-      fn = scale_likelihood,
-      M = M,
-      y = norm_df_t[['global_logit_fraction']],
-      sig = norm_df_t[['global_lf_sigma']],
-      method = "L-BFGS-B",
-      upper = c(rep(7, times = ncol(M)),
-                rep(5, times = ncol(M) - 1)),
-      lower = c(rep(-7, times = ncol(M)),
-                rep(-5, times = ncol(M) - 1)),
-      hessian = TRUE
-    )
+      fit <- stats::optim(
+        rep(0, times = 2*ncol(M) - 1),
+        fn = scale_likelihood,
+        M = M,
+        y = norm_df_t[['global_logit_fraction']],
+        sig = norm_df_t[['global_lf_sigma']],
+        method = "L-BFGS-B",
+        upper = c(rep(7, times = ncol(M)),
+                  rep(5, times = ncol(M) - 1)),
+        lower = c(rep(-7, times = ncol(M)),
+                  rep(-5, times = ncol(M) - 1)),
+        hessian = TRUE
+      )
 
 
+      # Check if singular; if so, go to next label time
+      uncertainties <- tryCatch(
+        {
+          sqrt(diag(solve(fit$hessian)))
+        },
+        error = function(x){
+          Inf
+        }
 
-    # Check if singular; if so, go to next label time
-    uncertainties <- tryCatch(
-      {
-        sqrt(diag(solve(fit$hessian)))
-      },
-      error = function(x){
-        Inf
+      )
+
+      if(any(is.nan(uncertainties))){
+        uncertainties <- Inf
       }
 
-    )
-
-    if(any(is.nan(uncertainties))){
-      uncertainties <- Inf
-    }
-
-    # Check if any of the parameters are at bounds
+      # Check if any of the parameters are at bounds
 
 
-    if(!any(is.infinite(uncertainties))){
+      if(!any(is.infinite(uncertainties))){
 
-      uncertainty_vect[count] <- sqrt(sum(uncertainties[(ncol(M)+1):(length(fit$par))]^2))
+        uncertainty_vect[count] <- sqrt(sum(uncertainties[(ncol(M)+1):(length(fit$par))]^2))
 
 
-      # Return estimated scale factors
-      scale_factors <- c(1, exp(fit$par[(ncol(M)+1):(length(fit$par))]))
-      scale_factors <- as.vector(M %*% scale_factors)
-      scale_df <- dplyr::tibble(scale = scale_factors)
-      scale_df[[sample_feature]] <- norm_df_t[[sample_feature]]
-      scale_list[[count]] <- scale_df
-      count <- count + 1
+        # Return estimated scale factors
+        scale_factors <- c(1, exp(fit$par[(ncol(M)+1):(length(fit$par))]))
+        scale_factors <- as.vector(M %*% scale_factors)
+        scale_df <- dplyr::tibble(scale = scale_factors)
+        scale_df[[sample_feature]] <- norm_df_t[[sample_feature]]
+        scale_list[[count]] <- scale_df
+        count <- count + 1
+
+      }
 
     }
+
+
+
+
+
+
+
+
 
 
   }
@@ -1344,6 +1341,128 @@ normalize_EZDynamics <- function(norm_df,
 
   return(scale_df)
 
+
+}
+
+
+# Infer matrix representation of system of equations for normalization
+infer_eqns <- function(norm_df_t,
+                       modeled_to_measured,
+                       species,
+                       species_to_sf,
+                       sample_feature){
+
+  # Repeat equations if there are repeat compartments
+  actual_mtom <- sapply(norm_df_t[[sample_feature]],
+                        function(x) modeled_to_measured[[x]],
+                        simplify = FALSE)
+
+  ### Infer system of equations
+
+  # Number of unique sample types
+  ns <- length(actual_mtom)
+
+
+  M <- matrix(0, nrow = length(actual_mtom),
+              ncol = length(species))
+
+
+
+  # Do we need to map multiple species to one sample_feature?
+  multi_mapping <- FALSE
+  for(f in seq_along(actual_mtom)){
+
+    if(length(actual_mtom[[f]]) > 1){
+      multi_mapping <- TRUE
+      break
+    }
+
+  }
+
+  # If so, resolve multi-species to one sample_feature
+  if(multi_mapping){
+
+    if(is.null(species_to_sf)){
+      # List where each element is a vector of species names that
+      # belong to a given sample_feature (names of the elements).
+      # For example, this might denote that nuclear pre-RNA and nuclear mature
+      # RNA come from the "nuclear" sample_feature
+      species_to_sf <- list()
+
+      infer_stosf <- TRUE
+
+    }else{
+      infer_stosf <- FALSE
+    }
+
+    # First pass, figure out which species map to which sample_features
+    for(f in seq_along(actual_mtom)){
+
+      newrow <- rep(0, times = length(species))
+      names(newrow) <- species
+      for(x in seq_along(actual_mtom[[f]])){
+        newrow <- newrow + get_coefficients(stats::as.formula(actual_mtom[[f]][[x]]), species)
+      }
+
+      M[f,] <- newrow
+
+
+      if(infer_stosf){
+
+        if(!all(newrow > 0)){
+
+          # Sanity check; make sure if this sample_feature has been seen before,
+          # that it provided the same result
+          if(length(species_to_sf[[names(actual_mtom)[f]]]) > 0){
+
+            if(!identical(newrow[newrow != 0], species_to_sf[[names(actual_mtom)[f]]])){
+              stop("Inferred species groups contradicted one another! Try specifying
+                   species_to_sf parameter manually.")
+            }
+
+          }else{
+
+            species_to_sf[[names(actual_mtom)[f]]] <- names(newrow[newrow != 0])
+
+          }
+
+        }
+      }
+
+    }
+
+
+    # Make sure that all species have been assigned to some group
+    if(!(sum(sapply(species_to_sf, length)) == length(species))){
+      stop("Was not able to automatically infer species_to_sf! Try specifying
+             it manually.")
+    }
+
+
+    colnames(M) <- species
+
+    M <- sapply(species_to_sf, function(cols){
+      rowSums(M[, cols])
+    })
+
+    # Normalize (technically maybe unnecessary... Shouldn't hurt though)
+    M <- M / rowSums(M)
+
+  }else{
+
+    ### SIMPLE MAPPING OF SPECIES TO SAMPLE_FEATURES
+
+    # f is for formula
+    for(f in seq_along(actual_mtom)){
+
+      M[f,] <- get_coefficients(stats::as.formula(actual_mtom[[f]][[1]]), species)
+
+    }
+
+  }
+
+
+  return(M)
 
 }
 
