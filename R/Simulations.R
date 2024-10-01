@@ -2351,29 +2351,59 @@ check_SimulateMultiCondition_input <- function(args){
 #' for that sample. Additional columns can specify other features of the sample,
 #' like what subcellular compartment the sample is taken from. **NOTE: Not sure I am
 #' actually using these optional columns in any useful capacity anymore**.
-#' @param formula_list A list of named lists. The names of each sub-list should be
-#' the same as the sample names as they are found in `metadf`. Each sub-list should be
-#' a list of formula relating feature names that will show up as columns of the simulated
-#' cB to species modeled in your `graph`. This only needs to be specified if you want
-#' to simulate the scenario where some of the measured species are a sum of modeled species.
 #' @param log_means Vector of log-Normal logmeans from which the distribution of
 #' feature-specific parameters will be drawn from. Length of vector should be the same
 #' as max(entries in `graph`), i.e., the number of parameters in your specified model.
 #' @param log_sds Vector of log-Normal logsds from which the distribution of
 #' feature-specific parameters will be drawn from.
+#' @param ntreatments Number of distinct experimental treatments to simulate. By default,
+#' only a single "treatment" (you might refer to this as wild-type, or control) is simulated.
+#' Increase this if you would like to explore performing comparative dynamical systems
+#' modeling.
+#' @param treatment_col Column name in metadf that distinguishes different treatments.
+#' Number of unique values in this column should == `ntreatments`.
+#' @param treatment_avg_effects Data frame describing effects of treatment on each
+#' parameter. Should have five columns: "parameter_index", "treatment_index", "mean", "sd",
+#' and "fraction_affected".
+#' Each row corresponds to the effect the ith (i = treatment_index) treatment has on the
+#' jth (j = parameter_index) kinetic parameter. Effect sizes, on a log-scale, are drawn from
+#' a Normal distribution with mean and standard deviation set by the mean and sd columns,
+#' respectively. The number of non-zero effects is set by "fraction_affected", and is
+#' equal to `ceiling(nfeatures * fraction_affected)`. treatment_index of 1 will be ignored
+#' and can either be included or not.
+#' @param formula_list A list of named lists. The names of each sub-list should be
+#' the same as the sample names as they are found in `metadf`. Each sub-list should be
+#' a list of formula relating feature names that will show up as columns of the simulated
+#' cB to species modeled in your `graph`. This only needs to be specified if you want
+#' to simulate the scenario where some of the measured species are a sum of modeled species.
 #' @param unassigned_name String to give to reads not assigned to a given feature.
 #' @param seqdepth Total number of reads in each sample.
 #' @param dispersion Negative binomial `size` parameter to use for simulating read counts
 #' @param lfn_sd Logit(fn) replicate variability.
+#' @param effect_avg_default If `ntreatments` > 1, and `treatment_effects` is not
+#' provided, this will be the value of `mean` for all treatments and parameters imputed
+#' in `treatment_effects`.
+#' @param effect_sd_default If `ntreatments` > 1, and `treatment_effects` is not
+#' provided, this will be the value of `sd` for all treatments and parameters imputed
+#' in `treatment_effects`.
+#' @param fraction_affected_default If `ntreatments` > 1, and `treatment_effects` is not
+#' provided, this will be the value of `fraction_affected` for all treatments and parameters imputed
+#' in `treatment_effects`.
 #' @param ... Parameters passed to `SimulateOneRep()`.
 #' @importFrom magrittr %>%
 #' @export
 SimulateDynamics <- function(nfeatures, graph, metadf,
-                             formula_list = NULL,
                              log_means, log_sds,
+                             ntreatments = 1,
+                             treatment_col = NULL,
+                             treamtent_effects = NULL,
+                             formula_list = NULL,
                              unassigned_name = "__no_feature",
                              seqdepth = nfeatures * 2500,
                              dispersion = 100, lfn_sd = 0.2,
+                             effect_avg_default = 0,
+                             effect_sd_default = 0.5,
+                             fraction_affected_default = 0.5,
                              ...){
 
 
@@ -2382,108 +2412,187 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
 
   ### Step 0, generate parameters for each feature
 
-  param_list <- vector(mode = "list", length = length(log_means))
+  param_per_treatment <- vector(mode = "list",
+                                length = ntreatment)
 
-  for(lms in seq_along(log_means)){
+  # Infer treatment_effects if not present and needed
+  if(is.null(treatment_effects) & ntreatments > 1){
+    treatment_effects <- automatic_treatment_effects(nt = ntreatments,
+                                                     np = max(graph),
+                                                     default_mean = effect_avg_default,
+                                                     default_sd = effect_sd_default,
+                                                     default_affected = fraction_affected_default)
+  }
 
-    param_list[[lms]] <- stats::rlnorm(nfeatures,
-                                meanlog = log_means[lms],
-                                sdlog = log_sds[lms])
+  for(t in 1:ntreatment){
+
+    param_list <- vector(mode = "list", length = length(log_means))
+
+    for(lms in seq_along(log_means)){
+
+      if(t == 1){
+
+        param_list[[lms]] <- stats::rlnorm(nfeatures,
+                                           meanlog = log_means[lms],
+                                           sdlog = log_sds[lms])
+
+      }else{
+
+        effect_details <- treatment_effects %>%
+          dplyr::filter(parameter_index == lms &
+                          treatment_index == t)
+
+        avg_effect <- effect_details %>%
+          dplyr::select(mean) %>%
+          unlist() %>%
+          unname()
+
+        effect_size <- effect_details %>%
+          dplyr::select(sd) %>%
+          unlist() %>%
+          unname()
+
+        num_affected <- ceiling(
+          effect_details %>%
+          dplyr::select(fraction_affected) %>%
+          unlist() %>%
+          unname() * nfeatures
+        )
+
+        num_null <- nfeatures - num_affected
+
+        param_list[[lms]] <- exp(
+          log(param_per_treatment[[1]][[lms]]) +
+          c(
+            rep(0, times = num_null),
+            stats::rnorm(num_affected,
+                       mean = avg_effect,
+                       sd = effect_size)
+            )
+        )
+
+      }
+
+
+    }
+
+    param_per_treatment[[t]] <- param_list
+
 
   }
+
 
 
   # Loop over each feature
   sim_df <- dplyr::tibble()
-  for(i in 1:nfeatures){
-
-    ### Step 1, construct A
-    param_extend <- c(0, sapply(param_list, function(x) x[i]))
-    param_graph <- matrix(param_extend[graph + 1],
-                          nrow = nrow(graph),
-                          ncol = ncol(graph),
-                          byrow = FALSE)
-
-    A <- matrix(0,
-                nrow = nrow(graph) - 1,
-                ncol = ncol(graph) - 1)
-
-    rownames(A) <- rownames(graph[-1,])
-    colnames(A) <- rownames(graph[-1,])
 
 
+  if(is.null(treatment_col)){
+    metadf[["treatment"]] <- "control"
+    treatment_col <- "treatment"
+  }
 
-    zero_index <- which(colnames(graph) == "0")
+  treatment_vect <- unique(metadf[[treatment_col]])
 
-    diag(A) <- -rowSums(param_graph[-zero_index,])
-    A <- A + t(param_graph[-zero_index,-zero_index])
+  for(t in 1:ntreatments){
 
+    treatment_value <- treatment_vect[t]
+    submeta <- metadf %>%
+      dplyr::filter(!!dplyr::sym(treatment_col) == treatment_value)
 
-    ### Step 2: infer general solution
+    for(i in 1:nfeatures){
 
-    Rss <- solve(a = A,
-                 b = -param_graph[zero_index,-zero_index])
+      ### Step 1, construct A
+      param_extend <- c(0, sapply(param_list[[t]], function(x) x[i]))
+      param_graph <- matrix(param_extend[graph + 1],
+                            nrow = nrow(graph),
+                            ncol = ncol(graph),
+                            byrow = FALSE)
 
+      A <- matrix(0,
+                  nrow = nrow(graph) - 1,
+                  ncol = ncol(graph) - 1)
 
-    ev <- eigen(A)
-
-    lambda <- ev$values
-    V<- ev$vectors
-
-
-    ### Step 3: Infer data for actual measured species
-    all_ss <- c()
-    all_fns <- c()
-    features <- c()
-    sample_names <- c()
-    for(s in seq_along(metadf$sample)){
-
-      tl <- metadf$tl[s]
-      sample <- metadf$sample[s]
-
-      cs <- solve(V, -Rss)
-
-      exp_lambda <- exp(lambda*tl)
-
-      scaled_eigenvectors <- V %*% diag(exp_lambda*cs)
-
-      result_vector <- rowSums(scaled_eigenvectors) + Rss
-
-      names(result_vector) <- rownames(A)
-
-      # Evaluate the formulas
-      sample_formula <- formula_list[[sample]]
-
-      measured_levels <- evaluate_formulas(result_vector, sample_formula)
-
-      names(Rss) <- rownames(A)
-      measured_ss <- evaluate_formulas(Rss, sample_formula)
+      rownames(A) <- rownames(graph[-1,])
+      colnames(A) <- rownames(graph[-1,])
 
 
-      all_fns <- c(all_fns, measured_levels/measured_ss)
-      all_ss <- c(all_ss, measured_ss)
-      features <- c(features, names(measured_levels))
-      sample_names <- c(sample_names, rep(sample, times = length(measured_levels)))
+
+      zero_index <- which(colnames(graph) == "0")
+
+      diag(A) <- -rowSums(param_graph[-zero_index,])
+      A <- A + t(param_graph[-zero_index,-zero_index])
+
+
+      ### Step 2: infer general solution
+
+      Rss <- solve(a = A,
+                   b = -param_graph[zero_index,-zero_index])
+
+
+      ev <- eigen(A)
+
+      lambda <- ev$values
+      V<- ev$vectors
+
+
+      ### Step 3: Infer data for actual measured species
+      all_ss <- c()
+      all_fns <- c()
+      features <- c()
+      sample_names <- c()
+      for(s in seq_along(submeta$sample)){
+
+        tl <- submeta$tl[s]
+        sample <- submeta$sample[s]
+
+        cs <- solve(V, -Rss)
+
+        exp_lambda <- exp(lambda*tl)
+
+        scaled_eigenvectors <- V %*% diag(exp_lambda*cs)
+
+        result_vector <- rowSums(scaled_eigenvectors) + Rss
+
+        names(result_vector) <- rownames(A)
+
+        # Evaluate the formulas
+        sample_formula <- formula_list[[sample]]
+
+        measured_levels <- evaluate_formulas(result_vector, sample_formula)
+
+        names(Rss) <- rownames(A)
+        measured_ss <- evaluate_formulas(Rss, sample_formula)
+
+
+        all_fns <- c(all_fns, measured_levels/measured_ss)
+        all_ss <- c(all_ss, measured_ss)
+        features <- c(features, names(measured_levels))
+        sample_names <- c(sample_names, rep(sample, times = length(measured_levels)))
+
+      }
+
+
+      sample_details <- submeta %>%
+        dplyr::select(-tl)
+
+
+
+      sim_df <- dplyr::bind_rows(sim_df,
+                                 dplyr::tibble(sample = sample_names,
+                                               fn = all_fns,
+                                               ss = all_ss,
+                                               feature_type = features,
+                                               feature = paste0("Gene", i)) %>%
+                                   dplyr::inner_join(sample_details,
+                                                     by = "sample"))
+
 
     }
 
 
-    sample_details <- metadf %>%
-      dplyr::select(-tl)
-
-
-
-    sim_df <- dplyr::bind_rows(sim_df,
-                        dplyr::tibble(sample = sample_names,
-                               fn = all_fns,
-                               ss = all_ss,
-                               feature_type = features,
-                               feature = paste0("Gene", i)) %>%
-                          dplyr::inner_join(sample_details,
-                                     by = "sample"))
-
-
   }
+
 
   ### Simulate one replicate of each feature and sample
   combined_cB <- dplyr::tibble()
@@ -2776,6 +2885,28 @@ create_odemodels_internally <- function(){
     )
 
   return(model_list)
+
+}
+
+
+# Determine treatment_effects df if not provided
+automatic_treatment_effects <- function(nt, np,
+                                        default_mean,
+                                        default_sd,
+                                        default_affected){
+
+    treatment_ids <- rep(1:nt, each = np)
+    parameter_ids <- rep(1:np, times = nt)
+
+    treatment_effects <- tibble(
+      parameter_index = parameter_ids,
+      treatment_index = treatment_ids,
+      mean = default_mean,
+      sd = default_sd,
+      fraction_affected = default_affected
+    )
+
+    return(treatment_effects)
 
 }
 
