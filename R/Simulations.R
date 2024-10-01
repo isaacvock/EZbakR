@@ -2520,7 +2520,6 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
 
     if(ntreatments == 1){
       metadf[["treatment"]] <- "treatment1"
-      treatment_col <- "treatment"
     }else{
       stop("Simulating multiple treatments but you have not specified which samples
          belong to which treatments! Do so by adding a column named 'treatment'
@@ -2530,13 +2529,13 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
   }
 
 
-  treatment_vect <- unique(metadf[[treatment_col]])
+  treatment_vect <- unique(metadf$treatment)
 
   for(t in 1:ntreatments){
 
     treatment_value <- treatment_vect[t]
     submeta <- metadf %>%
-      dplyr::filter(!!dplyr::sym(treatment_col) == treatment_value)
+      dplyr::filter(treatment == treatment_value)
 
     for(i in 1:nfeatures){
 
