@@ -479,6 +479,83 @@ ezbdo <- EZDynamics(ezbdo,
 ```
 
 
+### Performing comparative analyses
+
+All of the above examples involved estimating kinetic parameters in a single biological
+condition. What if you have multiple distinct conditions and want to compare parameter
+estimates across these conditions? EZbakR can do that too! Here's an example of how:
+
+```{r}
+
+### SIMULATE DATA
+
+# Now we are simulating two distinct biological conditions.
+# Default is for about 50% of all features to have differences in
+# all parameters. 
+simdata <- EZSimulate(nfeatures = 200,
+                      ntreatments = 2,
+                      mode = "dynamics",
+                      label_time = c(1, 3),
+                      dynamics_preset = "nuc2cyto")
+              
+### EZBAKR ANALYSES
+
+ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+
+ezbdo <- EstimateFractions(ezbdo)
+
+
+# Lengths of features:
+# In simulation, all features are same length, so this is here for illustrative
+# purposes only
+feature_lengths <- tibble(
+  GF = unique(simdata$cB$GF),
+  length = 1000
+)
+
+
+# DIFFERENT FROM SINGLE CONDITION ANALYSIS: "treatment" is included in the formula.
+ezbdo <- AverageAndRegularize(ezbdo,
+                              formula_mean = ~tl:compartment:treatment - 1,
+                              type = "fractions",
+                              feature_lengths = feature_lengths,
+                              parameter = "logit_fraction_highTC")
+
+
+# Nothing changes here!
+ezbdo <- EZDynamics(ezbdo,
+                    graph = graph,
+                    sub_features = "GF",
+                    grouping_features = "GF",
+                    sample_feature = "compartment",
+                    modeled_to_measured = ode_models$nuc2cyto$formulas)
+
+
+# Now we can run CompareParameters. Need to:
+# 1) Let it know you want to use EZDynamics output (type = "dynamics")
+# 2) Use the reference_levels and experimental_levels parameters
+# 3) Specify the "design_factor" (treatment in this case) and
+# parameter (let's compare k2).
+ezbdo <- CompareParameters(ezbdo,
+                           parameter = "logk2",
+                           design_factor = "treatment",
+                           reference_levels = "treatment1",
+                           experimental_levels = "treatment2")
+
+
+# Can make a volcano plot
+# Here I have specified everything to be exhaustive, but
+# in this case we could just specify `parameter = "logk2"`,
+# since we only have one logk2 comparative analysis in our
+# EZbakRData object
+EZVolcanoPlot(ezbdo,
+              parameter = "logk2",
+              design_factor = "treatment",
+              reference_levels = "treatment1",
+              experimental_levels = "treatment2")
+
+```
+
 ## Taking a deeper dive
 
 In this section we will explore in greater detail the many components that make `EZDynamics` tick. We will discuss their structure and the information they convey.

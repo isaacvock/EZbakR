@@ -7,6 +7,11 @@
 #' different factor values you would like to compare.
 #' @param reference Name of reference `condition` factor level value.
 #' @param experimental Name of `condition` factor level value to compare to reference.
+#' @param reference_levels If type was == "dynamics" for `CompareParameters()` run you are
+#' interested in, then this should specify the level(s)
+#' of the `design_factor`(s) reference group.
+#' @param  experimental_levels If type was == "dynamics" for `CompareParameters()` run you are
+#' interested in, then this should specify the level(s) of the `design_factor`(s) experimental group.
 #' @param param_name If you want to assess the significance of a single parameter,
 #' rather than the comparison of two parameters, specify that one parameter's name
 #' here.
@@ -16,6 +21,8 @@
 #' @param features Character vector of feature names for which comparisons were made.
 #' @param condition Defunct parameter that has been replaced with `design_factor`. If provided
 #' gets passed to `design_factor` if `design_factor` is not already specified.
+#' @param normalize_by_median Whether or not the median was subtracted from the estimated
+#' parameter differences.
 #' @param repeatID If multiple `kinetics` or `fractions` tables exist with the same metadata,
 #' then this is the numerical index by which they are distinguished.
 #' @param exactMatch If TRUE, then `features` has to exactly match
@@ -38,10 +45,13 @@ EZVolcanoPlot <- function(obj,
                           design_factor = NULL,
                           reference = NULL,
                           experimental = NULL,
+                          reference_levels = NULL,
+                          experimental_levels = NULL,
                           param_name = NULL,
                           param_function = NULL,
                           features = NULL,
                           condition = NULL,
+                          normalize_by_median = NULL,
                           repeatID = NULL,
                           exactMatch = TRUE,
                           plotlog2 = TRUE,
@@ -67,6 +77,9 @@ EZVolcanoPlot <- function(obj,
                           design_factor = design_factor,
                           reference = reference,
                           experimental = experimental,
+                          reference_levels = reference_levels,
+                          experimental_levels = experimental_levels,
+                          normalize_by_median = normalize_by_median,
                           param_name = param_name,
                           param_function = param_function,
                           repeatID = repeatID,

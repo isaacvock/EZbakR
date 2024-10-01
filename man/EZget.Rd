@@ -34,6 +34,7 @@ EZget(
   sample_feature = NULL,
   modeled_to_measured = NULL,
   graph = NULL,
+  normalize_by_median = NULL,
   returnNameOnly = FALSE,
   exactMatch = FALSE,
   alwaysCheck = FALSE
@@ -140,6 +141,9 @@ and the species in \code{graph}.}
 
 \item{graph}{Only relevant if type == "dynamics". NxN adjacency matrix,
 where N represents the number of species modeled when running \code{EZDynamics()}.}
+
+\item{normalize_by_median}{Whether median difference was subtracted from estimated
+kinetic parameter difference. Thus, only relevant if type == "comparisons".}
 
 \item{returnNameOnly}{If TRUE, then only the names of tables that passed your
 search criteria will be returned. Else, the single table passing your search

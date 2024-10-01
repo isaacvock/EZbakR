@@ -10,10 +10,13 @@ EZVolcanoPlot(
   design_factor = NULL,
   reference = NULL,
   experimental = NULL,
+  reference_levels = NULL,
+  experimental_levels = NULL,
   param_name = NULL,
   param_function = NULL,
   features = NULL,
   condition = NULL,
+  normalize_by_median = NULL,
   repeatID = NULL,
   exactMatch = TRUE,
   plotlog2 = TRUE,
@@ -35,6 +38,13 @@ different factor values you would like to compare.}
 
 \item{experimental}{Name of \code{condition} factor level value to compare to reference.}
 
+\item{reference_levels}{If type was == "dynamics" for \code{CompareParameters()} run you are
+interested in, then this should specify the level(s)
+of the \code{design_factor}(s) reference group.}
+
+\item{experimental_levels}{If type was == "dynamics" for \code{CompareParameters()} run you are
+interested in, then this should specify the level(s) of the \code{design_factor}(s) experimental group.}
+
 \item{param_name}{If you want to assess the significance of a single parameter,
 rather than the comparison of two parameters, specify that one parameter's name
 here.}
@@ -47,6 +57,9 @@ rather than individual parameters or simple differences in two parameters.}
 
 \item{condition}{Defunct parameter that has been replaced with \code{design_factor}. If provided
 gets passed to \code{design_factor} if \code{design_factor} is not already specified.}
+
+\item{normalize_by_median}{Whether or not the median was subtracted from the estimated
+parameter differences.}
 
 \item{repeatID}{If multiple \code{kinetics} or \code{fractions} tables exist with the same metadata,
 then this is the numerical index by which they are distinguished.}

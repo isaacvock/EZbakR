@@ -10,6 +10,8 @@ CompareParameters(
   reference,
   experimental,
   param_name,
+  parameter = "log_kdeg",
+  type = "averages",
   reference_levels = NULL,
   experimental_levels = NULL,
   param_function,
@@ -20,9 +22,8 @@ CompareParameters(
   formula_mean = NULL,
   sd_grouping_factors = NULL,
   fit_params = NULL,
-  overwrite = TRUE,
-  parameter = "log_kdeg",
-  type = "averages"
+  normalize_by_median = FALSE,
+  overwrite = TRUE
 )
 }
 \arguments{
@@ -42,6 +43,10 @@ Difference will be calculated as \code{experimental} - \code{reference}.}
 \item{param_name}{If you want to assess the significance of a single parameter,
 rather than the comparison of two parameters, specify that one parameter's name
 here.}
+
+\item{parameter}{Parameter to average across replicates of a given condition.}
+
+\item{type}{Type of table to use. Can either be "averages" or "dynamics".}
 
 \item{reference_levels}{If type == "dynamics", then this should specify the levels
 of the \code{design_factor}(s) reference group. For example, if you have a single
@@ -96,11 +101,12 @@ standard deviations across replicates for the averages object you want to use.}
 \item{fit_params}{Character vector of parameter names in the averages object
 you would like to use.}
 
+\item{normalize_by_median}{If TRUE, then median difference will be set equal to 0.
+This can account for global biases in parameter estimates due to things like differences
+in effective label times. Does risk eliminating real signal though, so user discretion
+is advised.}
+
 \item{overwrite}{If TRUE, then identical output will be overwritten if it exists.}
-
-\item{parameter}{Parameter to average across replicates of a given condition.}
-
-\item{type}{Type of table to use. Can either be "averages" or "dynamics".}
 }
 \description{
 Get contrasts of estimated parameters
