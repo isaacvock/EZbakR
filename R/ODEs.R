@@ -1127,18 +1127,16 @@ normalize_EZDynamics <- function(norm_df,
   # Hack to deal with devtools::check() NOTEs
   n <- NULL
 
-
   ### What label times are present across all compartments
-  # TO-DO: Add design factor to this, and loop over each design factor
-  # to calculate scale factors for each design factor group, then modify
-  # fitting function to accept scale_factors as either a list (with one
-  # element per design_factor level) or a vector (current)
   valid_label_times <- norm_df %>%
-    dplyr::select(!!label_time_name, !!sample_feature) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(!!label_time_name, !!sample_feature, !!design_factors) %>%
     dplyr::distinct() %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(c(label_time_name)))) %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(c(label_time_name, design_factors)))) %>%
     dplyr::count() %>%
-    dplyr::filter(n >= length(modeled_to_measured)) %>%
+    dplyr::mutate(valid = n >= length(modeled_to_measured)) %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(c(label_time_name)))) %>%
+    dplyr::summarise(valid = all(valid)) %>%
     dplyr::ungroup() %>%
     dplyr::select(!!label_time_name) %>%
     unlist() %>%
