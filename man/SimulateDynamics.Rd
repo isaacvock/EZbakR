@@ -11,7 +11,6 @@ SimulateDynamics(
   log_means,
   log_sds,
   ntreatments = 1,
-  treatment_col = NULL,
   treamtent_effects = NULL,
   formula_list = NULL,
   unassigned_name = "__no_feature",
@@ -51,9 +50,6 @@ only a single "treatment" (you might refer to this as wild-type, or control) is 
 Increase this if you would like to explore performing comparative dynamical systems
 modeling.}
 
-\item{treatment_col}{Column name in metadf that distinguishes different treatments.
-Number of unique values in this column should == \code{ntreatments}.}
-
 \item{formula_list}{A list of named lists. The names of each sub-list should be
 the same as the sample names as they are found in \code{metadf}. Each sub-list should be
 a list of formula relating feature names that will show up as columns of the simulated
@@ -82,7 +78,7 @@ in \code{treatment_effects}.}
 
 \item{...}{Parameters passed to \code{SimulateOneRep()}.}
 
-\item{treatment_avg_effects}{Data frame describing effects of treatment on each
+\item{treatment_effects}{Data frame describing effects of treatment on each
 parameter. Should have five columns: "parameter_index", "treatment_index", "mean", "sd",
 and "fraction_affected".
 Each row corresponds to the effect the ith (i = treatment_index) treatment has on the

@@ -43,6 +43,10 @@ EZSimulate(
   unassigned_name = "__no_feature",
   dispersion = 1000,
   lfn_sd = 0.2,
+  treatment_effects = NULL,
+  effect_avg_default = 0,
+  effect_sd_default = 0.5,
+  fraction_affected_default = 0.5,
   log_means = NULL,
   log_sds = NULL
 )
@@ -213,6 +217,28 @@ mature nuclear RNA can be exported to the cytoplasm. Only  mature RNA degrades.}
 \item{dispersion}{Negative binomial \code{size} parameter to use for simulating read counts}
 
 \item{lfn_sd}{Logit(fn) replicate variability.}
+
+\item{treatment_effects}{Data frame describing effects of treatment on each
+parameter. Should have five columns: "parameter_index", "treatment_index", "mean", "sd",
+and "fraction_affected".
+Each row corresponds to the effect the ith (i = treatment_index) treatment has on the
+jth (j = parameter_index) kinetic parameter. Effect sizes, on a log-scale, are drawn from
+a Normal distribution with mean and standard deviation set by the mean and sd columns,
+respectively. The number of non-zero effects is set by "fraction_affected", and is
+equal to \code{ceiling(nfeatures * fraction_affected)}. treatment_index of 1 will be ignored
+and can either be included or not.}
+
+\item{effect_avg_default}{If \code{ntreatments} > 1, and \code{treatment_effects} is not
+provided, this will be the value of \code{mean} for all treatments and parameters imputed
+in \code{treatment_effects}.}
+
+\item{effect_sd_default}{If \code{ntreatments} > 1, and \code{treatment_effects} is not
+provided, this will be the value of \code{sd} for all treatments and parameters imputed
+in \code{treatment_effects}.}
+
+\item{fraction_affected_default}{If \code{ntreatments} > 1, and \code{treatment_effects} is not
+provided, this will be the value of \code{fraction_affected} for all treatments and parameters imputed
+in \code{treatment_effects}.}
 
 \item{log_means}{Vector of log-Normal logmeans from which the distribution of
 feature-specific parameters will be drawn from. Length of vector should be the same

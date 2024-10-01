@@ -909,6 +909,24 @@ SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
 #' Remaining parameters will make it so indices order parameters from fastest to slowest process.
 #' @param log_sds Vector of log-Normal logsds from which the distribution of
 #' feature-specific parameters will be drawn from. If not provided, will be 0.4 for all parameters.
+#' @param treatment_effects Data frame describing effects of treatment on each
+#' parameter. Should have five columns: "parameter_index", "treatment_index", "mean", "sd",
+#' and "fraction_affected".
+#' Each row corresponds to the effect the ith (i = treatment_index) treatment has on the
+#' jth (j = parameter_index) kinetic parameter. Effect sizes, on a log-scale, are drawn from
+#' a Normal distribution with mean and standard deviation set by the mean and sd columns,
+#' respectively. The number of non-zero effects is set by "fraction_affected", and is
+#' equal to `ceiling(nfeatures * fraction_affected)`. treatment_index of 1 will be ignored
+#' and can either be included or not.
+#' @param effect_avg_default If `ntreatments` > 1, and `treatment_effects` is not
+#' provided, this will be the value of `mean` for all treatments and parameters imputed
+#' in `treatment_effects`.
+#' @param effect_sd_default If `ntreatments` > 1, and `treatment_effects` is not
+#' provided, this will be the value of `sd` for all treatments and parameters imputed
+#' in `treatment_effects`.
+#' @param fraction_affected_default If `ntreatments` > 1, and `treatment_effects` is not
+#' provided, this will be the value of `fraction_affected` for all treatments and parameters imputed
+#' in `treatment_effects`.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
@@ -939,6 +957,10 @@ EZSimulate <- function(nfeatures,
                        unassigned_name = "__no_feature",
                        dispersion = 1000,
                        lfn_sd = 0.2,
+                       treatment_effects = NULL,
+                       effect_avg_default = 0,
+                       effect_sd_default = 0.5,
+                       fraction_affected_default = 0.5,
                        log_means = NULL,
                        log_sds = NULL){
 
@@ -1041,7 +1063,7 @@ EZSimulate <- function(nfeatures,
 
 
     formula_list <- vector(mode = "list",
-                           length = length(label_time)*length(formulas)*nreps)
+                           length = length(label_time)*length(formulas)*nreps*ntreatments)
 
     tl_vect <- rep(0, times = length(formula_list))
     compartment_vect <- rep(0, times = length(formula_list))
@@ -1052,13 +1074,18 @@ EZSimulate <- function(nfeatures,
       compartment_vect[i] <- names(formulas)[( (i-1) %% length(formulas)) + 1 ]
 
     }
+
+    treatment_vect <- rep(1:ntreatments,
+                          each = length(label_time)*length(formulas)*nreps)
+
     names(formula_list) <- paste0("sample",  generate_pattern(length(formula_list)))
 
 
 
     metadf <- dplyr::tibble(sample = paste0("sample",  generate_pattern(length(formula_list))) ,
                             compartment = compartment_vect,
-                            tl = tl_vect)
+                            tl = tl_vect,
+                            treamtent = paste0("treatment", treatment_vect))
 
     # means of log of parameters
     if(is.null(log_means)){
@@ -1076,16 +1103,21 @@ EZSimulate <- function(nfeatures,
     }
 
 
-    simdata <- SimulateDynamics(nfeatures,
-                                graph,
-                                metadf,
-                                formula_list,
-                                log_means,
-                                log_sds,
-                                unassigned_name,
-                                seqdepth,
-                                dispersion,
-                                lfn_sd)
+    simdata <- SimulateDynamics(nfeatures = nfeatures,
+                                graph = graph,
+                                metadf = metadf,
+                                formula_list = formula_list,
+                                log_means = log_means,
+                                log_sds = log_sds,
+                                unassigned_name = unassigned_name,
+                                seqdepth = seqdepth,
+                                dispersion = dispersion,
+                                lfn_sd = lfn_sd,
+                                effect_avg_default = effect_avg_default,
+                                effect_sd_default = effect_sd_default,
+                                fraction_affected_default = fraction_affected_default,
+                                ntreatments = ntreatments,
+                                treatment_effects = treatment_effects)
 
     # Need to impute grouping feature in pre-RNA case
     if(preset %in% c("preRNA", "preRNAwithPdeg", "nuc2cytowithpreRNA")){
@@ -2360,9 +2392,7 @@ check_SimulateMultiCondition_input <- function(args){
 #' only a single "treatment" (you might refer to this as wild-type, or control) is simulated.
 #' Increase this if you would like to explore performing comparative dynamical systems
 #' modeling.
-#' @param treatment_col Column name in metadf that distinguishes different treatments.
-#' Number of unique values in this column should == `ntreatments`.
-#' @param treatment_avg_effects Data frame describing effects of treatment on each
+#' @param treatment_effects Data frame describing effects of treatment on each
 #' parameter. Should have five columns: "parameter_index", "treatment_index", "mean", "sd",
 #' and "fraction_affected".
 #' Each row corresponds to the effect the ith (i = treatment_index) treatment has on the
@@ -2395,7 +2425,6 @@ check_SimulateMultiCondition_input <- function(args){
 SimulateDynamics <- function(nfeatures, graph, metadf,
                              log_means, log_sds,
                              ntreatments = 1,
-                             treatment_col = NULL,
                              treamtent_effects = NULL,
                              formula_list = NULL,
                              unassigned_name = "__no_feature",
@@ -2487,9 +2516,13 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
   sim_df <- dplyr::tibble()
 
 
-  if(is.null(treatment_col)){
-    metadf[["treatment"]] <- "control"
+  if(!("treatment" %in% colnames(metadf)) & ntreatment == 1){
+    metadf[["treatment"]] <- "treatment1"
     treatment_col <- "treatment"
+  }else{
+    stop("Simulating multiple treatments but you have not specified which samples
+         belong to which treatments! Do so by adding a column named 'treatment'
+         to your metadf.")
   }
 
   treatment_vect <- unique(metadf[[treatment_col]])
@@ -2503,7 +2536,7 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
     for(i in 1:nfeatures){
 
       ### Step 1, construct A
-      param_extend <- c(0, sapply(param_list[[t]], function(x) x[i]))
+      param_extend <- c(0, sapply(param_per_treatment[[t]], function(x) x[i]))
       param_graph <- matrix(param_extend[graph + 1],
                             nrow = nrow(graph),
                             ncol = ncol(graph),
@@ -2660,9 +2693,19 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
   }
 
   # Get parameter truths
-  names(param_list) <- paste0('true_k', 1:length(log_means))
-  parameter_truth <- dplyr::as_tibble(param_list)
-  parameter_truth$feature <- paste0('Gene', 1:nrow(parameter_truth))
+  parameter_truth <- tibble()
+  for(t in 1:ntreatments){
+    param_list <- param_per_treatment[[t]]
+    names(param_list) <- paste0('true_k', 1:length(log_means))
+    parameter_truth_t <- dplyr::as_tibble(param_list)
+    parameter_truth_t$feature <- paste0('Gene', 1:nrow(parameter_truth_t))
+    parameter_truth_t$treatment <- treatment_vect[t]
+
+    parameter_truth <- parameter_truth_t %>%
+      dplyr::bind_rows(parameter_truth)
+
+  }
+
 
   # Form final ground truth
   gt_list <- list(replicate_truth = combined_gt,
