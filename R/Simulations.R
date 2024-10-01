@@ -1085,7 +1085,7 @@ EZSimulate <- function(nfeatures,
     metadf <- dplyr::tibble(sample = paste0("sample",  generate_pattern(length(formula_list))) ,
                             compartment = compartment_vect,
                             tl = tl_vect,
-                            treamtent = paste0("treatment", treatment_vect))
+                            treatment = paste0("treatment", treatment_vect))
 
     # means of log of parameters
     if(is.null(log_means)){
