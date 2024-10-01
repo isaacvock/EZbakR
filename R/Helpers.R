@@ -77,6 +77,8 @@
 #' and the species in `graph`.
 #' @param graph Only relevant if type == "dynamics". NxN adjacency matrix,
 #' where N represents the number of species modeled when running `EZDynamics()`.
+#' @param normalize_by_median Whether median difference was subtracted from estimated
+#' kinetic parameter difference. Thus, only relevant if type == "comparisons".
 #' @param repeatID Numerical ID for duplicate objects with same metadata.
 #' @param returnNameOnly If TRUE, then only the names of tables that passed your
 #' search criteria will be returned. Else, the single table passing your search
@@ -118,6 +120,7 @@ EZget <- function(obj,
                   sample_feature = NULL,
                   modeled_to_measured = NULL,
                   graph = NULL,
+                  normalize_by_median = NULL,
                   returnNameOnly = FALSE,
                   exactMatch = FALSE,
                   alwaysCheck = FALSE){
@@ -532,6 +535,18 @@ EZget <- function(obj,
                                          "graph")
 
     possible_tables <- intersect(possible_tables, possible_tables_g)
+
+
+  }
+
+
+  if(!is.null(normalize_by_median)){
+
+    possible_tables_m <- exact_ezsearch(metadata,
+                                        normalize_by_median,
+                                        "normalize_by_median")
+
+    possible_tables <- intersect(possible_tables, possible_tables_m)
 
 
   }

@@ -699,6 +699,8 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 #' @param param_name If you want to assess the significance of a single parameter,
 #' rather than the comparison of two parameters, specify that one parameter's name
 #' here.
+#' @param parameter Parameter to average across replicates of a given condition.
+#' @param type Type of table to use. Can either be "averages" or "dynamics".
 #' @param reference_levels If type == "dynamics", then this should specify the levels
 #' of the `design_factor`(s) reference group. For example, if you have a single
 #' `design_factor` called "genotype" and you would like to compare "WT" (reference)
@@ -742,22 +744,26 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 #' standard deviations across replicates for the averages object you want to use.
 #' @param fit_params Character vector of parameter names in the averages object
 #' you would like to use.
-#' @param parameter Parameter to average across replicates of a given condition.
-#' @param type Type of table to use. Can either be "averages" or "dynamics".
+#' @param normalize_by_median If TRUE, then median difference will be set equal to 0.
+#' This can account for global biases in parameter estimates due to things like differences
+#' in effective label times. Does risk eliminating real signal though, so user discretion
+#' is advised.
 #' @param overwrite If TRUE, then identical output will be overwritten if it exists.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
 CompareParameters <- function(obj, design_factor, reference, experimental,
                               param_name,
+                              parameter = "log_kdeg",
+                              type = "averages",
                               reference_levels = NULL,
                               experimental_levels = NULL,
                               param_function,
                               condition = NULL,
                               features = NULL, exactMatch = TRUE, repeatID = NULL,
                               formula_mean = NULL, sd_grouping_factors = NULL,
-                              fit_params = NULL, overwrite = TRUE, parameter = "log_kdeg",
-                              type = "averages"){
+                              fit_params = NULL, normalize_by_median = FALSE,
+                              overwrite = TRUE){
 
 
   ### Hack to deal with annoying devtools::check() NOTE
@@ -969,6 +975,21 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
   }
 
 
+  if(normalize_by_median){
+
+    # subtract median difference to account for potential global biases
+    comparison <- comparison %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(difference = difference - median(difference)) %>%
+      dplyr::mutate(
+        stat = difference/uncertainty,
+        pval = 2*stats::pnorm(-abs(stat))
+      ) %>%
+      dplyr::mutate(
+        padj = stats::p.adjust(pval, method = "BH")
+      )
+
+  }
 
 
 
@@ -1010,6 +1031,7 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                                  reference_levels = reference_levels,
                                  experimental_levels = experimental_levels,
                                  cstrat = strategy,
+                                 normalize_by_median = normalize_by_median,
                                  overwrite = overwrite)
 
     # How many identical tables already exist?
@@ -1031,6 +1053,7 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                                reference_levels = reference_levels,
                                experimental_levels = experimental_levels,
                                cstrat = strategy,
+                               normalize_by_median = normalize_by_median,
                                returnNameOnly = TRUE,
                                exactMatch = TRUE,
                                alwaysCheck = TRUE)) + 1
@@ -1056,6 +1079,7 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                                                             reference_levels = reference_levels,
                                                             experimental_levels = experimental_levels,
                                                             cstrat = strategy,
+                                                            normalize_by_median = normalize_by_median,
                                                             repeatID = repeatID)
 
 
