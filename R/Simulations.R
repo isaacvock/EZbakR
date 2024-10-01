@@ -2442,7 +2442,7 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
   ### Step 0, generate parameters for each feature
 
   param_per_treatment <- vector(mode = "list",
-                                length = ntreatment)
+                                length = ntreatments)
 
   # Infer treatment_effects if not present and needed
   if(is.null(treatment_effects) & ntreatments > 1){
@@ -2453,7 +2453,7 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
                                                      default_affected = fraction_affected_default)
   }
 
-  for(t in 1:ntreatment){
+  for(t in 1:ntreatments){
 
     param_list <- vector(mode = "list", length = length(log_means))
 
@@ -2516,7 +2516,7 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
   sim_df <- dplyr::tibble()
 
 
-  if(!("treatment" %in% colnames(metadf)) & ntreatment == 1){
+  if(!("treatment" %in% colnames(metadf)) & ntreatments == 1){
     metadf[["treatment"]] <- "treatment1"
     treatment_col <- "treatment"
   }else{
