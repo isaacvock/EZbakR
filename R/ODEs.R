@@ -579,6 +579,7 @@ EZDynamics <- function(obj,
 
     ### Infer replicate numbers
     meta_groups <- c(label_time_name, unique(c(sample_feature, design_factors)))
+    meta_groups <- meta_groups[meta_groups != "imputed_sample_feature"]
     reps <- metadf %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(meta_groups))) %>%
       dplyr::summarise(nreps = dplyr::n())

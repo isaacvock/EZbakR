@@ -169,17 +169,17 @@ compare <- dplyr::inner_join(dynfit, gt %>% dplyr::rename(GF = feature),
                              by = "GF")
 
 
-true_scale_factor <- mean(exp(compare$k1[compare$k1 < 9.9]) / compare$true_k1[compare$k1 < 9.9])
+true_scale_factor <- mean(exp(compare$logk1[compare$logk1 < 9.9]) / compare$true_k1[compare$logk1 < 9.9])
 
 
 gPk1 <- compare %>%
   dplyr::mutate(density = get_density(
     x = log(true_k1),
-    y = log(exp(k1)/true_scale_factor),
+    y = log(exp(logk1)/true_scale_factor),
     n = 200
   )) %>%
   ggplot(aes(x = log(true_k1),
-             y = log(exp(k1)/true_scale_factor),
+             y = log(exp(logk1)/true_scale_factor),
              color = density)) +
   geom_point(size=0.9) +
   theme_classic() +
@@ -202,11 +202,11 @@ gPk1 <- compare %>%
 gPk2 <- compare %>%
   dplyr::mutate(density = get_density(
     x = log(true_k2),
-    y = k2,
+    y = logk2,
     n = 200
   )) %>%
   ggplot(aes(x = log(true_k2),
-             y = k2,
+             y = logk2,
              color = density)) +
   geom_point(size=0.9) +
   theme_classic() +
@@ -226,11 +226,11 @@ gPk2 <- compare %>%
 gPk3 <- compare %>%
   dplyr::mutate(density = get_density(
     x = log(true_k3),
-    y = k3,
+    y = logk3,
     n = 200
   )) %>%
   ggplot(aes(x = log(true_k3),
-             y = k3,
+             y = logk3,
              color = density)) +
   geom_point(size=0.9) +
   theme_classic() +
@@ -524,7 +524,7 @@ ezbdo <- AverageAndRegularize(ezbdo,
 
 # Nothing changes here!
 ezbdo <- EZDynamics(ezbdo,
-                    graph = graph,
+                    graph = ode_models$nuc2cyto$graph,
                     sub_features = "GF",
                     grouping_features = "GF",
                     sample_feature = "compartment",
@@ -537,6 +537,7 @@ ezbdo <- EZDynamics(ezbdo,
 # 3) Specify the "design_factor" (treatment in this case) and
 # parameter (let's compare k2).
 ezbdo <- CompareParameters(ezbdo,
+                           type = "dynamics",
                            parameter = "logk2",
                            design_factor = "treatment",
                            reference_levels = "treatment1",

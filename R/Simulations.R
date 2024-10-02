@@ -932,7 +932,7 @@ SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
 #' @export
 EZSimulate <- function(nfeatures,
                        mode = c("standard", "dynamics"),
-                       ntreatments = 2, nreps = 3, nctlreps = 1,
+                       ntreatments = ifelse(mode == "standard", 2, 1), nreps = 3, nctlreps = 1,
                        metadf = NULL,
                        mean_formula = NULL,
                        param_details = NULL,

@@ -56,7 +56,7 @@ EZVolcanoPlot <- function(obj,
                           exactMatch = TRUE,
                           plotlog2 = TRUE,
                           FDR_cutoff = 0.05,
-                          difference_cutoff = 0,
+                          difference_cutoff = log(2),
                           size = NULL){
 
   # Check for backwards compatibility
@@ -165,6 +165,24 @@ EZVolcanoPlot <- function(obj,
                linetype = "dotted",
                linewidth = 0.75)
 
+  if(abs(difference_cutoff) > 0){
+
+    intercept <- difference_cutoff * ifelse(plotlog2,
+                                            log2(exp(1)),
+                                            1)
+
+    ggv <- ggv +
+      geom_vline(xintercept = -intercept,
+                 color = 'darkred',
+                 linetype = "dotted",
+                 linewidth = 0.75) +
+      geom_vline(xintercept = intercept,
+                 color = 'darkred',
+                 linetype = "dotted",
+                 linewidth = 0.75)
+
+  }
+
 
   return(ggv)
 }
@@ -215,7 +233,7 @@ EZMAPlot <- function(obj,
                      exactMatch = TRUE,
                          plotlog2 = TRUE,
                          FDR_cutoff = 0.05,
-                         difference_cutoff = 0,
+                     difference_cutoff = ifelse(plotlog2, 1, log(2)),
                          size = NULL){
 
 
