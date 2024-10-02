@@ -514,7 +514,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
       dplyr::ungroup() %>%
       dplyr::mutate(!!col_name := get_sd_posterior(sd_est = !!dplyr::sym(sd_est_name),
                                                    sd_var = (!!dplyr::sym(sd_var_name)) ^ 2,
-                                                   fit_var = stats::var(regression_results[[c]]$lm_result$residuals) / sd_reg_factor,
+                                                   fit_var = stats::var(regression_results[[c]]$lm_result$residuals),
                                                    fit_mean = !!dplyr::sym(fit_mean_name),
                                                    conservative = conservative)) %>%
       dplyr::mutate(!!natural_col_name := exp((!!dplyr::sym(col_name))))
@@ -660,7 +660,13 @@ checkSingleLevelFactors <- function(formula, data) {
 # DESeq model (pre-DESeq2).
 get_sd_posterior <- function(n = 1, sd_est, sd_var,
                              fit_var, fit_mean,
+                             fit_var_min = 0.01,
                              conservative = FALSE){
+
+
+  if(fit_var <= 0){
+    fit_var <- fit_var_min
+  }
 
 
   denom <- (n/sd_var + 1/fit_var)
