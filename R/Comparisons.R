@@ -697,39 +697,34 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 #' which `AverageAndRegularize()` has been run.
 #' @param design_factor Name of factor from `metadf` whose parameter estimates at
 #' different factor values you would like to compare. If you specify this, you need
-#' to also specify `reference` and `experimental`.
-#' @param reference Name of reference `condition` factor level value. Difference
-#' will be calculated as `experimental` - `reference`.
-#' @param experimental Name of `condition` factor level value to compare to reference.
-#' Difference will be calculated as `experimental` - `reference`.
+#' to also specify `reference` and `experimental`. If `type` == "dynamics", this
+#' can have multiple values, being the names of all of the factors you would like
+#' to stratify a group by.
+#' @param reference Name of reference `design_factor` factor level value. Difference
+#' will be calculated as `experimental` - `reference`. If type == "dynamics", then this should specify the levels
+#' of all of the `design_factor`(s) reference group. For example, if you have
+#' multiple `design_factor`'s, then `reference` must be a named character vector with one element
+#' per `design_factor`, with elements named the corresponding `design_factor`. For
+#' example, if `design_factor` is c("genotype", "treatment"), and you would like
+#' to compare genotype = "WT" and treatment = "untreated" (reference) to genotype = "KO" and
+#' treatment = "treated", then `reference` would need to be a vector with
+#' one element named "genotype", equal to "WT" and one element named "treatment"
+#' equal to "untreated" (this example could be created with, `c(genotype = "WT", treatment = "untreated")`).
+#' @param experimental Name of `design_factor` factor level value to compare to reference.
+#' Difference will be calculated as `experimental` - `reference`. If type == "dynamics", then this should specify the levels
+#' of all of the `design_factor`(s) reference group. For example, if you have
+#' multiple `design_factor`'s, then `experimental` must be a named character vector with one element
+#' per `design_factor`, with elements named the corresponding `design_factor`. For
+#' example, if `design_factor` is c("genotype", "treatment"), and you would like
+#' to compare genotype = "WT" and treatment = "untreated" (reference) to genotype = "KO" and
+#' treatment = "treated", then `experimental` would need to be a vector with
+#' one element named "genotype", equal to "KO" and one element named "treatment"
+#' equal to "treated" (this example could be created with, `c(genotype = "KO", treatment = "treated")`).
 #' @param param_name If you want to assess the significance of a single parameter,
 #' rather than the comparison of two parameters, specify that one parameter's name
 #' here.
 #' @param parameter Parameter to average across replicates of a given condition.
 #' @param type Type of table to use. Can either be "averages" or "dynamics".
-#' @param reference_levels If type == "dynamics", then this should specify the levels
-#' of the `design_factor`(s) reference group. For example, if you have a single
-#' `design_factor` called "genotype" and you would like to compare "WT" (reference)
-#' to "KO" (experimental), then `reference_levels` should be "WT". If you have
-#' multiple `design_factor`'s, then `reference_levels` must be a named character vector with one element
-#' per `design_factor`, with elements named the corresponding `design_factor`. For
-#' example, if `design_factor` is c("genotype", "treatment"), and you would like
-#' to compare genotype = "WT" and treatment = "untreated" (reference) to genotype = "KO" and
-#' treatment = "treated", then `reference_levels` would need to be a vector with
-#' one element named "genotype", equal to "WT" and one element named "treatment"
-#' equal to "untreated" (this example could be created with, `c(genotype = "WT", treatment = "untreated")`).
-#' @param  experimental_levels Same idea as `reference_levels`.
-#' If type == "dynamics", then this should specify the levels
-#' of the `design_factor`(s) experimental group. For example, if you have a single
-#' `design_factor` called "genotype" and you would like to compare "WT" (reference)
-#' to "KO" (experimental), then `experimental_levels` should be "KO". If you have
-#' multiple `design_factor`'s, then `experimental_levels` must be a named character vector with one element
-#' per `design_factor`, with elements named the corresponding `design_factor`. For
-#' example, if `design_factor` is c("genotype", "treatment"), and you would like
-#' to compare genotype = "WT" and treatment = "untreated" (reference) to genotype = "KO" and
-#' treatment = "treated", then `experimental_levels` would need to be a vector with
-#' one element named "genotype", equal to "KO" and one element named "treatment"
-#' equal to "treated" (this example could be created with, `c(genotype = "KO", treatment = "treated")`).
 #' @param param_function NOT YET IMPLEMENTED. Will allow you to specify more complicated
 #' functions of parameters when hypotheses you need to test are combinations of parameters
 #' rather than individual parameters or simple differences in two parameters.
@@ -754,6 +749,10 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 #' This can account for global biases in parameter estimates due to things like differences
 #' in effective label times. Does risk eliminating real signal though, so user discretion
 #' is advised.
+#' @param reference_levels Same as `reference`, but exclusively parsed in case of
+#' `type` == "dynamics, included for backwards compatibility.
+#' @param experimental_levels Same as `experimental`, but exclusively parsed in case of
+#' `type` == "dynamics, included for backwards compatibility.
 #' @param overwrite If TRUE, then identical output will be overwritten if it exists.
 #' @import data.table
 #' @importFrom magrittr %>%
@@ -762,13 +761,13 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                               param_name,
                               parameter = "log_kdeg",
                               type = "averages",
-                              reference_levels = NULL,
-                              experimental_levels = NULL,
                               param_function,
                               condition = NULL,
                               features = NULL, exactMatch = TRUE, repeatID = NULL,
                               formula_mean = NULL, sd_grouping_factors = NULL,
                               fit_params = NULL, normalize_by_median = FALSE,
+                              reference_levels = NULL,
+                              experimental_levels = NULL,
                               overwrite = TRUE){
 
 
@@ -788,12 +787,15 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
 
     strategy <- "dynamics"
 
-    if(missing(reference_levels) | missing(experimental_levels)){
-
-      stop("Need to specify reference_levels and experimental_levels if
-           type == 'dynamics'")
-
+    # Catch missing arg for sake backwards compatibility
+    if(missing(reference) & !is.null(reference_levels)){
+      reference <- reference_levels
     }
+
+    if(missing(experimental) & !is.null(experimental_levels)){
+      experimental <- experimental_levels
+    }
+
 
   }else{
 
@@ -929,16 +931,16 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
     }
 
     # Convert reference_levels and experimental_levels to named lists
-    if(is.null(names(reference_levels))){
-      reference_list <- stats::setNames(as.list(reference_levels), design_factors)
+    if(is.null(names(reference))){
+      reference_list <- stats::setNames(as.list(reference), design_factors)
     }else{
-      reference_list <- as.list(reference_levels)
+      reference_list <- as.list(reference)
     }
 
-    if(is.null(names(experimental_levels))){
-      experimental_list <- stats::setNames(as.list(experimental_levels), design_factors)
+    if(is.null(names(experimental))){
+      experimental_list <- stats::setNames(as.list(experimental), design_factors)
     }else{
-      experimental_list <- as.list(experimental_levels)
+      experimental_list <- as.list(experimental)
     }
 
 
@@ -1034,8 +1036,6 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                                  experimental = experimental,
                                  param_name = param_name,
                                  param_function = param_function,
-                                 reference_levels = reference_levels,
-                                 experimental_levels = experimental_levels,
                                  cstrat = strategy,
                                  normalize_by_median = normalize_by_median,
                                  overwrite = overwrite)
@@ -1056,8 +1056,6 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                                experimental = experimental,
                                param_name = param_name,
                                param_function = param_function,
-                               reference_levels = reference_levels,
-                               experimental_levels = experimental_levels,
                                cstrat = strategy,
                                normalize_by_median = normalize_by_median,
                                returnNameOnly = TRUE,
@@ -1082,8 +1080,6 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                                                             param_function = param_function,
                                                             features = features_to_analyze,
                                                             parameter = parameter,
-                                                            reference_levels = reference_levels,
-                                                            experimental_levels = experimental_levels,
                                                             cstrat = strategy,
                                                             normalize_by_median = normalize_by_median,
                                                             repeatID = repeatID)

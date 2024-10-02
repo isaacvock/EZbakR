@@ -10,8 +10,6 @@ EZVolcanoPlot(
   design_factor = NULL,
   reference = NULL,
   experimental = NULL,
-  reference_levels = NULL,
-  experimental_levels = NULL,
   param_name = NULL,
   param_function = NULL,
   features = NULL,
@@ -21,7 +19,7 @@ EZVolcanoPlot(
   exactMatch = TRUE,
   plotlog2 = TRUE,
   FDR_cutoff = 0.05,
-  difference_cutoff = 0,
+  difference_cutoff = log(2),
   size = NULL
 )
 }
@@ -37,13 +35,6 @@ different factor values you would like to compare.}
 \item{reference}{Name of reference \code{condition} factor level value.}
 
 \item{experimental}{Name of \code{condition} factor level value to compare to reference.}
-
-\item{reference_levels}{If type was == "dynamics" for \code{CompareParameters()} run you are
-interested in, then this should specify the level(s)
-of the \code{design_factor}(s) reference group.}
-
-\item{experimental_levels}{If type was == "dynamics" for \code{CompareParameters()} run you are
-interested in, then this should specify the level(s) of the \code{design_factor}(s) experimental group.}
 
 \item{param_name}{If you want to assess the significance of a single parameter,
 rather than the comparison of two parameters, specify that one parameter's name

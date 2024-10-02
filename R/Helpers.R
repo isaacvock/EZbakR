@@ -32,12 +32,6 @@
 #' @param scale_factors Sample group scale factors used in `EZDynamics()`.
 #' Therefore, only relevant if type == "dynamics"
 #' @param feature_lengths Table of feature lengths used for length normalization.
-#' @param reference_levels Reference factor levels used for comparative analysis
-#' of dynamical systems model fit parameter.
-#' Therefore, only relevant if type == "comparisons".
-#' @param experimental_levels Experimental factor levels used for comparative analysis
-#' of dynamical systems model fit parameter.
-#' Therefore, only relevant if type == "comparisons".
 #' @param cstrat Strategy used for comparative analyses. Can be:
 #' \itemize{
 #'  \item contrast: If two parameters were compared via specifying the reference
@@ -103,8 +97,6 @@ EZget <- function(obj,
                   design_factor = NULL,
                   dynamics_design_factors = NULL,
                   scale_factors = NULL,
-                  reference_levels = NULL,
-                  experimental_levels = NULL,
                   cstrat = NULL,
                   feature_lengths = NULL,
                   experimental = NULL,
@@ -357,30 +349,6 @@ EZget <- function(obj,
     possible_tables_f <- exact_ezsearch(metadata,
                                         query = scale_factors,
                                         object = "feature_lengths")
-
-
-    possible_tables <- intersect(possible_tables, possible_tables_f)
-
-
-  }
-
-  if(!is.null(reference_levels)){
-
-    possible_tables_f <- exact_ezsearch(metadata,
-                                        query = reference_levels,
-                                        object = "reference_levels")
-
-
-    possible_tables <- intersect(possible_tables, possible_tables_f)
-
-
-  }
-
-  if(!is.null(experimental_levels)){
-
-    possible_tables_f <- exact_ezsearch(metadata,
-                                        query = experimental_levels,
-                                        object = "experimental_levels")
 
 
     possible_tables <- intersect(possible_tables, possible_tables_f)

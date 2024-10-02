@@ -7,11 +7,6 @@
 #' different factor values you would like to compare.
 #' @param reference Name of reference `condition` factor level value.
 #' @param experimental Name of `condition` factor level value to compare to reference.
-#' @param reference_levels If type was == "dynamics" for `CompareParameters()` run you are
-#' interested in, then this should specify the level(s)
-#' of the `design_factor`(s) reference group.
-#' @param  experimental_levels If type was == "dynamics" for `CompareParameters()` run you are
-#' interested in, then this should specify the level(s) of the `design_factor`(s) experimental group.
 #' @param param_name If you want to assess the significance of a single parameter,
 #' rather than the comparison of two parameters, specify that one parameter's name
 #' here.
@@ -45,8 +40,6 @@ EZVolcanoPlot <- function(obj,
                           design_factor = NULL,
                           reference = NULL,
                           experimental = NULL,
-                          reference_levels = NULL,
-                          experimental_levels = NULL,
                           param_name = NULL,
                           param_function = NULL,
                           features = NULL,
@@ -77,8 +70,6 @@ EZVolcanoPlot <- function(obj,
                           design_factor = design_factor,
                           reference = reference,
                           experimental = experimental,
-                          reference_levels = reference_levels,
-                          experimental_levels = experimental_levels,
                           normalize_by_median = normalize_by_median,
                           param_name = param_name,
                           param_function = param_function,

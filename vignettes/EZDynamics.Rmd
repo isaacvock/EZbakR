@@ -533,15 +533,15 @@ ezbdo <- EZDynamics(ezbdo,
 
 # Now we can run CompareParameters. Need to:
 # 1) Let it know you want to use EZDynamics output (type = "dynamics")
-# 2) Use the reference_levels and experimental_levels parameters
-# 3) Specify the "design_factor" (treatment in this case) and
-# parameter (let's compare k2).
+# 2) Specify the "design_factor" (treatment in this case) 
+# 3) Specify the "parameter" you want to compare 
+# (let's compare log(k2), a.k.a logk2).
 ezbdo <- CompareParameters(ezbdo,
                            type = "dynamics",
                            parameter = "logk2",
                            design_factor = "treatment",
-                           reference_levels = "treatment1",
-                           experimental_levels = "treatment2")
+                           reference = "treatment1",
+                           experimental = "treatment2")
 
 
 # Can make a volcano plot
@@ -552,8 +552,8 @@ ezbdo <- CompareParameters(ezbdo,
 EZVolcanoPlot(ezbdo,
               parameter = "logk2",
               design_factor = "treatment",
-              reference_levels = "treatment1",
-              experimental_levels = "treatment2")
+              reference = "treatment1",
+              experimental = "treatment2")
 
 ```
 

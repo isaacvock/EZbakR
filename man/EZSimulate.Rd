@@ -7,7 +7,7 @@
 EZSimulate(
   nfeatures,
   mode = c("standard", "dynamics"),
-  ntreatments = 2,
+  ntreatments = ifelse(mode == "standard", 2, 1),
   nreps = 3,
   nctlreps = 1,
   metadf = NULL,

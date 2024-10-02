@@ -12,7 +12,7 @@ EZDynamics(
   scale_factors = NULL,
   sample_feature = NULL,
   modeled_to_measured = NULL,
-  parameter_names = paste0("k", 1:max(graph)),
+  parameter_names = paste0("logk", 1:max(graph)),
   unassigned_name = "__no_feature",
   type = "averages",
   prior_means = rep(-3, times = max(graph)),

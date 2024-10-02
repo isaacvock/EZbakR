@@ -17,8 +17,6 @@ EZget(
   design_factor = NULL,
   dynamics_design_factors = NULL,
   scale_factors = NULL,
-  reference_levels = NULL,
-  experimental_levels = NULL,
   cstrat = NULL,
   feature_lengths = NULL,
   experimental = NULL,
@@ -77,14 +75,6 @@ Therefore, only relevant if type == "dynamics".}
 
 \item{scale_factors}{Sample group scale factors used in \code{EZDynamics()}.
 Therefore, only relevant if type == "dynamics"}
-
-\item{reference_levels}{Reference factor levels used for comparative analysis
-of dynamical systems model fit parameter.
-Therefore, only relevant if type == "comparisons".}
-
-\item{experimental_levels}{Experimental factor levels used for comparative analysis
-of dynamical systems model fit parameter.
-Therefore, only relevant if type == "comparisons".}
 
 \item{cstrat}{Strategy used for comparative analyses. Can be:
 \itemize{
