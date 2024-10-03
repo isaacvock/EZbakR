@@ -54,7 +54,8 @@ EZQC.EZbakRFractions <- function(obj,
   fname <- EZget(obj, type = "fractions",
                  features = features,
                  populations = populations,
-                 fraction_design = fraction_design)
+                 fraction_design = fraction_design,
+                 returnNameOnly = TRUE)
   mutrate_populations <- obj[["metadata"]][["fractions"]][[fname]][["populations"]]
 
 

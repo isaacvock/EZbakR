@@ -18,7 +18,7 @@ EZMAPlot(
   exactMatch = TRUE,
   plotlog2 = TRUE,
   FDR_cutoff = 0.05,
-  difference_cutoff = ifelse(plotlog2, 1, log(2)),
+  difference_cutoff = log(2),
   size = NULL
 )
 }
