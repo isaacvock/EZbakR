@@ -1,10 +1,29 @@
 #' Run quality control checks
 #'
+#' @param obj EZbakRData or EZbakRFractions object.
+#' @param ... Parameters passed to the class-specific method.
+#' If you have provided an EZbakRFractions object, then these can be (all play the
+#' same role as in `EstimateKinetics()`, that is they get passed to `EZget()` to find
+#' the fractions table you are interested in. See `?EstimateKinetics()` for details.):
+#' \itemize{
+#'  \item `features`
+#'  \item `populations`
+#'  \item `fraction_design`
+#'
+#' }
+#' If you have provided an EZbakRData object, then these can be (all same the same
+#' purpose as in `EstimateFractions`, so see `?EstimateFractions()` for details):
+#' \itemize{
+#'  \item `mutrate_populations`
+#'  \item `features`
+#'  \item `filter_cols`
+#'  \item `filter_condition`
+#'  \item `remove_features`
+#' }
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
 EZQC <- function(obj,
-                 mutrate_populations = "all",
                  ...){
 
   UseMethod("EZQC")
@@ -13,15 +32,31 @@ EZQC <- function(obj,
 
 #' Run quality control checks
 #'
+#' @param obj EZbakRFractions object, which is an EZbakRData object on which
+#' `EstimateFractions` has been run.
+#' @param features Set of features analyzed in the fractions table you are
+#' interested QCing. This gets passed to `EZget()` to help find this table.
+#' @param populations Set of mutation types analyzed in the fractions table
+#' you are interested in QCing. This gets passed to `EZget()` to help find this table.
+#' @param fraction_design The fraction "design matrix" specified to get the
+#' fractions table you are interested in QCing. This gets passed to `EZget()` to
+#' help find this table.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
 EZQC.EZbakRFractions <- function(obj,
-                                 mutrate_populations = "all",
-                                 ...,
                                  features = NULL,
                                  populations = NULL,
-                                 fraction_design = NULL){
+                                 fraction_design = NULL,
+                                 ...){
+
+  ### Get mutation rate populations that were analyzed
+  fname <- EZget(obj, type = "fractions",
+                 features = features,
+                 populations = populations,
+                 fraction_design = fraction_design)
+  mutrate_populations <- obj[["metadata"]][["fractions"]][[fname]][["populations"]]
+
 
   ### Check raw mutation rates
   graw <- check_raw_mutation_rates(obj,
@@ -67,16 +102,26 @@ EZQC.EZbakRFractions <- function(obj,
 
 #' Run quality control checks
 #'
+#' @param mutrate_populations Same as in `EstimateFractions()`. See `?EstimateFractions()`
+#' for details.
+#' @param features Same as in `EstimateFractions()`. See `?EstimateFractions()`
+#' for details.
+#' @param filter_cols Same as in `EstimateFractions()`. See `?EstimateFractions()`
+#' for details.
+#' @param filter_condition Same as in `EstimateFractions()`. See `?EstimateFractions()`
+#' for details.
+#' @param remove_features Same as in `EstimateFractions()`. See `?EstimateFractions()`
+#' for details.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
 EZQC.EZbakRData <- function(obj,
                             mutrate_populations = "all",
-                            ...,
                             features = "all",
                             filter_cols = "all",
                             filter_condition = `&`,
-                            remove_features = c("NA", "__no_feature")){
+                            remove_features = c("NA", "__no_feature"),
+                            ...){
 
   ### Check raw mutation rates
   graw <- check_raw_mutation_rates(obj,

@@ -4,7 +4,30 @@
 \alias{EZQC}
 \title{Run quality control checks}
 \usage{
-EZQC(obj, mutrate_populations = "all", ...)
+EZQC(obj, ...)
+}
+\arguments{
+\item{obj}{EZbakRData or EZbakRFractions object.}
+
+\item{...}{Parameters passed to the class-specific method.
+If you have provided an EZbakRFractions object, then these can be (all play the
+same role as in \code{EstimateKinetics()}, that is they get passed to \code{EZget()} to find
+the fractions table you are interested in. See \code{?EstimateKinetics()} for details.):
+\itemize{
+\item \code{features}
+\item \code{populations}
+\item \code{fraction_design}
+
+}
+If you have provided an EZbakRData object, then these can be (all same the same
+purpose as in \code{EstimateFractions}, so see \code{?EstimateFractions()} for details):
+\itemize{
+\item \code{mutrate_populations}
+\item \code{features}
+\item \code{filter_cols}
+\item \code{filter_condition}
+\item \code{remove_features}
+}}
 }
 \description{
 Run quality control checks
