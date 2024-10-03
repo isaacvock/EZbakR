@@ -23,9 +23,9 @@ EZQC.EZbakRFractions <- function(obj,
                                  populations = NULL,
                                  fraction_design = NULL){
 
-
   ### Check raw mutation rates
-  graw <- check_raw_mutation_rates(obj)
+  graw <- check_raw_mutation_rates(obj,
+                                   mutrate_populations = mutrate_populations)
 
 
   ### Check labeled and unlabeled mutation rates
@@ -40,13 +40,28 @@ EZQC.EZbakRFractions <- function(obj,
 
 
   ### Check fraction labeled distribution
-  gfn <- check_fl_dist(obj)
+  gfld <- check_fl_dist(obj,
+                        features = features,
+                        populations = populations,
+                        fraction_design = fraction_design)
 
 
   ### Check fraction labeled replicate correlation
-  gfn <- check_fl_corr(obj)
+  gflc <- check_fl_corr(obj,
+                        features = features,
+                        populations = populations,
+                        fraction_design = fraction_design)
 
 
+  return(
+    list(
+      Raw_mutrates = graw,
+      Inferred_mutrates = glabel,
+      Readcount_corr = gread,
+      Fraction_labeled_dist = gfld,
+      Fraction_labeled_corr = gflc
+    )
+  )
 
 }
 
@@ -254,7 +269,9 @@ check_plabeled <- function(obj,
 
 
 # Using EZbakRFractions object
-check_read_count_corr_ezbf <- function(obj){
+check_read_count_corr_ezbf <- function(obj,
+                                       features, populations,
+                                       fraction_design){
 
   metadf <- data.table::copy(obj$metadf)
 
@@ -270,7 +287,7 @@ check_read_count_corr_ezbf <- function(obj){
     dplyr::group_by(dplyr::across(dplyr::all_of(IDcol))) %>%
     dplyr::filter(dplyr::n() > 1)
 
-  if(nrow(rep_meta) > 1){
+  if(nrow(rep_meta) == 0){
     message("Detected no conditions with replicates!
             Skipping read count replicate correlation analysis.")
 
@@ -281,6 +298,9 @@ check_read_count_corr_ezbf <- function(obj){
 
   ### Get read counts for each feature
   fname <- EZget(obj, type = "fractions",
+                 features = features,
+                 populations = populations,
+                 fraction_design = fraction_design,
                  returnNameOnly = TRUE)
   fraction <- obj[["fractions"]][[fname]]
   features <- obj[["metadata"]][["fractions"]][[fname]]$features
@@ -295,9 +315,9 @@ check_read_count_corr_ezbf <- function(obj){
 
   ### Make correlation plots
 
-  glist <- make_readcount_corr_plots(readcnts,
-                                     rep_meta,
-                                     IDcol)
+  glist <- make_corr_plots(readcnts,
+                           rep_meta,
+                           IDcol)
 
 
   return(glist)
@@ -390,9 +410,9 @@ check_read_count_corr_ezbd <- function(obj,
 
   ### Make correlation plots
 
-  glist <- make_readcount_corr_plots(readcnts,
-                                     rep_meta,
-                                     IDcol)
+  glist <- make_corr_plots(readcnts,
+                           rep_meta,
+                           IDcol)
 
 
   return(glist)
@@ -402,9 +422,20 @@ check_read_count_corr_ezbd <- function(obj,
 
 
 ### MAKE READ COUNT CORRELATION PLOT
-make_readcount_corr_plots <- function(readcnts,
+make_corr_plots <- function(table,
                                       rep_meta,
-                                      IDcol){
+                                      IDcol,
+                                      value = c("reads",
+                                                "fraction"),
+                                      fraction_type = "fraction_highTC",
+                                      cutoff = 0.9){
+
+
+  value <- match.arg(value)
+
+  axis_label_string <- ifelse(value == "reads",
+                              "log10(read counts)",
+                              paste0("logit(", fraction_type, ")"))
 
 
   RIDs <- unique(rep_meta[[IDcol]])
@@ -418,7 +449,9 @@ make_readcount_corr_plots <- function(readcnts,
     sub_meta <- rep_meta %>%
       dplyr::filter(!!dplyr::sym(IDcol) == RIDs[r])
 
-    sub_readcnts <- readcnts[sample %in% sub_meta$sample]
+
+    sub_table <- table %>%
+      dplyr::filter(sample %in% sub_meta$sample)
 
 
     nreps <- nrow(sub_meta)
@@ -437,26 +470,45 @@ make_readcount_corr_plots <- function(readcnts,
         samps <- c(sub_meta$sample[j],
                    sub_meta$sample[k])
 
-        corr_df <- sub_readcnts %>%
-          dplyr::filter(sample %in% samps) %>%
-          tidyr::pivot_wider(
-            names_from = sample,
-            values_from = reads
-          )
+        if(value == "reads"){
+
+          corr_df <- sub_table %>%
+            dplyr::filter(sample %in% samps) %>%
+            dplyr::mutate(
+              !!value := log10(!!dplyr::sym(value) + 1)
+            ) %>%
+            tidyr::pivot_wider(
+              names_from = sample,
+              values_from = !!value
+            )
+
+        }else{
+
+          corr_df <- sub_table %>%
+            dplyr::filter(sample %in% samps) %>%
+            dplyr::mutate(
+              !!value := logit(!!dplyr::sym(value))
+            ) %>%
+            tidyr::pivot_wider(
+              names_from = sample,
+              values_from = !!value
+            )
+
+        }
 
 
         subglist[[count]] <- corr_df %>%
           dplyr::mutate(
             density = get_density(
-              x = log10( (!!dplyr::sym(samps[1])) + 1),
-              y = log10( (!!dplyr::sym(samps[2])) + 1),
+              x = !!dplyr::sym(samps[1]),
+              y = !!dplyr::sym(samps[2]),
               n = 200
             )
           ) %>%
           stats::na.omit() %>%
           ggplot2::ggplot(
-            aes(x = log10(.data[[samps[1]]] + 1),
-                y = log10(.data[[samps[2]]] + 1),
+            aes(x = .data[[samps[1]]],
+                y = .data[[samps[2]]],
                 color = density)
           ) +
           ggplot2::geom_point() +
@@ -468,8 +520,8 @@ make_readcount_corr_plots <- function(readcnts,
             color = 'darkred',
             linetype = 'dotted'
           ) +
-          ggplot2::xlab(paste0(samps[1], " log10(read counts)")) +
-          ggplot2::ylab(paste0(samps[2], " log10(read counts)"))
+          ggplot2::xlab(paste0(samps[1], " ", axis_label_string)) +
+          ggplot2::ylab(paste0(samps[2], " ", axis_label_string))
 
 
         stat_df <- stat_df %>%
@@ -477,8 +529,8 @@ make_readcount_corr_plots <- function(readcnts,
             dplyr::tibble(
               sample_1 = samps[1],
               sample_2 = samps[2],
-              correlation = cor(log10(corr_df[[samps[1]]] + 1),
-                                log10(corr_df[[samps[2]]] + 1))
+              correlation = cor(corr_df[[samps[1]]],
+                                corr_df[[samps[2]]])
             )
           )
 
@@ -497,16 +549,18 @@ make_readcount_corr_plots <- function(readcnts,
   }
 
   ### Print correlations
-  message(paste0(c("log10(read count) correlation for each pair of replicates are:", utils::capture.output(stat_df)), collapse = "\n"))
+  message(paste0(c(paste0(axis_label_string, " correlation for each pair of replicates are:"), utils::capture.output(stat_df)), collapse = "\n"))
 
 
   message("")
-  if(any(stat_df$correlation < 0.9)){
-    warning("log10(read count) correlation is low in one or more samples.
+  if(any(stat_df$correlation < cutoff)){
+    message(paste0(axis_label_string, " correlation is low in one or more samples.
               Did you properly specify all sample detail columns in your metadf?")
+            )
   }else{
-    message("log10(read count) correlations are high, suggesting good reproducibility!")
+    message(paste0(axis_label_string, " correlations are high, suggesting good reproducibility!"))
   }
+  message("")
 
   names(glist) <- paste0("Group_", 1:length(glist))
 
@@ -518,13 +572,185 @@ make_readcount_corr_plots <- function(readcnts,
 
 
 
-check_fl_dist <- function(){
+check_fl_dist <- function(obj,
+                          features,
+                          populations,
+                          fraction_design){
+
+  ### Get read counts for each feature
+  fname <- EZget(obj, type = "fractions",
+                 returnNameOnly = TRUE)
+  fraction_table <- obj[["fractions"]][[fname]]
+  features <- obj[["metadata"]][["fractions"]][[fname]]$features
+
+  fraction_cols <- colnames(fraction_table)
+  fraction_cols <- fraction_cols[grepl("^fraction_", fraction_cols)]
+
+
+  glist <- vector(mode = "list",
+                  length = length(fraction_cols))
+
+  avg_fractions <- tibble()
+
+  for(fc in seq_along(fraction_cols)){
+
+    fractions <- fraction_table %>%
+      dplyr::select(sample, !!features, !!fraction_cols[fc]) %>%
+      dplyr::rename(fraction = !!dplyr::sym(fraction_cols[fc])) %>%
+      dplyr::filter(fraction != 0)
+
+    avg_fractions <- avg_fractions %>%
+      dplyr::bind_rows(
+        fractions %>%
+          dplyr::group_by(sample) %>%
+          dplyr::summarise(
+            avg_fraction = mean(fraction)
+          ) %>%
+          dplyr::mutate(
+            fraction_type = fraction_cols[fc]
+          )
+      )
+
+
+    samples <- unique(fractions$sample)
+
+    for(s in seq_along(samples)){
+
+
+
+      glist[[fc]][[samples[s]]] <- fractions %>%
+        ggplot2::ggplot(aes(x = fraction)) +
+        ggplot2::geom_density() +
+        ggplot2::theme_classic() +
+        ggplot2::xlab(fraction_cols[fc]) +
+        ggplot2::ylab("Density")
+
+    }
+
+  }
+
+  message(paste0(c("Average fractions for each sample are:", utils::capture.output(avg_fractions)), collapse = "\n"))
+
+
+  lower_fxn_cutoff <- ifelse(
+    length(fraction_cols) == 1,
+    0.5/10,
+    1/(10*length(fraction_cols))
+  )
+  upper_fxn_cutoff <- 1 - lower_fxn_cutoff
+
+
+  message("")
+  low_fx <- FALSE
+  high_fx <- FALSE
+  if(any(avg_fractions$avg_fraction < lower_fxn_cutoff)){
+    message("One or more of your samples have very low amounts of labeling.
+            This could mean that your label times are short, which can limit
+            the statistical power of EZbakR analyses.")
+    low_fx <- TRUE
+  }
+
+  if(any(avg_fractions$avg_fraction > upper_fxn_cutoff)){
+    message("One or more of your samples have very high amounts of labeling.
+            This could mean that your label times are long, which can limit
+            the statistical power of EZbakR analyses.")
+    high_fx <- TRUE
+  }
+
+  if(!low_fx & !high_fx){
+    message("Labeling rates (e.g., fraction labeled for single label experiments) look good!")
+  }
+
+  message("")
+
+  if(length(glist) == 1){
+
+    glist <- glist[[1]]
+
+  }else{
+
+    names(glist) <- fraction_cols
+
+  }
+
+
+  return(glist)
 
 }
 
-check_fl_corr <- function(){
+check_fl_corr <- function(obj,
+                          features,
+                          populations,
+                          fraction_design){
+
+  metadf <- data.table::copy(obj$metadf)
+
+  rep_meta <- infer_replicates(obj,
+                               consider_tl = TRUE)
+
+  ### Filter out groups with no more than 1 replicate
+  IDcol <- ifelse("replicate_id_imputed" %in% colnames(rep_meta),
+                  "replicate_id_imputed",
+                  "replicate_id")
+
+  rep_meta <- rep_meta %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(IDcol))) %>%
+    dplyr::filter(dplyr::n() > 1)
+
+  if(nrow(rep_meta) == 0){
+    message("Detected no conditions with replicates!
+            Skipping read count replicate correlation analysis.")
+
+    return(list())
+
+  }
 
 
+  ### Get read counts for each feature
+  fname <- EZget(obj, type = "fractions",
+                 returnNameOnly = TRUE)
+  fraction_table <- obj[["fractions"]][[fname]]
+  features <- obj[["metadata"]][["fractions"]][[fname]]$features
+
+  fraction_cols <- colnames(fraction_table)
+  fraction_cols <- fraction_cols[grepl("^fraction_", fraction_cols)]
+
+
+  glist <- vector(mode = "list",
+                  length = length(fraction_cols))
+
+  for(fc in seq_along(fraction_cols)){
+
+    fractions <- fraction_table %>%
+      dplyr::filter(
+        sample %in% rep_meta$sample
+      ) %>%
+      dplyr::select(sample, !!features, !!fraction_cols[fc]) %>%
+      dplyr::rename(fraction = !!dplyr::sym(fraction_cols[fc]))
+
+
+    glist[[fc]] <- make_corr_plots(
+      setDT(data.table::copy(fractions)),
+      rep_meta,
+      IDcol,
+      value = "fraction",
+      fraction_type = fraction_cols[fc],
+    )
+
+  }
+
+  if(length(glist) == 1){
+
+    glist <- glist[[1]]
+
+  }else{
+
+    names(glist) <- fraction_cols
+
+  }
+
+
+  return(glist)
 }
 
 
