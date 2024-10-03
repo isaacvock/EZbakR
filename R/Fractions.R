@@ -976,6 +976,11 @@ EstimateMutRates.EZbakRData <- function(obj,
 
     muts_analyze <- populations
 
+    if(!(mutcounts_in_cB %in% muts_analyze)){
+      stop("You specified mutrate_populations not present in your cB!")
+    }
+
+
   }
 
   nucs_analyze <- basecounts_in_cB[which(mutcounts_in_cB %in% muts_analyze)]
@@ -1880,6 +1885,27 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                    fraction_design = fraction_design,
                                    overwrite = overwrite)
 
+    # How many identical tables already exist?
+    if(overwrite){
+
+      repeatID <- 1
+
+    }else{
+
+      repeatID <- length(EZget(obj,
+                               type = 'fractions',
+                               features = features_to_analyze,
+                               populations = pops_to_analyze,
+                               fraction_design = fraction_design,
+                               returnNameOnly = TRUE,
+                               exactMatch = TRUE,
+                               alwaysCheck = TRUE)) + 1
+    }
+
+  }else{
+
+    repeatID <- 1
+
   }
 
 
@@ -1889,7 +1915,8 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
   # Save metadata
   obj[['metadata']][['fractions']][[fraction_vect]] <- list(features = features_to_analyze,
                                                             populations = pops_to_analyze,
-                                                            fraction_design = fraction_design)
+                                                            fraction_design = fraction_design,
+                                                            repeatID = repeatID)
 
 
 
@@ -1993,6 +2020,11 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
   }else{
 
     muts_analyze <- populations
+
+    if(!(muts_analyze %in% mutcounts_in_cB)){
+      stop("You specified mutrate_populations not present in your cB!")
+    }
+
 
   }
 
