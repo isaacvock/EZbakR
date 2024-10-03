@@ -255,6 +255,15 @@ EZMAPlot <- function(obj,
   comparison <- obj[['comparisons']][[comparison_name]]
   metadata <- obj[['metadata']][['comparisons']][[comparison_name]]
 
+  if(!("avg_coverage" %in% colnames(comparison))){
+
+    stop("Can't make MA plot if you have no coverage information! This likely means
+         that you are trying to compare parameters estimated by EZDynamics, where
+         average coverage is not included as output due to it lacking an interpretable
+         meaning.")
+
+  }
+
   # Infer x-axis scale and label
   if(plotlog2){
 
