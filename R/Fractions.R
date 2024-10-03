@@ -746,7 +746,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
         ]
 
       current_name <- names(obj$mutation_rates)[1]
-      obj$mutation_rates[[paste0("feature_", current_name)]] <- feature_mutrates
+      obj$mutation_rates[[paste0(paste(features_to_analyze, collapse = "_"), "_", current_name)]] <- feature_mutrates
 
 
 
@@ -1768,7 +1768,9 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
           # Kinda cutesy, but works because bind_rows(dataframe, NULL) = dataframe
           # so don't need a special condition for s == 1.
-          obj$mutation_rates[[paste0("feature_", current_name)]] <- dplyr::bind_rows(feature_mutrates, obj$mutation_rates[[paste0("feature_", current_name)]])
+          obj$mutation_rates[[paste0(paste(features_to_analyze, collapse = "_"), "_", current_name)]] <- dplyr::bind_rows(feature_mutrates,
+                                                                                                                          obj$mutation_rates[[paste0(paste(features_to_analyze, collapse = "_"), "_", current_name)]])
+
 
         }else{
 
