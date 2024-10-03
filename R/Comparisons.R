@@ -236,6 +236,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   }
 
+  can_simply_average <- TRUE
   X <- stats::model.matrix(formula_mean,
                     metadf %>%
                       dplyr::mutate(!!parameter := 1))
@@ -855,7 +856,7 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
   # Get fractions
   parameter_est <- obj[[type]][[averages_name]]
 
-  features_to_analyze <- obj[["metadata"]][[type]][[averages_name]][["features"]]
+  features_to_analyze <- obj[["metadata"]][[type]][[averages_name]][["grouping_features"]]
 
 
   ### Perform comparative analysis of interest
