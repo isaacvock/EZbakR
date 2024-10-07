@@ -167,6 +167,9 @@ EZQC.EZbakRData <- function(obj,
 check_raw_mutation_rates <- function(obj,
                                      mutrate_populations){
 
+  # Hack to address NOTEs
+  n <- muttype <- mutrate <- NULL
+
   ### What mutation rates should be assessed?
 
   # Figure out which mutation counts are in the cB
@@ -252,6 +255,11 @@ check_raw_mutation_rates <- function(obj,
 check_plabeled <- function(obj,
                            mutrates = NULL){
 
+
+  # Hack to deal with NOTEs
+  mutrate <- NULL
+
+
   # Gotta fetch mutrates
   if(is.null(mutrates)){
 
@@ -322,6 +330,12 @@ check_read_count_corr_ezbf <- function(obj,
                                        features, populations,
                                        fraction_design){
 
+
+  # Hack to deal with NOTEs
+  `.` <- list()
+  n <- NULL
+
+
   metadf <- data.table::copy(obj$metadf)
 
   rep_meta <- infer_replicates(obj,
@@ -380,6 +394,12 @@ check_read_count_corr_ezbd <- function(obj,
                                        filter_cols,
                                        filter_condition,
                                        remove_features){
+
+
+  # Hack to deal with NOTEs
+  n <- NULL
+  `.` <- list()
+
 
   cB <- data.table::copy(obj$cB)
   metadf <- data.table::copy(obj$metadf)
@@ -480,6 +500,11 @@ make_corr_plots <- function(table,
                                       cutoff = 0.9){
 
 
+
+  # Hack to deal with NOTEs
+  density <- NULL
+
+
   value <- match.arg(value)
 
   axis_label_string <- ifelse(value == "reads",
@@ -578,7 +603,7 @@ make_corr_plots <- function(table,
             dplyr::tibble(
               sample_1 = samps[1],
               sample_2 = samps[2],
-              correlation = cor(corr_df[[samps[1]]],
+              correlation = stats::cor(corr_df[[samps[1]]],
                                 corr_df[[samps[2]]])
             )
           )
@@ -626,6 +651,9 @@ check_fl_dist <- function(obj,
                           populations,
                           fraction_design){
 
+  # Hack to address NOTEs
+  fraction <- NULL
+
   ### Get read counts for each feature
   fname <- EZget(obj, type = "fractions",
                  returnNameOnly = TRUE)
@@ -639,7 +667,7 @@ check_fl_dist <- function(obj,
   glist <- vector(mode = "list",
                   length = length(fraction_cols))
 
-  avg_fractions <- tibble()
+  avg_fractions <- dplyr::tibble()
 
   for(fc in seq_along(fraction_cols)){
 
@@ -879,7 +907,7 @@ get_density <- function(x, y, ...) {
 ### Source for code: https://github.com/cran/MASS/tree/master/R
 bandwidth.nrd <- function (x)
 {
-  r <- quantile(x, c(0.25, 0.75))
+  r <- stats::quantile(x, c(0.25, 0.75))
   h <- (r[2L] - r[1L])/1.34
   4 * 1.06 * min(sqrt(stats::var(x)), h) * length(x)^(-1/5)
 }

@@ -989,7 +989,7 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
     # subtract median difference to account for potential global biases
     comparison <- comparison %>%
       dplyr::ungroup() %>%
-      dplyr::mutate(difference = difference - median(difference)) %>%
+      dplyr::mutate(difference = difference - stats::median(difference)) %>%
       dplyr::mutate(
         stat = difference/uncertainty,
         pval = 2*stats::pnorm(-abs(stat))

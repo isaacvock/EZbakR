@@ -2438,6 +2438,8 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
 
   # Hack to deal with devtools::check() NOTEs
   ss <- feature_type <- feature <- NULL
+  parameter_index <- treatment_index <- sd <- fraction_affected <- NULL
+  treatment <- NULL
 
   ### Step 0, generate parameters for each feature
 
@@ -2697,7 +2699,7 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
   }
 
   # Get parameter truths
-  parameter_truth <- tibble()
+  parameter_truth <- dplyr::tibble()
   for(t in 1:ntreatments){
     param_list <- param_per_treatment[[t]]
     names(param_list) <- paste0('true_k', 1:length(log_means))
@@ -2945,7 +2947,7 @@ automatic_treatment_effects <- function(nt, np,
     treatment_ids <- rep(1:nt, each = np)
     parameter_ids <- rep(1:np, times = nt)
 
-    treatment_effects <- tibble(
+    treatment_effects <- dplyr::tibble(
       parameter_index = parameter_ids,
       treatment_index = treatment_ids,
       mean = default_mean,

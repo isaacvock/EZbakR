@@ -1126,7 +1126,7 @@ normalize_EZDynamics <- function(norm_df,
                                  species_to_sf = NULL){
 
   # Hack to deal with devtools::check() NOTEs
-  n <- NULL
+  n <- valid <- NULL
 
   ### What label times are present across all compartments
   valid_label_times <- norm_df %>%
