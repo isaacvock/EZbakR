@@ -15,6 +15,10 @@ EZget(
   parameter = NULL,
   counttype = NULL,
   design_factor = NULL,
+  dynamics_design_factors = NULL,
+  scale_factors = NULL,
+  cstrat = NULL,
+  feature_lengths = NULL,
   experimental = NULL,
   reference = NULL,
   param_name = NULL,
@@ -28,6 +32,7 @@ EZget(
   sample_feature = NULL,
   modeled_to_measured = NULL,
   graph = NULL,
+  normalize_by_median = NULL,
   returnNameOnly = FALSE,
   exactMatch = FALSE,
   alwaysCheck = FALSE
@@ -64,6 +69,25 @@ Not sure this is being used in any way currently...}
 
 \item{design_factor}{design_factor specified in relevant run of \code{CompareParameters()}.
 Therefore, only relevant if type == "comparisons".}
+
+\item{dynamics_design_factors}{design_factors included in final \code{EZDynamics()} output.
+Therefore, only relevant if type == "dynamics".}
+
+\item{scale_factors}{Sample group scale factors used in \code{EZDynamics()}.
+Therefore, only relevant if type == "dynamics"}
+
+\item{cstrat}{Strategy used for comparative analyses. Can be:
+\itemize{
+\item contrast: If two parameters were compared via specifying the reference
+and experimental levels in \code{CompareParameters()} (for type == "averages").
+\item single_param: If a single parameter was passed to \code{CompareParameters()}
+via its \code{param_name} option.
+\item dynamics: If output of \code{EZDynamics()} was passed to \code{CompareParameters()}
+\item function: If function of multiple parameters was passed to \code{CompareParameter()}
+via its \code{param_function} option.
+}}
+
+\item{feature_lengths}{Table of feature lengths used for length normalization.}
 
 \item{experimental}{Experimental condition specified in relevant run of \code{CompareParameters()}.
 Therefore, only relevant if type == "comparisons".}
@@ -107,6 +131,9 @@ and the species in \code{graph}.}
 
 \item{graph}{Only relevant if type == "dynamics". NxN adjacency matrix,
 where N represents the number of species modeled when running \code{EZDynamics()}.}
+
+\item{normalize_by_median}{Whether median difference was subtracted from estimated
+kinetic parameter difference. Thus, only relevant if type == "comparisons".}
 
 \item{returnNameOnly}{If TRUE, then only the names of tables that passed your
 search criteria will be returned. Else, the single table passing your search

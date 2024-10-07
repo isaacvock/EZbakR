@@ -64,6 +64,10 @@
 #' convert its values to factors so as to avoid performing continuous regression on label
 #' times. Defaults to TRUE as including label time in the regression is often meant to
 #' stratify samples by their label time if, for example, you are averaging logit(fractions).
+#' @param regress_se_with_abs If TRUE, and if `type == "fractions"`, then standard error
+#' will be regressed against logit fraction rather than magnitude of logit fraction.
+#' Makes sense to set this to FALSE if analyzing certain site-specific mutational probing
+#' methods when high mutation content things are likely low variance SNPs.
 #' @param force_lm Certain formula lend them selves to efficient approximations of the
 #' full call to `lm()`. Namely, formulas that stratify samples into disjoint groups where
 #' a single parameter of the model is effectively estimated from each group can be tackled
@@ -99,6 +103,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                  error_if_singular = TRUE,
                                  min_reads = 10,
                                  convert_tl_to_factor = TRUE,
+                                 regress_se_with_abs = TRUE,
                                  force_lm = FALSE,
                                  force_optim = force_lm,
                                  conservative = FALSE,
@@ -118,6 +123,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
   ### Hack to deal with devtools::check() NOTEs
   n <- log_normalized_reads <- logse <- logse_from_uncert <- replicates <- NULL
   coverage <- se_mean <- se_logse <- coverages <- parameters <- normalized_reads <- NULL
+  logsd_from_uncert <- logsd <- NULL
 
   `.` <- list
 
@@ -230,6 +236,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   }
 
+  can_simply_average <- TRUE
   X <- stats::model.matrix(formula_mean,
                     metadf %>%
                       dplyr::mutate(!!parameter := 1))
@@ -289,6 +296,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
   kinetics <- kinetics %>%
     dplyr::inner_join(features_to_keep,
                       by = features_to_analyze)
+
 
 
   ### Need to cover for edge case where there are single level factors
@@ -431,8 +439,18 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     # that is likely a large refactor
     if(type == "fractions"){
 
-      formula_str <- paste("`logse_", .x, "`", " ~ `coverage_", .x, "`",
-                           " + abs(`mean_", .x, "`)", sep = "")
+      if(regress_se_with_abs){
+
+        formula_str <- paste("`logse_", .x, "`", " ~ `coverage_", .x, "`",
+                             " + abs(`mean_", .x, "`)", sep = "")
+
+      }else{
+
+        formula_str <- paste("`logse_", .x, "`", " ~ `coverage_", .x, "`",
+                             " + `mean_", .x, "`", sep = "")
+
+      }
+
 
     }else if(parameter == "log_kdeg"){
 
@@ -497,7 +515,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
       dplyr::ungroup() %>%
       dplyr::mutate(!!col_name := get_sd_posterior(sd_est = !!dplyr::sym(sd_est_name),
                                                    sd_var = (!!dplyr::sym(sd_var_name)) ^ 2,
-                                                   fit_var = stats::var(regression_results[[c]]$lm_result$residuals) / sd_reg_factor,
+                                                   fit_var = stats::var(regression_results[[c]]$lm_result$residuals),
                                                    fit_mean = !!dplyr::sym(fit_mean_name),
                                                    conservative = conservative)) %>%
       dplyr::mutate(!!natural_col_name := exp((!!dplyr::sym(col_name))))
@@ -643,7 +661,13 @@ checkSingleLevelFactors <- function(formula, data) {
 # DESeq model (pre-DESeq2).
 get_sd_posterior <- function(n = 1, sd_est, sd_var,
                              fit_var, fit_mean,
+                             fit_var_min = 0.01,
                              conservative = FALSE){
+
+
+  if(fit_var <= 0){
+    fit_var <- fit_var_min
+  }
 
 
   denom <- (n/sd_var + 1/fit_var)
@@ -674,14 +698,34 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 #' which `AverageAndRegularize()` has been run.
 #' @param design_factor Name of factor from `metadf` whose parameter estimates at
 #' different factor values you would like to compare. If you specify this, you need
-#' to also specify `reference` and `experimental`.
-#' @param reference Name of reference `condition` factor level value. Difference
-#' will be calculated as `experimental` - `reference`.
-#' @param experimental Name of `condition` factor level value to compare to reference.
-#' Difference will be calculated as `experimental` - `reference`.
+#' to also specify `reference` and `experimental`. If `type` == "dynamics", this
+#' can have multiple values, being the names of all of the factors you would like
+#' to stratify a group by.
+#' @param reference Name of reference `design_factor` factor level value. Difference
+#' will be calculated as `experimental` - `reference`. If type == "dynamics", then this should specify the levels
+#' of all of the `design_factor`(s) reference group. For example, if you have
+#' multiple `design_factor`'s, then `reference` must be a named character vector with one element
+#' per `design_factor`, with elements named the corresponding `design_factor`. For
+#' example, if `design_factor` is c("genotype", "treatment"), and you would like
+#' to compare genotype = "WT" and treatment = "untreated" (reference) to genotype = "KO" and
+#' treatment = "treated", then `reference` would need to be a vector with
+#' one element named "genotype", equal to "WT" and one element named "treatment"
+#' equal to "untreated" (this example could be created with, `c(genotype = "WT", treatment = "untreated")`).
+#' @param experimental Name of `design_factor` factor level value to compare to reference.
+#' Difference will be calculated as `experimental` - `reference`. If type == "dynamics", then this should specify the levels
+#' of all of the `design_factor`(s) reference group. For example, if you have
+#' multiple `design_factor`'s, then `experimental` must be a named character vector with one element
+#' per `design_factor`, with elements named the corresponding `design_factor`. For
+#' example, if `design_factor` is c("genotype", "treatment"), and you would like
+#' to compare genotype = "WT" and treatment = "untreated" (reference) to genotype = "KO" and
+#' treatment = "treated", then `experimental` would need to be a vector with
+#' one element named "genotype", equal to "KO" and one element named "treatment"
+#' equal to "treated" (this example could be created with, `c(genotype = "KO", treatment = "treated")`).
 #' @param param_name If you want to assess the significance of a single parameter,
 #' rather than the comparison of two parameters, specify that one parameter's name
 #' here.
+#' @param parameter Parameter to average across replicates of a given condition.
+#' @param type Type of table to use. Can either be "averages" or "dynamics".
 #' @param param_function NOT YET IMPLEMENTED. Will allow you to specify more complicated
 #' functions of parameters when hypotheses you need to test are combinations of parameters
 #' rather than individual parameters or simple differences in two parameters.
@@ -702,23 +746,36 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 #' standard deviations across replicates for the averages object you want to use.
 #' @param fit_params Character vector of parameter names in the averages object
 #' you would like to use.
-#' @param parameter Parameter to average across replicates of a given condition.
+#' @param normalize_by_median If TRUE, then median difference will be set equal to 0.
+#' This can account for global biases in parameter estimates due to things like differences
+#' in effective label times. Does risk eliminating real signal though, so user discretion
+#' is advised.
+#' @param reference_levels Same as `reference`, but exclusively parsed in case of
+#' `type` == "dynamics, included for backwards compatibility.
+#' @param experimental_levels Same as `experimental`, but exclusively parsed in case of
+#' `type` == "dynamics, included for backwards compatibility.
 #' @param overwrite If TRUE, then identical output will be overwritten if it exists.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @export
 CompareParameters <- function(obj, design_factor, reference, experimental,
-                              param_name, param_function,
+                              param_name,
+                              parameter = "log_kdeg",
+                              type = "averages",
+                              param_function,
                               condition = NULL,
                               features = NULL, exactMatch = TRUE, repeatID = NULL,
                               formula_mean = NULL, sd_grouping_factors = NULL,
-                              fit_params = NULL, overwrite = TRUE, parameter = "log_kdeg"){
+                              fit_params = NULL, normalize_by_median = FALSE,
+                              reference_levels = NULL,
+                              experimental_levels = NULL,
+                              overwrite = TRUE){
 
 
   ### Hack to deal with annoying devtools::check() NOTE
 
   difference <- uncertainty <- pval <- padj <- avg_coverage <- NULL
-
+  exp_par <- ref_par <- exp_se <- ref_se <- NULL
 
   ### Determine what strategy to use for "comparisons"
 
@@ -727,32 +784,52 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
     design_factor <- condition
   }
 
-  if(missing(design_factor) | missing(reference) | missing(experimental)){
+  if(type == "dynamics"){
 
-    if(missing(param_name)){
+    strategy <- "dynamics"
 
-      if(missing(param_function)){
+    # Catch missing arg for sake backwards compatibility
+    if(missing(reference) & !is.null(reference_levels)){
+      reference <- reference_levels
+    }
 
-        stop("You either need to specify: 1) condition, reference, and experimental,
+    if(missing(experimental) & !is.null(experimental_levels)){
+      experimental <- experimental_levels
+    }
+
+
+  }else{
+
+    if(missing(design_factor) | missing(reference) | missing(experimental)){
+
+      if(missing(param_name)){
+
+        if(missing(param_function)){
+
+          stop("You either need to specify: 1) condition, reference, and experimental,
              2) param_name or 3) param_function!")
+
+        }else{
+
+          strategy = "function"
+
+        }
 
       }else{
 
-        strategy = "function"
+        strategy = "single_param"
 
       }
 
     }else{
 
-      strategy = "single_param"
+      strategy = "contrast"
 
     }
 
-  }else{
-
-    strategy = "contrast"
-
   }
+
+
 
   ### Extract kinetic parameters of interest
 
@@ -765,7 +842,7 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
     environment(formula_mean) <- NULL
   }
   averages_name <- EZget(obj,
-                         type = "averages",
+                         type = type,
                          features = features,
                          parameter = parameter,
                          formula_mean = formula_mean,
@@ -777,9 +854,9 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
 
 
   # Get fractions
-  parameter_est <- obj[["averages"]][[averages_name]]
+  parameter_est <- obj[[type]][[averages_name]]
 
-  features_to_analyze <- obj[["metadata"]][["averages"]][[averages_name]][["features"]]
+  features_to_analyze <- obj[["metadata"]][[type]][[averages_name]][["grouping_features"]]
 
 
   ### Perform comparative analysis of interest
@@ -824,12 +901,102 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
 
   }
 
+  if(strategy == "dynamics"){
+
+    # See if design_factor needs to be imputed
+    if(missing(design_factor)){
+
+      design_factors <- obj[["metadata"]][[type]][[averages_name]][["dynamics_design_factors"]]
+
+      if(length(design_factors) > 1){
+        stop("Need to specify design_factor if you have more than one such
+             factor in your 'dynamics' table!")
+      }else{
+
+        design_factor <- design_factors
+
+      }
+
+
+    }
+
+    # Makes more sense for it to be plural in this context
+    design_factors <- design_factor
+
+
+
+    # Helper function to create a filter expression for the given levels
+    create_filter_expr <- function(cols, levels) {
+      exprs <- purrr::map2(cols, cols, ~rlang::expr(!!sym(.x) == !!levels[[.y]]))
+      purrr::reduce(exprs, `&`)
+    }
+
+    # Convert reference_levels and experimental_levels to named lists
+    if(is.null(names(reference))){
+      reference_list <- stats::setNames(as.list(reference), design_factors)
+    }else{
+      reference_list <- as.list(reference)
+    }
+
+    if(is.null(names(experimental))){
+      experimental_list <- stats::setNames(as.list(experimental), design_factors)
+    }else{
+      experimental_list <- as.list(experimental)
+    }
+
+
+    # Names of new columns
+    par_se <- paste0("se_", parameter)
+
+
+    # Calculate the differences for each unique set of feature values
+    comparison <- parameter_est %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
+      dplyr::summarise(
+        ref_par = stats::weighted.mean( (!!dplyr::sym(parameter))[!!create_filter_expr(design_factors, reference_list)],
+                                w = (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, reference_list)],
+                                na.rm = TRUE),
+        exp_par = stats::weighted.mean( (!!dplyr::sym(parameter))[!!create_filter_expr(design_factors, experimental_list)],
+                                w = (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, experimental_list)],
+                                na.rm = TRUE),
+        ref_se = sqrt(sum( ( (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, reference_list)])^2 )),
+        exp_se = sqrt(sum( ( (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, experimental_list)])^2 )),
+      ) %>%
+      dplyr::mutate(
+        difference = exp_par - ref_par,
+        uncertainty = sqrt(exp_se^2 + ref_se^2),
+        stat = difference/uncertainty,
+        pval = 2*stats::pnorm(-abs(stat))
+      ) %>%
+      dplyr::mutate(
+        padj = stats::p.adjust(pval, method = "BH")
+      )
+
+  }
+
 
   if(strategy == "function"){
 
 
     stop("Not implemented yet!!!")
 
+
+  }
+
+
+  if(normalize_by_median){
+
+    # subtract median difference to account for potential global biases
+    comparison <- comparison %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(difference = difference - stats::median(difference)) %>%
+      dplyr::mutate(
+        stat = difference/uncertainty,
+        pval = 2*stats::pnorm(-abs(stat))
+      ) %>%
+      dplyr::mutate(
+        padj = stats::p.adjust(pval, method = "BH")
+      )
 
   }
 
@@ -870,6 +1037,8 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                                  experimental = experimental,
                                  param_name = param_name,
                                  param_function = param_function,
+                                 cstrat = strategy,
+                                 normalize_by_median = normalize_by_median,
                                  overwrite = overwrite)
 
     # How many identical tables already exist?
@@ -888,6 +1057,8 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                                experimental = experimental,
                                param_name = param_name,
                                param_function = param_function,
+                               cstrat = strategy,
+                               normalize_by_median = normalize_by_median,
                                returnNameOnly = TRUE,
                                exactMatch = TRUE,
                                alwaysCheck = TRUE)) + 1
@@ -910,6 +1081,8 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                                                             param_function = param_function,
                                                             features = features_to_analyze,
                                                             parameter = parameter,
+                                                            cstrat = strategy,
+                                                            normalize_by_median = normalize_by_median,
                                                             repeatID = repeatID)
 
 
@@ -925,10 +1098,13 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
 }
 
 
+
 fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
                                     coverage_col,
                                     uncertainties_col,
                                     error_if_singular = TRUE){
+
+  parameter <- fsvector <- NULL
 
 
   fit <- stats::lm(formula_mean, data,

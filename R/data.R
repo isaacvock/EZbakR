@@ -72,3 +72,31 @@
 #' }
 #' @references Luo et al. (2020) Biochemistry. 59(42), 4121-4142
 "example_metadf"
+
+
+#' Example ODE model graphs and formulas
+#'
+#' A list of example "graphs" and specie formulas that can be passed to
+#' `EZDynamics` or `SimulateDynamics`, and that are used under the hood
+#' by `EZSimulate` to facilitate simulations of ODE models.
+#' @format ## `ode_models`
+#' A list with 6 elements
+#' \describe{
+#'  \item{nuc2cyto}{Simplest model of nuclear and cytoplasmic RNA dynamics: 0 -> N -> C -> 0}
+#'  \item{preRNA}{Simplest model of pre-RNA and mature RNA dynamics: 0 -> P -> M -> 0}
+#'  \item{preRNAwithPdeg}{Same as preRNA, but now pre-RNA can also degrade.}
+#'  \item{nuc2cytowithNdeg}{Same as nuc2cyto, but now nuclear RNA can also degrade.}
+#'  \item{subtlseq}{Subcellular TimeLapse-seq model, similar to that described in Ietswaart et al., 2024.
+#'  Simplest model discussed there, lacking nuclear degradation: 0 -> CH -> NP -> CY -> PL -> 0, and CY can
+#'  also degrade.}
+#'  \item{nuc2cytowithpreRNA}{Combination of nuc2cyto and preRNA where preRNA is first synthesized,
+#'  then either processed or exported to the cytoplasm. Processing can also occur in the cytoplasm, and
+#'  mature nuclear RNA can be exported to the cytoplasm. Only  mature RNA degrades.}
+#' }
+#' Each element of list has two items
+#' \describe{
+#'  \item{graph}{Matrix representation of ODE system graph.}
+#'  \item{formulas}{Formula objects relating measured species to modeled species.}
+#' }
+#' @references Ietswaart et al. (2024) Molecular Cell. 84(14), 2765-2784.
+"ode_models"

@@ -10,6 +10,8 @@ CompareParameters(
   reference,
   experimental,
   param_name,
+  parameter = "log_kdeg",
+  type = "averages",
   param_function,
   condition = NULL,
   features = NULL,
@@ -18,8 +20,10 @@ CompareParameters(
   formula_mean = NULL,
   sd_grouping_factors = NULL,
   fit_params = NULL,
-  overwrite = TRUE,
-  parameter = "log_kdeg"
+  normalize_by_median = FALSE,
+  reference_levels = NULL,
+  experimental_levels = NULL,
+  overwrite = TRUE
 )
 }
 \arguments{
@@ -28,17 +32,39 @@ which \code{AverageAndRegularize()} has been run.}
 
 \item{design_factor}{Name of factor from \code{metadf} whose parameter estimates at
 different factor values you would like to compare. If you specify this, you need
-to also specify \code{reference} and \code{experimental}.}
+to also specify \code{reference} and \code{experimental}. If \code{type} == "dynamics", this
+can have multiple values, being the names of all of the factors you would like
+to stratify a group by.}
 
-\item{reference}{Name of reference \code{condition} factor level value. Difference
-will be calculated as \code{experimental} - \code{reference}.}
+\item{reference}{Name of reference \code{design_factor} factor level value. Difference
+will be calculated as \code{experimental} - \code{reference}. If type == "dynamics", then this should specify the levels
+of all of the \code{design_factor}(s) reference group. For example, if you have
+multiple \code{design_factor}'s, then \code{reference} must be a named character vector with one element
+per \code{design_factor}, with elements named the corresponding \code{design_factor}. For
+example, if \code{design_factor} is c("genotype", "treatment"), and you would like
+to compare genotype = "WT" and treatment = "untreated" (reference) to genotype = "KO" and
+treatment = "treated", then \code{reference} would need to be a vector with
+one element named "genotype", equal to "WT" and one element named "treatment"
+equal to "untreated" (this example could be created with, \code{c(genotype = "WT", treatment = "untreated")}).}
 
-\item{experimental}{Name of \code{condition} factor level value to compare to reference.
-Difference will be calculated as \code{experimental} - \code{reference}.}
+\item{experimental}{Name of \code{design_factor} factor level value to compare to reference.
+Difference will be calculated as \code{experimental} - \code{reference}. If type == "dynamics", then this should specify the levels
+of all of the \code{design_factor}(s) reference group. For example, if you have
+multiple \code{design_factor}'s, then \code{experimental} must be a named character vector with one element
+per \code{design_factor}, with elements named the corresponding \code{design_factor}. For
+example, if \code{design_factor} is c("genotype", "treatment"), and you would like
+to compare genotype = "WT" and treatment = "untreated" (reference) to genotype = "KO" and
+treatment = "treated", then \code{experimental} would need to be a vector with
+one element named "genotype", equal to "KO" and one element named "treatment"
+equal to "treated" (this example could be created with, \code{c(genotype = "KO", treatment = "treated")}).}
 
 \item{param_name}{If you want to assess the significance of a single parameter,
 rather than the comparison of two parameters, specify that one parameter's name
 here.}
+
+\item{parameter}{Parameter to average across replicates of a given condition.}
+
+\item{type}{Type of table to use. Can either be "averages" or "dynamics".}
 
 \item{param_function}{NOT YET IMPLEMENTED. Will allow you to specify more complicated
 functions of parameters when hypotheses you need to test are combinations of parameters
@@ -68,9 +94,18 @@ standard deviations across replicates for the averages object you want to use.}
 \item{fit_params}{Character vector of parameter names in the averages object
 you would like to use.}
 
-\item{overwrite}{If TRUE, then identical output will be overwritten if it exists.}
+\item{normalize_by_median}{If TRUE, then median difference will be set equal to 0.
+This can account for global biases in parameter estimates due to things like differences
+in effective label times. Does risk eliminating real signal though, so user discretion
+is advised.}
 
-\item{parameter}{Parameter to average across replicates of a given condition.}
+\item{reference_levels}{Same as \code{reference}, but exclusively parsed in case of
+\code{type} == "dynamics, included for backwards compatibility.}
+
+\item{experimental_levels}{Same as \code{experimental}, but exclusively parsed in case of
+\code{type} == "dynamics, included for backwards compatibility.}
+
+\item{overwrite}{If TRUE, then identical output will be overwritten if it exists.}
 }
 \description{
 Get contrasts of estimated parameters

@@ -12,9 +12,14 @@ EZDynamics(
   scale_factors = NULL,
   sample_feature = NULL,
   modeled_to_measured = NULL,
-  parameter_names = paste0("k", 1:max(graph)),
+  parameter_names = paste0("logk", 1:max(graph)),
   unassigned_name = "__no_feature",
   type = "averages",
+  prior_means = rep(-3, times = max(graph)),
+  prior_sds = c(3, rep(1, times = max(graph) - 1)),
+  avg_params_tokeep = NULL,
+  avg_params_todrop = NULL,
+  label_time_name = "tl",
   features = NULL,
   populations = NULL,
   fraction_design = NULL,
@@ -22,6 +27,10 @@ EZDynamics(
   repeatID = NULL,
   exactMatch = TRUE,
   feature_lengths = NULL,
+  use_coverage = TRUE,
+  normalization_repeatID = NULL,
+  normalization_exactMatch = TRUE,
+  species_to_sf = NULL,
   overwrite = TRUE
 )
 }
@@ -110,6 +119,25 @@ was not assigned to said feature? "__no_feature" by default.}
 \item{type}{What type of table would you like to use? Currently only supports
 "averages", but will support "fractions" in the near future.}
 
+\item{prior_means}{Mean of log-Normal prior for kinetic parameters. Should
+be vector where ith value is mean for ith parameter, i = index in \code{graph}}
+
+\item{prior_sds}{Std. dev. of log-Normal prior for kinetic parameter.
+Should be vector where ith value is mean for ith parameter, i = index in \code{graph}.}
+
+\item{avg_params_tokeep}{Names of parameters in averages table that you would
+like to keep. Other parameters will be discarded. Don't include the prefixes "mean_",
+"sd_", or "coverage_"; these will be imputed automatically. In other words,
+this should be the base parameter names.}
+
+\item{avg_params_todrop}{Names of parameters in averages table that you would
+like to drop. Other parameters will be kept. Don't include the prefixes "mean_",
+"sd_", or "coverage_"; these will be imputed automatically. In other words,
+this should be the base parameter names.}
+
+\item{label_time_name}{Name of relevant label time column that will be found
+in the parameter names. Defaults to the standard "tl".}
+
 \item{features}{Character vector of the set of features you want to stratify
 reads by and estimate proportions of each RNA population. The default of "all"
 will use all feature columns in the \code{obj}'s cB.}
@@ -139,6 +167,34 @@ by default.}
 \item{feature_lengths}{Table of effective lengths for each feature combination in your
 data. For example, if your analysis includes features named GF and XF, this
 should be a data frame with columns GF, XF, and length.}
+
+\item{use_coverage}{If TRUE, normalized read counts will be used to inform
+kinetic parameter estimates. If FALSE, only fraction news will be used, which
+will leave some parameters (e.g., synthesis rate) unidentifiable, though has
+the advantage of avoiding the potential biases induced by normalization problems.}
+
+\item{normalization_repeatID}{For extracting the \code{fractions} table needed for
+normalization of multi-sample data. If multiple \code{fractions} tables exist with the same metadata,
+then this is the numerical index by which they are distinguished.}
+
+\item{normalization_exactMatch}{For extracting the \code{fractions} table needed for
+normalization of multi-sample data. If TRUE, then \code{features} and \code{populations}
+have to exactly match those for a given fractions table for that table to be used.
+Means that you can't specify a subset of features or populations by default, since this is TRUE
+by default.}
+
+\item{species_to_sf}{List mapping individual RNA species in \code{graph} to
+different sample_feature values (sf). This is relevant if you are modeling both
+pre- and mature RNA dynamics in subcellular fractionation data. EZbakR can usually
+automatically infer this, but if not, then you can manually specify this mapping.
+Should be a list with one element per unique sample_feature type. Each element should
+be a vector of the RNA species in \code{graph} that belong to that sample_feature type. For
+example, if you have whole cell, cytoplasmic, and nuclear fraction data, this should have
+one element called "cytoplasmic" and one element called "nuclear". The whole cell
+sample_feature is a sum of cytoplasmic and nuclear and thus does not apply. The "cytoplasmic"
+element of this list should be the set of RNA species that are present in the cytoplasm,
+e.g. cytoplasmic pre-RNA (maybe referred to in \code{graph} as CP) and cytoplasmic mature
+RNA (maybe referred to in \code{graph} as CM).}
 
 \item{overwrite}{If TRUE and a fractions estimate output already exists that
 would possess the same metadata (features analyzed, populations analyzed,

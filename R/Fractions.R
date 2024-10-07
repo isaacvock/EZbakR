@@ -144,6 +144,8 @@ create_fraction_design <- function(mutrate_populations){
 #' of initial feature-specific logit(pnew) estimates using high coverage features, minus the
 #' average uncertainty in the logit(pnew) estimates. As this difference can sometimes be negative,
 #' a value of `pnew_prior_sd_min` will be imputed in that case.
+#' @param pnew_prior_sd_max Similar to `pnew_prior_sd_min`, but now representing the
+#' maximum allowed logit(pnew) prior sd.
 #' @param pold_est Background mutation rate estimates if you have them. Can either be a single
 #' number applied to all samples or a named vector of values, where the names should be sample
 #' names.
@@ -185,6 +187,7 @@ EstimateFractions <- function(obj, features = "all",
                               hier_readcutoff = 300,
                               init_pnew_prior_sd = 0.8,
                               pnew_prior_sd_min = 0.01,
+                              pnew_prior_sd_max = 0.15,
                               pold_est = NULL,
                               pold_from_nolabel = FALSE,
                               grouping_factors = NULL,
@@ -364,6 +367,8 @@ EstimateMutRates <- function(obj,
 #' of initial feature-specific logit(pnew) estimates using high coverage features, minus the
 #' average uncertainty in the logit(pnew) estimates. As this difference can sometimes be negative,
 #' a value of `pnew_prior_sd_min` will be imputed in that case.
+#' @param pnew_prior_sd_max Similar to `pnew_prior_sd_min`, but now representing the
+#' maximum allowed logit(pnew) prior sd.
 #' @param pold_est Background mutation rate estimates if you have them. Can either be a single
 #' number applied to all samples or a named vector of values, where the names should be sample
 #' names.
@@ -403,8 +408,9 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                                          pold_prior_mean = -6.5,
                                          pold_prior_sd = 0.5,
                                          hier_readcutoff = 300,
-                                         init_pnew_prior_sd = 0.8,
+                                         init_pnew_prior_sd = 0.3,
                                          pnew_prior_sd_min = 0.01,
+                                         pnew_prior_sd_max = 0.15,
                                          pold_est = NULL,
                                          pold_from_nolabel = FALSE,
                                          grouping_factors = NULL,
@@ -418,6 +424,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   rm(..colvect)
 
   pnew_prior_sd_min <- pnew_prior_sd_min
+  pnew_prior_sd_max <- pnew_prior_sd_max
 
   `.` <- list
 
@@ -662,6 +669,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                                       Poisson = Poisson,
                                       pold = unique(pold),
                                       pnew_prior_mean = unique(pnew),
+                                 fraction_prior_sd = 1,
                                       pnew_prior_sd = init_pnew_prior_sd)),
           pold = unique(pold)),
         by = c("sample", features_to_analyze)
@@ -676,14 +684,20 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
       message("Estimating fractions with feature-specific pnews")
 
-      global_est <- feature_specific[,.(pnew_prior = mean(logit(pnew)),
+      ## Mean should really be the estimated sample wide value
+      pnew_prior_df <- mutrates %>%
+        dplyr::rename(pnew_prior = pnew) %>%
+        dplyr::select(sample, pnew_prior)
+      global_est <- feature_specific[pnew_prior_df][pnew < 0.3 & pnew > max(cB$pold, na.rm = TRUE)][,.(pnew_prior = mean(logit(pnew_prior)),
                                     pnew_prior_sd = stats::sd(logit(pnew)) - mean(lpnew_uncert),
                                     pold = mean(pold)),
                                  by = sample]
 
       global_est[, pnew_prior_sd := ifelse(pnew_prior_sd < 0,
                                            pnew_prior_sd_min,
-                                           pnew_prior_sd)
+                                           ifelse(pnew_prior_sd > pnew_prior_sd_max,
+                                                  pnew_prior_sd_max,
+                                                  pnew_prior_sd))
       ]
 
       global_est[, pnew_prior_sd := min(pnew_prior_sd)]
@@ -732,7 +746,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
         ]
 
       current_name <- names(obj$mutation_rates)[1]
-      obj$mutation_rates[[paste0("feature_", current_name)]] <- feature_mutrates
+      obj$mutation_rates[[paste0(paste(features_to_analyze, collapse = "_"), "_", current_name)]] <- feature_mutrates
 
 
 
@@ -961,6 +975,11 @@ EstimateMutRates.EZbakRData <- function(obj,
   }else{
 
     muts_analyze <- populations
+
+    if(!(mutcounts_in_cB %in% muts_analyze)){
+      stop("You specified mutrate_populations not present in your cB!")
+    }
+
 
   }
 
@@ -1262,6 +1281,8 @@ EstimateMutRates.EZbakRData <- function(obj,
 #' of initial feature-specific logit(pnew) estimates using high coverage features, minus the
 #' average uncertainty in the logit(pnew) estimates. As this difference can sometimes be negative,
 #' a value of `pnew_prior_sd_min` will be imputed in that case.
+#' @param pnew_prior_sd_max Similar to `pnew_prior_sd_min`, but now representing the
+#' maximum allowed logit(pnew) prior sd.
 #' @param pold_est Background mutation rate estimates if you have them. Can either be a single
 #' number applied to all samples or a named vector of values, where the names should be sample
 #' names.
@@ -1304,6 +1325,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                               hier_readcutoff = 300,
                                               init_pnew_prior_sd = 0.8,
                                               pnew_prior_sd_min = 0.01,
+                                              pnew_prior_sd_max = 0.15,
                                               pold_est = NULL,
                                               pold_from_nolabel = FALSE,
                                               grouping_factors = NULL,
@@ -1692,7 +1714,9 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
           global_est[, pnew_prior_sd := ifelse(pnew_prior_sd < 0,
                                                pnew_prior_sd_min,
-                                               pnew_prior_sd)
+                                               ifelse(pnew_prior_sd > pnew_prior_sd_max,
+                                                      pnew_prior_sd_max,
+                                                      pnew_prior_sd))
           ]
 
           global_est[, pnew_prior_sd := min(pnew_prior_sd)]
@@ -1749,7 +1773,9 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
           # Kinda cutesy, but works because bind_rows(dataframe, NULL) = dataframe
           # so don't need a special condition for s == 1.
-          obj$mutation_rates[[paste0("feature_", current_name)]] <- dplyr::bind_rows(feature_mutrates, obj$mutation_rates[[paste0("feature_", current_name)]])
+          obj$mutation_rates[[paste0(paste(features_to_analyze, collapse = "_"), "_", current_name)]] <- dplyr::bind_rows(feature_mutrates,
+                                                                                                                          obj$mutation_rates[[paste0(paste(features_to_analyze, collapse = "_"), "_", current_name)]])
+
 
         }else{
 
@@ -1859,6 +1885,27 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                    fraction_design = fraction_design,
                                    overwrite = overwrite)
 
+    # How many identical tables already exist?
+    if(overwrite){
+
+      repeatID <- 1
+
+    }else{
+
+      repeatID <- length(EZget(obj,
+                               type = 'fractions',
+                               features = features_to_analyze,
+                               populations = pops_to_analyze,
+                               fraction_design = fraction_design,
+                               returnNameOnly = TRUE,
+                               exactMatch = TRUE,
+                               alwaysCheck = TRUE)) + 1
+    }
+
+  }else{
+
+    repeatID <- 1
+
   }
 
 
@@ -1868,7 +1915,8 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
   # Save metadata
   obj[['metadata']][['fractions']][[fraction_vect]] <- list(features = features_to_analyze,
                                                             populations = pops_to_analyze,
-                                                            fraction_design = fraction_design)
+                                                            fraction_design = fraction_design,
+                                                            repeatID = repeatID)
 
 
 
@@ -1972,6 +2020,11 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
   }else{
 
     muts_analyze <- populations
+
+    if(!(muts_analyze %in% mutcounts_in_cB)){
+      stop("You specified mutrate_populations not present in your cB!")
+    }
+
 
   }
 
@@ -2659,6 +2712,9 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
                                 pnew, pold, mutcols, basecols, highpop = NULL,
                                 samples_with_no_label = NULL,
                                 sample = NULL){
+
+  # Hack to deal with devtools::check()
+  fsvector <- NULL
 
 
   if(sample %in% samples_with_no_label){

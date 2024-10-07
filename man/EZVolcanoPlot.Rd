@@ -14,10 +14,12 @@ EZVolcanoPlot(
   param_function = NULL,
   features = NULL,
   condition = NULL,
+  normalize_by_median = NULL,
+  repeatID = NULL,
   exactMatch = TRUE,
   plotlog2 = TRUE,
   FDR_cutoff = 0.05,
-  difference_cutoff = 0,
+  difference_cutoff = log(2),
   size = NULL
 )
 }
@@ -46,6 +48,12 @@ rather than individual parameters or simple differences in two parameters.}
 
 \item{condition}{Defunct parameter that has been replaced with \code{design_factor}. If provided
 gets passed to \code{design_factor} if \code{design_factor} is not already specified.}
+
+\item{normalize_by_median}{Whether or not the median was subtracted from the estimated
+parameter differences.}
+
+\item{repeatID}{If multiple \code{kinetics} or \code{fractions} tables exist with the same metadata,
+then this is the numerical index by which they are distinguished.}
 
 \item{exactMatch}{If TRUE, then \code{features} has to exactly match
 those for a given comparisons table for that table to be used. Means that you can't

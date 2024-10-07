@@ -27,6 +27,21 @@
 #' Not sure this is being used in any way currently...
 #' @param design_factor design_factor specified in relevant run of `CompareParameters()`.
 #' Therefore, only relevant if type == "comparisons".
+#' @param dynamics_design_factors design_factors included in final `EZDynamics()` output.
+#' Therefore, only relevant if type == "dynamics".
+#' @param scale_factors Sample group scale factors used in `EZDynamics()`.
+#' Therefore, only relevant if type == "dynamics"
+#' @param feature_lengths Table of feature lengths used for length normalization.
+#' @param cstrat Strategy used for comparative analyses. Can be:
+#' \itemize{
+#'  \item contrast: If two parameters were compared via specifying the reference
+#'  and experimental levels in `CompareParameters()` (for type == "averages").
+#'  \item single_param: If a single parameter was passed to `CompareParameters()`
+#'  via its `param_name` option.
+#'  \item dynamics: If output of `EZDynamics()` was passed to `CompareParameters()`
+#'  \item function: If function of multiple parameters was passed to `CompareParameter()`
+#'  via its `param_function` option.
+#' }
 #' @param experimental Experimental condition specified in relevant run of `CompareParameters()`.
 #' Therefore, only relevant if type == "comparisons".
 #' @param reference Reference condition specified in relevant run of `CompareParameters()`.
@@ -56,6 +71,8 @@
 #' and the species in `graph`.
 #' @param graph Only relevant if type == "dynamics". NxN adjacency matrix,
 #' where N represents the number of species modeled when running `EZDynamics()`.
+#' @param normalize_by_median Whether median difference was subtracted from estimated
+#' kinetic parameter difference. Thus, only relevant if type == "comparisons".
 #' @param repeatID Numerical ID for duplicate objects with same metadata.
 #' @param returnNameOnly If TRUE, then only the names of tables that passed your
 #' search criteria will be returned. Else, the single table passing your search
@@ -78,6 +95,10 @@ EZget <- function(obj,
                   parameter = NULL,
                   counttype = NULL,
                   design_factor = NULL,
+                  dynamics_design_factors = NULL,
+                  scale_factors = NULL,
+                  cstrat = NULL,
+                  feature_lengths = NULL,
                   experimental = NULL,
                   reference = NULL,
                   param_name = NULL,
@@ -91,10 +112,10 @@ EZget <- function(obj,
                   sample_feature = NULL,
                   modeled_to_measured = NULL,
                   graph = NULL,
+                  normalize_by_median = NULL,
                   returnNameOnly = FALSE,
                   exactMatch = FALSE,
                   alwaysCheck = FALSE){
-
 
 
   type <- match.arg(type)
@@ -112,10 +133,15 @@ EZget <- function(obj,
 
   }
 
+  if(!is.null(cstrat)){
+
+    cstrat <- match.arg(cstrat, c("contrast", "single_param",
+                                  "dynamics", "function"))
+
+  }
+
   metadata <- obj[['metadata']][[type]]
 
-
-  table_of_interest <- NULL
 
 
   # If only one table is present, that's the one you want
@@ -241,6 +267,19 @@ EZget <- function(obj,
   }
 
 
+  if(!is.null(cstrat)){
+
+    possible_tables_c <- exact_ezsearch(metadata,
+                                         query = cstrat,
+                                         object = "cstrat")
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_c)
+
+
+  }
+
+
   if(!is.null(parameter)){
 
     possible_tables_par <- exact_ezsearch(metadata,
@@ -277,6 +316,46 @@ EZget <- function(obj,
 
 
   }
+
+
+  if(!is.null(dynamics_design_factors)){
+
+    possible_tables_d <- vector_ezsearch(metadata,
+                                         dynamics_design_factors,
+                                         "dynamics_design_factors",
+                                         exactMatch = exactMatch)
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_d)
+
+
+  }
+
+  if(!is.null(scale_factors)){
+
+    possible_tables_s <- exact_ezsearch(metadata,
+                                        query = scale_factors,
+                                        object = "scale_factors")
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_s)
+
+
+  }
+
+
+  if(!is.null(feature_lengths)){
+
+    possible_tables_f <- exact_ezsearch(metadata,
+                                        query = scale_factors,
+                                        object = "feature_lengths")
+
+
+    possible_tables <- intersect(possible_tables, possible_tables_f)
+
+
+  }
+
 
   if(!is.null(experimental)){
 
@@ -429,6 +508,18 @@ EZget <- function(obj,
   }
 
 
+  if(!is.null(normalize_by_median)){
+
+    possible_tables_m <- exact_ezsearch(metadata,
+                                        normalize_by_median,
+                                        "normalize_by_median")
+
+    possible_tables <- intersect(possible_tables, possible_tables_m)
+
+
+  }
+
+
   # Can return multiple names of candidate tables, but can
   # only return one table
   if(returnNameOnly){
@@ -439,7 +530,16 @@ EZget <- function(obj,
 
     }
 
-    return(possible_tables)
+    if(length(possible_tables) == 0){
+
+      return(NULL)
+
+    }else{
+
+      return(possible_tables)
+
+    }
+
 
   }else{
 
@@ -542,53 +642,18 @@ decide_output <- function(obj, proposed_name,
                           type = c("fractions", "kinetics",
                                    "readcounts", "averages",
                                    "comparisons", "dynamics"),
-                          features = NULL,
-                          populations = NULL,
-                          fraction_design = NULL,
-                          counttype = NULL,
-                          kstrat = NULL,
-                          parameter = NULL,
-                          design_factor = NULL,
-                          reference = NULL,
-                          experimental = NULL,
-                          param_name = NULL,
-                          param_function = NULL,
-                          formula_mean = NULL,
-                          sd_grouping_factors = NULL,
-                          fit_params = NULL,
-                          sub_features = NULL,
-                          grouping_features = NULL,
-                          sample_feature = NULL,
-                          modeled_to_measured = NULL,
-                          graph = NULL,
-                          overwrite = TRUE){
+                          overwrite = TRUE,
+                          ...){
+
 
   type = match.arg(type)
 
   ### Does same analysis output already exist?
   existing_output <- EZget(obj,
-                             type = type,
-                             features = features,
-                             populations = populations,
-                             fraction_design = fraction_design,
-                             parameter = parameter,
-                             kstrat = kstrat,
-                             counttype = counttype,
-                           design_factor = design_factor,
-                           reference = reference,
-                           experimental = experimental,
-                           param_name = param_name,
-                           param_function = param_function,
-                           formula_mean = formula_mean,
-                           sd_grouping_factors = sd_grouping_factors,
-                           fit_params = fit_params,
-                           sub_features = sub_features,
-                           grouping_features = grouping_features,
-                           sample_feature = sample_feature,
-                           modeled_to_measured = modeled_to_measured,
-                           graph = graph,
-                             returnNameOnly = TRUE,
-                             exactMatch = TRUE,
+                           type = type,
+                           ...,
+                           returnNameOnly = TRUE,
+                           exactMatch = TRUE,
                            alwaysCheck = TRUE)
 
   if(length(existing_output) == 0){

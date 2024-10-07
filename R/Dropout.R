@@ -23,6 +23,7 @@ CorrectDropout <- function(obj,
   ### Hack to deal with devtools::check() NOTEs
 
   tl <- n <- nolabel_rpm <- rpm <- pdo <- fit <- global_fraction <- corrected_gf <- corrected_fraction <- corrected_n <- NULL
+  nolabel_n <- nolabel_reps <- dropout <- sig <- NULL
 
 
   ##### GENERAL STEPS:
@@ -85,11 +86,14 @@ CorrectDropout <- function(obj,
     dplyr::inner_join(metadf %>% dplyr::filter(tl == 0),
                       by = "sample") %>%
     dplyr::group_by(sample) %>%
-    dplyr::mutate(nolabel_rpm = n/(sum(n)/1000000)) %>%
+    dplyr::mutate(nolabel_rpm = n/(sum(n)/1000000),
+                  nolabel_n = n) %>%
     dplyr::group_by(dplyr::across(dplyr::all_of(c(grouping_factors, features_to_analyze)))) %>%
-    dplyr::summarise(nolabel_rpm = mean(nolabel_rpm)) %>%
-    dplyr::select(!!grouping_factors, !!features_to_analyze, nolabel_rpm)
-
+    dplyr::summarise(nolabel_rpm = mean(nolabel_rpm),
+                     nolabel_n = mean(nolabel_n),
+                     nolabel_reps = dplyr::n()) %>%
+    dplyr::select(!!grouping_factors, !!features_to_analyze,
+                  nolabel_rpm, nolabel_n, nolabel_reps)
 
 
   corrected <- fractions %>%
@@ -103,19 +107,25 @@ CorrectDropout <- function(obj,
     dplyr::inner_join(nolabel_data,
                       by = c(grouping_factors, features_to_analyze)) %>%
     dplyr::mutate(dropout = rpm / nolabel_rpm) %>%
+    dplyr::mutate(sig = sqrt((!!dplyr::sym(logit_se))^2 )) %>%
 
     ### ESTIMATE DROPOUT PARAMETERS:
     dplyr::group_by(sample) %>%
     dplyr::mutate(
-      fit = I(list(summary(stats::nls(log(dropout) ~ log((-(scale*pdo)*!!dplyr::sym(fraction_of_interest))/((1-pdo) + !!dplyr::sym(fraction_of_interest)*pdo) + scale),
-                                      start = list(scale = 1, pdo = 0.2)))))
+      fit = I(list(stats::optim(
+        par = c(0.2, 2),
+        dropout_likelihood,
+        theta = !!dplyr::sym(fraction_of_interest),
+        dropout = dropout,
+        sig = sig,
+        method = "L-BFGS-B",
+        upper = c(0.99, 100),
+        lower = c(0.01, 1) # Scale factor can't be < 1 because -s4U molecule count > +s4U molecule count
+      )))
     ) %>%
     dplyr::mutate(
-      pdo := purrr::map_dbl(fit, ~ .x$coefficients[2,1]),
-      scale := purrr::map_dbl(fit, ~ .x$coefficients[1,1]),
-    ) %>%
-    dplyr::mutate(
-      pdo = ifelse(pdo < 0, 0, pdo)
+      pdo := purrr::map_dbl(fit, ~ .x$par[1]),
+      scale := purrr::map_dbl(fit, ~ .x$par[2]),
     ) %>%
     dplyr::select(-fit) %>%
 
@@ -126,7 +136,7 @@ CorrectDropout <- function(obj,
     dplyr::mutate(global_fraction = sum(!!dplyr::sym(fraction_of_interest)*n)/sum(n)) %>%
     dplyr::ungroup() %>%
     dplyr::mutate(corrected_gf = global_fraction/((1 - pdo) + global_fraction * pdo)) %>%
-    dplyr::mutate(corrected_n = round(n * (corrected_gf*(1 - pdo) + (1 - corrected_gf) /
+    dplyr::mutate(corrected_n = ceiling(n * (corrected_gf*(1 - pdo) + (1 - corrected_gf) /
                     (corrected_fraction*(1 - pdo) + (1 - corrected_fraction))))
     ) %>%
     dplyr::mutate(!!fraction_of_interest := corrected_fraction,
@@ -141,11 +151,6 @@ CorrectDropout <- function(obj,
     dplyr::select(sample, pdo, scale) %>%
     dplyr::distinct()
 
-
-  if(any(dropout_params$pdo > 1)){
-    stop("Dropout was estimated to be 100%, in one of your samples, which is likely an estimation error.
-              Is your data of unusually low coverage or metabolic label incorporation rate? This can lead to estimation problems.")
-  }
 
   message(paste0(c("Estimated rates of dropout are:",
                    utils::capture.output(as.data.frame(dropout_params[,c("sample", "pdo")]))),
@@ -165,5 +170,33 @@ CorrectDropout <- function(obj,
 
 
   return(obj)
+
+}
+
+
+# Dropout likelihood function
+# log(dropout) ~ Normal(f(pdo, theta, scale), sig)
+dropout_likelihood <- function(param, dropout, theta, sig){
+
+  pdo <- param[1]
+  scale <- param[2]
+
+  Edropout <- log((-(scale*pdo)*theta)/((1-pdo) + theta*pdo) + scale)
+
+  ll <- stats::dnorm(dropout,
+              Edropout,
+              sig,
+              log = TRUE)
+
+  return(-sum(ll))
+
+
+}
+
+
+# Estimating standard deviation of log(reads)
+read_sig <- function(reads, reps){
+
+  return(sqrt(1/reads)/sqrt(reps))
 
 }

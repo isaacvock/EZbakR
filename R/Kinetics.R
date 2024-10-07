@@ -170,6 +170,7 @@ Standard_kinetic_estimation <- function(obj,
   tl <- kdeg <- log_kdeg <- se_log_kdeg <- ..cols_to_keep <- ..kinetics_cols_to_keep <- NULL
   ksyn <- normalized_reads <- log_ksyn <- se_log_ksyn <- scale_factor <- n <- nolabel_rpm <- NULL
   old_rpm <- new_rpm <- geom_mean <- rpm <- nolabel_n <- nolabel_reps <- NULL
+  reference_rpm <- reference_n <- reference_reps <- NULL
 
   rm(..cols_to_keep)
   rm(..kinetics_cols_to_keep)
