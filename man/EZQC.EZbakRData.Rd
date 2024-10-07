@@ -15,6 +15,8 @@
 )
 }
 \arguments{
+\item{obj}{An EZbakRData object}
+
 \item{mutrate_populations}{Same as in \code{EstimateFractions()}. See \code{?EstimateFractions()}
 for details.}
 
@@ -29,6 +31,8 @@ for details.}
 
 \item{remove_features}{Same as in \code{EstimateFractions()}. See \code{?EstimateFractions()}
 for details.}
+
+\item{...}{Additional arguments. Currently goes unused.}
 }
 \description{
 Run quality control checks

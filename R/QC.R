@@ -34,6 +34,7 @@ EZQC <- function(obj,
 #'
 #' @param obj EZbakRFractions object, which is an EZbakRData object on which
 #' `EstimateFractions` has been run.
+#' @param ... Additional arguments. Currently goes unused.
 #' @param features Set of features analyzed in the fractions table you are
 #' interested QCing. This gets passed to `EZget()` to help find this table.
 #' @param populations Set of mutation types analyzed in the fractions table
@@ -103,6 +104,8 @@ EZQC.EZbakRFractions <- function(obj,
 
 #' Run quality control checks
 #'
+#' @param obj An EZbakRData object
+#' @param ... Additional arguments. Currently goes unused.
 #' @param mutrate_populations Same as in `EstimateFractions()`. See `?EstimateFractions()`
 #' for details.
 #' @param features Same as in `EstimateFractions()`. See `?EstimateFractions()`

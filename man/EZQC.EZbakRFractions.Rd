@@ -19,6 +19,8 @@ you are interested in QCing. This gets passed to \code{EZget()} to help find thi
 \item{fraction_design}{The fraction "design matrix" specified to get the
 fractions table you are interested in QCing. This gets passed to \code{EZget()} to
 help find this table.}
+
+\item{...}{Additional arguments. Currently goes unused.}
 }
 \description{
 Run quality control checks
