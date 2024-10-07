@@ -23,6 +23,7 @@
     <li><a class="dropdown-item" href="../articles/EstimateFractions.html">EstimateFractions</a></li>
     <li><a class="dropdown-item" href="../articles/EstimateKinetics.html">EstimateKinetics</a></li>
     <li><a class="dropdown-item" href="../articles/Linear-modeling.html">Linear modeling in EZbakR</a></li>
+    <li><a class="dropdown-item" href="../articles/EZDynamics.html">Dynamical systems modeling in EZbakR</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -56,6 +57,10 @@
 <span>  parameter <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  counttype <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  design_factor <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  dynamics_design_factors <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  scale_factors <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  cstrat <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  feature_lengths <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  experimental <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  reference <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  param_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -69,6 +74,7 @@
 <span>  sample_feature <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  modeled_to_measured <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  graph <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  normalize_by_median <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  returnNameOnly <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  exactMatch <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  alwaysCheck <span class="op">=</span> <span class="cn">FALSE</span></span>
@@ -128,6 +134,31 @@ Not sure this is being used in any way currently...</p></dd>
 <dt id="arg-design-factor">design_factor<a class="anchor" aria-label="anchor" href="#arg-design-factor"></a></dt>
 <dd><p>design_factor specified in relevant run of <code><a href="CompareParameters.html">CompareParameters()</a></code>.
 Therefore, only relevant if type == "comparisons".</p></dd>
+
+
+<dt id="arg-dynamics-design-factors">dynamics_design_factors<a class="anchor" aria-label="anchor" href="#arg-dynamics-design-factors"></a></dt>
+<dd><p>design_factors included in final <code><a href="EZDynamics.html">EZDynamics()</a></code> output.
+Therefore, only relevant if type == "dynamics".</p></dd>
+
+
+<dt id="arg-scale-factors">scale_factors<a class="anchor" aria-label="anchor" href="#arg-scale-factors"></a></dt>
+<dd><p>Sample group scale factors used in <code><a href="EZDynamics.html">EZDynamics()</a></code>.
+Therefore, only relevant if type == "dynamics"</p></dd>
+
+
+<dt id="arg-cstrat">cstrat<a class="anchor" aria-label="anchor" href="#arg-cstrat"></a></dt>
+<dd><p>Strategy used for comparative analyses. Can be:</p><ul><li><p>contrast: If two parameters were compared via specifying the reference
+and experimental levels in <code><a href="CompareParameters.html">CompareParameters()</a></code> (for type == "averages").</p></li>
+<li><p>single_param: If a single parameter was passed to <code><a href="CompareParameters.html">CompareParameters()</a></code>
+via its <code>param_name</code> option.</p></li>
+<li><p>dynamics: If output of <code><a href="EZDynamics.html">EZDynamics()</a></code> was passed to <code><a href="CompareParameters.html">CompareParameters()</a></code></p></li>
+<li><p>function: If function of multiple parameters was passed to <code>CompareParameter()</code>
+via its <code>param_function</code> option.</p></li>
+</ul></dd>
+
+
+<dt id="arg-feature-lengths">feature_lengths<a class="anchor" aria-label="anchor" href="#arg-feature-lengths"></a></dt>
+<dd><p>Table of feature lengths used for length normalization.</p></dd>
 
 
 <dt id="arg-experimental">experimental<a class="anchor" aria-label="anchor" href="#arg-experimental"></a></dt>
@@ -197,6 +228,11 @@ and the species in <code>graph</code>.</p></dd>
 <dt id="arg-graph">graph<a class="anchor" aria-label="anchor" href="#arg-graph"></a></dt>
 <dd><p>Only relevant if type == "dynamics". NxN adjacency matrix,
 where N represents the number of species modeled when running <code><a href="EZDynamics.html">EZDynamics()</a></code>.</p></dd>
+
+
+<dt id="arg-normalize-by-median">normalize_by_median<a class="anchor" aria-label="anchor" href="#arg-normalize-by-median"></a></dt>
+<dd><p>Whether median difference was subtracted from estimated
+kinetic parameter difference. Thus, only relevant if type == "comparisons".</p></dd>
 
 
 <dt id="arg-returnnameonly">returnNameOnly<a class="anchor" aria-label="anchor" href="#arg-returnnameonly"></a></dt>

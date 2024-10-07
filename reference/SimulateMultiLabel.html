@@ -31,6 +31,7 @@ parameters."></head><body>
     <li><a class="dropdown-item" href="../articles/EstimateFractions.html">EstimateFractions</a></li>
     <li><a class="dropdown-item" href="../articles/EstimateKinetics.html">EstimateKinetics</a></li>
     <li><a class="dropdown-item" href="../articles/Linear-modeling.html">Linear modeling in EZbakR</a></li>
+    <li><a class="dropdown-item" href="../articles/EZDynamics.html">Dynamical systems modeling in EZbakR</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -84,8 +85,130 @@ parameters.</p>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
+    <div class="section level2">
+    <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
 
-  </main></div>
+
+<dl><dt id="arg-nfeatures">nfeatures<a class="anchor" aria-label="anchor" href="#arg-nfeatures"></a></dt>
+<dd><p>Number of "features" (e.g., genes) to simulate data for</p></dd>
+
+
+<dt id="arg-populations">populations<a class="anchor" aria-label="anchor" href="#arg-populations"></a></dt>
+<dd><p>Vector of mutation populations you want to simulate.</p></dd>
+
+
+<dt id="arg-fraction-design">fraction_design<a class="anchor" aria-label="anchor" href="#arg-fraction-design"></a></dt>
+<dd><p>Fraction design matrix, specifying which potential mutational
+populations should actually exist. See ?EstimateFractions for more details.</p></dd>
+
+
+<dt id="arg-fractions-matrix">fractions_matrix<a class="anchor" aria-label="anchor" href="#arg-fractions-matrix"></a></dt>
+<dd><p>Matrix of fractions of each mutational population to simulate.
+If not provided, this will be simulated. One row for each feature, one column for each
+mutational population, rows should sum to 1.</p></dd>
+
+
+<dt id="arg-read-vect">read_vect<a class="anchor" aria-label="anchor" href="#arg-read-vect"></a></dt>
+<dd><p>Vector of length = <code>nfeatures</code>; specifies the number of reads
+to be simulated for each feature. If this is not provided, the number of reads
+simulated is equal to <code>round(seqdepth * (ksyn_i/kdeg_i)/sum(ksyn/kdeg))</code>. In other words,
+the normalized steady-state abundance of a feature is multiplied by the total number
+of reads to be simulated and rounded to the nearest integer.</p></dd>
+
+
+<dt id="arg-sample-name">sample_name<a class="anchor" aria-label="anchor" href="#arg-sample-name"></a></dt>
+<dd><p>Character vector to assign to <code>sample</code> column of output simulated
+data table (the cB table).</p></dd>
+
+
+<dt id="arg-feature-prefix">feature_prefix<a class="anchor" aria-label="anchor" href="#arg-feature-prefix"></a></dt>
+<dd><p>Name given to the i-th feature is <code>paste0(feature_prefix, i)</code>. Shows up in the
+<code>feature</code> column of the output simulated data table.</p></dd>
+
+
+<dt id="arg-kdeg-vect">kdeg_vect<a class="anchor" aria-label="anchor" href="#arg-kdeg-vect"></a></dt>
+<dd><p>Vector of length = <code>nfeatures</code>; specifies the degradation rate constant to use for each
+feature's simulation. If this is not provided and <code>fn_vect</code> is, then <code>kdeg_vect = -log(1 - fn_vect)/label_time</code>.
+If both <code>kdeg_vect</code> and <code>fn_vect</code> are not provided, each feature's <code>kdeg_vect</code> value is drawn from a log-normal distrubition
+with meanlog = <code>logkdeg_mean</code> and sdlog = <code>logkdeg_sd</code>. <code>kdeg_vect</code> is actually only simulated in the case
+where <code>read_vect</code> is also not provided, as it will be used to simulate read counts as described above.</p></dd>
+
+
+<dt id="arg-ksyn-vect">ksyn_vect<a class="anchor" aria-label="anchor" href="#arg-ksyn-vect"></a></dt>
+<dd><p>Vector of length = <code>nfeatures</code>; specifies the synthesis rate constant to use for each
+feature's simulation. If this is not provided, and <code>read_vect</code> is also not provided, then each
+feature's <code>ksyn_vect</code> value is drawn from a log-normal distribution with meanlog = <code>logksyn_mean</code> and
+sdlog = <code>logksyn_sd</code>. ksyn's do not need to be simulated if <code>read_vect</code> is provided, as they only
+influence read counts.</p></dd>
+
+
+<dt id="arg-logkdeg-mean">logkdeg_mean<a class="anchor" aria-label="anchor" href="#arg-logkdeg-mean"></a></dt>
+<dd><p>If necessary, meanlog of a log-normal distribution from which
+kdegs are simulated</p></dd>
+
+
+<dt id="arg-logkdeg-sd">logkdeg_sd<a class="anchor" aria-label="anchor" href="#arg-logkdeg-sd"></a></dt>
+<dd><p>If necessary, sdlog of a log-normal distribution from which
+kdegs are simulated</p></dd>
+
+
+<dt id="arg-logksyn-mean">logksyn_mean<a class="anchor" aria-label="anchor" href="#arg-logksyn-mean"></a></dt>
+<dd><p>If necessary, meanlog of a log-normal distribution from which
+ksyns are simulated</p></dd>
+
+
+<dt id="arg-logksyn-sd">logksyn_sd<a class="anchor" aria-label="anchor" href="#arg-logksyn-sd"></a></dt>
+<dd><p>If necessary, sdlog of a log-normal distribution from which
+ksyns are simulated</p></dd>
+
+
+<dt id="arg-phighs">phighs<a class="anchor" aria-label="anchor" href="#arg-phighs"></a></dt>
+<dd><p>Vector of probabilities of mutation rates in labeled reads of each type denoted in
+<code>populations</code>. Should be a named vector, with names being the corresponding <code>population</code>.</p></dd>
+
+
+<dt id="arg-plows">plows<a class="anchor" aria-label="anchor" href="#arg-plows"></a></dt>
+<dd><p>Vector of probabilities of mutation rates in unlabeled reads of each type denoted in
+<code>populations</code>. Should be a named vector, with names being the corresponding <code>population</code>.</p></dd>
+
+
+<dt id="arg-seqdepth">seqdepth<a class="anchor" aria-label="anchor" href="#arg-seqdepth"></a></dt>
+<dd><p>Only relevant if <code>read_vect</code> is not provided; in that case, this is
+the total number of reads to simulate.</p></dd>
+
+
+<dt id="arg-readlength">readlength<a class="anchor" aria-label="anchor" href="#arg-readlength"></a></dt>
+<dd><p>Length of simulated reads. In this simple simulation, all reads
+are simulated as being exactly this length.</p></dd>
+
+
+<dt id="arg-alpha-min">alpha_min<a class="anchor" aria-label="anchor" href="#arg-alpha-min"></a></dt>
+<dd><p>Minimum possible value of alpha element of Dirichlet random variable</p></dd>
+
+
+<dt id="arg-alpha-max">alpha_max<a class="anchor" aria-label="anchor" href="#arg-alpha-max"></a></dt>
+<dd><p>Maximum possible value of alpha element of Dirichlet random variable</p></dd>
+
+
+<dt id="arg-ucont">Ucont<a class="anchor" aria-label="anchor" href="#arg-ucont"></a></dt>
+<dd><p>Probability that a nucleotide in a simulated read is a U.</p></dd>
+
+
+<dt id="arg-acont">Acont<a class="anchor" aria-label="anchor" href="#arg-acont"></a></dt>
+<dd><p>Probability that a nucleotide in a simulated read is an A.</p></dd>
+
+
+<dt id="arg-gcont">Gcont<a class="anchor" aria-label="anchor" href="#arg-gcont"></a></dt>
+<dd><p>Probability that a nucleotide in a simulated read is a G.</p></dd>
+
+
+<dt id="arg-ccont">Ccont<a class="anchor" aria-label="anchor" href="#arg-ccont"></a></dt>
+<dd><p>Probability that a nucleotide in a simulated read is a C.</p></dd>
+
+</dl></div>
+
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

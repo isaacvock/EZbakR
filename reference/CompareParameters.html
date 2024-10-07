@@ -23,6 +23,7 @@
     <li><a class="dropdown-item" href="../articles/EstimateFractions.html">EstimateFractions</a></li>
     <li><a class="dropdown-item" href="../articles/EstimateKinetics.html">EstimateKinetics</a></li>
     <li><a class="dropdown-item" href="../articles/Linear-modeling.html">Linear modeling in EZbakR</a></li>
+    <li><a class="dropdown-item" href="../articles/EZDynamics.html">Dynamical systems modeling in EZbakR</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -51,6 +52,8 @@
 <span>  <span class="va">reference</span>,</span>
 <span>  <span class="va">experimental</span>,</span>
 <span>  <span class="va">param_name</span>,</span>
+<span>  parameter <span class="op">=</span> <span class="st">"log_kdeg"</span>,</span>
+<span>  type <span class="op">=</span> <span class="st">"averages"</span>,</span>
 <span>  <span class="va">param_function</span>,</span>
 <span>  condition <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  features <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -59,8 +62,10 @@
 <span>  formula_mean <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  sd_grouping_factors <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  fit_params <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  parameter <span class="op">=</span> <span class="st">"log_kdeg"</span></span>
+<span>  normalize_by_median <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  reference_levels <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  experimental_levels <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -76,23 +81,49 @@ which <code><a href="AverageAndRegularize.html">AverageAndRegularize()</a></code
 <dt id="arg-design-factor">design_factor<a class="anchor" aria-label="anchor" href="#arg-design-factor"></a></dt>
 <dd><p>Name of factor from <code>metadf</code> whose parameter estimates at
 different factor values you would like to compare. If you specify this, you need
-to also specify <code>reference</code> and <code>experimental</code>.</p></dd>
+to also specify <code>reference</code> and <code>experimental</code>. If <code>type</code> == "dynamics", this
+can have multiple values, being the names of all of the factors you would like
+to stratify a group by.</p></dd>
 
 
 <dt id="arg-reference">reference<a class="anchor" aria-label="anchor" href="#arg-reference"></a></dt>
-<dd><p>Name of reference <code>condition</code> factor level value. Difference
-will be calculated as <code>experimental</code> - <code>reference</code>.</p></dd>
+<dd><p>Name of reference <code>design_factor</code> factor level value. Difference
+will be calculated as <code>experimental</code> - <code>reference</code>. If type == "dynamics", then this should specify the levels
+of all of the <code>design_factor</code>(s) reference group. For example, if you have
+multiple <code>design_factor</code>'s, then <code>reference</code> must be a named character vector with one element
+per <code>design_factor</code>, with elements named the corresponding <code>design_factor</code>. For
+example, if <code>design_factor</code> is c("genotype", "treatment"), and you would like
+to compare genotype = "WT" and treatment = "untreated" (reference) to genotype = "KO" and
+treatment = "treated", then <code>reference</code> would need to be a vector with
+one element named "genotype", equal to "WT" and one element named "treatment"
+equal to "untreated" (this example could be created with, <code>c(genotype = "WT", treatment = "untreated")</code>).</p></dd>
 
 
 <dt id="arg-experimental">experimental<a class="anchor" aria-label="anchor" href="#arg-experimental"></a></dt>
-<dd><p>Name of <code>condition</code> factor level value to compare to reference.
-Difference will be calculated as <code>experimental</code> - <code>reference</code>.</p></dd>
+<dd><p>Name of <code>design_factor</code> factor level value to compare to reference.
+Difference will be calculated as <code>experimental</code> - <code>reference</code>. If type == "dynamics", then this should specify the levels
+of all of the <code>design_factor</code>(s) reference group. For example, if you have
+multiple <code>design_factor</code>'s, then <code>experimental</code> must be a named character vector with one element
+per <code>design_factor</code>, with elements named the corresponding <code>design_factor</code>. For
+example, if <code>design_factor</code> is c("genotype", "treatment"), and you would like
+to compare genotype = "WT" and treatment = "untreated" (reference) to genotype = "KO" and
+treatment = "treated", then <code>experimental</code> would need to be a vector with
+one element named "genotype", equal to "KO" and one element named "treatment"
+equal to "treated" (this example could be created with, <code>c(genotype = "KO", treatment = "treated")</code>).</p></dd>
 
 
 <dt id="arg-param-name">param_name<a class="anchor" aria-label="anchor" href="#arg-param-name"></a></dt>
 <dd><p>If you want to assess the significance of a single parameter,
 rather than the comparison of two parameters, specify that one parameter's name
 here.</p></dd>
+
+
+<dt id="arg-parameter">parameter<a class="anchor" aria-label="anchor" href="#arg-parameter"></a></dt>
+<dd><p>Parameter to average across replicates of a given condition.</p></dd>
+
+
+<dt id="arg-type">type<a class="anchor" aria-label="anchor" href="#arg-type"></a></dt>
+<dd><p>Type of table to use. Can either be "averages" or "dynamics".</p></dd>
 
 
 <dt id="arg-param-function">param_function<a class="anchor" aria-label="anchor" href="#arg-param-function"></a></dt>
@@ -139,12 +170,25 @@ standard deviations across replicates for the averages object you want to use.</
 you would like to use.</p></dd>
 
 
+<dt id="arg-normalize-by-median">normalize_by_median<a class="anchor" aria-label="anchor" href="#arg-normalize-by-median"></a></dt>
+<dd><p>If TRUE, then median difference will be set equal to 0.
+This can account for global biases in parameter estimates due to things like differences
+in effective label times. Does risk eliminating real signal though, so user discretion
+is advised.</p></dd>
+
+
+<dt id="arg-reference-levels">reference_levels<a class="anchor" aria-label="anchor" href="#arg-reference-levels"></a></dt>
+<dd><p>Same as <code>reference</code>, but exclusively parsed in case of
+<code>type</code> == "dynamics, included for backwards compatibility.</p></dd>
+
+
+<dt id="arg-experimental-levels">experimental_levels<a class="anchor" aria-label="anchor" href="#arg-experimental-levels"></a></dt>
+<dd><p>Same as <code>experimental</code>, but exclusively parsed in case of
+<code>type</code> == "dynamics, included for backwards compatibility.</p></dd>
+
+
 <dt id="arg-overwrite">overwrite<a class="anchor" aria-label="anchor" href="#arg-overwrite"></a></dt>
 <dd><p>If TRUE, then identical output will be overwritten if it exists.</p></dd>
-
-
-<dt id="arg-parameter">parameter<a class="anchor" aria-label="anchor" href="#arg-parameter"></a></dt>
-<dd><p>Parameter to average across replicates of a given condition.</p></dd>
 
 </dl></div>
 

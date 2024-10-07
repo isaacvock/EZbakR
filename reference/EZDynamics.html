@@ -33,6 +33,7 @@ involves assaying different species in different samples)."></head><body>
     <li><a class="dropdown-item" href="../articles/EstimateFractions.html">EstimateFractions</a></li>
     <li><a class="dropdown-item" href="../articles/EstimateKinetics.html">EstimateKinetics</a></li>
     <li><a class="dropdown-item" href="../articles/Linear-modeling.html">Linear modeling in EZbakR</a></li>
+    <li><a class="dropdown-item" href="../articles/EZDynamics.html">Dynamical systems modeling in EZbakR</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -68,9 +69,14 @@ involves assaying different species in different samples).</p>
 <span>  scale_factors <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  sample_feature <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  modeled_to_measured <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  parameter_names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"k"</span>, <span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">graph</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  parameter_names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"logk"</span>, <span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">graph</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  unassigned_name <span class="op">=</span> <span class="st">"__no_feature"</span>,</span>
 <span>  type <span class="op">=</span> <span class="st">"averages"</span>,</span>
+<span>  prior_means <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="op">-</span><span class="fl">3</span>, times <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">graph</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  prior_sds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, times <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">graph</span><span class="op">)</span> <span class="op">-</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  avg_params_tokeep <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  avg_params_todrop <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  label_time_name <span class="op">=</span> <span class="st">"tl"</span>,</span>
 <span>  features <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  populations <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  fraction_design <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -78,6 +84,10 @@ involves assaying different species in different samples).</p>
 <span>  repeatID <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  exactMatch <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  feature_lengths <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  use_coverage <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  normalization_repeatID <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  normalization_exactMatch <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  species_to_sf <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -187,6 +197,35 @@ was not assigned to said feature? "__no_feature" by default.</p></dd>
 "averages", but will support "fractions" in the near future.</p></dd>
 
 
+<dt id="arg-prior-means">prior_means<a class="anchor" aria-label="anchor" href="#arg-prior-means"></a></dt>
+<dd><p>Mean of log-Normal prior for kinetic parameters. Should
+be vector where ith value is mean for ith parameter, i = index in <code>graph</code></p></dd>
+
+
+<dt id="arg-prior-sds">prior_sds<a class="anchor" aria-label="anchor" href="#arg-prior-sds"></a></dt>
+<dd><p>Std. dev. of log-Normal prior for kinetic parameter.
+Should be vector where ith value is mean for ith parameter, i = index in <code>graph</code>.</p></dd>
+
+
+<dt id="arg-avg-params-tokeep">avg_params_tokeep<a class="anchor" aria-label="anchor" href="#arg-avg-params-tokeep"></a></dt>
+<dd><p>Names of parameters in averages table that you would
+like to keep. Other parameters will be discarded. Don't include the prefixes "mean_",
+"sd_", or "coverage_"; these will be imputed automatically. In other words,
+this should be the base parameter names.</p></dd>
+
+
+<dt id="arg-avg-params-todrop">avg_params_todrop<a class="anchor" aria-label="anchor" href="#arg-avg-params-todrop"></a></dt>
+<dd><p>Names of parameters in averages table that you would
+like to drop. Other parameters will be kept. Don't include the prefixes "mean_",
+"sd_", or "coverage_"; these will be imputed automatically. In other words,
+this should be the base parameter names.</p></dd>
+
+
+<dt id="arg-label-time-name">label_time_name<a class="anchor" aria-label="anchor" href="#arg-label-time-name"></a></dt>
+<dd><p>Name of relevant label time column that will be found
+in the parameter names. Defaults to the standard "tl".</p></dd>
+
+
 <dt id="arg-features">features<a class="anchor" aria-label="anchor" href="#arg-features"></a></dt>
 <dd><p>Character vector of the set of features you want to stratify
 reads by and estimate proportions of each RNA population. The default of "all"
@@ -229,6 +268,42 @@ by default.</p></dd>
 <dd><p>Table of effective lengths for each feature combination in your
 data. For example, if your analysis includes features named GF and XF, this
 should be a data frame with columns GF, XF, and length.</p></dd>
+
+
+<dt id="arg-use-coverage">use_coverage<a class="anchor" aria-label="anchor" href="#arg-use-coverage"></a></dt>
+<dd><p>If TRUE, normalized read counts will be used to inform
+kinetic parameter estimates. If FALSE, only fraction news will be used, which
+will leave some parameters (e.g., synthesis rate) unidentifiable, though has
+the advantage of avoiding the potential biases induced by normalization problems.</p></dd>
+
+
+<dt id="arg-normalization-repeatid">normalization_repeatID<a class="anchor" aria-label="anchor" href="#arg-normalization-repeatid"></a></dt>
+<dd><p>For extracting the <code>fractions</code> table needed for
+normalization of multi-sample data. If multiple <code>fractions</code> tables exist with the same metadata,
+then this is the numerical index by which they are distinguished.</p></dd>
+
+
+<dt id="arg-normalization-exactmatch">normalization_exactMatch<a class="anchor" aria-label="anchor" href="#arg-normalization-exactmatch"></a></dt>
+<dd><p>For extracting the <code>fractions</code> table needed for
+normalization of multi-sample data. If TRUE, then <code>features</code> and <code>populations</code>
+have to exactly match those for a given fractions table for that table to be used.
+Means that you can't specify a subset of features or populations by default, since this is TRUE
+by default.</p></dd>
+
+
+<dt id="arg-species-to-sf">species_to_sf<a class="anchor" aria-label="anchor" href="#arg-species-to-sf"></a></dt>
+<dd><p>List mapping individual RNA species in <code>graph</code> to
+different sample_feature values (sf). This is relevant if you are modeling both
+pre- and mature RNA dynamics in subcellular fractionation data. EZbakR can usually
+automatically infer this, but if not, then you can manually specify this mapping.
+Should be a list with one element per unique sample_feature type. Each element should
+be a vector of the RNA species in <code>graph</code> that belong to that sample_feature type. For
+example, if you have whole cell, cytoplasmic, and nuclear fraction data, this should have
+one element called "cytoplasmic" and one element called "nuclear". The whole cell
+sample_feature is a sum of cytoplasmic and nuclear and thus does not apply. The "cytoplasmic"
+element of this list should be the set of RNA species that are present in the cytoplasm,
+e.g. cytoplasmic pre-RNA (maybe referred to in <code>graph</code> as CP) and cytoplasmic mature
+RNA (maybe referred to in <code>graph</code> as CM).</p></dd>
 
 
 <dt id="arg-overwrite">overwrite<a class="anchor" aria-label="anchor" href="#arg-overwrite"></a></dt>

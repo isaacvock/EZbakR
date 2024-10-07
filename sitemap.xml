@@ -2,6 +2,7 @@
 <url><loc>https://isaacvock.github.io/EZbakR/404.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/LICENSE-text.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/LICENSE.html</loc></url>
+<url><loc>https://isaacvock.github.io/EZbakR/articles/EZDynamics.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/articles/EZget.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/articles/EstimateFractions.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/articles/EstimateKinetics.html</loc></url>
@@ -15,6 +16,9 @@
 <url><loc>https://isaacvock.github.io/EZbakR/reference/CorrectDropout.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EZDynamics.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EZMAPlot.html</loc></url>
+<url><loc>https://isaacvock.github.io/EZbakR/reference/EZQC.EZbakRData.html</loc></url>
+<url><loc>https://isaacvock.github.io/EZbakR/reference/EZQC.EZbakRFractions.html</loc></url>
+<url><loc>https://isaacvock.github.io/EZbakR/reference/EZQC.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EZSimulate.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EZVolcanoPlot.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EZbakRArrowData.html</loc></url>
@@ -49,6 +53,7 @@
 <url><loc>https://isaacvock.github.io/EZbakR/reference/new_EZbakRData.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/new_EZbakRFractions.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/new_EZbakRKinetics.html</loc></url>
+<url><loc>https://isaacvock.github.io/EZbakR/reference/ode_models.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/standard_fraction_design.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/tilac_fraction_design.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/validate_EZbakRArrowData.html</loc></url>

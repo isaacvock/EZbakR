@@ -23,6 +23,7 @@
     <li><a class="dropdown-item" href="../articles/EstimateFractions.html">EstimateFractions</a></li>
     <li><a class="dropdown-item" href="../articles/EstimateKinetics.html">EstimateKinetics</a></li>
     <li><a class="dropdown-item" href="../articles/Linear-modeling.html">Linear modeling in EZbakR</a></li>
+    <li><a class="dropdown-item" href="../articles/EZDynamics.html">Dynamical systems modeling in EZbakR</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -55,10 +56,11 @@
 <span>  param_function <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  features <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  condition <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  repeatID <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  exactMatch <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  plotlog2 <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  FDR_cutoff <span class="op">=</span> <span class="fl">0.05</span>,</span>
-<span>  difference_cutoff <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  difference_cutoff <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span>,</span>
 <span>  size <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -108,6 +110,11 @@ rather than individual parameters or simple differences in two parameters.</p></
 <dt id="arg-condition">condition<a class="anchor" aria-label="anchor" href="#arg-condition"></a></dt>
 <dd><p>Defunct parameter that has been replaced with <code>design_factor</code>. If provided
 gets passed to <code>design_factor</code> if <code>design_factor</code> is not already specified.</p></dd>
+
+
+<dt id="arg-repeatid">repeatID<a class="anchor" aria-label="anchor" href="#arg-repeatid"></a></dt>
+<dd><p>If multiple <code>kinetics</code> or <code>fractions</code> tables exist with the same metadata,
+then this is the numerical index by which they are distinguished.</p></dd>
 
 
 <dt id="arg-exactmatch">exactMatch<a class="anchor" aria-label="anchor" href="#arg-exactmatch"></a></dt>

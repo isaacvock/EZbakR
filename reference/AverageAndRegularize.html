@@ -33,6 +33,7 @@ bakR, though slightly improved upon since then."></head><body>
     <li><a class="dropdown-item" href="../articles/EstimateFractions.html">EstimateFractions</a></li>
     <li><a class="dropdown-item" href="../articles/EstimateKinetics.html">EstimateKinetics</a></li>
     <li><a class="dropdown-item" href="../articles/Linear-modeling.html">Linear modeling in EZbakR</a></li>
+    <li><a class="dropdown-item" href="../articles/EZDynamics.html">Dynamical systems modeling in EZbakR</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -77,6 +78,7 @@ bakR, though slightly improved upon since then.</p>
 <span>  error_if_singular <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  min_reads <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  convert_tl_to_factor <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  regress_se_with_abs <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  force_lm <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  force_optim <span class="op">=</span> <span class="va">force_lm</span>,</span>
 <span>  conservative <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -192,6 +194,13 @@ all treatment Bs correspond to batch Bs).</p></dd>
 convert its values to factors so as to avoid performing continuous regression on label
 times. Defaults to TRUE as including label time in the regression is often meant to
 stratify samples by their label time if, for example, you are averaging logit(fractions).</p></dd>
+
+
+<dt id="arg-regress-se-with-abs">regress_se_with_abs<a class="anchor" aria-label="anchor" href="#arg-regress-se-with-abs"></a></dt>
+<dd><p>If TRUE, and if <code>type == "fractions"</code>, then standard error
+will be regressed against logit fraction rather than magnitude of logit fraction.
+Makes sense to set this to FALSE if analyzing certain site-specific mutational probing
+methods when high mutation content things are likely low variance SNPs.</p></dd>
 
 
 <dt id="arg-force-lm">force_lm<a class="anchor" aria-label="anchor" href="#arg-force-lm"></a></dt>

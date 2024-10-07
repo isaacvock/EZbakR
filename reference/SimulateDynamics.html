@@ -35,6 +35,7 @@ conditions."></head><body>
     <li><a class="dropdown-item" href="../articles/EstimateFractions.html">EstimateFractions</a></li>
     <li><a class="dropdown-item" href="../articles/EstimateKinetics.html">EstimateKinetics</a></li>
     <li><a class="dropdown-item" href="../articles/Linear-modeling.html">Linear modeling in EZbakR</a></li>
+    <li><a class="dropdown-item" href="../articles/EZDynamics.html">Dynamical systems modeling in EZbakR</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -67,13 +68,18 @@ conditions.</p>
 <span>  <span class="va">nfeatures</span>,</span>
 <span>  <span class="va">graph</span>,</span>
 <span>  <span class="va">metadf</span>,</span>
-<span>  formula_list <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">log_means</span>,</span>
 <span>  <span class="va">log_sds</span>,</span>
+<span>  ntreatments <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  treatment_effects <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  formula_list <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  unassigned_name <span class="op">=</span> <span class="st">"__no_feature"</span>,</span>
 <span>  seqdepth <span class="op">=</span> <span class="va">nfeatures</span> <span class="op">*</span> <span class="fl">2500</span>,</span>
 <span>  dispersion <span class="op">=</span> <span class="fl">100</span>,</span>
 <span>  lfn_sd <span class="op">=</span> <span class="fl">0.2</span>,</span>
+<span>  effect_avg_default <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  effect_sd_default <span class="op">=</span> <span class="fl">0.5</span>,</span>
+<span>  fraction_affected_default <span class="op">=</span> <span class="fl">0.5</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -102,14 +108,6 @@ like what subcellular compartment the sample is taken from. <strong>NOTE: Not su
 actually using these optional columns in any useful capacity anymore</strong>.</p></dd>
 
 
-<dt id="arg-formula-list">formula_list<a class="anchor" aria-label="anchor" href="#arg-formula-list"></a></dt>
-<dd><p>A list of named lists. The names of each sub-list should be
-the same as the sample names as they are found in <code>metadf</code>. Each sub-list should be
-a list of formula relating feature names that will show up as columns of the simulated
-cB to species modeled in your <code>graph</code>. This only needs to be specified if you want
-to simulate the scenario where some of the measured species are a sum of modeled species.</p></dd>
-
-
 <dt id="arg-log-means">log_means<a class="anchor" aria-label="anchor" href="#arg-log-means"></a></dt>
 <dd><p>Vector of log-Normal logmeans from which the distribution of
 feature-specific parameters will be drawn from. Length of vector should be the same
@@ -119,6 +117,33 @@ as max(entries in <code>graph</code>), i.e., the number of parameters in your sp
 <dt id="arg-log-sds">log_sds<a class="anchor" aria-label="anchor" href="#arg-log-sds"></a></dt>
 <dd><p>Vector of log-Normal logsds from which the distribution of
 feature-specific parameters will be drawn from.</p></dd>
+
+
+<dt id="arg-ntreatments">ntreatments<a class="anchor" aria-label="anchor" href="#arg-ntreatments"></a></dt>
+<dd><p>Number of distinct experimental treatments to simulate. By default,
+only a single "treatment" (you might refer to this as wild-type, or control) is simulated.
+Increase this if you would like to explore performing comparative dynamical systems
+modeling.</p></dd>
+
+
+<dt id="arg-treatment-effects">treatment_effects<a class="anchor" aria-label="anchor" href="#arg-treatment-effects"></a></dt>
+<dd><p>Data frame describing effects of treatment on each
+parameter. Should have five columns: "parameter_index", "treatment_index", "mean", "sd",
+and "fraction_affected".
+Each row corresponds to the effect the ith (i = treatment_index) treatment has on the
+jth (j = parameter_index) kinetic parameter. Effect sizes, on a log-scale, are drawn from
+a Normal distribution with mean and standard deviation set by the mean and sd columns,
+respectively. The number of non-zero effects is set by "fraction_affected", and is
+equal to <code>ceiling(nfeatures * fraction_affected)</code>. treatment_index of 1 will be ignored
+and can either be included or not.</p></dd>
+
+
+<dt id="arg-formula-list">formula_list<a class="anchor" aria-label="anchor" href="#arg-formula-list"></a></dt>
+<dd><p>A list of named lists. The names of each sub-list should be
+the same as the sample names as they are found in <code>metadf</code>. Each sub-list should be
+a list of formula relating feature names that will show up as columns of the simulated
+cB to species modeled in your <code>graph</code>. This only needs to be specified if you want
+to simulate the scenario where some of the measured species are a sum of modeled species.</p></dd>
 
 
 <dt id="arg-unassigned-name">unassigned_name<a class="anchor" aria-label="anchor" href="#arg-unassigned-name"></a></dt>
@@ -135,6 +160,24 @@ feature-specific parameters will be drawn from.</p></dd>
 
 <dt id="arg-lfn-sd">lfn_sd<a class="anchor" aria-label="anchor" href="#arg-lfn-sd"></a></dt>
 <dd><p>Logit(fn) replicate variability.</p></dd>
+
+
+<dt id="arg-effect-avg-default">effect_avg_default<a class="anchor" aria-label="anchor" href="#arg-effect-avg-default"></a></dt>
+<dd><p>If <code>ntreatments</code> &gt; 1, and <code>treatment_effects</code> is not
+provided, this will be the value of <code>mean</code> for all treatments and parameters imputed
+in <code>treatment_effects</code>.</p></dd>
+
+
+<dt id="arg-effect-sd-default">effect_sd_default<a class="anchor" aria-label="anchor" href="#arg-effect-sd-default"></a></dt>
+<dd><p>If <code>ntreatments</code> &gt; 1, and <code>treatment_effects</code> is not
+provided, this will be the value of <code>sd</code> for all treatments and parameters imputed
+in <code>treatment_effects</code>.</p></dd>
+
+
+<dt id="arg-fraction-affected-default">fraction_affected_default<a class="anchor" aria-label="anchor" href="#arg-fraction-affected-default"></a></dt>
+<dd><p>If <code>ntreatments</code> &gt; 1, and <code>treatment_effects</code> is not
+provided, this will be the value of <code>fraction_affected</code> for all treatments and parameters imputed
+in <code>treatment_effects</code>.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
