@@ -1,5 +1,5 @@
 ---
-title: "Dynamical systems modeling in EZbakR"
+title: "Dynamical systems modeling in EZbakR: EZDynamics()"
 output: 
   rmarkdown::html_vignette:
     code_folding: show
@@ -792,13 +792,13 @@ kinetic parameters. This has the downside of greatly limiting the complexity of 
 you can fit.
 1. Let EZbakR infer scale factors automatically.
 
-1 is technically ideal, though getting spike-ins to work well can be a easier said than done. If scale factors are not provided, EZbakR will try 3. This strategy works by modeling the total fraction of reads that are labeled in a given sample as a function of the same value in other samples. For example, 
+1 is technically ideal, though getting spike-ins to work well can be a easier said than done. If scale factors are not provided, EZbakR will try 3. This strategy works by modeling the total fraction of reads that are labeled in a given sample as a function of the same value in other samples. For example, if you have cytoplasmic, nuclear, and whole cell NR-seq data, you can model the whole cell global fraction labeled as a weighted average of the cytoplasmic and nuclear global fraction labeled's. The weights are related to the relative molecular abundances of cytoplasmic and nuclear RNA, making them precisely the normalization scale factors we are after.
 
 
 ### Uncertainty quantification
 
 The output of `EZDynamics` will be a table stored in the `dynamics` element of your `EZbakRData` object. You can access it with `<obj>$dynamics$<dynamics_table_name>`,
-replacing `<obj>` with what you called your `EZbakRData` object, and `dynamics_table_name` with whatever EZbakR called that table, or using `EZget`. When interpreting the output, be mindful of the uncertainty estimates ("se_<parameter_name>") for a given parameter. Often, parameters in a model are theoretically identifiable, meaning that in theory you have enough data to estimate them, but not practically identifiable. High uncertainties can flag instances of the latter. 
+replacing `<obj>` with what you called your `EZbakRData` object, and `dynamics_table_name` with whatever EZbakR called that table, or using `EZget`. When interpreting the output, be mindful of the uncertainty estimates ("se_<parameter_name>") for a given parameter. Often, parameters in a model are theoretically identifiable, meaning that in theory you have enough data to estimate them, but not practically identifiable. High uncertainties can flag instances of the latter. What represents "high" can vary a bit from dataset to dataset and parameter to parameter, but the range of uncertainties seen across all estimated parameters can give you a good sense of what is good. In cases of practical unidentifiability, there is a pretty clear stratification between low and high uncertainty estimates.
 
 
 

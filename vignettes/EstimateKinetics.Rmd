@@ -1,5 +1,5 @@
 ---
-title: "EstimateKinetics"
+title: "Simple kinetic parameter estimation: EstimateKinetics()"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{EstimateKinetics}

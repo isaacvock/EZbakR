@@ -1,5 +1,5 @@
 ---
-title: "EZget"
+title: "Convenient fetching of EZbakR outputs: EZget()"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{EZget}
