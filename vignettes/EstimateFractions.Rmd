@@ -1,5 +1,5 @@
 ---
-title: "EstimateFractions"
+title: "Universal first step: EstimateFractions()"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{EstimateFractions}
