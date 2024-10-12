@@ -771,7 +771,6 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                               experimental_levels = NULL,
                               overwrite = TRUE){
 
-
   ### Hack to deal with annoying devtools::check() NOTE
 
   difference <- uncertainty <- pval <- padj <- avg_coverage <- NULL
@@ -856,7 +855,18 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
   # Get fractions
   parameter_est <- obj[[type]][[averages_name]]
 
-  features_to_analyze <- obj[["metadata"]][[type]][[averages_name]][["grouping_features"]]
+
+  # Get features
+  if(type == "dynamics"){
+
+    features_to_analyze <- obj[["metadata"]][[type]][[averages_name]][["grouping_features"]]
+
+  }else{
+
+    features_to_analyze <- obj[["metadata"]][[type]][[averages_name]][["features"]]
+
+  }
+
 
 
   ### Perform comparative analysis of interest
