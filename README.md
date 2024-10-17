@@ -50,7 +50,7 @@ EZbakR represents a complete rewrite of [bakR](https://github.com/simonlabcode/b
 7. Linear model-based averaging of replicate data to support more complex experimental designs and maximally flexible comparative analyses. 
 8. Greater flexibility in terms of the input data structure. Namely, multiple different features can be specified in your input cB table, and multiple different experimental details can be included in your input metadf table.
 9. A novel transcript isoform deconvolution strategy that allows for isoform-specific kinetic parameter estimation.
-10. Generalized linear dynamical systems modeling of NR-seq data. Supports analyses of subcellular fractionation NR-seq extensions, such as those described here, here, and here.
+10. Generalized linear dynamical systems modeling of NR-seq data. Supports analyses of subcellular fractionation NR-seq extensions, such as those described [here](https://www.cell.com/molecular-cell/fulltext/S1097-2765(24)00511-2#:~:text=Thus%2C%20RNA%20flow%20impacts%20cell,processing%2C%20including%20splicing%20and%20polyadenylation.), [here](https://www.biorxiv.org/content/10.1101/2024.03.11.584215v1), and [here](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1012059). Also supports analyses of pre-mRNA processing dynamics.
 
 In the near future, EZbakR will support anything bakR can do that isn't currently implemented (Namely `DissectMechanisms()` and various visualization functions). There are also a number of exciting developments on the horizon, so stay tuned!
 
