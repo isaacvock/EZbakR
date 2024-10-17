@@ -1,39 +1,59 @@
 # Welcome to the alpha release of EZbakR!
 
-EZbakR is a one-stop-shop for analyses of nucleotide recoding RNA-seq datasets(NR-seq). NR-seq refers to a class of methods (e.g., [TimeLapse-seq](https://www.nature.com/articles/nmeth.4582), [SLAM-seq](https://www.nature.com/articles/nmeth.4435), [TUC-seq](https://pubmed.ncbi.nlm.nih.gov/31768978/), etc.) that combine RNA-seq, metabolic labeling, and unique metabolic label recoding chemistries. These methods were originally developed to dissect the kinetics of RNA synthesis and degradation. Excitingly though, a treasure trove of extensions of the original methods have been created over the years. To-date, nucleotide recoding has been combined with the likes of [TT-seq](https://www.nature.com/articles/nmeth.4582), [Start-seq](https://www.sciencedirect.com/science/article/pii/S1097276521006869?via%3Dihub), [Ribo-seq](https://www.nature.com/articles/s41592-021-01250-z), [scRNA-seq](https://www.nature.com/articles/s41586-019-1369-y) (other examples of this [here](https://www.nature.com/articles/s41592-020-0935-4), [here](https://www.nature.com/articles/s41587-020-0480-9), and [here](https://www.biorxiv.org/content/10.1101/2023.07.06.547989v1)), [Perturb-seq](https://www.nature.com/articles/s41587-023-01948-9), [long-read sequencing](https://www.biorxiv.org/content/10.1101/2020.05.01.073296v1), and [subcellular fractionation](https://www.biorxiv.org/content/10.1101/2022.08.21.504696v1.full). In addition, while the original methods used 4-thiouridine (s<sup>4</sup>U), the same chemistry has been found to work with [6-thioguanosine](https://pubs.acs.org/doi/full/10.1021/jacs.8b08554) (s<sup>6</sup>G), opening the door to dual-labeling experimental designs (e.g., [TILAC](https://academic.oup.com/nar/article/50/19/e110/6677324)).
+EZbakR is a highly flexible tool for analyses of nucleotide recoding RNA-seq datasets (NR-seq; e.g., [TimeLapse-seq](https://www.nature.com/articles/nmeth.4582), [SLAM-seq](https://www.nature.com/articles/nmeth.4435), [TUC-seq](https://pubmed.ncbi.nlm.nih.gov/31768978/), etc.)).
 
 To install or update, run:
 
 ```
-library(devtools)
-devtools::install_github("isaacvock/EZbakR")
+if (!require("remotes", quietly = TRUE))
+    install.packages("remotes")
+remotes::install_github("isaacvock/EZbakR")
 ```
 
-At this point, changes will be made weekly, so updating frequently is highly suggested.
+At this point, changes will be made weekly, so updating frequently is highly recommended.
 
 Documentation is here: https://isaacvock.github.io/EZbakR/
 
+## Vignettes
+
+Currently, the following functionalities have dedicated vignettes:
+
+1. A [general quickstart](https://isaacvock.github.io/EZbakR/articles/Quickstart.html) taking you through the standard workflow, similar to bakR's one and only workflow.
+2. [Estimating the fraction of reads from each mutational population in your data](https://isaacvock.github.io/EZbakR/articles/EstimateFractions.html). This is done with EZbakR's [`EstimateFractions()`](https://isaacvock.github.io/EZbakR/reference/EstimateFractions.html) function.
+3. [Estimating kinetic parameters of synthesis and degradation in a standard NR-seq experiment](https://isaacvock.github.io/EZbakR/articles/EstimateKinetics.html). This is done with EZbakR's [`EstimateKinetics()`](https://isaacvock.github.io/EZbakR/reference/EstimateKinetics.html) function.
+4. [Assessing the quality of your NR-seq data](https://isaacvock.github.io/EZbakR/articles/EZQC.html). This is done with EZbakR's [`EZQC()`](https://isaacvock.github.io/EZbakR/reference/EZQC.html) function.
+5. [Flexible linear modeling-based comparative analyses](https://isaacvock.github.io/EZbakR/articles/Linear-modeling.html). This is done with EZbakR's [`AverageAndRegularize()`](https://isaacvock.github.io/EZbakR/reference/AverageAndRegularize.html) and [`CompareParameters()`](https://isaacvock.github.io/EZbakR/reference/CompareParameters.html) functions.
+6. [Generalized linear dynamical systems modeling of subcellular compartment transport and/or pre-mRNA processing dynamics](https://isaacvock.github.io/EZbakR/articles/EZDynamics.html). This is done with EZbakR's [`EZDynamics()`](https://isaacvock.github.io/EZbakR/reference/EZDynamics.html) function.
+7. [Conveniently fetching data from an EZbakR fit object](https://isaacvock.github.io/EZbakR/articles/EZget.html). This is done with the EZbakR's [`EZget()`](https://isaacvock.github.io/EZbakR/reference/EZget.html) function.
+
+Other implemented functionality that will have vignettes in the future includes:
+
+1. Providing fractions or kinetic parameter estimates as input. The former works similarly to how it did in bakR, and is implemented via the [`EZbakRFractions()`](https://isaacvock.github.io/EZbakR/reference/EZbakRFractions.html) function. THe latter is unique to EZbakR and is implemented via the [`EZbakRKinetics()`](https://isaacvock.github.io/EZbakR/reference/EZbakRKinetics.html) function.
+2. Simulating NR-seq data. There are a number of simulation functions implemented in EZbakR. [`EZSimulate()`](https://isaacvock.github.io/EZbakR/reference/EZSimulate.html) is a convenient wrapper to several of these.
+
 ## What's new?
 
-EZbakR represents a complete rewrite of bakR. Improvements implemented in EZbakR include:
+EZbakR represents a complete rewrite of [bakR](https://github.com/simonlabcode/bakR). Improvements implemented in EZbakR include:
 
 1. Modular function design that facilitates using EZbakR with any kind of NR-seq data, regardless of the experimental design or data details.
 2. Extended mixture modeling capabilities. Includes:
     * Support for multi-label analyses.
     * Hierarchical mutation rate estimation strategy to allow for feature-specific mutation rates.
-    * More efficient and accurate uncertainty quantification
+    * More efficient and accurate uncertainty quantification.
 3. Additional kinetic parameter estimation strategies:
     * Non-steady-state analyses as introduced in [Narain et al., 2021](https://www.sciencedirect.com/science/article/pii/S1097276521004962).
     * Short-feed analyses that assume negligible degradation of existing RNA.
     * Synthesis rate estimation is implemented as a part of all strategies.
 4. Improved uncertainty propogation so as to achieve performance of bakR's slower implementations (Hybrid and MCMC) with a strategy as efficient as bakR's most efficent implementation (MLE).
-5. Removal of Stan dependencies. I love Stan, but having it as an R package dependency makes installation and maintenace more difficult.
+5. Removal of Stan dependencies. I love Stan, but having it as an R package dependency makes installation and maintenace more difficult. 
 6. Optional [Apache Arrow](https://arrow.apache.org/) backend to help with analyses of larger-than-RAM datasets
 7. Linear model-based averaging of replicate data to support more complex experimental designs and maximally flexible comparative analyses. 
 8. Greater flexibility in terms of the input data structure. Namely, multiple different features can be specified in your input cB table, and multiple different experimental details can be included in your input metadf table.
 9. A novel transcript isoform deconvolution strategy that allows for isoform-specific kinetic parameter estimation.
+10. Generalized linear dynamical systems modeling of NR-seq data. Supports analyses of subcellular fractionation NR-seq extensions, such as those described here, here, and here.
 
-In the near future, EZbakR will support:
-1. Alternative overdisperse mixture modeling strategies.
-2. Generalized dynamical systems modeling of NR-seq data.
-3. Anything bakR can do that isn't currently implemented (Namely `DissectMechanisms()`, `QC_checks()`, and various visualization functions).
+In the near future, EZbakR will support anything bakR can do that isn't currently implemented (Namely `DissectMechanisms()` and various visualization functions). There are also a number of exciting developments on the horizon, so stay tuned!
+
+## What is NR-seq?
+
+NR-seq refers to a class of methods that combine RNA-seq, metabolic labeling, and unique metabolic label recoding chemistries. These methods were originally developed to dissect the kinetics of RNA synthesis and degradation. Excitingly though, a treasure trove of extensions of the original methods have been created over the years. To-date, nucleotide recoding has been combined with the likes of [TT-seq](https://www.nature.com/articles/nmeth.4582), [Start-seq](https://www.sciencedirect.com/science/article/pii/S1097276521006869?via%3Dihub), [Ribo-seq](https://www.nature.com/articles/s41592-021-01250-z), [scRNA-seq](https://www.nature.com/articles/s41586-019-1369-y) (other examples of this [here](https://www.nature.com/articles/s41592-020-0935-4), [here](https://www.nature.com/articles/s41587-020-0480-9), and [here](https://www.biorxiv.org/content/10.1101/2023.07.06.547989v1)), [Perturb-seq](https://www.nature.com/articles/s41587-023-01948-9), [long-read sequencing](https://www.biorxiv.org/content/10.1101/2020.05.01.073296v1), and [subcellular fractionation](https://www.biorxiv.org/content/10.1101/2022.08.21.504696v1.full). In addition, while the original methods used 4-thiouridine (s<sup>4</sup>U), the same chemistry has been found to work with [6-thioguanosine](https://pubs.acs.org/doi/full/10.1021/jacs.8b08554) (s<sup>6</sup>G), opening the door to dual-labeling experimental designs (e.g., [TILAC](https://academic.oup.com/nar/article/50/19/e110/6677324)). EZbakR and its companion pipeline [fastq2EZbakR](https://github.com/isaacvock/fastq2EZbakR) aim to provide an integrated and flexible framework to support this exciting class of methods. 
