@@ -1,6 +1,6 @@
 # Welcome to EZbakR!
 
-EZbakR is a highly flexible tool for analyses of nucleotide recoding RNA-seq datasets (NR-seq; e.g., [TimeLapse-seq](https://www.nature.com/articles/nmeth.4582), [SLAM-seq](https://www.nature.com/articles/nmeth.4435), [TUC-seq](https://pubmed.ncbi.nlm.nih.gov/31768978/), etc.).
+EZbakR is a highly flexible tool for analyses of nucleotide recoding RNA-seq datasets (NR-seq; e.g., [TimeLapse-seq](https://www.nature.com/articles/nmeth.4582), [SLAM-seq](https://www.nature.com/articles/nmeth.4435), [TUC-seq](https://pubmed.ncbi.nlm.nih.gov/31768978/), etc.). See [our preprint](https://www.biorxiv.org/content/10.1101/2024.10.14.617411v1) for a discussion of the motivation behind EZbakR and its companion pipeline [fastq2EZbakR](https://github.com/isaacvock/fastq2EZbakR), as well as validation of all of its novel functionality.
 
 To install or update, run:
 
