@@ -377,6 +377,9 @@ feature-specific mutation rates, which can be IDed in the
 
 ### Isoform deconvolution
 
+**NOTE**: This is experimental functionality. A preprint will be out soon describing
+how to optimize these kinds of analyses.
+
 For many years now, we have had tools to estimate transcript isoform abundances
 from RNA-seq data. These include RSEM, kallisto, Salmon, and many more. Wouldn't
 it be nice if we could similarly estimate synthesis and degradation rate
@@ -384,7 +387,7 @@ constants for individual transcript isoforms with NR-seq data? EZbakR now
 implements such an analysis strategy! To use it, you will need to have a cB
 in which reads have been assigned to their transcript equivalence class, which
 is just a fancy way of saying "the set of isoforms with which they are
-completely consistent". fastq2EZbakR is able to do this, so check out its
+completely consistent". [fastq2EZbakR](https://github.com/isaacvock/fastq2EZbakR) is able to do this, so check out its
 documentation for details. We can simulate such a cB ourselves for demonstration
 purposes:
 
@@ -538,7 +541,7 @@ ds %>%
 See the [arrow documentation](https://arrow.apache.org/docs/r/articles/dataset.html) for a lot more details about how to tune the dataset creation process. This will never load the entire cB into memory, though may use a bit too much RAM if you try to add some of the custom filtering or summarization discussed in the arrows 
 docs.
 
-### Step 2: Create EZbakRArrowData object
+#### Step 2: Create EZbakRArrowData object
 
 You can then create an `EZbakRArrowData` object similarly to how you would create
 a standard `EZbakRData` object:
@@ -558,7 +561,7 @@ ezbado <- EZbakRArrowData(ds, metadf)
 
 ```
 
-### Step 3: Run EstimateFractions like normal
+#### Step 3: Run EstimateFractions like normal
 
 Finally, just run `EstimateFractions()` with all of the settings you would 
 normally use if you were working with an `EZbakRData` object:
@@ -576,3 +579,38 @@ ezbado <- EstimateFractions(ezbado,
 
 
 ```
+
+
+#### Simulating the Arrow workflow
+
+To give you the opportunity to explore using the Arrow backend in a controlled
+setting, here is a workflow where we simulate a cB, create a temporary arrow
+dataset with it, and run `EstimateFractions()` on an `EZbakRArrowData` object:
+
+```{r}
+library(arrow)
+
+simdata <- EZSimulate(nfeatures = 250)
+
+outdir <- tempdir()
+
+write_dataset(
+  simdata$cB,
+  path = paste0(outdir, "\\arrow_dataset"),
+  format = "parquet",
+  partitioning = "sample"
+)
+
+ds <- open_dataset(paste0(outdir, "\\arrow_dataset"))
+
+ezbdo <- EZbakRArrowData(ds,
+                    simdata$metadf)
+
+
+ezbdo <- EstimateFractions(ezbdo)
+```
+
+In this case, a single sample is analyzed at a time to reduce RAM usage, as the 
+arrow dataset allows EZbakR to only load the sample being currently analyzed
+into RAM. Note that this will result in a slight runtime hit relative to the non-arrow 
+analysis. Thus, this is best reserved for working with large datasets.
