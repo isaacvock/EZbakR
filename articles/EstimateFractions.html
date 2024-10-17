@@ -323,11 +323,9 @@ important to understand how <code><a href="../reference/EstimateFractions.html">
 the various feature columns in your cB. Often, you will be interested in
 analyzing subsets of these features separately. For example, it might
 make sense to estimate fractions for gene + transcript equivalence class
-combos for performing isoform-level analyses (discussed later in this
-vignette), gene + exon-exon junction combos, and the standard
-exonic-gene feature, all with the same cB. You can specify which
-features to use in a given analysis via setting the
-<code>features</code> argument:</p>
+combos, gene + exon-exon junction combos, and the standard exonic-gene
+feature, all with the same cB. You can specify which features to use in
+a given analysis via setting the <code>features</code> argument:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span>, features <span class="op">=</span> <span class="st">'feature'</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Estimating mutation rates</span></span>
@@ -407,11 +405,9 @@ read will assign to multiple instances of a given feature. For example,
 when assigning reads to exon-exon junctions, one read may overlap
 multiple exon-exon junctions. In fastq2EZbakR, such instances are
 handled by including the names of all features a read assigned to,
-separated by “+”. You can see an example of this if you inspect the cB
-created by <code>EZbakR</code>’s isoform simulator,
-<code><a href="../reference/SimulateIsoforms.html">SimulateIsoforms()</a></code>. In some cases, you will want to split
-these rows into multiple rows for each feature assignment. To do that,
-you can specify the <code>split_multi_features</code> and
+separated by “+”. In some cases, you will want to split these rows into
+multiple rows for each feature assignment. To do that, you can specify
+the <code>split_multi_features</code> and
 <code>multi_feature_cols</code> arguments:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span>,</span>
@@ -449,7 +445,7 @@ NR-induced mutations due to poor read alignment.</li>
 <p>In this section, we will discuss some strategies you can use to
 address these two challenges.</p>
 <div class="section level3">
-<h3 id="correcting-dropout">Correcting dropout<a class="anchor" aria-label="anchor" href="#correcting-dropout"></a>
+<h3 id="correcting-for-dropout">Correcting for dropout<a class="anchor" aria-label="anchor" href="#correcting-for-dropout"></a>
 </h3>
 <p>If you have -label data to compare to, EZbakR can use this data to
 quantify and correct for dropout. The strategy used by EZbakR is
@@ -567,108 +563,7 @@ usual, let’s check the results:</p>
 <span>     <span class="va">compare</span><span class="op">$</span><span class="va">fraction_highTC</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/abline.html" class="external-link">abline</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span></span></code></pre></div>
 <p><img src="EstimateFractions_files/figure-html/unnamed-chunk-21-1.png" width="576"></p>
-<p>Still good! For now, I suggest using this strategy with caution
-though, as it is technically still “experimental”. In particular, watch
-out for extreme feature-specific mutation rates, which can be IDed in
-the</p>
-</div>
-<div class="section level3">
-<h3 id="isoform-deconvolution">Isoform deconvolution<a class="anchor" aria-label="anchor" href="#isoform-deconvolution"></a>
-</h3>
-<p>For many years now, we have had tools to estimate transcript isoform
-abundances from RNA-seq data. These include RSEM, kallisto, Salmon, and
-many more. Wouldn’t it be nice if we could similarly estimate synthesis
-and degradation rate constants for individual transcript isoforms with
-NR-seq data? EZbakR now implements such an analysis strategy! To use it,
-you will need to have a cB in which reads have been assigned to their
-transcript equivalence class, which is just a fancy way of saying “the
-set of isoforms with which they are completely consistent”. fastq2EZbakR
-is able to do this, so check out its documentation for details. We can
-simulate such a cB ourselves for demonstration purposes:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Simulates a single sample worth of data</span></span>
-<span><span class="va">simdata_iso</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/SimulateIsoforms.html">SimulateIsoforms</a></span><span class="op">(</span>nfeatures <span class="op">=</span> <span class="fl">300</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># We have to manually create the metadf in this case</span></span>
-<span><span class="va">metadf</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>sample <span class="op">=</span> <span class="st">'sampleA'</span>, </span>
-<span>                     tl <span class="op">=</span> <span class="fl">4</span>, </span>
-<span>                     condition <span class="op">=</span> <span class="st">'A'</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EZbakRData.html">EZbakRData</a></span><span class="op">(</span><span class="va">simdata_iso</span><span class="op">$</span><span class="va">cB</span>,</span>
-<span>                    <span class="va">metadf</span><span class="op">)</span></span></code></pre></div>
-<p>If you inspect the cB simulated by <code><a href="../reference/SimulateIsoforms.html">SimulateIsoforms()</a></code>,
-you will note that there is a column called <code>transcripts</code>,
-which represents transcript equivalence classes. The transcript IDs for
-all of the transcripts a read is consistent with are separated by “+”’s,
-though in this case, we don’t want to separate and copy the data for
-each isoform. Whether, we want to estimate fractions for each unique
-equivalence class:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Estimating mutation rates</span></span>
-<span><span class="co">#&gt; Summarizing data for feature(s) of interest</span></span>
-<span><span class="co">#&gt; Averaging out the nucleotide counts for improved efficiency</span></span>
-<span><span class="co">#&gt; Estimating fractions</span></span>
-<span><span class="co">#&gt; Processing output</span></span></code></pre></div>
-<p>To get isoform-specific estimates, we will need to run a new
-function, called <code><a href="../reference/EstimateIsoformFractions.html">EstimateIsoformFractions()</a></code>. Before doing
-this though, we need to import transcript isoform quantification
-estimates from tools like RSEM, which will be used by
-<code><a href="../reference/EstimateIsoformFractions.html">EstimateIsoformFractions()</a></code>. To do this, you can use
-<code><a href="../reference/ImportIsoformQuant.html">ImportIsoformQuant()</a></code>. <code><a href="../reference/ImportIsoformQuant.html">ImportIsoformQuant()</a></code> has
-three parameters:</p>
-<ul>
-<li>
-<code>obj</code>: The <code>EZbakRData</code> object you want to
-which you want to add isoform quantification information</li>
-<li>
-<code>files</code>: A named vector of paths to each isoform
-quantification output file you want to import. The names should be the
-relevant sample names as they appear in your cB.</li>
-<li>
-<code>quant_tool</code>: The tool you used for isoform
-quantification.</li>
-</ul>
-<p><code><a href="../reference/ImportIsoformQuant.html">ImportIsoformQuant()</a></code> is just a convenient wrapper for
-<code><a href="https://rdrr.io/pkg/tximport/man/tximport.html" class="external-link">tximport::tximport</a></code>, so I urge you to read that tools’s
-documentation for more information (documentation <a href="https://bioconductor.org/packages/release/bioc/vignettes/tximport/inst/doc/tximport.html" class="external-link">here</a>).</p>
-<p>In this example, I will hack a solution, since I don’t have any
-isoform quantification output to use. You could technically do something
-similar if you are having a tough time using
-<code><a href="../reference/ImportIsoformQuant.html">ImportIsoformQuant()</a></code>, but I wouldn’t recommend it:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co">### Hack in the true, simulated isoform levels</span></span>
-<span><span class="va">reads</span> <span class="op">&lt;-</span> <span class="va">simdata_iso</span><span class="op">$</span><span class="va">ground_truth</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">transcript_id</span>, <span class="va">true_count</span>, <span class="va">true_TPM</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>sample <span class="op">=</span> <span class="st">'sampleA'</span>,</span>
-<span>                effective_length <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/rename.html" class="external-link">rename</a></span><span class="op">(</span>expected_count <span class="op">=</span> <span class="va">true_count</span>,</span>
-<span>                TPM <span class="op">=</span> <span class="va">true_TPM</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Name of table needs to have "isoform_quant" in it</span></span>
-<span><span class="va">ezbdo</span><span class="op">[[</span><span class="st">'readcounts'</span><span class="op">]</span><span class="op">]</span><span class="op">[[</span><span class="st">'simulated_isoform_quant'</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">reads</span></span>
-<span></span>
-<span><span class="co">### Perform deconvolution</span></span>
-<span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateIsoformFractions.html">EstimateIsoformFractions</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Analyzing sample sampleA...</span></span></code></pre></div>
-<p>We can then see how it did by comparing to ground truth:</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">est</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EZget.html">EZget</a></span><span class="op">(</span><span class="va">ezbdo</span>, </span>
-<span>             type <span class="op">=</span> <span class="st">'fractions'</span>,</span>
-<span>             features <span class="op">=</span> <span class="st">"transcript_id"</span><span class="op">)</span></span>
-<span><span class="va">truth</span> <span class="op">&lt;-</span> <span class="va">simdata_iso</span><span class="op">$</span><span class="va">ground_truth</span></span>
-<span></span>
-<span><span class="va">compare</span> <span class="op">&lt;-</span> <span class="va">truth</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate-joins.html" class="external-link">inner_join</a></span><span class="op">(</span><span class="va">est</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"feature"</span>, <span class="st">"transcript_id"</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">compare</span><span class="op">$</span><span class="va">true_fn</span>,</span>
-<span>     <span class="va">compare</span><span class="op">$</span><span class="va">fraction_highTC</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/abline.html" class="external-link">abline</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span></span></code></pre></div>
-<p><img src="EstimateFractions_files/figure-html/unnamed-chunk-25-1.png" width="576" style="display: block; margin: auto;"></p>
-<p>This simulation is a bit extreme as around 50% of all isoform
-abundance differences are assumed to be completely driven by differences
-in isoform stability, which leads to underestimation of some of the
-crazy extreme fraction news. Other than that though, it looks good!</p>
+<p>Still good!</p>
 </div>
 <div class="section level3">
 <h3 id="using-the-apache-arrow-backend">Using the Apache Arrow backend<a class="anchor" aria-label="anchor" href="#using-the-apache-arrow-backend"></a>
@@ -695,7 +590,7 @@ of your cB. This will create a set of .parquet files, with one file
 created for each sample. This will allow
 <code><a href="../reference/EstimateFractions.html">EstimateFractions()</a></code> to load your data in one sample at a
 time, so as to only hold a single sample of the cB in RAM at a time:</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/apache/arrow/" class="external-link">arrow</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co">### Move into the directory with your cB file</span></span>
@@ -737,13 +632,12 @@ creation process. This will never load the entire cB into memory, though
 may use a bit too much RAM if you try to add some of the custom
 filtering or summarization discussed in the arrows docs.</p>
 </div>
-</div>
-<div class="section level3">
-<h3 id="step-2-create-ezbakrarrowdata-object">Step 2: Create EZbakRArrowData object<a class="anchor" aria-label="anchor" href="#step-2-create-ezbakrarrowdata-object"></a>
-</h3>
+<div class="section level4">
+<h4 id="step-2-create-ezbakrarrowdata-object">Step 2: Create EZbakRArrowData object<a class="anchor" aria-label="anchor" href="#step-2-create-ezbakrarrowdata-object"></a>
+</h4>
 <p>You can then create an <code>EZbakRArrowData</code> object similarly
 to how you would create a standard <code>EZbakRData</code> object:</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu">arrow</span><span class="fu">::</span><span class="fu"><a href="https://arrow.apache.org/docs/r/reference/open_dataset.html" class="external-link">open_dataset</a></span><span class="op">(</span><span class="st">"Path/to/where/you/want/to/Arrow/Dataset/"</span><span class="op">)</span></span>
 <span></span>
 <span></span>
@@ -756,13 +650,13 @@ to how you would create a standard <code>EZbakRData</code> object:</p>
 <span></span>
 <span><span class="va">ezbado</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EZbakRArrowData.html">EZbakRArrowData</a></span><span class="op">(</span><span class="va">ds</span>, <span class="va">metadf</span><span class="op">)</span></span></code></pre></div>
 </div>
-<div class="section level3">
-<h3 id="step-3-run-estimatefractions-like-normal">Step 3: Run EstimateFractions like normal<a class="anchor" aria-label="anchor" href="#step-3-run-estimatefractions-like-normal"></a>
-</h3>
+<div class="section level4">
+<h4 id="step-3-run-estimatefractions-like-normal">Step 3: Run EstimateFractions like normal<a class="anchor" aria-label="anchor" href="#step-3-run-estimatefractions-like-normal"></a>
+</h4>
 <p>Finally, just run <code><a href="../reference/EstimateFractions.html">EstimateFractions()</a></code> with all of the
 settings you would normally use if you were working with an
 <code>EZbakRData</code> object:</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ezbado</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbado</span>,</span>
 <span>                            features <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"GF"</span>, <span class="st">"XF"</span>,</span>
 <span>                                         <span class="st">"junction_start"</span>, <span class="st">"junction_end"</span><span class="op">)</span>,</span>
@@ -772,6 +666,80 @@ settings you would normally use if you were working with an
 <span>                            split_multi_features <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>                            multi_feature_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"junction_start"</span>,</span>
 <span>                                                   <span class="st">"junction_end"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level4">
+<h4 id="simulating-the-arrow-workflow">Simulating the Arrow workflow<a class="anchor" aria-label="anchor" href="#simulating-the-arrow-workflow"></a>
+</h4>
+<p>To give you the opportunity to explore using the Arrow backend in a
+controlled setting, here is a workflow where we simulate a cB, create a
+temporary arrow dataset with it, and run
+<code><a href="../reference/EstimateFractions.html">EstimateFractions()</a></code> on an <code>EZbakRArrowData</code>
+object:</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/apache/arrow/" class="external-link">arrow</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'arrow'</span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:utils':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     timestamp</span></span>
+<span></span>
+<span><span class="va">simdata</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EZSimulate.html">EZSimulate</a></span><span class="op">(</span>nfeatures <span class="op">=</span> <span class="fl">250</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">outdir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://arrow.apache.org/docs/r/reference/write_dataset.html" class="external-link">write_dataset</a></span><span class="op">(</span></span>
+<span>  <span class="va">simdata</span><span class="op">$</span><span class="va">cB</span>,</span>
+<span>  path <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">outdir</span>, <span class="st">"\\arrow_dataset"</span><span class="op">)</span>,</span>
+<span>  format <span class="op">=</span> <span class="st">"parquet"</span>,</span>
+<span>  partitioning <span class="op">=</span> <span class="st">"sample"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://arrow.apache.org/docs/r/reference/open_dataset.html" class="external-link">open_dataset</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">outdir</span>, <span class="st">"\\arrow_dataset"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EZbakRArrowData.html">EZbakRArrowData</a></span><span class="op">(</span><span class="va">ds</span>,</span>
+<span>                    <span class="va">simdata</span><span class="op">$</span><span class="va">metadf</span><span class="op">)</span></span>
+<span></span>
+<span></span>
+<span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Estimating mutation rates</span></span>
+<span><span class="co">#&gt; Estimating fractions for each sample:</span></span>
+<span><span class="co">#&gt; ANALYZING sample1...</span></span>
+<span><span class="co">#&gt; Extracting data for sample of interest and summarize out nucleotide content</span></span>
+<span><span class="co">#&gt; Adding mutation rate estimation information</span></span>
+<span><span class="co">#&gt; Estimating fractions</span></span>
+<span><span class="co">#&gt; ANALYZING sample2...</span></span>
+<span><span class="co">#&gt; Extracting data for sample of interest and summarize out nucleotide content</span></span>
+<span><span class="co">#&gt; Adding mutation rate estimation information</span></span>
+<span><span class="co">#&gt; Estimating fractions</span></span>
+<span><span class="co">#&gt; ANALYZING sample3...</span></span>
+<span><span class="co">#&gt; Extracting data for sample of interest and summarize out nucleotide content</span></span>
+<span><span class="co">#&gt; Adding mutation rate estimation information</span></span>
+<span><span class="co">#&gt; Estimating fractions</span></span>
+<span><span class="co">#&gt; ANALYZING sample4...</span></span>
+<span><span class="co">#&gt; Extracting data for sample of interest and summarize out nucleotide content</span></span>
+<span><span class="co">#&gt; Adding mutation rate estimation information</span></span>
+<span><span class="co">#&gt; Estimating fractions</span></span>
+<span><span class="co">#&gt; ANALYZING sample5...</span></span>
+<span><span class="co">#&gt; Extracting data for sample of interest and summarize out nucleotide content</span></span>
+<span><span class="co">#&gt; Adding mutation rate estimation information</span></span>
+<span><span class="co">#&gt; Estimating fractions</span></span>
+<span><span class="co">#&gt; ANALYZING sample6...</span></span>
+<span><span class="co">#&gt; Extracting data for sample of interest and summarize out nucleotide content</span></span>
+<span><span class="co">#&gt; Adding mutation rate estimation information</span></span>
+<span><span class="co">#&gt; Estimating fractions</span></span>
+<span><span class="co">#&gt; ANALYZING sample7...</span></span>
+<span><span class="co">#&gt; Counting reads</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ANALYZING sample8...</span></span>
+<span><span class="co">#&gt; Counting reads</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Processing output</span></span></code></pre></div>
+<p>In this case, a single sample is analyzed at a time to reduce RAM
+usage, as the arrow dataset allows EZbakR to only load the sample being
+currently analyzed into RAM. Note that this will result in a slight
+runtime hit relative to the non-arrow analysis. Thus, this is best
+reserved for working with large datasets.</p>
+</div>
 </div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
