@@ -175,8 +175,7 @@ exon-exon junctions, and more. To make full effective use of this diverse set
 of feature assignments, its important to understand how `EstimateFractions()`
 will treat the various feature columns in your cB. Often, you will be interested
 in analyzing subsets of these features separately. For example, it might make
-sense to estimate fractions for gene + transcript equivalence class combos for
-performing isoform-level analyses (discussed later in this vignette), gene + 
+sense to estimate fractions for gene + transcript equivalence class combos, gene + 
 exon-exon junction combos, and the standard exonic-gene feature, all with the
 same cB. You can specify which features to use in a given analysis via setting
 the `features` argument:
@@ -245,9 +244,7 @@ Finally, some feature assignments will be ambiguous. That is, one read will
 assign to multiple instances of a given feature. For example, when assigning
 reads to exon-exon junctions, one read may overlap multiple exon-exon junctions.
 In fastq2EZbakR, such instances are handled by including the names of all
-features a read assigned to, separated by "+". You can see an example of this 
-if you inspect the cB created by `EZbakR`'s isoform simulator, 
-`SimulateIsoforms()`. In some cases, you will want to split these rows into
+features a read assigned to, separated by "+". In some cases, you will want to split these rows into
 multiple rows for each feature assignment. To do that, you can specify
 the `split_multi_features` and `multi_feature_cols` arguments:
 
