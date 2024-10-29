@@ -243,6 +243,10 @@ Standard_kinetic_estimation <- function(obj,
 
     lkdeg_uncert <- function(fn, se_lfn){
 
+      se_lfn <- ifelse(is.nan(se_lfn),
+             1.5,
+             se_lfn)
+
       deriv <- (1/log(1 - fn)) * (1 / (1 - fn)) * (fn*(1 - fn))
 
       uncert <- abs(deriv)*se_lfn
