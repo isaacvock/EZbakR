@@ -112,11 +112,11 @@ validate_EZbakRFractions <- function(obj){
 
   est_cols <- fraction_cols[!grepl("^fraction_", fraction_cols) &
                                        grepl("^logit_fraction_", fraction_cols) &
-                                       !(fraction_cols %in% c("sample", "n")) &
-                                       !grepl("^se_logit_fraction_", fraction_cols)]
+                                       !grepl("^se_logit_fraction_", fraction_cols) &
+                                       !(fraction_cols %in% c("sample", "n"))]
 
 
-  se_cols <- est_cols[grepl("^se_", est_cols)]
+  se_cols <- fraction_cols[grepl("^se_", fraction_cols)]
 
   expected_ests <- gsub("^se_", "", se_cols)
 
