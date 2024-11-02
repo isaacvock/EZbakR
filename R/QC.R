@@ -605,7 +605,7 @@ make_corr_plots <- function(table,
               sample_1 = samps[1],
               sample_2 = samps[2],
               correlation = stats::cor(corr_df[[samps[1]]],
-                                corr_df[[samps[2]]])
+                                corr_df[[samps[2]]], use = "complete.obs")
             )
           )
 
@@ -857,6 +857,10 @@ infer_replicates <- function(obj,
 
 
     tl_cols <- tl_cols_possible[tl_cols_possible %in% colnames(metadf)]
+
+    # Need to remove label free samples
+    metadf <- metadf %>%
+      dplyr::filter(!all(dplyr::c_across(dplyr::all_of(tl_cols)) == 0))
 
 
     cols_to_filter <- c("sample", tl_cols)
