@@ -845,27 +845,28 @@ infer_replicates <- function(obj,
     new_col <- "replicate_id"
   }
 
+  # Find label time columns
+  mutcounts_in_cB <- find_mutcounts(obj)
+
+  tl_cols_possible <- c("tl", "tpulse", "tchase",
+                        paste0("tl_", mutcounts_in_cB),
+                        paste0("tpulse_", mutcounts_in_cB),
+                        paste0("tchase_", mutcounts_in_cB))
+
+
+  tl_cols <- tl_cols_possible[tl_cols_possible %in% colnames(metadf)]
+
+
   if(!consider_tl){
 
-    # Mutation columns in cB
-    mutcounts_in_cB <- find_mutcounts(obj)
+    cols_to_filter <- c("sample", tl_cols)
 
-    tl_cols_possible <- c("tl", "tpulse", "tchase",
-                          paste0("tl_", mutcounts_in_cB),
-                          paste0("tpulse_", mutcounts_in_cB),
-                          paste0("tchase_", mutcounts_in_cB))
-
-
-    tl_cols <- tl_cols_possible[tl_cols_possible %in% colnames(metadf)]
+  }else{
 
     # Need to remove label free samples
     metadf <- metadf %>%
       dplyr::filter(!all(dplyr::c_across(dplyr::all_of(tl_cols)) == 0))
 
-
-    cols_to_filter <- c("sample", tl_cols)
-
-  }else{
 
     cols_to_filter <- "sample"
 
