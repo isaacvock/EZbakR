@@ -572,6 +572,7 @@ make_corr_plots <- function(table,
 
 
         subglist[[count]] <- corr_df %>%
+          stats::na.omit() %>%
           dplyr::mutate(
             density = get_density(
               x = !!dplyr::sym(samps[1]),
