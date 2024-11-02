@@ -865,10 +865,13 @@ infer_replicates <- function(obj,
 
     # Need to remove label free samples
     metadf <- metadf %>%
+      dplyr::rowwise() %>%
       dplyr::filter(!all(dplyr::c_across(dplyr::all_of(tl_cols)) == 0))
 
 
     cols_to_filter <- "sample"
+
+    browser()
 
   }
 
