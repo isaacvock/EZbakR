@@ -572,6 +572,7 @@ make_corr_plots <- function(table,
 
 
         subglist[[count]] <- corr_df %>%
+          stats::na.omit() %>%
           dplyr::mutate(
             density = get_density(
               x = !!dplyr::sym(samps[1]),
@@ -604,7 +605,7 @@ make_corr_plots <- function(table,
               sample_1 = samps[1],
               sample_2 = samps[2],
               correlation = stats::cor(corr_df[[samps[1]]],
-                                corr_df[[samps[2]]])
+                                corr_df[[samps[2]]], use = "complete.obs")
             )
           )
 
@@ -844,23 +845,29 @@ infer_replicates <- function(obj,
     new_col <- "replicate_id"
   }
 
+  # Find label time columns
+  mutcounts_in_cB <- find_mutcounts(obj)
+
+  tl_cols_possible <- c("tl", "tpulse", "tchase",
+                        paste0("tl_", mutcounts_in_cB),
+                        paste0("tpulse_", mutcounts_in_cB),
+                        paste0("tchase_", mutcounts_in_cB))
+
+
+  tl_cols <- tl_cols_possible[tl_cols_possible %in% colnames(metadf)]
+
+
   if(!consider_tl){
-
-    # Mutation columns in cB
-    mutcounts_in_cB <- find_mutcounts(obj)
-
-    tl_cols_possible <- c("tl", "tpulse", "tchase",
-                          paste0("tl_", mutcounts_in_cB),
-                          paste0("tpulse_", mutcounts_in_cB),
-                          paste0("tchase_", mutcounts_in_cB))
-
-
-    tl_cols <- tl_cols_possible[tl_cols_possible %in% colnames(metadf)]
-
 
     cols_to_filter <- c("sample", tl_cols)
 
   }else{
+
+    # Need to remove label free samples
+    metadf <- metadf %>%
+      dplyr::rowwise() %>%
+      dplyr::filter(!all(dplyr::c_across(dplyr::all_of(tl_cols)) == 0))
+
 
     cols_to_filter <- "sample"
 
