@@ -871,8 +871,6 @@ infer_replicates <- function(obj,
 
     cols_to_filter <- "sample"
 
-    browser()
-
   }
 
   # Filter and add a replicate ID column
