@@ -772,12 +772,19 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                                                    method = "L-BFGS-B",
                                                    hessian = TRUE))),
                                       list(I(list(par = -Inf,
-                                                  hessian = Inf)))),
+                                                  hessian = 1)))),
                          n = sum(n)) %>%
         dplyr::ungroup() %>%
         dplyr::mutate(
           !!col_name := purrr::map_dbl(fit, ~ .x$par[1]),
           !!uncertainty_col := purrr::map_dbl(fit, ~ sqrt(solve(.x$hessian)[1]))
+        ) %>%
+        dplyr::mutate(
+          !!uncertainty_col := ifelse(
+            !!dplyr::sym(col_name) == -Inf,
+            0,
+            !!dplyr::sym(uncertainty_col)
+          )
         ) %>%
         dplyr::select(-fit) %>%
         dplyr::mutate(!!natural_col_name := inv_logit(!!dplyr::sym(col_name))) %>%
