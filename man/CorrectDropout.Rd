@@ -8,6 +8,9 @@ CorrectDropout(
   obj,
   grouping_factors = NULL,
   features = NULL,
+  populations = NULL,
+  fraction_design = NULL,
+  repeatID = NULL,
   exactMatch = TRUE
 )
 }
@@ -22,6 +25,19 @@ to group -s4U samples by for calculating the average -s4U RPM? The default value
 \item{features}{Character vector of the set of features you want to stratify
 reads by and estimate proportions of each RNA population. The default of \code{NULL}
 will expect there to be only one fractions table in the EZbakRFractions object.}
+
+\item{populations}{Mutational populations that were analyzed to generate the
+fractions table to use. For example, this would be "TC" for a standard
+s4U-based nucleotide recoding experiment.}
+
+\item{fraction_design}{"Design matrix" specifying which RNA populations exist
+in your samples. By default, this will be created automatically and will assume
+that all combinations of the \code{mutrate_populations} you have requested to analyze are
+present in your data. If this is not the case for your data, then you will have
+to create one manually. See docs for \code{EstimateFractions} (run ?EstimateFractions()) for more details.}
+
+\item{repeatID}{If multiple \code{fractions} tables exist with the same metadata,
+then this is the numerical index by which they are distinguished.}
 
 \item{exactMatch}{If TRUE, then \code{features} must exactly match the \code{features}
 metadata for a given fractions table for it to be used. Means that you cannot

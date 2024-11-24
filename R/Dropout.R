@@ -9,6 +9,16 @@
 #' @param features Character vector of the set of features you want to stratify
 #' reads by and estimate proportions of each RNA population. The default of `NULL`
 #' will expect there to be only one fractions table in the EZbakRFractions object.
+#' @param populations Mutational populations that were analyzed to generate the
+#' fractions table to use. For example, this would be "TC" for a standard
+#' s4U-based nucleotide recoding experiment.
+#' @param fraction_design "Design matrix" specifying which RNA populations exist
+#' in your samples. By default, this will be created automatically and will assume
+#' that all combinations of the `mutrate_populations` you have requested to analyze are
+#' present in your data. If this is not the case for your data, then you will have
+#' to create one manually. See docs for `EstimateFractions` (run ?EstimateFractions()) for more details.
+#' @param repeatID If multiple `fractions` tables exist with the same metadata,
+#' then this is the numerical index by which they are distinguished.
 #' @param exactMatch If TRUE, then `features` must exactly match the `features`
 #' metadata for a given fractions table for it to be used. Means that you cannot
 #' specify a subset of features by default. Set this to FALSE if you would like
@@ -17,6 +27,9 @@
 CorrectDropout <- function(obj,
                            grouping_factors = NULL,
                            features = NULL,
+                           populations = NULL,
+                           fraction_design = NULL,
+                           repeatID = NULL,
                            exactMatch = TRUE){
 
 
@@ -41,6 +54,8 @@ CorrectDropout <- function(obj,
   fractions_name <- EZget(obj, type = "fractions",
                           features = features,
                           exactMatch = exactMatch,
+                          populations = populations,
+                          fraction_design = fraction_design,
                           returnNameOnly = TRUE)
 
   # Get fractions
@@ -200,3 +215,9 @@ read_sig <- function(reads, reps){
   return(sqrt(1/reads)/sqrt(reps))
 
 }
+
+
+# VisualizeDropout <- function(obj,
+#                              grouping_factors = NULL,
+#                              features = NULL,
+#                              exactMatch = NULL)
