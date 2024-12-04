@@ -1578,7 +1578,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
       }
 
 
-      dplyr::as_tibble(sample_fns) %>%
+      sample_fns <- dplyr::as_tibble(sample_fns) %>%
         dplyr::mutate(!!natural_col_name := 0,
                       !!col_name := -Inf,
                       !!uncertainty_col := 0)
