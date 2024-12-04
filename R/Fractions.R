@@ -1544,8 +1544,6 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
   for(s in seq_along(all_samples)){
 
-    browser()
-
 
     message(paste0("ANALYZING ", all_samples[s], "..."))
 
