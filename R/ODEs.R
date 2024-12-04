@@ -536,7 +536,10 @@ EZDynamics <- function(obj,
                                design_factors = design_factors[design_factors != sample_feature])
         },
         error = function(e){
-          message(e)
+          message(paste0("Estimation of normalization scale factors failed!
+                         Will only estimate parameters that are identifiable without
+                         read counts.
+                         Error message thrown during normalization: ", e))
           NULL
         }
       )
@@ -1019,6 +1022,7 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
   ### Step 3: Infer data for actual measured species
   all_ss <- c()
   all_fns <- c()
+  indices_to_remove <- c()
 
   for(n in seq_along(tls)){
 
@@ -1038,16 +1042,26 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
     # Evaluate the formulas
     sample_formula <- formula_list[[sample_feature]]
 
-    sample_formula <- sample_formula[[which(sapply(1:length(sample_formula),
-                                                   function(x) all.vars(sample_formula[[x]])[1] == feature_type))]]
+    # If feature is not in model, throw it out and data for it
+    if(sum(sapply(1:length(sample_formula), function(x) all.vars(sample_formula[[x]])[1] == feature_type)) == 0){
 
-    measured_levels <- evaluate_formulas2(result_vector, sample_formula)
+      indices_to_remove <- c(indices_to_remove, n)
 
-    names(Rss) <- rownames(A)
-    measured_ss <- evaluate_formulas2(Rss, sample_formula)
+    }else{
 
-    all_fns <- c(all_fns, measured_levels/measured_ss)
-    all_ss <- c(all_ss, measured_ss)
+      sample_formula <- sample_formula[[which(sapply(1:length(sample_formula),
+                                                     function(x) all.vars(sample_formula[[x]])[1] == feature_type))]]
+
+      measured_levels <- evaluate_formulas2(result_vector, sample_formula)
+
+      names(Rss) <- rownames(A)
+      measured_ss <- evaluate_formulas2(Rss, sample_formula)
+
+      all_fns <- c(all_fns, measured_levels/measured_ss)
+      all_ss <- c(all_ss, measured_ss)
+
+    }
+
 
   }
 
@@ -1056,6 +1070,14 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
     all_fns < 0.0001 ~ 0.0001,
     .default = all_fns
   )
+
+
+
+  # Remove data for unmodeled features
+  if(length(indices_to_remove) > 0){
+    logit_fn <- logit_fn[-indices_to_remove]
+    logit_fn_sd <- logit_fn_sd[-indices_to_remove]
+  }
 
 
 
