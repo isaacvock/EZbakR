@@ -388,7 +388,8 @@ calculate_dropout <- function(obj,
     dplyr::inner_join(nolabel_data,
                       by = c(grouping_factors, features_to_analyze)) %>%
     dplyr::mutate(dropout = rpm / nolabel_rpm) %>%
-    dplyr::mutate(sig = sqrt((!!dplyr::sym(logit_se))^2 ))
+    dplyr::mutate(sig = sqrt((!!dplyr::sym(logit_se))^2 )) %>%
+    dplyr::filter(n > 25 & dropout < 5) # Get rid of outliers
 
 
   return(dropout_df)
