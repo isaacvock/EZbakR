@@ -2763,7 +2763,7 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
 
       }
 
-      if(all(population_vector) == "low"){
+      if(all(population_vector == "low")){
         fvector[i] <- 1
         ismvector[i] <- Inf
       }else{
