@@ -26,7 +26,7 @@ Currently, the following functionalities have dedicated vignettes:
 6. [Dynamical systems modeling](https://isaacvock.github.io/EZbakR/articles/EZDynamics.html). For analyses of subcellular fractionation and/or pre-mRNA processing dynamics. This is done with EZbakR's [`EZDynamics()`](https://isaacvock.github.io/EZbakR/reference/EZDynamics.html) function.
 7. [Navigating EZbakR output](https://isaacvock.github.io/EZbakR/articles/EZget.html). Conveniently fetching data from EZbakR analyses. This is done with the EZbakR's [`EZget()`](https://isaacvock.github.io/EZbakR/reference/EZget.html) function.
 
-Other implemented functionality that will have vignettes in the future includes:
+Other implemented functionality that may be of interest includes:
 
 1. Providing fractions or kinetic parameter estimates as input. The former works similarly to how it did in bakR, and is implemented via the [`EZbakRFractions()`](https://isaacvock.github.io/EZbakR/reference/EZbakRFractions.html) function. THe latter is unique to EZbakR and is implemented via the [`EZbakRKinetics()`](https://isaacvock.github.io/EZbakR/reference/EZbakRKinetics.html) function.
 2. Simulating NR-seq data. There are a number of simulation functions implemented in EZbakR. [`EZSimulate()`](https://isaacvock.github.io/EZbakR/reference/EZSimulate.html) is a convenient wrapper to several of these.
