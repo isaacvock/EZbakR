@@ -216,15 +216,21 @@ estimating mutation rates of the two populations in each labeled sample
 and 2) estimating fractions. Both of these steps are performed with a
 single function in EZbakR: <code><a href="../reference/EZbakRFractions.html">EZbakRFractions()</a></code>:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span>, features <span class="op">=</span> <span class="st">"feature"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Estimating mutation rates</span></span>
 <span><span class="co">#&gt; Summarizing data for feature(s) of interest</span></span>
 <span><span class="co">#&gt; Averaging out the nucleotide counts for improved efficiency</span></span>
 <span><span class="co">#&gt; Estimating fractions</span></span>
-<span><span class="co">#&gt; Processing output</span></span></code></pre></div>
-<p>See <code>?EstimateFractions()</code> for details and descriptions of
-optional parameters. We can use the simulated ground truth to assess
-estimate accuracy and confirm that the method is working:</p>
+<span><span class="co">#&gt; Processing output</span></span>
+<span></span>
+<span><span class="co">### NOTE:</span></span>
+<span><span class="co">### For real data from fastq2EZbakR, you will likely</span></span>
+<span><span class="co">### want to set `features = "XF"`. See EstimateFractions()</span></span>
+<span><span class="co">### vignette for details</span></span></code></pre></div>
+<p>See <code>?EstimateFractions()</code> as well as the <a href="https://isaacvock.github.io/EZbakR/articles/EstimateFractions.html">associated
+vignette</a> for details and descriptions of optional parameters. We can
+use the simulated ground truth to assess estimate accuracy and confirm
+that the method is working:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Simulated ground truth</span></span>
 <span><span class="va">truth</span> <span class="op">&lt;-</span> <span class="va">simdata</span><span class="op">$</span><span class="va">PerRepTruth</span></span>
