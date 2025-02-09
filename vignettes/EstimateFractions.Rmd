@@ -377,6 +377,107 @@ abline(0,1)
 
 Still good!
 
+
+
+### Isoform deconvolution
+
+For many years now, we have had tools to estimate transcript isoform abundances
+from RNA-seq data. These include RSEM, kallisto, Salmon, and many more. Wouldn't
+it be nice if we could similarly estimate synthesis and degradation rate
+constants for individual transcript isoforms with NR-seq data? EZbakR now
+implements such an analysis strategy! To use it, you will need to have a cB
+in which reads have been assigned to their transcript equivalence class, which
+is just a fancy way of saying "the set of isoforms with which they are
+completely consistent". [fastq2EZbakR](https://github.com/isaacvock/fastq2EZbakR) is able to do this, so check out its
+documentation for details. We can simulate such a cB ourselves for demonstration
+purposes:
+
+```{r}
+# Simulates a single sample worth of data
+simdata_iso <- SimulateIsoforms(nfeatures = 300)
+
+# We have to manually create the metadf in this case
+metadf <- data.frame(sample = 'sampleA', 
+                     tl = 4, 
+                     condition = 'A')
+
+ezbdo <- EZbakRData(simdata_iso$cB,
+                    metadf)
+```
+
+If you inspect the cB simulated by `SimulateIsoforms()`, you will note that
+there is a column called `transcripts`, which represents transcript equivalence
+classes. The transcript IDs for all of the transcripts a read is consistent
+with are separated by "+"'s, though in this case, we don't want to separate
+and copy the data for each isoform. Whether, we want to estimate fractions
+for each unique equivalence class:
+
+```{r}
+ezbdo <- EstimateFractions(ezbdo)
+```
+
+
+To get isoform-specific estimates, we will need to run a new function, called
+`EstimateIsoformFractions()`. Before doing this though, we need to import
+transcript isoform quantification estimates from tools like RSEM, which will 
+be used by `EstimateIsoformFractions()`. To do this, you can use
+`ImportIsoformQuant()`. `ImportIsoformQuant()` has three parameters:
+
+* `obj`: The `EZbakRData` object you want to which you want to add isoform
+quantification information
+* `files`: A named vector of paths to each isoform quantification output file
+you want to import. The names should be the relevant sample names as they appear 
+in your cB.
+* `quant_tool`: The tool you used for isoform quantification.
+
+`ImportIsoformQuant()` is just a convenient wrapper for `tximport::tximport`,
+so I urge you to read that tools's documentation for more information
+(documentation [here](https://bioconductor.org/packages/release/bioc/vignettes/tximport/inst/doc/tximport.html)).
+
+In this example, I will hack a solution, since I don't have any isoform
+quantification output to use. You could technically do something similar
+if you are having a tough time using `ImportIsoformQuant()`, but I wouldn't
+recommend it:
+
+```{r}
+### Hack in the true, simulated isoform levels
+reads <- simdata_iso$ground_truth %>%
+  dplyr::select(transcript_id, true_count, true_TPM) %>%
+  dplyr::mutate(sample = 'sampleA',
+                effective_length = 10000) %>%
+  dplyr::rename(expected_count = true_count,
+                TPM = true_TPM)
+
+# Name of table needs to have "isoform_quant" in it
+ezbdo[['readcounts']][['simulated_isoform_quant']] <- reads
+
+### Perform deconvolution
+ezbdo <- EstimateIsoformFractions(ezbdo)
+
+```
+
+We can then see how it did by comparing to ground truth:
+
+```{r, fig.align='center'}
+est <- EZget(ezbdo, 
+             type = 'fractions',
+             features = "transcript_id")
+truth <- simdata_iso$ground_truth
+
+compare <- truth %>%
+  dplyr::inner_join(est, by = c("feature", "transcript_id"))
+
+plot(compare$true_fn,
+     compare$fraction_highTC)
+abline(0,1)
+```
+
+This simulation is a bit extreme as around 50% of all isoform
+abundance differences are assumed to be completely driven by differences
+in isoform stability, which leads to underestimation of some of the crazy
+extreme fraction news. Other than that though, it looks good!
+
+
 ### Using the Apache Arrow backend
 
 **NOTE:** The documentation for this section lacks good examples as I don't yet
