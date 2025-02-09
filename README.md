@@ -24,7 +24,7 @@ Currently, the following functionalities have dedicated vignettes:
 4. [Quality Control](https://isaacvock.github.io/EZbakR/articles/EZQC.html): Assessing the quality of your NR-seq data. This is done with EZbakR's [`EZQC()`](https://isaacvock.github.io/EZbakR/reference/EZQC.html) function.
 5. [Comparative analyses](https://isaacvock.github.io/EZbakR/articles/Linear-modeling.html): Fitting a flexible generalized linear model to your NR-seq data so as to perform comparative analyses of estimated kinetic parameters that complements differential expression analyses. This is done with EZbakR's [`AverageAndRegularize()`](https://isaacvock.github.io/EZbakR/reference/AverageAndRegularize.html) and [`CompareParameters()`](https://isaacvock.github.io/EZbakR/reference/CompareParameters.html) functions.
 6. [Dynamical systems modeling](https://isaacvock.github.io/EZbakR/articles/EZDynamics.html). For analyses of subcellular fractionation and/or pre-mRNA processing dynamics. This is done with EZbakR's [`EZDynamics()`](https://isaacvock.github.io/EZbakR/reference/EZDynamics.html) function.
-7. [Navigating EZbakR output](https://isaacvock.github.io/EZbakR/articles/EZget.html). Conveniently fetching data from EZbakR analyses. This is done with the EZbakR's [`EZget()`](https://isaacvock.github.io/EZbakR/reference/EZget.html) function.
+7. [Navigating EZbakR output](https://isaacvock.github.io/EZbakR/articles/EZget.html). Conveniently fetching data from EZbakR analyses. This is done with EZbakR's [`EZget()`](https://isaacvock.github.io/EZbakR/reference/EZget.html) function.
 
 Other implemented functionality that may be of interest includes:
 
