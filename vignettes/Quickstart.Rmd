@@ -132,10 +132,15 @@ labeled sample and 2) estimating fractions. Both of these steps are performed
 with a single function in EZbakR: `EZbakRFractions()`:
 
 ```{r}
-ezbdo <- EstimateFractions(ezbdo)
+ezbdo <- EstimateFractions(ezbdo, features = "feature")
+
+### NOTE:
+### For real data from fastq2EZbakR, you will likely
+### want to set `features = "XF"`. See EstimateFractions()
+### vignette for details
 ```
 
-See `?EstimateFractions()` for details and descriptions of optional parameters. We
+See `?EstimateFractions()` as well as the [associated vignette](https://isaacvock.github.io/EZbakR/articles/EstimateFractions.html) for details and descriptions of optional parameters. We
 can use the simulated ground truth to assess estimate accuracy and confirm
 that the method is working:
 
