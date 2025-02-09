@@ -18,13 +18,13 @@ Documentation is here: https://isaacvock.github.io/EZbakR/
 
 Currently, the following functionalities have dedicated vignettes:
 
-1. A [general quickstart](https://isaacvock.github.io/EZbakR/articles/Quickstart.html) taking you through the standard workflow, similar to bakR's one and only workflow.
-2. [Estimating the fraction of reads from each mutational population in your data](https://isaacvock.github.io/EZbakR/articles/EstimateFractions.html). This is done with EZbakR's [`EstimateFractions()`](https://isaacvock.github.io/EZbakR/reference/EstimateFractions.html) function.
-3. [Estimating kinetic parameters of synthesis and degradation in a standard NR-seq experiment](https://isaacvock.github.io/EZbakR/articles/EstimateKinetics.html). This is done with EZbakR's [`EstimateKinetics()`](https://isaacvock.github.io/EZbakR/reference/EstimateKinetics.html) function.
-4. [Assessing the quality of your NR-seq data](https://isaacvock.github.io/EZbakR/articles/EZQC.html). This is done with EZbakR's [`EZQC()`](https://isaacvock.github.io/EZbakR/reference/EZQC.html) function.
-5. [Flexible linear modeling-based comparative analyses](https://isaacvock.github.io/EZbakR/articles/Linear-modeling.html). This is done with EZbakR's [`AverageAndRegularize()`](https://isaacvock.github.io/EZbakR/reference/AverageAndRegularize.html) and [`CompareParameters()`](https://isaacvock.github.io/EZbakR/reference/CompareParameters.html) functions.
-6. [Generalized linear dynamical systems modeling of subcellular compartment transport and/or pre-mRNA processing dynamics](https://isaacvock.github.io/EZbakR/articles/EZDynamics.html). This is done with EZbakR's [`EZDynamics()`](https://isaacvock.github.io/EZbakR/reference/EZDynamics.html) function.
-7. [Conveniently fetching data from an EZbakR fit object](https://isaacvock.github.io/EZbakR/articles/EZget.html). This is done with the EZbakR's [`EZget()`](https://isaacvock.github.io/EZbakR/reference/EZget.html) function.
+1. [Quickstart](https://isaacvock.github.io/EZbakR/articles/Quickstart.html): Takes you through the standard workflow, similar to bakR's one and only workflow.
+2. [Estimating fractions](https://isaacvock.github.io/EZbakR/articles/EstimateFractions.html): Estimating the fraction of reads from each mutational population in your data. This is the nearly universal first step in all NR-seq analyses. This is done with EZbakR's [`EstimateFractions()`](https://isaacvock.github.io/EZbakR/reference/EstimateFractions.html) function.
+3. [Estimating kinetics](https://isaacvock.github.io/EZbakR/articles/EstimateKinetics.html): Estimating kinetic parameters of synthesis and degradation in a standard NR-seq experiment. For standard, single label, NR-seq analyses, this is the next step in your analysis workflow after estimating the fraction of reads that are from labeled RNA. This is done with EZbakR's [`EstimateKinetics()`](https://isaacvock.github.io/EZbakR/reference/EstimateKinetics.html) function.
+4. [Quality Control](https://isaacvock.github.io/EZbakR/articles/EZQC.html): Assessing the quality of your NR-seq data. This is done with EZbakR's [`EZQC()`](https://isaacvock.github.io/EZbakR/reference/EZQC.html) function.
+5. [Comparative analyses][Flexible linear modeling-based comparative analyses](https://isaacvock.github.io/EZbakR/articles/Linear-modeling.html). This is done with EZbakR's [`AverageAndRegularize()`](https://isaacvock.github.io/EZbakR/reference/AverageAndRegularize.html) and [`CompareParameters()`](https://isaacvock.github.io/EZbakR/reference/CompareParameters.html) functions.
+6. [Dynamical systems modeling](https://isaacvock.github.io/EZbakR/articles/EZDynamics.html). This is done with EZbakR's [`EZDynamics()`](https://isaacvock.github.io/EZbakR/reference/EZDynamics.html) function.
+7. [Navigating EZbakR output](https://isaacvock.github.io/EZbakR/articles/EZget.html). This is done with the EZbakR's [`EZget()`](https://isaacvock.github.io/EZbakR/reference/EZget.html) function.
 
 Other implemented functionality that will have vignettes in the future includes:
 
