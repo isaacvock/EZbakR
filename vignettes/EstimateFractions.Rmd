@@ -50,7 +50,14 @@ Technically, all you need to do is run `EstimateFractions()`, providing it your
 `EZbakRData` object, and all will be fine:
 
 ```{r}
-ezbdo <- EstimateFractions(ezbdo)
+ezbdo <- EstimateFractions(ezbdo,
+                           features = "feature")
+
+# NOTE:
+# For real data from fastq2EZbakR, you will often
+# want to set `features = "XF"`, specifying analysis
+# of reads mapping to exonic regions of genes.
+
 ```
 
 Despite this, it is important to realize that `EstimateFractions()` is automating
@@ -62,7 +69,7 @@ In this case, that is just the "TC" column of the simulated cB.
 2. All possible mutational populations are present in your data.
 3. The feature sets for which you want to estimate fractions includes each unique
 combination of all feature columns in your cB. In this case, that is just the 
-"feature" column of the simulated cB.
+"feature" column of the simulated cB. 
 4. You want to filter out rows for which all feature columns are the string
 "__no_feature" or "NA".
 5. Rows with multiple feature assignments in a given feature column should not
