@@ -37,7 +37,7 @@ simulated is equal to \code{round(seqdepth * (ksyn_i/kdeg_i)/sum(ksyn/kdeg))}. I
 the normalized steady-state abundance of a feature is multiplied by the total number
 of reads to be simulated and rounded to the nearest integer.}
 
-\item{label_time}{Length of s^{4}U feed to simulate.}
+\item{label_time}{Length of s^4^U feed to simulate.}
 
 \item{sample_name}{Character vector to assign to \code{sample} column of output simulated
 data table (the cB table).}

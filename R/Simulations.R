@@ -17,7 +17,7 @@
 #' simulated is equal to `round(seqdepth * (ksyn_i/kdeg_i)/sum(ksyn/kdeg))`. In other words,
 #' the normalized steady-state abundance of a feature is multiplied by the total number
 #' of reads to be simulated and rounded to the nearest integer.
-#' @param label_time Length of s^{4}U feed to simulate.
+#' @param label_time Length of s^4^U feed to simulate.
 #' @param sample_name Character vector to assign to `sample` column of output simulated
 #' data table (the cB table).
 #' @param feature_prefix Name given to the i-th feature is `paste0(feature_prefix, i)`. Shows up in the
@@ -841,7 +841,7 @@ SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
 #' and pdiff_kd, pdiff_ks, and pdiff_both are all set to the equivalently named parameter values.
 #' @param seqdepth Only relevant if `read_vect` is not provided; in that case, this is
 #' the total number of reads to simulate.
-#' @param label_time Length of s^{4}U feed to simulate.
+#' @param label_time Length of s^4^U feed to simulate.
 #' @param pnew Probability that a T is mutated to a C if a read is new.
 #' @param pold Probability that a T is mutated to a C if a read is old.
 #' @param readlength Length of simulated reads. In this simple simulation, all reads
@@ -1210,7 +1210,7 @@ EZSimulate <- function(nfeatures,
 #' and pdiff_kd, pdiff_ks, and pdiff_both are all set to the equivalently named parameter values.
 #' @param seqdepth Only relevant if `read_vect` is not provided; in that case, this is
 #' the total number of reads to simulate.
-#' @param label_time Length of s^{4}U feed to simulate.
+#' @param label_time Length of s^4^U feed to simulate.
 #' @param pnew Probability that a T is mutated to a C if a read is new.
 #' @param pold Probability that a T is mutated to a C if a read is old.
 #' @param readlength Length of simulated reads. In this simple simulation, all reads
@@ -1691,7 +1691,7 @@ SimulateMultiCondition <- function(nfeatures, metadf, mean_formula,
 #' 1, in which case that many isoforms will be simulated for all features, or length
 #' equal to `nfeatures`.
 #' @param seqdepth Total number of sequencing reads to simulate
-#' @param label_time Length of s^{4}U feed to simulate.
+#' @param label_time Length of s^4^U feed to simulate.
 #' @param feature_prefix Name given to the i-th feature is `paste0(feature_prefix, i)`. Shows up in the
 #' `feature` column of the output simulated data table.
 #' @param sample_name Character vector to assign to `sample` column of output simulated

@@ -231,7 +231,7 @@ create_fraction_design <- function(mutrate_populations){
 #' numerical ID to distinguish the similar outputs.
 #' @import data.table
 #' @importFrom magrittr %>%
-#' @example
+#' @examples
 #'
 #' # Simulate data to analyze
 #' simdata <- SimulateOneRep(30)

@@ -35,7 +35,7 @@ equal to \code{nfeatures}.}
 
 \item{seqdepth}{Total number of sequencing reads to simulate}
 
-\item{label_time}{Length of s^{4}U feed to simulate.}
+\item{label_time}{Length of s^4^U feed to simulate.}
 
 \item{sample_name}{Character vector to assign to \code{sample} column of output simulated
 data table (the cB table).}
