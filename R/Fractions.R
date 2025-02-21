@@ -237,7 +237,7 @@ create_fraction_design <- function(mutrate_populations){
 #' simdata <- SimulateOneRep(30)
 #'
 #' # Create EZbakR input
-#' metadf <- tibble(sample = "sampleA", tl = 2)
+#' metadf <- data.frame(sample = "sampleA", tl = 2)
 #' ezbdo <- EZbakRData(simdata$cB, metadf)
 #'
 #' # Estimate fractions

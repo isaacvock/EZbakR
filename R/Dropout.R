@@ -36,7 +36,7 @@ CorrectDropout <- function(obj,
   ### Hack to deal with devtools::check() NOTEs
 
   tl <- n <- nolabel_rpm <- rpm <- pdo <- fit <- global_fraction <- corrected_gf <- corrected_fraction <- corrected_n <- NULL
-  nolabel_n <- nolabel_reps <- dropout <- sig <- density <- NULL
+  nolabel_n <- nolabel_reps <- dropout <- sig <- point_density <- NULL
 
 
   ##### GENERAL STEPS:
@@ -260,7 +260,7 @@ VisualizeDropout <- function(obj,
       dplyr::filter(sample == samps[s] &
                       n > n_min) %>%
       dplyr::mutate(
-        density = get_density(
+        point_density = get_density(
           x = !!dplyr::sym(fraction_of_interest),
           y = dropout,
           n = 200
@@ -269,7 +269,7 @@ VisualizeDropout <- function(obj,
       ggplot2::ggplot(
         ggplot2::aes(x = !!dplyr::sym(fraction_of_interest),
             y = dropout,
-            color = density)
+            color = point_density)
       ) +
       ggplot2::geom_point() +
       ggplot2::theme_classic() +
