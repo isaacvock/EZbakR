@@ -236,7 +236,7 @@ accuracy of this process by avoiding extreme estimates.
 simdata <- SimulateOneRep(30)
 
 # Create EZbakR input
-metadf <- tibble(sample = "sampleA", tl = 2)
+metadf <- data.frame(sample = "sampleA", tl = 2)
 ezbdo <- EZbakRData(simdata$cB, metadf)
 
 # Estimate fractions
