@@ -324,14 +324,16 @@ accuracy of this process by avoiding extreme estimates.</p></li>
 <span class="r-in"><span><span class="va">simdata</span> <span class="op">&lt;-</span> <span class="fu"><a href="SimulateOneRep.html">SimulateOneRep</a></span><span class="op">(</span><span class="fl">30</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Create EZbakR input</span></span></span>
-<span class="r-in"><span><span class="va">metadf</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="op">(</span>sample <span class="op">=</span> <span class="st">"sampleA"</span>, tl <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in tibble(sample = "sampleA", tl = 2):</span> could not find function "tibble"</span>
+<span class="r-in"><span><span class="va">metadf</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>sample <span class="op">=</span> <span class="st">"sampleA"</span>, tl <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="EZbakRData.html">EZbakRData</a></span><span class="op">(</span><span class="va">simdata</span><span class="op">$</span><span class="va">cB</span>, <span class="va">metadf</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'metadf' not found</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Estimate fractions</span></span></span>
 <span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu">EstimateFractions</span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'ezbdo' not found</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating mutation rates</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Summarizing data for feature(s) of interest</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Averaging out the nucleotide counts for improved efficiency</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating fractions</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Processing output</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
