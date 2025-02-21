@@ -203,9 +203,9 @@ related to the species you are modeling:</li>
 </ol>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">modeled_to_measured</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  nuclear <span class="op">=</span> <span class="va">GF</span> <span class="op">~</span> <span class="va">N</span>,</span>
-<span>  cytoplasm <span class="op">=</span> <span class="va">GF</span> <span class="op">~</span> <span class="va">C</span>,</span>
-<span>  total <span class="op">=</span> <span class="va">GF</span> <span class="op">~</span> <span class="va">C</span> <span class="op">+</span> <span class="va">N</span> <span class="co"># total RNA is a combination of C and N</span></span>
+<span>  nuclear <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">GF</span> <span class="op">~</span> <span class="va">N</span><span class="op">)</span>,</span>
+<span>  cytoplasm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">GF</span> <span class="op">~</span> <span class="va">C</span><span class="op">)</span>,</span>
+<span>  total <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">GF</span> <span class="op">~</span> <span class="va">C</span> <span class="op">+</span> <span class="va">N</span><span class="op">)</span> <span class="co"># total RNA is a combination of C and N</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>Running EZDynamics:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
@@ -845,9 +845,9 @@ species in your graph, nuclear RNA (N in the graph) and cytoplasmic RNA
 (C in the graph). <code>modeled_to_measured</code> would then be:</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mtom</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  total <span class="op">=</span> <span class="va">XF</span> <span class="op">~</span> <span class="va">C</span> <span class="op">+</span> <span class="va">N</span>,</span>
-<span>  nuclear <span class="op">=</span> <span class="va">XF</span> <span class="op">~</span> <span class="va">N</span>,</span>
-<span>  cytoplasmic <span class="op">=</span> <span class="va">XF</span> <span class="op">~</span> <span class="va">C</span></span>
+<span>  total <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">XF</span> <span class="op">~</span> <span class="va">C</span> <span class="op">+</span> <span class="va">N</span><span class="op">)</span>,</span>
+<span>  nuclear <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">XF</span> <span class="op">~</span> <span class="va">N</span><span class="op">)</span>,</span>
+<span>  cytoplasmic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">XF</span> <span class="op">~</span> <span class="va">C</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>This says that:</p>
 <ol style="list-style-type: decimal">
