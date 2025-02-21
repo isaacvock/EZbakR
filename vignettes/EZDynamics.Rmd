@@ -135,9 +135,9 @@ the species you are modeling:
 
 ```{r class.source = 'fold-show', eval=TRUE}
 modeled_to_measured <- list(
-  nuclear = GF ~ N,
-  cytoplasm = GF ~ C,
-  total = GF ~ C + N # total RNA is a combination of C and N
+  nuclear = list(GF ~ N),
+  cytoplasm = list(GF ~ C),
+  total = list(GF ~ C + N) # total RNA is a combination of C and N
 )
 ```
 
@@ -653,9 +653,9 @@ Let's also assume that your cB file has a single feature column, let's call it X
 
 ```{r}
 mtom <- list(
-  total = XF ~ C + N,
-  nuclear = XF ~ N,
-  cytoplasmic = XF ~ C
+  total = list(XF ~ C + N),
+  nuclear = list(XF ~ N),
+  cytoplasmic = list(XF ~ C)
 )
 ```
 
