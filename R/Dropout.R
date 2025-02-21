@@ -36,7 +36,7 @@ CorrectDropout <- function(obj,
   ### Hack to deal with devtools::check() NOTEs
 
   tl <- n <- nolabel_rpm <- rpm <- pdo <- fit <- global_fraction <- corrected_gf <- corrected_fraction <- corrected_n <- NULL
-  nolabel_n <- nolabel_reps <- dropout <- sig <- point_density <- NULL
+  nolabel_n <- nolabel_reps <- dropout <- sig <- NULL
 
 
   ##### GENERAL STEPS:
@@ -197,7 +197,7 @@ VisualizeDropout <- function(obj,
   ### Hack to deal with devtools::check() NOTEs
 
   tl <- n <- nolabel_rpm <- rpm <- pdo <- fit <- global_fraction <- corrected_gf <- corrected_fraction <- corrected_n <- NULL
-  nolabel_n <- nolabel_reps <- dropout <- sig <- NULL
+  nolabel_n <- nolabel_reps <- dropout <- sig <- point_density <- NULL
 
 
   ##### GENERAL STEPS:
