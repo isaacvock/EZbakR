@@ -131,7 +131,7 @@ and pdiff_kd, pdiff_ks, and pdiff_both are all set to the equivalently named par
 
 \item{seqdepth}{Total number of reads in each sample.}
 
-\item{label_time}{Length of s^{4}U feed to simulate.}
+\item{label_time}{Length of s^4^U feed to simulate.}
 
 \item{pnew}{Probability that a T is mutated to a C if a read is new.}
 

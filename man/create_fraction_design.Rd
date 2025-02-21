@@ -2,7 +2,7 @@
 % Please edit documentation in R/Fractions.R
 \name{create_fraction_design}
 \alias{create_fraction_design}
-\title{Generate a \code{fraction_design} table for \code{EstimateFractions}}
+\title{Generate a \code{fraction_design} table for \code{EstimateFractions}.}
 \usage{
 create_fraction_design(mutrate_populations)
 }
@@ -16,8 +16,34 @@ of c("TC", "GA").}
 \value{
 A \code{fraction_design} table that assumes that every possible combination of
 mutational populations listed in \code{mutrate_populations} are present in your data.
-The \code{present} column can be modified if this assumption is incorrect.
+The \code{present} column can be modified if this assumption is incorrect. This default
+is chosen as it will in theory work for all analyses, it may just be unnecessarily
+inefficient and estimate the abundance of populations that don't exist.
 }
 \description{
-Generate a \code{fraction_design} table for \code{EstimateFractions}
+A \code{fraction_design} table denotes what populations of labeled/unlabeled RNA are present in your data.
+A \code{fraction_design} table as one column for each mutation type (e.g., TC) present
+in your cB file, and one column named "present". Each entry is either \code{TRUE} or
+\code{FALSE}. The rows include all possible combinations of \code{TRUE} and \code{FALSE} for all
+mutation types columns. A value of \code{TRUE} in a mutation type column represents
+a population of reads that have high amounts (on average) of that mutation type.
+For example, if your \code{fraction_design} table has mutation type columns "TC" and
+"GA", the row with TC == \code{TRUE} and GA == \code{FALSE} represents a population of reads
+with high T-to-C mutation content and low G-to-A mutation content. In other words,
+these are reads from RNA synthesized in the presence of s4U but not s6G. If such
+a population exists in your data, the "present" column for that row should have a
+value of \code{TRUE}.
+}
+\examples{
+
+# Standard, single-label NR-seq
+fd <- create_fraction_design(c("TC"))
+
+# Dual-label NR-seq
+fd2 <- create_fraction_design(c("TC", "GA"))
+
+# Adjust dual-label output for TILAC
+fd2$present <- ifelse(fd2$TC & fd2$GA, FALSE, fd2$present)
+
+
 }

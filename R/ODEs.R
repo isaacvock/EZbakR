@@ -546,7 +546,6 @@ EZDynamics <- function(obj,
 
     }
 
-
     # Don't use reads if can't normalize
     if(is.null(scale_factors) & !is.null(sample_feature)){
       use_coverage <- FALSE
@@ -943,6 +942,7 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
                                 coverage_sd = NULL, scale_factor = NULL){
 
 
+
   ### Step 0, check to see if single replicate of data is being passed
   if(all(nreps == 1)){
     single_replicate <- TRUE
@@ -1008,6 +1008,7 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
   Rss <- solve(a = A,
                b = -param_graph[zero_index,-zero_index])
+  names(Rss) <- rownames(A)
 
 
   ev <- eigen(A)
@@ -1041,20 +1042,20 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
     # Evaluate the formulas
     sample_formula <- formula_list[[sample_feature]]
+    formula_index <- which(sapply(1:length(sample_formula),
+                                  function(x) all.vars(sample_formula[[x]])[1] == feature_type))
 
     # If feature is not in model, throw it out and data for it
-    if(sum(sapply(1:length(sample_formula), function(x) all.vars(sample_formula[[x]])[1] == feature_type)) == 0){
+    if(identical(formula_index, integer(0))){
 
       indices_to_remove <- c(indices_to_remove, n)
 
     }else{
 
-      sample_formula <- sample_formula[[which(sapply(1:length(sample_formula),
-                                                     function(x) all.vars(sample_formula[[x]])[1] == feature_type))]]
+      sample_formula <- sample_formula[[formula_index]]
 
       measured_levels <- evaluate_formulas2(result_vector, sample_formula)
 
-      names(Rss) <- rownames(A)
       measured_ss <- evaluate_formulas2(Rss, sample_formula)
 
       all_fns <- c(all_fns, measured_levels/measured_ss)
@@ -1065,12 +1066,8 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
   }
 
-  all_fns <- dplyr::case_when(
-    all_fns > 0.9999 ~ 0.9999,
-    all_fns < 0.0001 ~ 0.0001,
-    .default = all_fns
-  )
 
+  all_fns <- pmax(0.0001, pmin(0.9999, all_fns))
 
 
   # Remove data for unmodeled features

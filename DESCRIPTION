@@ -14,11 +14,11 @@ Description: A complete rewrite and reimagination of bakR. Designed to support
 	subcellular TimeLapse-seq. Support for single cell NR-seq methods is provided though
 	may be expanded in the future. Also designed to support nucleotide specific mutational
 	analyses and thus analyses of any mutational probing RNA-seq method (SHAPE-seq, DMS-MaPseq,
-	TRIBE, DART-seq, etc.). 
+	TRIBE, DART-seq, etc.).
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 Suggests: 
     furrr,
     knitr,

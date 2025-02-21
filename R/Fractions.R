@@ -1,4 +1,17 @@
-#' Generate a `fraction_design` table for `EstimateFractions`
+#' Generate a `fraction_design` table for `EstimateFractions`.
+#'
+#' A `fraction_design` table denotes what populations of labeled/unlabeled RNA are present in your data.
+#' A `fraction_design` table as one column for each mutation type (e.g., TC) present
+#' in your cB file, and one column named "present". Each entry is either `TRUE` or
+#' `FALSE`. The rows include all possible combinations of `TRUE` and `FALSE` for all
+#' mutation types columns. A value of `TRUE` in a mutation type column represents
+#' a population of reads that have high amounts (on average) of that mutation type.
+#' For example, if your `fraction_design` table has mutation type columns "TC" and
+#' "GA", the row with TC == `TRUE` and GA == `FALSE` represents a population of reads
+#' with high T-to-C mutation content and low G-to-A mutation content. In other words,
+#' these are reads from RNA synthesized in the presence of s4U but not s6G. If such
+#' a population exists in your data, the "present" column for that row should have a
+#' value of `TRUE`.
 #'
 #' @param mutrate_populations Character vector of the set of mutational populations
 #' present in your data. For example, s4U fed data with standard nucleotide recoding
@@ -7,7 +20,22 @@
 #' of c("TC", "GA").
 #' @return A `fraction_design` table that assumes that every possible combination of
 #' mutational populations listed in `mutrate_populations` are present in your data.
-#' The `present` column can be modified if this assumption is incorrect.
+#' The `present` column can be modified if this assumption is incorrect. This default
+#' is chosen as it will in theory work for all analyses, it may just be unnecessarily
+#' inefficient and estimate the abundance of populations that don't exist.
+#' @examples
+#'
+#' # Standard, single-label NR-seq
+#' fd <- create_fraction_design(c("TC"))
+#'
+#' # Dual-label NR-seq
+#' fd2 <- create_fraction_design(c("TC", "GA"))
+#'
+#' # Adjust dual-label output for TILAC
+#' fd2$present <- ifelse(fd2$TC & fd2$GA, FALSE, fd2$present)
+#'
+#'
+#' @importFrom magrittr %>%
 #' @export
 create_fraction_design <- function(mutrate_populations){
 
@@ -37,7 +65,42 @@ create_fraction_design <- function(mutrate_populations){
 
 
 
-#' Estimate fractions of each RNA population
+#' Estimate fractions of each RNA population.
+#'
+#' The first step of any NR-seq analysis is to figure out the fraction of reads
+#' from each mutational population in your data. For example, if you are performing
+#' a standard SLAM-seq or TimeLapse-seq experiment, this means estimating the fraction
+#' of reads with high T-to-C mutation content, and the fraction with low T-to-C mutation
+#' content. This is what `EstimateFractions` is for.
+#'
+#' `EstimateFractions` uses mixture modeling to estimate the fraction of reads from
+#' each mutational population in your data, and this is done for each feature in your
+#' data (i.e., combination of columns that specify genomic features from which reads
+#' were derived). The set of mutational populations in your
+#' data can be specified by providing a `fraction_design` object, described in more
+#' depth above (also see `?create_fraction_design`). There are several flavors
+#' of mixture modeling that can be performed by `EstimateFractions`. These are
+#' as follows:
+#'
+#' 1. The default: global mutation rate parameters (global = same for all reads
+#' from all features) are estimated for each sample by fitting a single two-component
+#' mixture model to all of the reads in that sample. These are used to estimate
+#' the fraction of reads from each feature that are from each mutational population,
+#' also using a two-component mixture model.
+#'  - With `Poisson` set to `TRUE`, this is a nucleotide-content adjusted Poisson
+#'  mixture model, which is a more efficient alternative to binomial mixture modeling.
+#'  - With `Poisson` set to `FALSE`, this is a binomial mixture model.
+#' 2. Low mutation rate from -label: if `pold_from_nolabel` is `TRUE`, then the background,
+#' no label mutation rates are estimated from -label samples. By default, a single set of
+#' background mutation rates are estimated for all samples, but you can change this behavior
+#' by setting `grouping_factors` to specify columns in your `metadf` by which samples
+#' should be stratified.
+#'  - This is a great strategy to use if you have low label incorporation rates
+#' 3. Hierarchical model: if `strategy == "hierarchical"`, which is currently
+#' only compatible for single-mutation type modeling (e.g., standard T-to-C mutation
+#' modeling), then high T-to-C content mutation rates are estimated for each feature.
+#' The global sample-wide estimates are used as an informative prior to increase the
+#' accuracy of this process by avoiding extreme estimates.
 #'
 #' @param obj `EZbakRData` or `EZbakRArrowData` object
 #' @param features Character vector of the set of features you want to stratify
@@ -168,6 +231,18 @@ create_fraction_design <- function(mutrate_populations){
 #' numerical ID to distinguish the similar outputs.
 #' @import data.table
 #' @importFrom magrittr %>%
+#' @examples
+#'
+#' # Simulate data to analyze
+#' simdata <- SimulateOneRep(30)
+#'
+#' # Create EZbakR input
+#' metadf <- tibble(sample = "sampleA", tl = 2)
+#' ezbdo <- EZbakRData(simdata$cB, metadf)
+#'
+#' # Estimate fractions
+#' ezbdo <- EstimateFractions(ezbdo)
+#'
 #' @export
 EstimateFractions <- function(obj, features = "all",
                               mutrate_populations = "all",
@@ -2457,9 +2532,16 @@ tcmml <- function(param, muts, nucs, n,
   }
 
 
+  # if(!is.finite(sum(n*log(ll)) + prior)){
+  #
+  #   browser()
+  #
+  # }
 
 
   ll <- -(sum(n*log(ll)) + prior)
+
+
 
   return(ll)
 
