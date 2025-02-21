@@ -376,6 +376,13 @@ Standard_kinetic_estimation <- function(obj,
       log_ksyn = log(ksyn))
 
 
+    # Add normalized read counts
+    kinetics <- kinetics %>%
+      dplyr::inner_join(reads_norm %>%
+                          dplyr::select(sample, !!features_to_analyze, "normalized_reads"),
+                        by = c("sample", features_to_analyze))
+
+
     ##### STEP 3: ESTIMATE UNCERTAINTY
     ##### (higher than in standard due to -s4U read variance)
 
