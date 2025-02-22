@@ -2,7 +2,7 @@
 % Please edit documentation in R/Kinetics.R
 \name{EstimateKinetics}
 \alias{EstimateKinetics}
-\title{Generic function for estimating kinetic parameters.}
+\title{Estimate kinetic parameters}
 \usage{
 EstimateKinetics(
   obj,
@@ -39,8 +39,6 @@ the average half-life of an RNA in your system.
 \item pulse-chase (NOT YET IMPLEMENTED): Estimate kdeg for a pulse-chase experiment. A kdeg will be estimated
 for each time point at which label was present. This includes any pulse-only samples,
 as well as all samples including a chase after the pulse.
-\item custom (NOT YET IMPLEMENTED): Provide a custom function that takes
-fraction estimates as input and produces as output kinetic parameter estimates.
 }}
 
 \item{features}{Character vector of the set of features you want to stratify
@@ -93,5 +91,109 @@ numerical ID to distinguish the similar outputs.}
 \code{EZbakRKinetics} object.
 }
 \description{
-Generic function for estimating kinetic parameters.
+Simple kinetic parameter (kdeg and ksyn) estimation using fraction estimates
+from \code{EstimateFractions()}. Several slightly different kinetic parameter
+inference strategies are implemented.
+}
+\details{
+\code{EstimateKinetics()} estimates the kinetics and RNA synthesis and degradation
+from standard single-label NR-seq data. It also technically supports analyses
+of the dual-label TILAC experiment, but that functionality is not as actively
+tested or maintained as the more standard analyses.
+
+\code{EstimateKinetics()} assumes a simple linear ODE model of RNA dynamics:
+\deqn{\frac{\text{dR}}{\text{dt}} = k_{\text{syn}} - k_{\text{deg}}*\text{R}}
+where:
+\itemize{
+\item R = Amount of RNA
+\item \eqn{k_{\text{syn}}} = Synthesis rate constant
+\item \eqn{k_{\text{deg}}} = Degradation rate constant
+and for which the general solution is:
+\deqn{\text{R(t)} = \text{R(0)}e^{-k_{\text{deg}}\text{t}} + (1 - \frac{k_{\text{syn}}}{k_{\text{deg}}})e^{-k_{\text{deg}}\text{t}}  }
+where \eqn{\text{R(0)}} is the initial RNA level.
+}
+
+The default kinetic parameter estimation strategy (\code{strategy == "standard"})
+assumes that for labeled RNA (or more precisely RNA synthesized in the presence
+of label) \eqn{\text{R(0)} = 0}. Thus, it assumes a pulse-label rather than
+pulse-chase experimental design (I've written several places, like \href{https://simonlabcode.github.io/bakR/articles/Troubleshooting.html#experimental-suggestions}{here}
+and \href{https://isaacvock.github.io/EZbakR/articles/EstimateKinetics.html#pulse-chase-analyses}{here}
+for example, about why pulse-label designs are superior to pulse-chases in
+almost all settings).
+
+For unlabeled RNA, it assumes that \eqn{\text{R(0)} = \frac{k_{\text{syn}}}{k_{\text{deg}}}}.
+This is known as the steady-state assumption and is the key assumption of this method.
+More broadly, assuming steady-state means that this method assumes that RNA levels
+from a given feature are constant for the entire metabolic labeling duration.
+As EZbakR is designed for analyses of bulk NR-seq data, "constant" means that the
+average RNA levels across all profiled cells is constant (thus asynchronous populations
+of dividing cells still count as steady-state, even if the RNA expression landscapes
+in individual cells are quite dynamic). This assumption may be violated in cases
+where labeling coincides with or closely follows a perturbation (e.g., drug treatment).
+When the steady-state assumption hold, there is a simple relationship between the
+fraction of reads from labeled RNA (\eqn{\theta}) and the turnover kinetics of the RNA:
+\deqn{\theta = 1 - e^{-k_{\text{deg}}t}}
+The power in this approach is thus that turnover kinetics are estimated from
+an "internally normalized" quantity: \eqn{\theta} (termed the "fraction new",
+"fraction labeled", "fraction high mutation content", or new-to-total ratio (NTR), depending
+on where you look or who you ask). "Internally normalized" means that a normalization
+scale factor does not need to be estimated in order to accurately infer turnover
+kinetics. \eqn{\theta} represents a ratio of read counts from the same feature
+in the same library, thus any scale factor would appear in both the numerator
+and denominator of this estimate and cancel out.
+
+When this assumption is valid, the \code{strategy = "NSS"} approach may be preferable.
+This approach relies on the same model of RNA dynamics, but now assumes that the
+initial RNA levels (\eqn{\text{R(0)}} for the unlabeled RNA) are not at the steady-state
+levels dictated by the current synthesis and turnover kinetics. The idea for this
+strategy was first presented in \href{https://pmc.ncbi.nlm.nih.gov/articles/PMC8354102/}{Narain et al. 2021}.
+To run this approach, you need to be able to estimate the initial RNA levels of
+each label-fed sample, as the fraction of reads from labeled RNA will no longer.
+only reflect the turnover kinetics (as the old RNA is assumed to potentially
+not have reached the new steady-state levels yet). This means that for each
+label-fed sample, you need to have a sample whose assayed RNA population represents
+the starting RNA population for the label-fed sample. EZbakR will use these
+reference samples to infer \eqn{\text{R(0)}} for unlabeled RNAs and estimate
+turnover kinetics from the ratio of this quantity to the remaining unlabeled RNA levels
+after labeling:
+\deqn{\theta_{\text{NSS}} = \frac{\text{R(tl)}}{\text{R(0)}}}
+While I really like the idea of this strategy, it is not without some severe limitations.
+For one, the major benefit of NR-seq, internally normalized estimation of turnover
+kinetics, is out the window. Thus, read counts need to be normalized between
+the relevant reference and label-fed sample pairs. In addition, the variance
+patterns of this ratio are somewhat unfortunate. Its variance
+is incredibly high for more stable RNAs, severely limiting the effective
+dynamic range of this approach relative to steady-state analyses. I continue
+to work to refine EZbakR's implementation of this approach, but for now I
+urge caution in its use and interpretation. See my discussion of an alternative
+approach for navigating non-steady-state data \href{https://simonlabcode.github.io/bakR/articles/NSS.html#going-beyond-the-steady-state-assumption}{here}.
+
+As an aside, you may wonder how this strategy deals with dynamic regulation of
+synthesis and degradation rate constants \emph{during labeling}. To answer this,
+you have to realize that the duration of metabolic labeling represents an
+integration time over which the best we can do is assess average kinetics. Thus,
+if rate constants are changing during the labeling, this strategy can still be
+thought of as providing a an estimate of the time averaged synthesis and turnover
+kinetics during the label time.
+
+Eventually, I will get around to implementing pulse-chase support in \code{EstimateKinetics()}.
+I haven't yet because I don't like pulse-chase experiments and think they are
+way more popular than they should be for purely historical reasons. But lots
+of people keep doing pulse-chase NR-seq so c'est la vie.
+}
+\examples{
+
+# Simulate data to analyze
+simdata <- SimulateOneRep(30)
+
+# Create EZbakR input
+metadf <- data.frame(sample = "sampleA", tl = 2)
+ezbdo <- EZbakRData(simdata$cB, metadf)
+
+# Estimate Fractions
+ezbdo <- EstimateFractions(ezbdo)
+
+# Estimate Kinetics
+ezbdo <- EstimateKinetics(ezbdo)
+
 }
