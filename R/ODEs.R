@@ -563,6 +563,9 @@ EZDynamics <- function(obj,
 
     }
 
+    # Add names to modeled_to_measured to avoid shockingly intensive computation
+    # in each optim() function call to find the relevant formula
+    modeled_to_measured <- renameFormulas(modeled_to_measured)
 
 
     # Don't estimate ksyn if coverage is not being modeled
@@ -767,6 +770,11 @@ EZDynamics <- function(obj,
       sample_feature <- "imputed_sample_feature"
 
     }
+
+
+    # Add names to modeled_to_measured to avoid shockingly intensive computation
+    # in each optim() function call to find the relevant formula
+    modeled_to_measured <- renameFormulas(modeled_to_measured)
 
     ### Fit model
 
@@ -1041,22 +1049,25 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
     names(result_vector) <- rownames(A)
 
     # Evaluate the formulas
-    sample_formula <- formula_list[[sample_feature]]
-    formula_index <- which(sapply(1:length(sample_formula),
-                                  function(x) all.vars(sample_formula[[x]])[1] == feature_type))
+    sample_formula <- formula_list[[sample_feature]][[feature_type]]
 
     # If feature is not in model, throw it out and data for it
-    if(identical(formula_index, integer(0))){
+    if(is.null(sample_formula)){
 
       indices_to_remove <- c(indices_to_remove, n)
 
     }else{
 
-      sample_formula <- sample_formula[[formula_index]]
 
-      measured_levels <- evaluate_formulas2(result_vector, sample_formula)
 
-      measured_ss <- evaluate_formulas2(Rss, sample_formula)
+      ### Generalized even to modeling contamination
+      # measured_levels <- evaluate_formulas2(result_vector, sample_formula)
+      #
+      # measured_ss <- evaluate_formulas2(Rss, sample_formula)
+      species_to_sum <- all.vars(sample_formula[[3]])
+
+      measured_levels <- sum(result_vector[species_to_sum])
+      measured_ss <- sum(Rss[species_to_sum])
 
       all_fns <- c(all_fns, measured_levels/measured_ss)
       all_ss <- c(all_ss, measured_ss)
@@ -1595,3 +1606,25 @@ scale_likelihood <- function(pars, M, y, sig){
 
 }
 
+
+# To avoid heavy comps later, conveniently rename
+# list elements of modeled_to_measured so that it is
+# name of modeled species.
+renameFormulas <- function(lst) {
+
+  # Helper to extract the "first variable" used in a formula
+  get_first_var <- function(f) {
+    vars <- all.vars(f)
+    if (length(vars) == 0) {
+      stop("No variables found in formula.")
+    }
+    vars[1]
+  }
+
+  # For each named sublist, rename the formula objects
+  lapply(lst, function(sublist) {
+    # sublist is a list of formula objects
+    new_names <- sapply(sublist, get_first_var)
+    setNames(sublist, new_names)
+  })
+}
