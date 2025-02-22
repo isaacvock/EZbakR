@@ -1155,6 +1155,7 @@ normalize_EZDynamics <- function(norm_df,
                                  design_factors,
                                  species_to_sf = NULL){
 
+
   # Hack to deal with devtools::check() NOTEs
   n <- valid <- NULL
 
