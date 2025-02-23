@@ -47,6 +47,11 @@ to specify a feature subset.}
 
 \item{n_min}{Minimum raw number of reads to make it to plot}
 }
+\value{
+A list of \code{ggplot2} objects, one for each +label sample.
+}
 \description{
-Make plots to visually assess dropout trends
+Plots a measure of dropout (the ratio of -label to +label RPM) as a function
+of feature fraction new, with the model fit depicted. Use this function to
+qualitatively assess model fit and whether the modeling assumptions are met.
 }

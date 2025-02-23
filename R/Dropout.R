@@ -1,5 +1,20 @@
 #' Correct for experimental/bioinformatic dropout of labeled RNA.
 #'
+#' Uses the strategy described [here](https://simonlabcode.github.io/bakR/articles/Dropout.html), and similar to that originally presented
+#' in [Berg et al. 2024](https://academic.oup.com/nar/article/52/7/e35/7612100).
+#'
+#' Dropout is the disproportionate loss of labeled RNA/reads from said RNA
+#' described independently [here](https://academic.oup.com/nar/article/52/7/e35/7612100)
+#' and [here](https://www.biorxiv.org/content/10.1101/2023.05.24.542133v1). Its origins can be a combination of
+#' bioinformatic (loss of high mutation content reads due to alignment problems),
+#' technical (loss of labeled RNA during RNA extraction), and biological (transcriptional
+#' shutoff in rare cases caused by metabolic label toxicity).
+#' `CorrectDropout()` compares label-fed and label-free controls from the same
+#' experimental conditions to estimate and correct for this dropout. It assumes
+#' that there is a single number (referred to as the dropout rate, or pdo) which
+#' describes the rate at which labeled RNA is lost (relative to unlabeled RNA).
+#' pdo ranges from 0 (no dropout) to 1 (complete loss of all labeled RNA), and
+#' is thus interpreted as the percentage of labeled RNA/read from labeled RNA.
 #'
 #' @param obj An EZbakRFractions object, which is an EZbakRData object on which
 #' you have run `EstimateFractions()`.
@@ -23,6 +38,8 @@
 #' metadata for a given fractions table for it to be used. Means that you cannot
 #' specify a subset of features by default. Set this to FALSE if you would like
 #' to specify a feature subset.
+#' @return An `EZbakRData` object with the specified "fractions" table replaced
+#' with a dropout corrected table.
 #' @export
 CorrectDropout <- function(obj,
                            grouping_factors = NULL,
@@ -151,14 +168,11 @@ CorrectDropout <- function(obj,
 
 
 
-# VisualizeDropout <- function(obj,
-#                              grouping_factors = NULL,
-#                              features = NULL,
-#                              exactMatch = NULL)
-
-
 #' Make plots to visually assess dropout trends
 #'
+#' Plots a measure of dropout (the ratio of -label to +label RPM) as a function
+#' of feature fraction new, with the model fit depicted. Use this function to
+#' qualitatively assess model fit and whether the modeling assumptions are met.
 #'
 #' @param obj An EZbakRFractions object, which is an EZbakRData object on which
 #' you have run `EstimateFractions()`.
@@ -183,6 +197,7 @@ CorrectDropout <- function(obj,
 #' specify a subset of features by default. Set this to FALSE if you would like
 #' to specify a feature subset.
 #' @param n_min Minimum raw number of reads to make it to plot
+#' @return A list of `ggplot2` objects, one for each +label sample.
 #' @export
 VisualizeDropout <- function(obj,
                              grouping_factors = NULL,

@@ -1,7 +1,7 @@
 #' Import transcript isoform quantification into EZbakRData object
 #'
-#' A convenient wrapper to \code{tximport()} for importing isoform quantification
-#' data into an EZbakRData object. This is necessary to run functions such as
+#' A convenient wrapper to [\code{tximport()}](https://bioconductor.org/packages/release/bioc/vignettes/tximport/inst/doc/tximport.html) for importing isoform quantification
+#' data into an EZbakRData object. You need to run this before running
 #' \code{EstimateIsoformFractions}.
 #'
 #' @param obj An `EZbakRData` object.
@@ -18,6 +18,9 @@
 #' as part of `...`.
 #' @param ... Additional arguments to be passed to `tximport::tximport()`. Especially relevant if
 #' you set `quant_tool` to "none".
+#' @return An `EZbakRData` object with an additional element in the `readcounts`
+#' list named "isform_quant_<quant_tool>". It contains TPM, expected_count,
+#' and effective length information for each transcript_id and each sample.
 #' @export
 ImportIsoformQuant <- function(obj, files,
                                quant_tool = c("none", "salmon", "sailfish",
@@ -92,6 +95,28 @@ ImportIsoformQuant <- function(obj, files,
 #' quantification performed by an outside tool (e.g., RSEM, kallisto, salmon, etc.)
 #' to infer transcript isoform-specific fraction news (or more generally fraction
 #' of reads coming from a particular mutation population).
+#'
+#' \code{EstimateIsoformFractions} expects as input a "fractions" table with estimates
+#' for transcript equivalence class (TEC) fraction news. A transcript equivalence class
+#' is the set of transcript isoforms with which a sequencing read is compatible.
+#' [fastq2EZbakR](https://github.com/isaacvock/fastq2EZbakR) is able to assign
+#' reads to these equivalence classes so that EZbakR can estimate the fraction of
+#' reads in each TEC that are from labeled RNA.
+#'
+#' \code{EstimateIsoformFractions} estimates transcript isoform fraction news
+#' by fitting a linear mixing model to the TEC fraction new estimates + transcript
+#' isoform abundance estimates. In other words, each TEC fraction new (data) is modeled
+#' as a weighted average of transcript isoform fraction news (parameters to estimate),
+#' with the weights determined by the relative abundances of the transcript isoforms
+#' in the TEC (data). The TEC fraction new is modeled as a Beta distribution with mean
+#' equal to the weighted transcript isoform fraction new average and variance related
+#' to the number of reads in the TEC.
+#'
+#' Transcript isoforms with estimated TPMs less than with an estimated
+#' TPM greater than `TPM_min` (1 by default) or an estimated number of read
+#' counts less than `count_min` (10 by default) are removed from TECs and will
+#' not have their fraction news estimated.
+#'
 #' @param obj An `EZbakRData` object
 #' @param features Character vector of the set of features you want to stratify
 #' reads by and estimate proportions of each RNA population. The default of "all"
@@ -131,6 +156,9 @@ ImportIsoformQuant <- function(obj, files,
 #' numerical ID to distinguish the similar outputs.
 #' @param TPM_min Minimum TPM for a transcript to be kept in analysis.
 #' @param count_min Minimum expected_count for a transcript to be kept in analysis.
+#' @return An `EZbakRData` object with an additional table under the "fractions"
+#' list. Has the same form as the output of `EstimateFractions()`, and will have the
+#' feature column "transcript_id".
 #' @export
 EstimateIsoformFractions <- function(obj,
                                      features = NULL,

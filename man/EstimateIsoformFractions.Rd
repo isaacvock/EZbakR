@@ -71,9 +71,36 @@ numerical ID to distinguish the similar outputs.}
 
 \item{count_min}{Minimum expected_count for a transcript to be kept in analysis.}
 }
+\value{
+An \code{EZbakRData} object with an additional table under the "fractions"
+list. Has the same form as the output of \code{EstimateFractions()}, and will have the
+feature column "transcript_id".
+}
 \description{
 Combines the output of \code{EstimateFractions} with transcript isoform
 quantification performed by an outside tool (e.g., RSEM, kallisto, salmon, etc.)
 to infer transcript isoform-specific fraction news (or more generally fraction
 of reads coming from a particular mutation population).
+}
+\details{
+\code{EstimateIsoformFractions} expects as input a "fractions" table with estimates
+for transcript equivalence class (TEC) fraction news. A transcript equivalence class
+is the set of transcript isoforms with which a sequencing read is compatible.
+\href{https://github.com/isaacvock/fastq2EZbakR}{fastq2EZbakR} is able to assign
+reads to these equivalence classes so that EZbakR can estimate the fraction of
+reads in each TEC that are from labeled RNA.
+
+\code{EstimateIsoformFractions} estimates transcript isoform fraction news
+by fitting a linear mixing model to the TEC fraction new estimates + transcript
+isoform abundance estimates. In other words, each TEC fraction new (data) is modeled
+as a weighted average of transcript isoform fraction news (parameters to estimate),
+with the weights determined by the relative abundances of the transcript isoforms
+in the TEC (data). The TEC fraction new is modeled as a Beta distribution with mean
+equal to the weighted transcript isoform fraction new average and variance related
+to the number of reads in the TEC.
+
+Transcript isoforms with estimated TPMs less than with an estimated
+TPM greater than \code{TPM_min} (1 by default) or an estimated number of read
+counts less than \code{count_min} (10 by default) are removed from TECs and will
+not have their fraction news estimated.
 }

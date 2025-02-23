@@ -44,6 +44,25 @@ metadata for a given fractions table for it to be used. Means that you cannot
 specify a subset of features by default. Set this to FALSE if you would like
 to specify a feature subset.}
 }
+\value{
+An \code{EZbakRData} object with the specified "fractions" table replaced
+with a dropout corrected table.
+}
 \description{
-Correct for experimental/bioinformatic dropout of labeled RNA.
+Uses the strategy described \href{https://simonlabcode.github.io/bakR/articles/Dropout.html}{here}, and similar to that originally presented
+in \href{https://academic.oup.com/nar/article/52/7/e35/7612100}{Berg et al. 2024}.
+}
+\details{
+Dropout is the disproportionate loss of labeled RNA/reads from said RNA
+described independently \href{https://academic.oup.com/nar/article/52/7/e35/7612100}{here}
+and \href{https://www.biorxiv.org/content/10.1101/2023.05.24.542133v1}{here}. Its origins can be a combination of
+bioinformatic (loss of high mutation content reads due to alignment problems),
+technical (loss of labeled RNA during RNA extraction), and biological (transcriptional
+shutoff in rare cases caused by metabolic label toxicity).
+\code{CorrectDropout()} compares label-fed and label-free controls from the same
+experimental conditions to estimate and correct for this dropout. It assumes
+that there is a single number (referred to as the dropout rate, or pdo) which
+describes the rate at which labeled RNA is lost (relative to unlabeled RNA).
+pdo ranges from 0 (no dropout) to 1 (complete loss of all labeled RNA), and
+is thus interpreted as the percentage of labeled RNA/read from labeled RNA.
 }

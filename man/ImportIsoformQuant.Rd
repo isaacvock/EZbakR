@@ -31,8 +31,13 @@ as part of \code{...}.}
 \item{...}{Additional arguments to be passed to \code{tximport::tximport()}. Especially relevant if
 you set \code{quant_tool} to "none".}
 }
+\value{
+An \code{EZbakRData} object with an additional element in the \code{readcounts}
+list named "isform_quant_<quant_tool>". It contains TPM, expected_count,
+and effective length information for each transcript_id and each sample.
+}
 \description{
-A convenient wrapper to \code{tximport()} for importing isoform quantification
-data into an EZbakRData object. This is necessary to run functions such as
+A convenient wrapper to \href{https://bioconductor.org/packages/release/bioc/vignettes/tximport/inst/doc/tximport.html}{\code{tximport()}} for importing isoform quantification
+data into an EZbakRData object. You need to run this before running
 \code{EstimateIsoformFractions}.
 }
