@@ -1,5 +1,45 @@
 #' Run quality control checks
 #'
+#' `EZQC()` assesses multiple aspects of your NR-seq data and generates a number
+#' of plots visualizing dataset-wide trends.
+#'
+#' `EZQC()` checks the following aspects of your NR-seq data. If you have passed
+#' an `EZbakRData` object, then `EZQC()` checks:
+#' \itemize{
+#'  \item Raw mutation rates: In all sequencing reads, how many T's in the reference
+#'  were a C in the read? The hope is that raw mutation rates are higher than -label
+#'  controls in all +label samples. Higher raw mutation rates, especially when using
+#'  standard label times (e.g., 2 hours or more in mammalian systems), are typically
+#'  a sign of good label incorporation and low labeled RNA/read dropout. If you
+#'  don't have -label samples, know that background mutation rates are typically
+#'  less than 0.2%, so +label raw mutation rates several times higher than this
+#'  would be preferable.
+#'  \item Mutation rates in labeled and unlabeled reads: The raw mutation rate
+#'  counts all mutations in all reads. In a standard NR-seq experiment performed
+#'  with a single metabolic label, there are typically two populations of reads:
+#'  1) Those from labeled RNA, having higher mutation rates due to chemical conversion/recoding
+#'  of the metabolic label and 2) those from unlabeled RNA, having lower, background
+#'  levels of mutations. `EZbakR` fits a two component mixture model to estimate the mutation
+#'  rates in these two populations separately. A successful NR-seq experiment should
+#'  have a labeled read mutation rate of > 1% and a low background mutation rate of
+#'  < 0.3%.
+#'  \item Read count replicate correlation: Simply the log10 read count correlation
+#'  for replicates, as inferred from your `metadf`.
+#' }
+#'
+#' If you have passed an `EZbakRFractions` object, i.e., the output of `EstimateFractions()`,
+#' then in addition to the checks in the `EZbakRData` input case, `EZQC()` also checks:
+#' \itemize{
+#'  \item Fraction labeled distribution: This is the distribution of feature-wise
+#'  fraction labeled's (or fraction high mutation content's) estimated by `EstimateFractions()`.
+#'  The "ideal" is a distribution with mean around 0.5, as this maximizes the amount of RNA
+#'  with synthesis and degradation kinetics within the dynamic range of the experiment. In practice,
+#'  you will (and should) be at least a bit lower than this as longer label times risk
+#'  physiological impacts of metabolic labeling.
+#'  \item Fraction labeled replicate correlation: This is the logit(fraction labeled)
+#'  correlation between replicates, as inferred from your `metadf`.
+#' }
+#'
 #' @param obj EZbakRData or EZbakRFractions object.
 #' @param ... Parameters passed to the class-specific method.
 #' If you have provided an EZbakRFractions object, then these can be (all play the
@@ -22,6 +62,8 @@
 #' }
 #' @import data.table
 #' @importFrom magrittr %>%
+#' @return A list of `ggplot2` objects visualizing the various aspects of your data
+#' assessed by `EZQC()`.
 #' @export
 EZQC <- function(obj,
                  ...){
@@ -44,6 +86,8 @@ EZQC <- function(obj,
 #' help find this table.
 #' @import data.table
 #' @importFrom magrittr %>%
+#' @return A list of `ggplot2` objects visualizing the various aspects of your data
+#' assessed by `EZQC()`.
 #' @export
 EZQC.EZbakRFractions <- function(obj,
                                  features = NULL,
@@ -118,6 +162,8 @@ EZQC.EZbakRFractions <- function(obj,
 #' for details.
 #' @import data.table
 #' @importFrom magrittr %>%
+#' @return A list of `ggplot2` objects visualizing the various aspects of your data
+#' assessed by `EZQC()`.
 #' @export
 EZQC.EZbakRData <- function(obj,
                             mutrate_populations = "all",

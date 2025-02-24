@@ -9,10 +9,51 @@
 #'
 #' When running `AverageAndRegularize()` to produce input for `EZDynamics()`, you
 #' must set `parameter` to "logit_fraction_high<muttype>" (<muttype> = type of mutation
-#' modeled by `EstimateFractions()`, e.g., TC), and you must include the label time
+#' modeled by `EstimateFractions()`, e.g., TC). If you have multiple distinct label times,
+#' you must also include the label time (`tl` of your `metadf`)
 #' in your regression formula. `EZDynamics()` models the logit(fraction high <muttype),
 #' and this will depend on the label time (longer label time = higher fraction), which
-#' is why these two conditions must be met.
+#' is why these two conditions must be met. If you only have a single label time though,
+#' `EZDynamics` will be able to impute this one value for all samples from your `metadf`.
+#' You can also include additional interaction terms in your `AverageAndRegularize()`
+#' model for different experimental conditions in which experiments were conducted,
+#' so that inferred kinetic parameters can be compared across these conditions. Currently,
+#' more complex modeling beyond simple stratification of samples by one or more condition
+#' is not possible with `EZDynamics()`.
+#'
+#' For normalization purposes, especially if analyzing pre-mRNA processing dynamics,
+#' you will need to provide `AverageAndRegularize()` with a table of feature lengths
+#' via the `feature_lengths` parameter. This will be used in all cases to length
+#' normalize read counts. Even in the case when you are just modeling mature mRNA
+#' dynamics, this is technically necessary for accurate estimation of scale factors.
+#'
+#' The first step of `EZDynamics()` is attempted inference of normalization scale
+#' factors for read counts. If you have scale factors you calculated yourself,
+#' e.g. via specialized spike-in protocols, you can provide these via the `scale_factors`
+#' parameter. If not, `EZDynamics()` will try to infer these from the fraction labeled's
+#' in each `sample_feature` (e.g., in different subcellular compartments). This relies on
+#' having some `sample_feature`'s that are a combination of other `sample_feature`'s. For
+#' example, if analyzing subcellular fractionation data, you may have 1) total RNA; 2)
+#' cytoplasmic RNA; and 3) nuclear RNA. Total RNA = cytoplasmic + nuclear RNA, and thus
+#' the fraction of reads from labeled RNA is a function of the total cytoplasmic and
+#' nuclear fraction labeled's, as well as the relative molecular abundances of cytoplasmic
+#' and nuclear RNA. The latter is precisely the scale factors we need to estimate.
+#' If you do not have sufficient combinations of data to perform this scale factor estimation,
+#' `EZDynamics()` will only use the fraction labeled's for modeling kinetic parameters.
+#' It can then perform post-hoc normalization to estimate a single synthesis rate constant,
+#' using the downstream rate constants to infer the unknown normalization scale factor necessary
+#' to combine kinetic parameter estimates and read counts to infer this rate constant.
+#'
+#' For estimating kinetic parameters, `EZDynamics()` infers the solution of the linear
+#' system of ODEs specified in your `graph` matrix input. This is done by representing
+#' the system of equations as a matrix, and deriving the general solution of the levels
+#' of each modeled species of RNA from the eigenvalues and eigenvectors of this matrix.
+#' While this makes `EZDynamics()` orders of magnitude more efficient than if it had to
+#' numerically infer the solution for each round of optimization, needing to compute
+#' eigenvalues and eigenvectors in each optimization iteration is still non-trivial,
+#' meaning that `EZDynamics()` may take anywhere from 10s of minutes to a couple hours
+#' to run, depending on how complex your model is and how many distinct set of samples
+#' and experimental conditions you have.
 #'
 #' @param obj Currently must be an EZbakRData object on which `AverageAndRegularize`
 #' has been run. In the future, will also support (in case where all species are
@@ -156,6 +197,7 @@
 #' numerical ID to distinguish the similar outputs.
 #' @importFrom magrittr %>%
 #' @import data.table
+#' @return `EZbakRData` object with an additional "dynamics" table.
 #' @export
 EZDynamics <- function(obj,
                      graph,

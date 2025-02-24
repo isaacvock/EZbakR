@@ -1,5 +1,26 @@
 #' Make a VolcanoPlot from EZbakR comparison
 #'
+#' Make a plot of effect size (x-axis) vs. multiple-test adjusted p-value (y-axis),
+#' coloring points by position relative to user-defined decision cutoffs.
+#'
+#' `EZVolcanoPlot()` accepts as input the output of `CompareParameters()`, i.e.,
+#' an `EZbakRData` object with at least one "comparisons" table. It will plot
+#' the "difference" column in this table versus -log10 of the "padj" column.
+#' In the simplest case, "difference" represents a log-fold change in a kinetic
+#' parameter (e.g., kdeg) estimate. More complicated linear model fits and
+#' comparisons can yield different parameter estimates.
+#'
+#' NOTE: some outputs of `CompareParameters()` are not meant for visualization
+#' via a volcano plot. For example, when fitting certain interaction models,
+#' some of the parameter estimates may represent average log(kinetic paramter)
+#' in one condition. See discussion of one example of this [here](https://github.com/simonlabcode/bakR/issues/7#issuecomment-2371431127).
+#'
+#' EZbakR estimates kinetic parameters in `EstimateKinetics()` and `EZDynamics()`
+#' on a log-scale. By default, since log2-fold changes are a bit easier to interpret
+#' and more common for these kind of visualizations, `EZVolcanoPlot()` multiplies
+#' the x-axis value by log2(exp(1)), which is the factor required to convert from
+#' a log to a log2 scale. You can turn this off by setting `plotlog2` to `FALSE`.
+#'
 #' @param obj An object of class `EZbakRCompare`, which is an `EZbakRData` object
 #' on which you have run `CompareParameters`
 #' @param parameter Name of parameter whose comparison you want to plot.
@@ -34,6 +55,9 @@
 #' a point size is automatically chosen.
 #' @import ggplot2
 #' @importFrom magrittr %>%
+#' @return A `ggplot2` object. X-axis = log2(estimate of interest (e.g., fold-change
+#' in degradation rate constant); Y-axis = -log10(multiple test adjusted p-value);
+#' points colored by location relative to FDR and effect size cutoffs.
 #' @export
 EZVolcanoPlot <- function(obj,
                           parameter = "log_kdeg",
@@ -180,6 +204,27 @@ EZVolcanoPlot <- function(obj,
 
 #' Make an MAPlot from EZbakR comparison
 #'
+#' Make a plot of effect size (y-axis) vs. log10(read coverage) (x-axis),
+#' coloring points by position relative to user-defined decision cutoffs.
+#'
+#' `EZMAPlot()` accepts as input the output of `CompareParameters()`, i.e.,
+#' an `EZbakRData` object with at least one "comparisons" table. It will plot
+#' the "avg_coverage" column in this table vs. the "difference" column.
+#' In the simplest case, "difference" represents a log-fold change in a kinetic
+#' parameter (e.g., kdeg) estimate. More complicated linear model fits and
+#' comparisons can yield different parameter estimates.
+#'
+#' NOTE: some outputs of `CompareParameters()` are not meant for visualization
+#' via an MA plot. For example, when fitting certain interaction models,
+#' some of the parameter estimates may represent average log(kinetic paramter)
+#' in one condition. See discussion of one example of this [here](https://github.com/simonlabcode/bakR/issues/7#issuecomment-2371431127).
+#'
+#' EZbakR estimates kinetic parameters in `EstimateKinetics()` and `EZDynamics()`
+#' on a log-scale. By default, since log2-fold changes are a bit easier to interpret
+#' and more common for these kind of visualizations, `EZMAPlot()` multiplies
+#' the y-axis value by log2(exp(1)), which is the factor required to convert from
+#' a log to a log2 scale. You can turn this off by setting `plotlog2` to `FALSE`.
+#'
 #' @param obj An object of class `EZbakRCompare`, which is an `EZbakRData` object
 #' on which you have run `CompareParameters`
 #' @param parameter Name of parameter whose comparison you want to plot.
@@ -210,6 +255,9 @@ EZVolcanoPlot <- function(obj,
 #' a point size is automatically chosen.
 #' @import ggplot2
 #' @importFrom magrittr %>%
+#' @return A `ggplot2` object. Y-axis = log2(estimate of interest (e.g., fold-change
+#' in degradation rate constant); X-axis = log10(average normalized read coverage);
+#' points colored by location relative to FDR and effect size cutoffs.
 #' @export
 EZMAPlot <- function(obj,
                          parameter = "log_kdeg",

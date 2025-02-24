@@ -108,5 +108,34 @@ is advised.}
 \item{overwrite}{If TRUE, then identical output will be overwritten if it exists.}
 }
 \description{
-Get contrasts of estimated parameters
+\code{CompareParameters()} calculates differences in parameters estimated by
+\code{AverageAndRegularize()} or \code{EZDynamics()} and performs null hypothesis
+statistical testing, comparing their values to a null hypothesis of 0.
+}
+\details{
+The EZbakR website has an extensive vignette walking through various use cases
+and parameters you can compare with \code{CompareParameters()}: \href{https://isaacvock.github.io/EZbakR/articles/Linear-modeling.html}{vignette link}.
+
+There are essentially 3 scenarios that \code{CompareParameters()} can handle:
+\itemize{
+\item Pairwise comparisons: compare \code{reference} to \code{experimental} parameter
+estimates of a specified \code{design_factor} from \code{AverageAndRegularize()}. log(\code{experimental} / \code{reference}) is
+the computed "difference" in this case.
+\item Assess the value of a single parameter, which itself should represent a
+difference between other parameters. The name of this parameter can be specified
+via the \code{param_name} argument. This is useful for various interaction models
+where some of the parameters of these models may represent things like "effect of
+A on condition X".
+\item Pairwise comparison of dynamical systems model parameter estimate: similar
+to the first case listed above, but now when \code{type == "dynamics"}. \code{design_factor} can
+now be a vector of all the \code{metadf} columns you stratified parameter estimates by.
+}
+Eventually, a 4th option via the currently non-functional \code{param_function} argument
+will be implemented, which will allow you to specify functions of parameters to be assessed,
+which can be useful for certain interaction models.
+
+\code{CompareParameters()} calculates p-values using what is essentially an asymptotic Wald test,
+meaning that a standard normal distribution is integrated. P-values are then multiple-test
+adjusted using the method of Benjamini and Hochberg, implemented in R's \code{p.adjust()}
+function.
 }

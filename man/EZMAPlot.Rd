@@ -66,6 +66,31 @@ you want to plot log2(parameter) difference.}
 \item{size}{Size of points, passed to \code{geom_point()} size parameter. If not specified,
 a point size is automatically chosen.}
 }
+\value{
+A \code{ggplot2} object. Y-axis = log2(estimate of interest (e.g., fold-change
+in degradation rate constant); X-axis = log10(average normalized read coverage);
+points colored by location relative to FDR and effect size cutoffs.
+}
 \description{
-Make an MAPlot from EZbakR comparison
+Make a plot of effect size (y-axis) vs. log10(read coverage) (x-axis),
+coloring points by position relative to user-defined decision cutoffs.
+}
+\details{
+\code{EZMAPlot()} accepts as input the output of \code{CompareParameters()}, i.e.,
+an \code{EZbakRData} object with at least one "comparisons" table. It will plot
+the "avg_coverage" column in this table vs. the "difference" column.
+In the simplest case, "difference" represents a log-fold change in a kinetic
+parameter (e.g., kdeg) estimate. More complicated linear model fits and
+comparisons can yield different parameter estimates.
+
+NOTE: some outputs of \code{CompareParameters()} are not meant for visualization
+via an MA plot. For example, when fitting certain interaction models,
+some of the parameter estimates may represent average log(kinetic paramter)
+in one condition. See discussion of one example of this \href{https://github.com/simonlabcode/bakR/issues/7#issuecomment-2371431127}{here}.
+
+EZbakR estimates kinetic parameters in \code{EstimateKinetics()} and \code{EZDynamics()}
+on a log-scale. By default, since log2-fold changes are a bit easier to interpret
+and more common for these kind of visualizations, \code{EZMAPlot()} multiplies
+the y-axis value by log2(exp(1)), which is the factor required to convert from
+a log to a log2 scale. You can turn this off by setting \code{plotlog2} to \code{FALSE}.
 }

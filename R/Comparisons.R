@@ -7,6 +7,36 @@
 #' are regularized via a hierarchical modeling strategy originally introduced with
 #' bakR, though slightly improved upon since then.
 #'
+#' The EZbakR website has an extensive vignette walking through various use cases
+#' and model types that you can fit with `AverageAndRegularize()`: [vignette link](https://isaacvock.github.io/EZbakR/articles/Linear-modeling.html).
+#' EZbakR improves upon bakR by balancing extra conservativeness in several steps
+#' with a more highly powered statistical testing scheme in its `CompareParameters()`
+#' function. In particular, the following changes to the variance regularization
+#' scheme were made:
+#' \itemize{
+#'  \item Sample-specific parameter uncertainties are used to generate conservative estimates
+#'  of feature-specific replicate variabilties. In addition, a small floor is set to ensure
+#'  that replicate variance estimates are never below a certain level, for the same reason.
+#'  \item Condition-wide replicate variabilities are regressed against both read coverage and
+#'  either a) |logit(estimate)| when modeling average fraction labeled. This captures
+#'  the fact thta estimates are best around a logit(fraction labeled) of 0 and get
+#'  worse for more extreme fraction labeled's.; b) log(kdeg) when modeling log degradation
+#'  rate constants. At first, I considered a strategy similar to the fraction labeled
+#'  modeling, but found that agreement between a fully rigorous MCMC sampling approach
+#'  and EZbakR was significantly improved by just regressing hee value of the log kientic parameter,
+#'  likely due to the non-linear transformation of fraction labeled to log(kdeg);
+#'  and c) only coverage in all other cases.
+#'  \item Features with replicate variabilities below the inferred trend have their replicate
+#'  variabilites set equal to that predicted by the trend. This helps limit underestimation
+#'  of parameter variance. Features with above-trend replicate variabilties have their
+#'  replicate variabilities regularized with a Normal prior Normal likelihood Bayesian
+#'  model, as in bakR (so the log(variance) is the inferred mean of this distribution, and
+#'  the known variance is inferred from the amount of variance about the linear dataset-wide
+#'  trend).
+#' }
+#' All of this allows `CompareParameters()` to use a less conservative statistical test
+#' when calculating p-values, while still controlling false discovery rates.
+#'
 #' @param obj An `EZbakRFractions` or `EZbakRKinetics` object, which is an `EZbakRData` object on
 #' which `EstimateFractions()` or `EstimateKinetics()` has been run.
 #' @param features Character vector of the set of features you want to stratify
@@ -88,6 +118,9 @@
 #' @param overwrite If TRUE, identical, existing output will be overwritten.
 #' @import data.table
 #' @importFrom magrittr %>%
+#' @return `EZbakRData` object with an additional "averages" table, as well as a
+#' fullfit table under the same list heading, which includes extra information about
+#' the priors used for regularization purposes.
 #' @export
 AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                  type = "kinetics",
@@ -693,6 +726,36 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 
 
 #' Get contrasts of estimated parameters
+#'
+#' `CompareParameters()` calculates differences in parameters estimated by
+#' `AverageAndRegularize()` or `EZDynamics()` and performs null hypothesis
+#' statistical testing, comparing their values to a null hypothesis of 0.
+#'
+#' The EZbakR website has an extensive vignette walking through various use cases
+#' and parameters you can compare with `CompareParameters()`: [vignette link](https://isaacvock.github.io/EZbakR/articles/Linear-modeling.html).
+#'
+#' There are essentially 3 scenarios that `CompareParameters()` can handle:
+#' \itemize{
+#'  \item Pairwise comparisons: compare `reference` to `experimental` parameter
+#'  estimates of a specified `design_factor` from `AverageAndRegularize()`. log(`experimental` / `reference`) is
+#'  the computed "difference" in this case.
+#'  \item Assess the value of a single parameter, which itself should represent a
+#'  difference between other parameters. The name of this parameter can be specified
+#'  via the `param_name` argument. This is useful for various interaction models
+#'  where some of the parameters of these models may represent things like "effect of
+#'  A on condition X".
+#'  \item Pairwise comparison of dynamical systems model parameter estimate: similar
+#'  to the first case listed above, but now when `type == "dynamics"`. `design_factor` can
+#'  now be a vector of all the `metadf` columns you stratified parameter estimates by.
+#' }
+#' Eventually, a 4th option via the currently non-functional `param_function` argument
+#' will be implemented, which will allow you to specify functions of parameters to be assessed,
+#' which can be useful for certain interaction models.
+#'
+#' `CompareParameters()` calculates p-values using what is essentially an asymptotic Wald test,
+#' meaning that a standard normal distribution is integrated. P-values are then multiple-test
+#' adjusted using the method of Benjamini and Hochberg, implemented in R's `p.adjust()`
+#' function.
 #'
 #' @param obj An `EZbakRFit` object, which is an `EZbakRFractions` object on
 #' which `AverageAndRegularize()` has been run.
