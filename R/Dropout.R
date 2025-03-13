@@ -394,6 +394,12 @@ calculate_dropout <- function(obj,
     dplyr::select(!!grouping_factors, !!features_to_analyze,
                   nolabel_rpm, nolabel_n, nolabel_reps)
 
+  if(nrow(nolabel_data) == 0){
+
+    stop("No -s4U samples found!!")
+
+  }
+
   ### CALCULATE DROPOUT:
   dropout_df <- fractions %>%
     dplyr::inner_join(metadf %>% dplyr::filter(tl > 0) %>%

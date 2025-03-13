@@ -593,6 +593,9 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                               parameter = parameter,
                               fit_params = covariate_names,
                               formula_mean = formula_mean,
+                              kstrat = kstrat,
+                              populations = populations,
+                              fraction_design = fraction_design,
                               sd_grouping_factors = sd_grouping_factors,
                               overwrite = overwrite)
 
@@ -611,6 +614,9 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                fit_params = covariate_names,
                                formula_mean = formula_mean,
                                sd_grouping_factors = sd_grouping_factors,
+                               kstrat = kstrat,
+                               populations = populations,
+                               fraction_design = fraction_design,
                                exactMatch = TRUE,
                                alwaysCheck = TRUE)) + 1
     }
@@ -631,6 +637,9 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                                       fit_params = covariate_names,
                                                       formula_mean = formula_mean,
                                                       sd_grouping_factors = sd_grouping_factors,
+                                                      kstrat = kstrat,
+                                                      populations = populations,
+                                                      fraction_design = fraction_design,
                                                       repeatID = repeatID)
 
 

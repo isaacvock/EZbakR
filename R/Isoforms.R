@@ -365,7 +365,7 @@ fit_beta_regression <- function(data){
 
   uncertainty <- sqrt(diag(solve(fit$hessian)))
 
-  return(dplyr::tibble(transcript_id = colnames(design_matrix),
+  return(data.table::data.table(transcript_id = colnames(design_matrix),
                 logit_fn = fit$par,
                 se_logit_fn = uncertainty))
 
