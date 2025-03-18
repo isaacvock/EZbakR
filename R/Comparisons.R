@@ -115,6 +115,10 @@
 #' @param feature_lengths Table of effective lengths for each feature combination in your
 #' data. For example, if your analysis includes features named GF and XF, this
 #' should be a data frame with columns GF, XF, and length.
+#' @param feature_sample_counts Data frame with columns <feature names> and `nsamps`,
+#' where <feature names> are all of the feature columns in the input to
+#' `AverageAndRegularize()`, and `nsamps` is the number of samples that samples
+#' from that feature combination needs to have over the read count threshold.
 #' @param overwrite If TRUE, identical, existing output will be overwritten.
 #' @import data.table
 #' @importFrom magrittr %>%
@@ -142,6 +146,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                  conservative = FALSE,
                                  character_limit = 20,
                                  feature_lengths = NULL,
+                                 feature_sample_counts = NULL,
                                  overwrite = TRUE){
 
 
@@ -321,9 +326,27 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     dplyr::filter(n > min_reads) %>%
     dplyr::select(-n) %>%
     dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
-    dplyr::count() %>%
-    dplyr::filter(n == num_samps) %>%
-    dplyr::select(!!features_to_analyze)
+    dplyr::count()
+
+  # In some cases, we don't care that there is data in every single sample
+  # (e.g., modeling pre-mRNA dynamics in the nucleus and mature + pre-mRNA
+  # dynamics in the cytoplasm), so you can specify how many samples each
+  # feature should have via the feature_sample_counts input table.
+  if(!is.null(feature_sample_counts)){
+
+    features_to_keep <- features_to_keep %>%
+      dplyr::inner_join(feature_sample_counts,
+                        by = features_to_analyze) %>%
+      dplyr::filter(n == nsamps) %>%
+      dplyr::select(!!features_to_analyze)
+
+  }else{
+
+    features_to_keep <- features_to_keep %>%
+      dplyr::filter(n == num_samps) %>%
+      dplyr::select(!!features_to_analyze)
+
+  }
 
 
   kinetics <- kinetics %>%
@@ -499,7 +522,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     formula <- stats::as.formula(formula_str)
 
     # Perform linear regression
-    lm_result <- stats::lm(formula, data = model_fit)
+    lm_result <- stats::lm(formula, data = model_fit %>%
+                             filter(!is.na(!!dplyr::sym(paste0("mean_", covariate_names[1])))))
 
     # Return result
     return(list(covariate = .x, lm_result = lm_result))
@@ -519,8 +543,17 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     # Create the new column name
     new_column_name <- paste("logse_", covariate, "_fit", sep = "")
 
+
+    # Need to impute NAs for those for which the covariate is not estimated
+    # for a given feature
+    notna_index <- which(!is.na(model_fit %>% dplyr::ungroup() %>% dplyr::select(!!paste0("mean_", covariate)) %>%
+                              unlist() %>% unname()))
+
+    imputed_vect <- rep(NA, times = nrow(model_fit))
+    imputed_vect[notna_index] <- fitted_values
+
     # Add the fitted values to the dataframe as a new column
-    model_fit[[new_column_name]] <- fitted_values
+    model_fit[[new_column_name]] <- imputed_vect
   }
 
 
@@ -705,6 +738,7 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
                              fit_var, fit_mean,
                              fit_var_min = 0.01,
                              conservative = FALSE){
+
 
 
   if(fit_var <= 0){
@@ -1223,7 +1257,7 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
     names(ses) <- paste0("logse_", names(ses))
 
     estimates <- c(means,
-                   ses, log10(coverage), se_logses)
+                   ses, coverage, se_logses)
 
   }else{
 
@@ -1231,7 +1265,7 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
     sds <- data %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(sd_groups))) %>%
       dplyr::mutate(group_sd = stats::sd(!!dplyr::sym(parameter)),
-             group_coverage = mean(!!dplyr::sym(coverage_col)))
+             group_coverage = log10(mean(!!dplyr::sym(coverage_col))))
 
     # Robust standard errors
     X <- stats::model.matrix(fit)
@@ -1255,7 +1289,7 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
     rownames(coverages) <- paste0("coverage_", rownames(coverages))
 
     estimates <- c(means, ses,
-                   log10(coverages[,1]),
+                   coverages[,1],
                    se_logses)
 
   }
