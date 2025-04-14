@@ -27,6 +27,8 @@ AverageAndRegularize(
   conservative = FALSE,
   character_limit = 20,
   feature_lengths = NULL,
+  feature_sample_counts = NULL,
+  scale_factor_df = NULL,
   overwrite = TRUE
 )
 }
@@ -130,6 +132,16 @@ of the features. If this is too long, only the parameter name will be used.}
 \item{feature_lengths}{Table of effective lengths for each feature combination in your
 data. For example, if your analysis includes features named GF and XF, this
 should be a data frame with columns GF, XF, and length.}
+
+\item{feature_sample_counts}{Data frame with columns \if{html}{\out{<feature names>}} and \code{nsamps},
+where \if{html}{\out{<feature names>}} are all of the feature columns in the input to
+\code{AverageAndRegularize()}, and \code{nsamps} is the number of samples that samples
+from that feature combination needs to have over the read count threshold.}
+
+\item{scale_factor_df}{Data frame with columns "sample" and a second column of
+whatever name you please. The second column should denote scale factors by which
+read counts in that sample should be multiplied by in order to normalize these
+read counts.}
 
 \item{overwrite}{If TRUE, identical, existing output will be overwritten.}
 }

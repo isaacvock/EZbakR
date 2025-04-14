@@ -9,6 +9,7 @@ ImportIsoformQuant(
   files,
   quant_tool = c("none", "salmon", "sailfish", "alevin", "piscem", "kallisto", "rsem",
     "stringtie"),
+  txIn = TRUE,
   ...
 )
 }
@@ -27,6 +28,10 @@ or "none". This argument is used to autofill the arguments below (geneIdCol, etc
 that the user will specify these columns. Be aware that specifying type other than "none" will
 ignore the arguments below (geneIdCol, etc.)'. Referenced 'arguments below' can be specified
 as part of \code{...}.}
+
+\item{txIn}{Whether or now you are providing isoform level quantification files.
+Alternative (\code{txIn = FALSE}) is gene-level quantification. In \code{ImportIsoformQuant},
+\code{txIn} gets passed to BOTH the \code{txIn} and \code{txOut} parameters in \code{tximport()}.}
 
 \item{...}{Additional arguments to be passed to \code{tximport::tximport()}. Especially relevant if
 you set \code{quant_tool} to "none".}

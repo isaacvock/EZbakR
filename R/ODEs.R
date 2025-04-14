@@ -227,6 +227,7 @@ EZDynamics <- function(obj,
                      species_to_sf = NULL,
                      overwrite = TRUE){
 
+
   # Hack to deal with devtools::check() NOTEs
   param_type <- coverage <- sd <- nreps <- tl <- measured_specie <- NULL
   fit <- ode_models <- GF <- NULL
@@ -588,6 +589,7 @@ EZDynamics <- function(obj,
 
     }
 
+
     # Don't use reads if can't normalize
     if(is.null(scale_factors) & !is.null(sample_feature)){
       use_coverage <- FALSE
@@ -610,17 +612,26 @@ EZDynamics <- function(obj,
     modeled_to_measured <- renameFormulas(modeled_to_measured)
 
 
-    # Don't estimate ksyn if coverage is not being modeled
+
+    ksyn_index <- unique(graph["0",])
+    ksyn_index <- ksyn_index[ksyn_index != 0]
+
     if(!use_coverage){
 
+      # Don't estimate ksyn if coverage is not being modeled
       npars <- npars - 1
 
-      ksyn_index <- unique(graph["0",])
-      ksyn_index <- ksyn_index[ksyn_index != 0]
 
       prior_means <- prior_means[-ksyn_index]
       prior_sds <- prior_sds[-ksyn_index]
 
+      starting_values <- starting_values[-ksyn_index]
+      upper_bounds <- upper_bounds[-ksyn_index]
+      lower_bounds <- lower_bounds[-ksyn_index]
+    }else{
+      starting_values[ksyn_index] <- mean(tidy_avgs$coverage, na.rm = TRUE)
+      upper_bounds[ksyn_index] <- 15
+      lower_bounds[ksyn_index] <- 0
     }
 
 
@@ -980,6 +991,32 @@ evaluate_formulas2 <- function(original_vector, formula) {
 
 }
 
+
+# If parameter estimates are nearly identical in generalized ODE
+# likelihood, it will crash due to a singularity in the matrix solution.
+# This function deals with these edge cases by spacing out nearly duplicate
+# values in a vector a small bit
+spread_duplicates <- function(vec, digits = 4, spread = 0.01) {
+
+  rounded_vec <- round(vec, digits)
+  dup_vals <- unique(rounded_vec[duplicated(rounded_vec)])
+
+  result <- vec
+
+  for (val in dup_vals) {
+
+    indices <- which(rounded_vec == val)
+
+    new_vals <- seq(val - spread, val + spread, length.out = length(indices))
+
+    result[indices] <- new_vals
+
+  }
+
+  return(result)
+
+}
+
 # Likelihood function for generalized dynamical systems modeling
 # with averages tables
 dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
@@ -1004,12 +1041,20 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
   ### Step 1, construct A
 
   # Make sure parameters are all different values
-  count = 1
-  while(length(unique(round(parameter_ests, digits = 6))) != length(parameter_ests)){
-    parameter_ests <- stats::rnorm(length(parameter_ests),
-                            mean = parameter_ests,
-                            sd = 0.001)
-    count = count + 1
+  count <- 1
+  s <- 0.01
+  while(length(unique(round(parameter_ests, digits = 4))) != length(parameter_ests)){
+    # parameter_ests <- stats::rnorm(length(parameter_ests),
+    #                         mean = parameter_ests,
+    #                         sd = 0.01)
+
+    parameter_ests <- spread_duplicates(parameter_ests,
+                                        spread = s)
+
+
+
+    count <- count + 1
+    s <- s + 0.01
     if(count > 5){
       stop("Infinite while loop!!")
     }
@@ -1056,18 +1101,30 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
   ### Step 2: infer general solution
 
-  Rss <- solve(a = A,
-               b = -param_graph[zero_index,-zero_index])
-  names(Rss) <- rownames(A)
+  tryCatch(
+    {
+      Rss <- solve(a = A,
+                   b = -param_graph[zero_index,-zero_index])
+
+      names(Rss) <- rownames(A)
 
 
-  ev <- eigen(A)
+      ev <- eigen(A)
 
-  lambda <- ev$values
-  V<- ev$vectors
+      lambda <- ev$values
+      V<- ev$vectors
 
 
-  cs <- solve(V, -Rss)
+      cs <- solve(V, -Rss)
+
+    },
+    error = function(x){
+      browser()
+    }
+
+  )
+
+
 
 
   ### Step 3: Infer data for actual measured species
@@ -1139,7 +1196,18 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
   if(use_coverage){
 
+    if(length(indices_to_remove) > 0){
+      coverage <- coverage[-indices_to_remove]
+      scale_factor <- scale_factor[-indices_to_remove]
+      nreps <- nreps[-indices_to_remove]
+    }
+
+
     if(alt_coverage){
+
+      if(length(indices_to_remove) > 0){
+        coverage_sd <- coverage_sd[-indices_to_remove]
+      }
 
       # all_reads <- all_ss*scale_factor
 
@@ -1165,10 +1233,12 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
     } else{
 
+
+      # Simple, conservative dispersion parameter estimate of 50
       ll <- ll +
         stats::dnorm(coverage + log10(scale_factor),
                      log10(all_ss),
-                     sqrt((1/((10^coverage)*(log(10)^2))))/sqrt(nreps),
+                     (log(10) * sqrt((1/10^coverage) + 1/100))/sqrt(nreps),
                      log = TRUE)
 
     }

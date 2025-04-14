@@ -119,6 +119,10 @@
 #' where <feature names> are all of the feature columns in the input to
 #' `AverageAndRegularize()`, and `nsamps` is the number of samples that samples
 #' from that feature combination needs to have over the read count threshold.
+#' @param scale_factor_df Data frame with columns "sample" and a second column of
+#' whatever name you please. The second column should denote scale factors by which
+#' read counts in that sample should be multiplied by in order to normalize these
+#' read counts.
 #' @param overwrite If TRUE, identical, existing output will be overwritten.
 #' @import data.table
 #' @importFrom magrittr %>%
@@ -147,6 +151,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                  character_limit = 20,
                                  feature_lengths = NULL,
                                  feature_sample_counts = NULL,
+                                 scale_factor_df = NULL,
                                  overwrite = TRUE){
 
 
@@ -205,19 +210,71 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   if(type == "fractions"){
 
-    normalized_reads <- get_normalized_read_counts(obj = obj,
-                                                   features_to_analyze = features_to_analyze,
-                                                   fractions_name = param_name,
-                                                   feature_lengths = feature_lengths) %>%
-      dplyr::as_tibble()
 
-    # Get the kinetic parameter data frame
-    kinetics <- kinetics %>%
-      dplyr::inner_join(normalized_reads[,c("sample",
-                                            features_to_analyze,
-                                            "normalized_reads")],
-                        by = c("sample", features_to_analyze)) %>%
-      dplyr::mutate(log_normalized_reads = log10(normalized_reads))
+    if(is.null(scale_factor_df)){
+
+      normalized_reads <- get_normalized_read_counts(obj = obj,
+                                                     features_to_analyze = features_to_analyze,
+                                                     fractions_name = param_name,
+                                                     feature_lengths = feature_lengths) %>%
+        dplyr::as_tibble()
+
+      # Get the kinetic parameter data frame
+      kinetics <- kinetics %>%
+        dplyr::inner_join(normalized_reads[,c("sample",
+                                              features_to_analyze,
+                                              "normalized_reads")],
+                          by = c("sample", features_to_analyze)) %>%
+        dplyr::mutate(log_normalized_reads = log10(normalized_reads))
+
+    }else{
+
+      scale_col <- colnames(scale_factor_df)
+      scale_col <- scale_col[scale_col != "sample"]
+
+      if(length(scale_col) != 1){
+
+        stop("scale_factor_df must have two columns, one named 'sample' and
+             the other named whatever you please.")
+
+      }
+
+      if(!is.null(feature_lengths)){
+
+        kinetics <- kinetics %>%
+          dplyr::inner_join(
+            feature_lengths %>%
+              dplyr::filter(length > 0),
+            by = c(features_to_analyze)
+          ) %>%
+          dplyr::inner_join(
+            scale_factor_df,
+            by = "sample"
+          ) %>%
+          dplyr::mutate(
+            normalized_reads = (n /  (length / 1000)) * !!dplyr::sym(scale_col),
+            log_normalized_reads = log10(normalized_reads)
+          )
+
+
+      }else{
+
+        kinetics <- kinetics %>%
+          dplyr::inner_join(
+            scale_factor_df,
+            by = "sample"
+          ) %>%
+          dplyr::mutate(
+            normalized_reads = n * !!dplyr::sym(scale_col),
+            log_normalized_reads = log10(normalized_reads)
+          )
+
+
+      }
+
+
+    }
+
 
 
     samples_with_no_label <- metadf %>%
@@ -322,25 +379,51 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   num_samps <- length(unique(kinetics$sample))
 
-  features_to_keep <- kinetics %>%
-    dplyr::filter(n > min_reads) %>%
-    dplyr::select(-n) %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
-    dplyr::count()
-
   # In some cases, we don't care that there is data in every single sample
   # (e.g., modeling pre-mRNA dynamics in the nucleus and mature + pre-mRNA
   # dynamics in the cytoplasm), so you can specify how many samples each
   # feature should have via the feature_sample_counts input table.
   if(!is.null(feature_sample_counts)){
 
+    # Idea is that sometimes users may only want to include one overarching
+    # feature in their filter table, so the code below allows EZbakR to count
+    # the number of samples for which this overarching feature appears above the
+    # read count threshold. All sub features belonging to this overarching
+    # feature can then be kept in downstream analyses.
+    #
+    # Necessary for combined pre-mRNA and mature mRNA modeling of nuclear and
+    # cytoplasmic dynamics, if you want to assume that pre-mRNA is only present
+    # in the nucleus (biologically reasonable assumption).
+    features_to_keep <- kinetics %>%
+      dplyr::filter(n > min_reads) %>%
+      dplyr::select(-n) %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
+      dplyr::count()
+
+    filter_features <- colnames(feature_sample_counts)[colnames(feature_sample_counts) != "nsamps"]
+
     features_to_keep <- features_to_keep %>%
       dplyr::inner_join(feature_sample_counts,
-                        by = features_to_analyze) %>%
+                        by = filter_features) %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(colnames(feature_sample_counts)))) %>%
+      dplyr::summarise(n = sum(n),
+                       nsamps = mean(nsamps)) %>%
       dplyr::filter(n == nsamps) %>%
-      dplyr::select(!!features_to_analyze)
+      dplyr::select(-n, -nsamps)
+
+    features_to_keep <- features_to_keep %>%
+      dplyr::inner_join(kinetics %>%
+                          dplyr::select(!!features_to_analyze) %>%
+                          dplyr::distinct(),
+                        by = filter_features)
 
   }else{
+
+    features_to_keep <- kinetics %>%
+      dplyr::filter(n > min_reads) %>%
+      dplyr::select(-n) %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
+      dplyr::count()
 
     features_to_keep <- features_to_keep %>%
       dplyr::filter(n == num_samps) %>%

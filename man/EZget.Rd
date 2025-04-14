@@ -33,6 +33,7 @@ EZget(
   modeled_to_measured = NULL,
   graph = NULL,
   normalize_by_median = NULL,
+  deconvolved = NULL,
   returnNameOnly = FALSE,
   exactMatch = FALSE,
   alwaysCheck = FALSE

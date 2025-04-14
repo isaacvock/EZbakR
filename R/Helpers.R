@@ -146,6 +146,7 @@ EZget <- function(obj,
                   modeled_to_measured = NULL,
                   graph = NULL,
                   normalize_by_median = NULL,
+                  deconvolved = NULL,
                   returnNameOnly = FALSE,
                   exactMatch = FALSE,
                   alwaysCheck = FALSE){
@@ -204,6 +205,21 @@ EZget <- function(obj,
   # 3) parameters: exact string match
 
   possible_tables <- names(metadata)
+
+
+  if(!is.null(deconvolved)){
+
+    possible_tables_d <- exact_ezsearch(
+      metadata,
+      deconvolved,
+      "deconvolved"
+    )
+
+    possible_tables <- intersect(possible_tables,
+                                 possible_tables_d)
+
+  }
+
 
   if(!is.null(features)){
 

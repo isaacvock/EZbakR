@@ -419,6 +419,101 @@ calculate_dropout <- function(obj,
 }
 
 
+DropoutNormalization <- function(obj,
+                                 grouping_factors = NULL,
+                                 features = NULL,
+                                 populations = NULL,
+                                 fraction_design = NULL,
+                                 repeatID = NULL,
+                                 exactMatch = TRUE){
+
+
+  ### Hack to deal with devtools::check() NOTEs
+
+  tl <- n <- nolabel_rpm <- rpm <- pdo <- fit <- global_fraction <- corrected_gf <- corrected_fraction <- corrected_n <- NULL
+  nolabel_n <- nolabel_reps <- dropout <- sig <- NULL
+
+
+  ##### GENERAL STEPS:
+  # 1) Get -s4U RPMs
+  # 2) Get +s4U RPMs
+  # 3) Calculate dropout (+s4U RPM)/(-s4U RPM)
+  # 4) Fit dropout vs. estimated fraction new trend
+  # 5) Correct fraction news and read counts accordingly.
+  # 6) Return corrected EZbakRFractions object
+
+
+  ### Figure out which fraction new estimates to use
+
+  # Function in Helpers.R
+  fractions_name <- EZget(obj, type = "fractions",
+                          features = features,
+                          exactMatch = exactMatch,
+                          populations = populations,
+                          fraction_design = fraction_design,
+                          returnNameOnly = TRUE)
+
+  # Get fractions
+  fractions <- obj[["fractions"]][[fractions_name]]
+
+  features_to_analyze <- obj[['metadata']][['fractions']][[fractions_name]][['features']]
+
+
+  ### Figure out column names to operate on
+
+  fraction_cols <- colnames(fractions)
+
+  fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
+
+  # Other columns I will have to reference
+  logit_fraction <- paste0("logit_", fraction_of_interest)
+  logit_se <- paste0("se_", logit_fraction)
+
+
+  ### Which columns should -s4U samples be grouped by?
+
+  metadf <- obj$metadf
+
+
+  if(is.null(grouping_factors)){
+
+    grouping_factors <- colnames(metadf)[!grepl("^tl", colnames(metadf)) &
+                                           (colnames(metadf) != "sample") &
+                                           !grepl("^tpulse", colnames(metadf)) &
+                                           !grepl("^tchase", colnames(metadf))]
+
+
+  }
+
+  grouping_factors <- unique(c(grouping_factors, "tl"))
+
+  ### Figure out which sample likely has lowest dropout in each group
+
+
+
+}
+
+
+do_norm_ll <- function(param,
+                       reffn,
+                       fndo,
+                       sig){
+
+  pdo <- inv_logit(param[1])
+
+  Efn <- fndo / ((1 - pdo) + (fndo*pdo))
+
+  ll <- stats::dnorm(EZbakR:::logit(reffn),
+                     EZbakR:::logit(Efn),
+                     sig,
+                     log = TRUE)
+
+  return(-sum(ll))
+
+}
+
+
+
 # Dropout likelihood function
 # log(dropout) ~ Normal(f(pdo, theta, scale), sig)
 dropout_likelihood <- function(param, dropout, theta, sig){
