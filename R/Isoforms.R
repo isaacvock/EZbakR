@@ -998,6 +998,7 @@ General_Fraction_Disambiguation <- function(obj, sample_name,
     dplyr::group_by(dplyr::across(dplyr::all_of(grouping_cols))) %>%
     tidyr::nest() %>%
     dplyr::mutate(fnest = lapply(data, fit_beta_regression)) %>%
+    dplyr::ungroup() %>%
     dplyr::select(!!other_features, fnest) %>%
     tidyr::unnest(cols = c(fnest)) %>%
     dplyr::mutate(!!logit_fraction_of_interest := logit_fn,
