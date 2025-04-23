@@ -103,11 +103,13 @@ ImportIsoformQuant <- function(obj, files,
 
   if(exists("readcounts", where = obj)){
 
-    obj[['readcounts']] <- outlist
+    obj[['readcounts']] <- append(obj[['readcounts']], outlist)
+
+
 
   }else{
 
-    obj[['readcounts']] <- append(obj[['readcounts']], outlist)
+    obj[['readcounts']] <- outlist
 
   }
 
@@ -363,6 +365,11 @@ fit_beta_regression <- function(data){
   n <- fn <- group <- transcript_id <- p <- nreads <- NULL
 
 
+  # if("AIG1" %in% data$gene_id){
+  #   browser()
+  # }
+
+
   cols <- colnames(data)
   deconvolved_feature <- ifelse(
     "transcript_id" %in% cols,
@@ -395,7 +402,7 @@ fit_beta_regression <- function(data){
                upper = 9,
                lower = -9,
                prior_a = 0,
-               prior_b = 1,
+               prior_b = 1.25,
                hessian = TRUE)
 
   uncertainty <- sqrt(diag(solve(fit$hessian)))
@@ -844,6 +851,7 @@ General_Fraction_Disambiguation <- function(obj, sample_name,
   expected_count <- TPM <- n <- group <- effective_length <- transcript_id <- n <- isoform_cnt <- data <- NULL
   fnest <- logit_fn <- se_logit_fn <- NULL
 
+
   ### THINGS THAT NEED TO BE INFERRED
   # 1) Which fractions to grab
   # 2) What the 'set of transcripts' column is called
@@ -1008,6 +1016,7 @@ General_Fraction_Disambiguation <- function(obj, sample_name,
     dplyr::inner_join(quant,
                       by = quant_feature) %>%
     dplyr::select(-TPM)
+
 
 
   # Combine single and multi-isoform gene estimates

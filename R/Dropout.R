@@ -419,7 +419,7 @@ calculate_dropout <- function(obj,
 }
 
 
-DropoutNormalization <- function(obj,
+NormalizeForDropout <- function(obj,
                                  grouping_factors = NULL,
                                  features = NULL,
                                  populations = NULL,
@@ -487,8 +487,131 @@ DropoutNormalization <- function(obj,
 
   grouping_factors <- unique(c(grouping_factors, "tl"))
 
+
+  # ### Check that input is compatible with dropout normalization
+  # check_donorm_validity(fractions,
+  #                       metadf,
+  #                       features_to_analyze,
+  #                       logit_fraction,
+  #                       logit_se,
+  #                       grouping_factors)
+
+
   ### Figure out which sample likely has lowest dropout in each group
 
+  # Reference sample in each group is that which has the lowest
+  # dropout and thus that other samples in that group will be
+  # normalized with respect to
+  reference_sample_info <- fractions %>%
+    dplyr::inner_join(
+      metadf,
+      by = "sample"
+    ) %>%
+    dplyr::filter(tl > 0 & n > read_cutoff)
+    dplyr::group_by(sample) %>%
+    dplyr::summarise(
+      med_fn = stats::median(!!dplyr::sym(logit_fraction))
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(grouping_factors))) %>%
+    dplyr::mutate(
+      normalization_reference = dplyr::case_when(
+        med_fn == min(med_fn) ~ TRUE,
+        .default = FALSE
+      ),
+      reference_samp = sample[med_fn == min(med_fn)],
+      nsamps_in_group = dplyr::n()
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(
+      sample, !!grouping_factors, normalization_reference, nsamps_in_group
+    )
+
+
+  ### Quantify dropout with respect to reference in each group
+
+
+  fxn_wide <- fractions %>%
+    dplyr::filter(n > read_cutoff & !!dplyr::sym(logit_fraction) > -Inf) %>%
+    dplyr::select(sample, XF, !!fraction_of_interest) %>%
+    pivot_wider(
+      names_from = "sample",
+      values_from = fraction_of_interest
+    )
+
+  pdos <- metadf %>%
+    dplyr::filter(tl > 0) %>%
+    dplyr::mutate(
+      pdo = 0
+    )
+
+  for(i in seq_along(pdos$sample)){
+
+    samp <- pdos$sample[i]
+
+    if(reference_sample_info$normalization_reference[reference_sample_info$sample == samp]) next
+
+    reference <- reference_sample_info$reference_samp[reference_sample_info$sample == samp]
+
+    pdos$pdo[i] <- fxn_wide %>%
+      dplyr::select(
+        XF,
+        !!samp,
+        !!reference
+      ) %>%
+      na.omit() %>%
+      summarise(
+        pdo = stats::optim(
+          par = c(-2),
+          fn = do_norm_ll,
+          reffn = !!dplyr::sym(reference),
+          fndo = !!dplyr::sym(samp),
+          sig = 0.2, # Should be some function of the uncertainties
+          method = "L-BFGS-B",
+          upper = 6,
+          lower = -6
+        )$par[1]
+      ) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(pdo) %>%
+      unlist() %>%
+      unname() %>%
+      EZbakR:::inv_logit()
+
+
+  }
+
+  fractions_normalized <- fractions %>%
+    dplyr::left_join(
+      pdos %>%
+        dplyr::select(sample, pdo),
+      by = "sample"
+    ) %>%
+    dplyr::mutate(
+      pdo = ifelse(is.na(pdo), 0, pdo)
+    ) %>%
+    dplyr::mutate(
+      !!fraction_cols := (!!dplyr::sym(fraction_cols))/((1 - pdo) + !!dplyr::sym(fraction_cols) * pdo),
+    ) %>%
+    dplyr::mutate(
+      !!logit_fraction := EZbakR:::logit(!!dplyr::sym(fraction_cols))
+    ) %>%
+    dplyr::group_by(
+      sample
+    ) %>%
+    dplyr::mutate(
+      num = mean(!!dplyr::sym(fraction_cols))*(1-pdo) + (1-mean(!!dplyr::sym(fraction_cols))),
+      den = !!dplyr::sym(fraction_cols)*(1-pdo) + (1 - !!dplyr::sym(fraction_cols)),
+      n = ceiling(n*(num/den))
+    ) %>%
+    dplyr::select(
+      -num, -den, -pdo
+    )
+
+  obj[["fractions"]][[fractions_name]] <- fractions_normalized
+  obj[['metadata']][['fractions']][[fractions_name]][['dropout']] <- pdos
+
+  return(obj)
 
 
 }
@@ -538,5 +661,44 @@ dropout_likelihood <- function(param, dropout, theta, sig){
 read_sig <- function(reads, reps){
 
   return(sqrt(1/reads)/sqrt(reps))
+
+}
+
+
+# Likelihood function for dropout normalization
+do_norm_ll <- function(param,
+                       reffn,
+                       fndo,
+                       sig){
+
+  pdo <- inv_logit(param[1])
+
+  Efn <- fndo / ((1 - pdo) + (fndo*pdo))
+
+  ll <- stats::dnorm(EZbakR:::logit(reffn),
+                     EZbakR:::logit(Efn),
+                     sig,
+                     log = TRUE)
+
+  return(-sum(ll))
+
+}
+
+
+# Make sure dropout normalization is possible
+check_donorm_validity <- function(
+    fractions,
+    metadf,
+    features_to_analyze,
+    logit_fraction,
+    logit_se,
+    grouping_factors
+){
+
+  ### Checklist:
+  # 1) Need 2 or more replicates of each grouping factor
+
+
+
 
 }
