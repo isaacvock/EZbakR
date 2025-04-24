@@ -424,7 +424,7 @@ calculate_dropout <- function(obj,
 #' Normalize for experimental/bioinformatic dropout of labeled RNA.
 #'
 #' Uses the strategy described [here](https://simonlabcode.github.io/bakR/articles/Dropout.html), and similar to that originally presented
-#' in [Berg et al. 2024](https://academic.oup.com/nar/article/52/7/e35/7612100).
+#' in [Berg et al. 2024](https://academic.oup.com/nar/article/52/7/e35/7612100),
 #' to normalize for dropout. Normalizing for dropout means identifying a reference
 #' sample with low dropout, and estimating dropout in each sample relative to
 #' that sample.
@@ -460,10 +460,15 @@ calculate_dropout <- function(obj,
 #'  to a reference sample chosen from among them. If you want to further separate
 #'  the groups of samples that are normalized together, specify the columns of
 #'  your metadf by which you want to additionally group factors in the `grouping_factors`
-#'  parameter
+#'  parameter. This behavior can be changed by setting `normalize_across_tls` to
+#'  `TRUE`, which will
 #'
 #' @param obj An EZbakRFractions object, which is an EZbakRData object on which
 #' you have run `EstimateFractions()`.
+#' @param normalize_across_tls If TRUE, samples from different label times will
+#' be normalized by finding a max inferred degradation rate constant (kdeg)
+#' sample and using that as a reference. Degradation kinetics with this max
+#' will be assumed to infer reference fraction news at different label times
 #' @param grouping_factors Which sample-detail columns in the metadf should be used
 #' to group -s4U samples by for calculating the average -s4U RPM? The default value of
 #' `NULL` will cause no sample-detail columns to be used.
@@ -489,6 +494,7 @@ calculate_dropout <- function(obj,
 #' @importFrom magrittr %>%
 #' @export
 NormalizeForDropout <- function(obj,
+                                 normalize_across_tls = FALSE,
                                  grouping_factors = NULL,
                                  features = NULL,
                                  populations = NULL,
@@ -543,8 +549,14 @@ NormalizeForDropout <- function(obj,
 
   metadf <- obj$metadf
 
+  # Which column is label time column?
+    # Could generalize to pulse-chases at some point
+  tl_col <- "tl"
 
-  grouping_factors <- unique(c(grouping_factors, "tl"))
+
+  if(!normalize_across_tls){
+    grouping_factors <- unique(c(grouping_factors, tl_col))
+  }
 
 
 
@@ -561,16 +573,20 @@ NormalizeForDropout <- function(obj,
     dplyr::filter(tl > 0 & n > read_cutoff)
     dplyr::group_by(sample) %>%
     dplyr::summarise(
-      med_fn = stats::median(!!dplyr::sym(logit_fraction))
+      med_fn = ifelse(
+        normalize_across_tls,
+        stats::median(-log(1 - !!dplyr::sym(fraction_of_interest))/tl ), # Inferred kdeg
+        stats::median(!!dplyr::sym(logit_fraction))
+        )
     ) %>%
     dplyr::ungroup() %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(grouping_factors))) %>%
+    {if (length(grouping_factors) > 0) dplyr::group_by(., dplyr::across(dplyr::all_of(grouping_factors))) else .} %>%
     dplyr::mutate(
       normalization_reference = dplyr::case_when(
-        med_fn == min(med_fn) ~ TRUE,
+        med_fn == max(med_fn) ~ TRUE,
         .default = FALSE
       ),
-      reference_samp = sample[med_fn == min(med_fn)],
+      reference_samp = sample[med_fn == max(med_fn)],
       nsamps_in_group = dplyr::n()
     ) %>%
     dplyr::ungroup() %>%
@@ -604,12 +620,30 @@ NormalizeForDropout <- function(obj,
 
     reference <- reference_sample_info$reference_samp[reference_sample_info$sample == samp]
 
-    pdos$pdo[i] <- fxn_wide %>%
+
+    fxn_subset <- fxn_wide %>%
       dplyr::select(
         XF,
         !!samp,
         !!reference
-      ) %>%
+      )
+
+    if(normalize_across_tls){
+
+      ref_tl <- metadf[[tl_col]][metadf$sample == reference]
+      samp_tl <- metadf[[tl_col]][metadf$sample == samp]
+
+      # Infer reference fraction new assuming exponential decay kinetics
+      fxn_subset <- fxn_subset %>%
+        dplyr::mutate(
+          # kdeg = -log(1 - fn)/tl
+          # fn = 1 - exp(-kdeg*tl)
+          !!reference := 1 - exp((log(1 - !!dplyr::sym(reference))/ref_tl) * samp_tl)
+        )
+
+    }
+
+    pdos$pdo[i] <- fxn_subset %>%
       na.omit() %>%
       summarise(
         pdo = stats::optim(
