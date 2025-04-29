@@ -146,6 +146,85 @@ EZQC.EZbakRFractions <- function(obj,
 
 }
 
+
+
+#' Run quality control checks
+#'
+#' @param obj EZbakRFractions object, which is an EZbakRData object on which
+#' `EstimateFractions` has been run.
+#' @param ... Additional arguments. Currently goes unused.
+#' @param features Set of features analyzed in the fractions table you are
+#' interested QCing. This gets passed to `EZget()` to help find this table.
+#' @param populations Set of mutation types analyzed in the fractions table
+#' you are interested in QCing. This gets passed to `EZget()` to help find this table.
+#' @param fraction_design The fraction "design matrix" specified to get the
+#' fractions table you are interested in QCing. This gets passed to `EZget()` to
+#' help find this table.
+#' @import data.table
+#' @importFrom magrittr %>%
+#' @return A list of `ggplot2` objects visualizing the various aspects of your data
+#' assessed by `EZQC()`.
+#' @export
+EZQC.EZbakRArrowFractions <- function(obj,
+                                 features = NULL,
+                                 populations = NULL,
+                                 fraction_design = NULL,
+                                 ...){
+
+  ### Get mutation rate populations that were analyzed
+  fname <- EZget(obj, type = "fractions",
+                 features = features,
+                 populations = populations,
+                 fraction_design = fraction_design,
+                 returnNameOnly = TRUE)
+  mutrate_populations <- obj[["metadata"]][["fractions"]][[fname]][["populations"]]
+
+
+  ### Check raw mutation rates
+  graw <- check_raw_mutation_rates(obj,
+                                   mutrate_populations = mutrate_populations,
+                                   arrow = TRUE)
+
+
+  ### Check labeled and unlabeled mutation rates
+  glabel <- check_plabeled(obj)
+
+
+  ### Check read count replicate correlation
+  gread <- check_read_count_corr_ezbf(obj,
+                                      features = features,
+                                      populations = populations,
+                                      fraction_design = fraction_design)
+
+
+  ### Check fraction labeled distribution
+  gfld <- check_fl_dist(obj,
+                        features = features,
+                        populations = populations,
+                        fraction_design = fraction_design)
+
+
+  ### Check fraction labeled replicate correlation
+  gflc <- check_fl_corr(obj,
+                        features = features,
+                        populations = populations,
+                        fraction_design = fraction_design)
+
+
+  return(
+    list(
+      Raw_mutrates = graw,
+      Inferred_mutrates = glabel,
+      Readcount_corr = gread,
+      Fraction_labeled_dist = gfld,
+      Fraction_labeled_corr = gflc
+    )
+  )
+
+}
+
+
+
 #' Run quality control checks
 #'
 #' @param obj An EZbakRData object
@@ -161,6 +240,7 @@ EZQC.EZbakRFractions <- function(obj,
 #' @param remove_features Same as in `EstimateFractions()`. See `?EstimateFractions()`
 #' for details.
 #' @import data.table
+#' @import arrow
 #' @importFrom magrittr %>%
 #' @return A list of `ggplot2` objects visualizing the various aspects of your data
 #' assessed by `EZQC()`.
@@ -212,49 +292,136 @@ EZQC.EZbakRData <- function(obj,
 
 # Currently assumes cB, not arrow_dataset
 check_raw_mutation_rates <- function(obj,
-                                     mutrate_populations){
+                                     mutrate_populations,
+                                     arrow = FALSE){
 
   # Hack to address NOTEs
   n <- muttype <- mutrate <- NULL
 
   ### What mutation rates should be assessed?
 
-  # Figure out which mutation counts are in the cB
-  mutcounts_in_cB <- find_mutcounts(obj)
+  if(arrow){
 
-  basecounts_in_cB <- paste0("n", substr(mutcounts_in_cB, start = 1, stop = 1))
+    # cB columns
+    cB <- obj$cBds
+    cBschema <- arrow::schema(cB)
+    cB_cols <- names(cBschema)
 
-  # Which populations to analyze?
-  if(mutrate_populations == "all"){
+    ### Vectors of potential column names
 
-    muts_analyze <- mutcounts_in_cB
+    # Mutation counts possible
+    mutcounts <- expand.grid(c("T", "C", "G", "A", "U", "N"),
+                             c("T", "C", "G", "A", "U", "N"))
+    mutcounts <- paste0(mutcounts[,1], mutcounts[,2])
+
+    illegal_mutcounts <- c("TT", "CC", "GG", "AA", "UU")
+
+    mutcounts <- mutcounts[!(mutcounts %in% illegal_mutcounts)]
+
+    # Which mutcounts are in the cB?
+    mutcounts_in_cB <- cB_cols[cB_cols %in% mutcounts]
+
+
+    # Base count columns in cB
+    basecounts_in_cB <- paste0("n", substr(mutcounts_in_cB, start = 1, stop = 1))
+
+
+    # Which populations to analyze?
+    if(mutrate_populations == "all"){
+
+      muts_analyze <- mutcounts_in_cB
+
+    }else{
+
+      muts_analyze <- mutrate_populations
+
+      if(!(muts_analyze %in% mutcounts_in_cB)){
+        stop("You specified mutrate_populations not present in your cB!")
+      }
+
+    }
+
+    nucs_analyze <- basecounts_in_cB[which(mutcounts_in_cB %in% muts_analyze)]
+
+
+    ### Compute raw mutation rates of each type
+    cB <- obj$cBds
+
+    all_samples <- obj$metadf$sample
+
+    mutrates <- vector(
+      mode = "list",
+      length = length(all_samples)
+    )
+
+    for(s in seq_along(all_samples)){
+
+
+      cBsamp <- cBds %>%
+        dplyr::collect()
+
+      setDT(cBsamp)
+
+
+      mutrates[[s]] <- cBsamp[, {
+        rates <- sapply(seq_along(muts_analyze), function(i) {
+          numerator <- sum(get(muts_analyze[i]) * n)
+          denominator <- sum(get(nucs_analyze[i]) * n)
+          rate <- numerator / denominator
+          return(rate)
+        })
+        names(rates) <- paste0(muts_analyze)
+        as.list(rates)
+      }, by = sample]
+
+
+    }
+
+    mutrates <- dplyr::bind_rows(mutrates)
+
 
   }else{
 
-    muts_analyze <- mutrate_populations
+    # Figure out which mutation counts are in the cB
+    mutcounts_in_cB <- find_mutcounts(obj)
 
-    if(!(muts_analyze %in% mutcounts_in_cB)){
-      stop("You specified mutrate_populations not present in your cB!")
+    basecounts_in_cB <- paste0("n", substr(mutcounts_in_cB, start = 1, stop = 1))
+
+    # Which populations to analyze?
+    if(mutrate_populations == "all"){
+
+      muts_analyze <- mutcounts_in_cB
+
+    }else{
+
+      muts_analyze <- mutrate_populations
+
+      if(!(muts_analyze %in% mutcounts_in_cB)){
+        stop("You specified mutrate_populations not present in your cB!")
+      }
+
     }
+
+    nucs_analyze <- basecounts_in_cB[which(mutcounts_in_cB %in% muts_analyze)]
+
+
+    ### Compute raw mutation rates of each type
+    cB <- obj$cB
+
+    mutrates <- cB[, {
+      rates <- sapply(seq_along(muts_analyze), function(i) {
+        numerator <- sum(get(muts_analyze[i]) * n)
+        denominator <- sum(get(nucs_analyze[i]) * n)
+        rate <- numerator / denominator
+        return(rate)
+      })
+      names(rates) <- paste0(muts_analyze)
+      as.list(rates)
+    }, by = sample]
+
 
   }
 
-  nucs_analyze <- basecounts_in_cB[which(mutcounts_in_cB %in% muts_analyze)]
-
-
-  ### Compute raw mutation rates of each type
-  cB <- obj$cB
-
-  mutrates <- cB[, {
-    rates <- sapply(seq_along(muts_analyze), function(i) {
-      numerator <- sum(get(muts_analyze[i]) * n)
-      denominator <- sum(get(nucs_analyze[i]) * n)
-      rate <- numerator / denominator
-      return(rate)
-    })
-    names(rates) <- paste0(muts_analyze)
-    as.list(rates)
-  }, by = sample]
 
 
   ### Make a plot of raw mutation rates of each type across samples
@@ -298,6 +465,9 @@ check_raw_mutation_rates <- function(obj,
   return(glist)
 
 }
+
+
+
 
 check_plabeled <- function(obj,
                            mutrates = NULL){
