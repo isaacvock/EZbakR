@@ -210,6 +210,7 @@ EZQC.EZbakRData <- function(obj,
 }
 
 
+# Currently assumes cB, not arrow_dataset
 check_raw_mutation_rates <- function(obj,
                                      mutrate_populations){
 
@@ -435,6 +436,7 @@ check_read_count_corr_ezbf <- function(obj,
 
 
 # Using EZbakRData object
+# Currently not compatible with arrow dataset
 check_read_count_corr_ezbd <- function(obj,
                                        features,
                                        filter_cols,
