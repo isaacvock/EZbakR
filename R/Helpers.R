@@ -6,6 +6,37 @@
 
 #' Easily get EZbakR table of estimates of interest
 #'
+#' `EZget()` returns a table of interest from your `EZbakRData` object. It is meant
+#' to make it easier to find and access certain analyses, as a single `EZbakRData`
+#' object may include analyses of different features, kinetic parameters, dynamical
+#' systems models, comparisons, etc.
+#'
+#' The input to `EZget()` is 1) the type of table you want to get ("fractions",
+#' "kinetics", "averages", "comparisons", or "dynamics") and 2) the metadata necessary
+#' to uniquely specify the table of interest. Above, every available piece of metadata
+#' that can be specified for this purpose is documented. You only need to specify the
+#' minimum information necessary. For example, if you would like to get a "fractions"
+#' table from an analysis of exon bins (feature == "exon_bins", and potentially
+#' other overarching features like "XF", "GF", or "rname"), and none of your other
+#' "fractions" tables includes exon_bins as a feature, then you can get this table
+#' with `EZget(ezbdo, type = "fractions", features = "exon_bins")`, where `ezbdo`
+#' is your `EZbakRData` object.
+#'
+#' As another example, imagine you want to get a "kinetics" table from an analysis
+#' of gene-wise kinetic parameters (e.g., features == "XF"). You may have multiple
+#' "kinetics" tables, all with "XF" as at least one of their features. If all of the
+#' other tables have additional features though, then you can tell `EZget()` that
+#' "XF" is the only feature present in your table of interest by setting `exactMatch`
+#' to `TRUE`, which tells `EZget()` that the metadata you specify should exactly match
+#' the relevant metadata for the table of interest. So the call in this case would
+#' look like `EZget(ezbdo, type = "fractions", features = "XF", exactMatch = TRUE)`.
+#'
+#' `EZget()` is used internally in almost every single EZbakR function to specify
+#' the input table for each analysis. Thus, the usage and metadata described here
+#' also applies to all functions that require you to specify which table you want
+#' to use (e.g., `EstimateKinetics()`, `AverageAndRegularize()`, `CompareParameters()`,
+#' etc.).
+#'
 #' @param obj EZbakRData object
 #' @param type The class of EZbakR outputs would you like to search through.
 #' Equivalent to the name of the list in the EZbakRData object that contains
@@ -83,6 +114,8 @@
 #' vectors.
 #' @param alwaysCheck If TRUE, then even if there is only a single table for the `type`
 #' of interest, still run all checks against queries.
+#' @return Table of interest from the relevant `EZbakRdata` list (set by the
+#' type parameter).
 #' @export
 EZget <- function(obj,
                   type = c("fractions", "kinetics", "readcounts",
@@ -113,6 +146,7 @@ EZget <- function(obj,
                   modeled_to_measured = NULL,
                   graph = NULL,
                   normalize_by_median = NULL,
+                  deconvolved = NULL,
                   returnNameOnly = FALSE,
                   exactMatch = FALSE,
                   alwaysCheck = FALSE){
@@ -171,6 +205,21 @@ EZget <- function(obj,
   # 3) parameters: exact string match
 
   possible_tables <- names(metadata)
+
+
+  if(!is.null(deconvolved)){
+
+    possible_tables_d <- exact_ezsearch(
+      metadata,
+      deconvolved,
+      "deconvolved"
+    )
+
+    possible_tables <- intersect(possible_tables,
+                                 possible_tables_d)
+
+  }
+
 
   if(!is.null(features)){
 

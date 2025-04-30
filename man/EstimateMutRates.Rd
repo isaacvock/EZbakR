@@ -48,6 +48,19 @@ rates in each group of -label samples will be used as the background mutation ra
 \description{
 Two component mixture models are fit to all data to estimate global high and
 low mutation rates for all samples. Estimation of these mutation rates
-are regularized through the use of informative priors whose parameters can
+are regularized through the use of weakly informative priors whose parameters can
 be altered using the arguments defined below.
+}
+\examples{
+
+# Simulate data to analyze
+simdata <- SimulateOneRep(30)
+
+# Create EZbakR input
+metadf <- data.frame(sample = "sampleA", tl = 2)
+ezbdo <- EZbakRData(simdata$cB, metadf)
+
+# Estimate mutation rates
+mutrates <- EstimateMutRates(ezbdo)
+
 }

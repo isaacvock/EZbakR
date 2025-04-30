@@ -87,15 +87,16 @@ create_fraction_design <- function(mutrate_populations){
 #' mixture model to all of the reads in that sample. These are used to estimate
 #' the fraction of reads from each feature that are from each mutational population,
 #' also using a two-component mixture model.
-#'  - With `Poisson` set to `TRUE`, this is a nucleotide-content adjusted Poisson
+#'    - With `Poisson` set to `TRUE`, this is a nucleotide-content adjusted Poisson
 #'  mixture model, which is a more efficient alternative to binomial mixture modeling.
-#'  - With `Poisson` set to `FALSE`, this is a binomial mixture model.
+#'    - With `Poisson` set to `FALSE`, this is a binomial mixture model.
 #' 2. Low mutation rate from -label: if `pold_from_nolabel` is `TRUE`, then the background,
 #' no label mutation rates are estimated from -label samples. By default, a single set of
 #' background mutation rates are estimated for all samples, but you can change this behavior
 #' by setting `grouping_factors` to specify columns in your `metadf` by which samples
 #' should be stratified.
-#'  - This is a great strategy to use if you have low label incorporation rates
+#'    - This is a great strategy to use if you have low label incorporation rates or
+#'    if you used a fairly short label time.
 #' 3. Hierarchical model: if `strategy == "hierarchical"`, which is currently
 #' only compatible for single-mutation type modeling (e.g., standard T-to-C mutation
 #' modeling), then high T-to-C content mutation rates are estimated for each feature.
@@ -281,7 +282,7 @@ EstimateFractions <- function(obj, features = "all",
 #'
 #' Two component mixture models are fit to all data to estimate global high and
 #' low mutation rates for all samples. Estimation of these mutation rates
-#' are regularized through the use of informative priors whose parameters can
+#' are regularized through the use of weakly informative priors whose parameters can
 #' be altered using the arguments defined below.
 #'
 #' @param obj An `EZbakRData` or `EZbakRArrowData` object
@@ -304,6 +305,18 @@ EstimateFractions <- function(obj, features = "all",
 #' rates in each group of -label samples will be used as the background mutation rate estimate in
 #' +label samples with the same values for the relevant metadf columns.
 #' @import data.table
+#' @examples
+#'
+#' # Simulate data to analyze
+#' simdata <- SimulateOneRep(30)
+#'
+#' # Create EZbakR input
+#' metadf <- data.frame(sample = "sampleA", tl = 2)
+#' ezbdo <- EZbakRData(simdata$cB, metadf)
+#'
+#' # Estimate mutation rates
+#' mutrates <- EstimateMutRates(ezbdo)
+#'
 #' @export
 EstimateMutRates <- function(obj,
                             populations = "all",
@@ -466,6 +479,7 @@ EstimateMutRates <- function(obj,
 #' numerical ID to distinguish the similar outputs.
 #' @import data.table
 #' @importFrom magrittr %>%
+#'
 #' @export
 EstimateFractions.EZbakRData <- function(obj, features = "all",
                                          mutrate_populations = "all",
@@ -2172,6 +2186,12 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
 
       ctl_cB <- dplyr::tibble()
       ctl_group_cols <- c("")
+
+      if(length(samples_with_no_label) == 0){
+
+        stop("Cannot set pold_from_nolabel to TRUE if you have no -label controls!")
+
+      }
 
       ### Compile all -label data
       for(c in seq_along(samples_with_no_label)){

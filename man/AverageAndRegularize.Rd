@@ -27,6 +27,8 @@ AverageAndRegularize(
   conservative = FALSE,
   character_limit = 20,
   feature_lengths = NULL,
+  feature_sample_counts = NULL,
+  scale_factor_df = NULL,
   overwrite = TRUE
 )
 }
@@ -131,7 +133,22 @@ of the features. If this is too long, only the parameter name will be used.}
 data. For example, if your analysis includes features named GF and XF, this
 should be a data frame with columns GF, XF, and length.}
 
+\item{feature_sample_counts}{Data frame with columns \if{html}{\out{<feature names>}} and \code{nsamps},
+where \if{html}{\out{<feature names>}} are all of the feature columns in the input to
+\code{AverageAndRegularize()}, and \code{nsamps} is the number of samples that samples
+from that feature combination needs to have over the read count threshold.}
+
+\item{scale_factor_df}{Data frame with columns "sample" and a second column of
+whatever name you please. The second column should denote scale factors by which
+read counts in that sample should be multiplied by in order to normalize these
+read counts.}
+
 \item{overwrite}{If TRUE, identical, existing output will be overwritten.}
+}
+\value{
+\code{EZbakRData} object with an additional "averages" table, as well as a
+fullfit table under the same list heading, which includes extra information about
+the priors used for regularization purposes.
 }
 \description{
 \code{AverageAndRegularize} fits a generalized linear model to your data to effectively
@@ -140,4 +157,35 @@ for those parameters. The linear model to which your data is fit is specified vi
 an R formula object supplied to the \code{formula_mean} parameter. Uncertainty estimates
 are regularized via a hierarchical modeling strategy originally introduced with
 bakR, though slightly improved upon since then.
+}
+\details{
+The EZbakR website has an extensive vignette walking through various use cases
+and model types that you can fit with \code{AverageAndRegularize()}: \href{https://isaacvock.github.io/EZbakR/articles/Linear-modeling.html}{vignette link}.
+EZbakR improves upon bakR by balancing extra conservativeness in several steps
+with a more highly powered statistical testing scheme in its \code{CompareParameters()}
+function. In particular, the following changes to the variance regularization
+scheme were made:
+\itemize{
+\item Sample-specific parameter uncertainties are used to generate conservative estimates
+of feature-specific replicate variabilties. In addition, a small floor is set to ensure
+that replicate variance estimates are never below a certain level, for the same reason.
+\item Condition-wide replicate variabilities are regressed against both read coverage and
+either a) |logit(estimate)| when modeling average fraction labeled. This captures
+the fact thta estimates are best around a logit(fraction labeled) of 0 and get
+worse for more extreme fraction labeled's.; b) log(kdeg) when modeling log degradation
+rate constants. At first, I considered a strategy similar to the fraction labeled
+modeling, but found that agreement between a fully rigorous MCMC sampling approach
+and EZbakR was significantly improved by just regressing hee value of the log kientic parameter,
+likely due to the non-linear transformation of fraction labeled to log(kdeg);
+and c) only coverage in all other cases.
+\item Features with replicate variabilities below the inferred trend have their replicate
+variabilites set equal to that predicted by the trend. This helps limit underestimation
+of parameter variance. Features with above-trend replicate variabilties have their
+replicate variabilities regularized with a Normal prior Normal likelihood Bayesian
+model, as in bakR (so the log(variance) is the inferred mean of this distribution, and
+the known variance is inferred from the amount of variance about the linear dataset-wide
+trend).
+}
+All of this allows \code{CompareParameters()} to use a less conservative statistical test
+when calculating p-values, while still controlling false discovery rates.
 }

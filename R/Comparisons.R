@@ -7,6 +7,36 @@
 #' are regularized via a hierarchical modeling strategy originally introduced with
 #' bakR, though slightly improved upon since then.
 #'
+#' The EZbakR website has an extensive vignette walking through various use cases
+#' and model types that you can fit with `AverageAndRegularize()`: [vignette link](https://isaacvock.github.io/EZbakR/articles/Linear-modeling.html).
+#' EZbakR improves upon bakR by balancing extra conservativeness in several steps
+#' with a more highly powered statistical testing scheme in its `CompareParameters()`
+#' function. In particular, the following changes to the variance regularization
+#' scheme were made:
+#' \itemize{
+#'  \item Sample-specific parameter uncertainties are used to generate conservative estimates
+#'  of feature-specific replicate variabilties. In addition, a small floor is set to ensure
+#'  that replicate variance estimates are never below a certain level, for the same reason.
+#'  \item Condition-wide replicate variabilities are regressed against both read coverage and
+#'  either a) |logit(estimate)| when modeling average fraction labeled. This captures
+#'  the fact thta estimates are best around a logit(fraction labeled) of 0 and get
+#'  worse for more extreme fraction labeled's.; b) log(kdeg) when modeling log degradation
+#'  rate constants. At first, I considered a strategy similar to the fraction labeled
+#'  modeling, but found that agreement between a fully rigorous MCMC sampling approach
+#'  and EZbakR was significantly improved by just regressing hee value of the log kientic parameter,
+#'  likely due to the non-linear transformation of fraction labeled to log(kdeg);
+#'  and c) only coverage in all other cases.
+#'  \item Features with replicate variabilities below the inferred trend have their replicate
+#'  variabilites set equal to that predicted by the trend. This helps limit underestimation
+#'  of parameter variance. Features with above-trend replicate variabilties have their
+#'  replicate variabilities regularized with a Normal prior Normal likelihood Bayesian
+#'  model, as in bakR (so the log(variance) is the inferred mean of this distribution, and
+#'  the known variance is inferred from the amount of variance about the linear dataset-wide
+#'  trend).
+#' }
+#' All of this allows `CompareParameters()` to use a less conservative statistical test
+#' when calculating p-values, while still controlling false discovery rates.
+#'
 #' @param obj An `EZbakRFractions` or `EZbakRKinetics` object, which is an `EZbakRData` object on
 #' which `EstimateFractions()` or `EstimateKinetics()` has been run.
 #' @param features Character vector of the set of features you want to stratify
@@ -85,9 +115,20 @@
 #' @param feature_lengths Table of effective lengths for each feature combination in your
 #' data. For example, if your analysis includes features named GF and XF, this
 #' should be a data frame with columns GF, XF, and length.
+#' @param feature_sample_counts Data frame with columns <feature names> and `nsamps`,
+#' where <feature names> are all of the feature columns in the input to
+#' `AverageAndRegularize()`, and `nsamps` is the number of samples that samples
+#' from that feature combination needs to have over the read count threshold.
+#' @param scale_factor_df Data frame with columns "sample" and a second column of
+#' whatever name you please. The second column should denote scale factors by which
+#' read counts in that sample should be multiplied by in order to normalize these
+#' read counts.
 #' @param overwrite If TRUE, identical, existing output will be overwritten.
 #' @import data.table
 #' @importFrom magrittr %>%
+#' @return `EZbakRData` object with an additional "averages" table, as well as a
+#' fullfit table under the same list heading, which includes extra information about
+#' the priors used for regularization purposes.
 #' @export
 AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                  type = "kinetics",
@@ -109,6 +150,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                  conservative = FALSE,
                                  character_limit = 20,
                                  feature_lengths = NULL,
+                                 feature_sample_counts = NULL,
+                                 scale_factor_df = NULL,
                                  overwrite = TRUE){
 
 
@@ -167,19 +210,71 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   if(type == "fractions"){
 
-    normalized_reads <- get_normalized_read_counts(obj = obj,
-                                                   features_to_analyze = features_to_analyze,
-                                                   fractions_name = param_name,
-                                                   feature_lengths = feature_lengths) %>%
-      dplyr::as_tibble()
 
-    # Get the kinetic parameter data frame
-    kinetics <- kinetics %>%
-      dplyr::inner_join(normalized_reads[,c("sample",
-                                            features_to_analyze,
-                                            "normalized_reads")],
-                        by = c("sample", features_to_analyze)) %>%
-      dplyr::mutate(log_normalized_reads = log10(normalized_reads))
+    if(is.null(scale_factor_df)){
+
+      normalized_reads <- get_normalized_read_counts(obj = obj,
+                                                     features_to_analyze = features_to_analyze,
+                                                     fractions_name = param_name,
+                                                     feature_lengths = feature_lengths) %>%
+        dplyr::as_tibble()
+
+      # Get the kinetic parameter data frame
+      kinetics <- kinetics %>%
+        dplyr::inner_join(normalized_reads[,c("sample",
+                                              features_to_analyze,
+                                              "normalized_reads")],
+                          by = c("sample", features_to_analyze)) %>%
+        dplyr::mutate(log_normalized_reads = log10(normalized_reads))
+
+    }else{
+
+      scale_col <- colnames(scale_factor_df)
+      scale_col <- scale_col[scale_col != "sample"]
+
+      if(length(scale_col) != 1){
+
+        stop("scale_factor_df must have two columns, one named 'sample' and
+             the other named whatever you please.")
+
+      }
+
+      if(!is.null(feature_lengths)){
+
+        kinetics <- kinetics %>%
+          dplyr::inner_join(
+            feature_lengths %>%
+              dplyr::filter(length > 0),
+            by = c(features_to_analyze)
+          ) %>%
+          dplyr::inner_join(
+            scale_factor_df,
+            by = "sample"
+          ) %>%
+          dplyr::mutate(
+            normalized_reads = (n /  (length / 1000)) * !!dplyr::sym(scale_col),
+            log_normalized_reads = log10(normalized_reads)
+          )
+
+
+      }else{
+
+        kinetics <- kinetics %>%
+          dplyr::inner_join(
+            scale_factor_df,
+            by = "sample"
+          ) %>%
+          dplyr::mutate(
+            normalized_reads = n * !!dplyr::sym(scale_col),
+            log_normalized_reads = log10(normalized_reads)
+          )
+
+
+      }
+
+
+    }
+
 
 
     samples_with_no_label <- metadf %>%
@@ -284,13 +379,57 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   num_samps <- length(unique(kinetics$sample))
 
-  features_to_keep <- kinetics %>%
-    dplyr::filter(n > min_reads) %>%
-    dplyr::select(-n) %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
-    dplyr::count() %>%
-    dplyr::filter(n == num_samps) %>%
-    dplyr::select(!!features_to_analyze)
+  # In some cases, we don't care that there is data in every single sample
+  # (e.g., modeling pre-mRNA dynamics in the nucleus and mature + pre-mRNA
+  # dynamics in the cytoplasm), so you can specify how many samples each
+  # feature should have via the feature_sample_counts input table.
+  if(!is.null(feature_sample_counts)){
+
+    # Idea is that sometimes users may only want to include one overarching
+    # feature in their filter table, so the code below allows EZbakR to count
+    # the number of samples for which this overarching feature appears above the
+    # read count threshold. All sub features belonging to this overarching
+    # feature can then be kept in downstream analyses.
+    #
+    # Necessary for combined pre-mRNA and mature mRNA modeling of nuclear and
+    # cytoplasmic dynamics, if you want to assume that pre-mRNA is only present
+    # in the nucleus (biologically reasonable assumption).
+    features_to_keep <- kinetics %>%
+      dplyr::filter(n > min_reads) %>%
+      dplyr::select(-n) %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
+      dplyr::count()
+
+    filter_features <- colnames(feature_sample_counts)[colnames(feature_sample_counts) != "nsamps"]
+
+    features_to_keep <- features_to_keep %>%
+      dplyr::inner_join(feature_sample_counts,
+                        by = filter_features) %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(colnames(feature_sample_counts)))) %>%
+      dplyr::summarise(n = sum(n),
+                       nsamps = mean(nsamps)) %>%
+      dplyr::filter(n == nsamps) %>%
+      dplyr::select(-n, -nsamps)
+
+    features_to_keep <- features_to_keep %>%
+      dplyr::inner_join(kinetics %>%
+                          dplyr::select(!!features_to_analyze) %>%
+                          dplyr::distinct(),
+                        by = filter_features)
+
+  }else{
+
+    features_to_keep <- kinetics %>%
+      dplyr::filter(n > min_reads) %>%
+      dplyr::select(-n) %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
+      dplyr::count()
+
+    features_to_keep <- features_to_keep %>%
+      dplyr::filter(n == num_samps) %>%
+      dplyr::select(!!features_to_analyze)
+
+  }
 
 
   kinetics <- kinetics %>%
@@ -466,7 +605,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     formula <- stats::as.formula(formula_str)
 
     # Perform linear regression
-    lm_result <- stats::lm(formula, data = model_fit)
+    lm_result <- stats::lm(formula, data = model_fit %>%
+                             filter(!is.na(!!dplyr::sym(paste0("mean_", covariate_names[1])))))
 
     # Return result
     return(list(covariate = .x, lm_result = lm_result))
@@ -486,8 +626,17 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     # Create the new column name
     new_column_name <- paste("logse_", covariate, "_fit", sep = "")
 
+
+    # Need to impute NAs for those for which the covariate is not estimated
+    # for a given feature
+    notna_index <- which(!is.na(model_fit %>% dplyr::ungroup() %>% dplyr::select(!!paste0("mean_", covariate)) %>%
+                              unlist() %>% unname()))
+
+    imputed_vect <- rep(NA, times = nrow(model_fit))
+    imputed_vect[notna_index] <- fitted_values
+
     # Add the fitted values to the dataframe as a new column
-    model_fit[[new_column_name]] <- fitted_values
+    model_fit[[new_column_name]] <- imputed_vect
   }
 
 
@@ -560,6 +709,9 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                               parameter = parameter,
                               fit_params = covariate_names,
                               formula_mean = formula_mean,
+                              kstrat = kstrat,
+                              populations = populations,
+                              fraction_design = fraction_design,
                               sd_grouping_factors = sd_grouping_factors,
                               overwrite = overwrite)
 
@@ -578,6 +730,9 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                fit_params = covariate_names,
                                formula_mean = formula_mean,
                                sd_grouping_factors = sd_grouping_factors,
+                               kstrat = kstrat,
+                               populations = populations,
+                               fraction_design = fraction_design,
                                exactMatch = TRUE,
                                alwaysCheck = TRUE)) + 1
     }
@@ -598,6 +753,9 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                                       fit_params = covariate_names,
                                                       formula_mean = formula_mean,
                                                       sd_grouping_factors = sd_grouping_factors,
+                                                      kstrat = kstrat,
+                                                      populations = populations,
+                                                      fraction_design = fraction_design,
                                                       repeatID = repeatID)
 
 
@@ -665,6 +823,7 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
                              conservative = FALSE){
 
 
+
   if(fit_var <= 0){
     fit_var <- fit_var_min
   }
@@ -693,6 +852,36 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 
 
 #' Get contrasts of estimated parameters
+#'
+#' `CompareParameters()` calculates differences in parameters estimated by
+#' `AverageAndRegularize()` or `EZDynamics()` and performs null hypothesis
+#' statistical testing, comparing their values to a null hypothesis of 0.
+#'
+#' The EZbakR website has an extensive vignette walking through various use cases
+#' and parameters you can compare with `CompareParameters()`: [vignette link](https://isaacvock.github.io/EZbakR/articles/Linear-modeling.html).
+#'
+#' There are essentially 3 scenarios that `CompareParameters()` can handle:
+#' \itemize{
+#'  \item Pairwise comparisons: compare `reference` to `experimental` parameter
+#'  estimates of a specified `design_factor` from `AverageAndRegularize()`. log(`experimental` / `reference`) is
+#'  the computed "difference" in this case.
+#'  \item Assess the value of a single parameter, which itself should represent a
+#'  difference between other parameters. The name of this parameter can be specified
+#'  via the `param_name` argument. This is useful for various interaction models
+#'  where some of the parameters of these models may represent things like "effect of
+#'  A on condition X".
+#'  \item Pairwise comparison of dynamical systems model parameter estimate: similar
+#'  to the first case listed above, but now when `type == "dynamics"`. `design_factor` can
+#'  now be a vector of all the `metadf` columns you stratified parameter estimates by.
+#' }
+#' Eventually, a 4th option via the currently non-functional `param_function` argument
+#' will be implemented, which will allow you to specify functions of parameters to be assessed,
+#' which can be useful for certain interaction models.
+#'
+#' `CompareParameters()` calculates p-values using what is essentially an asymptotic Wald test,
+#' meaning that a standard normal distribution is integrated. P-values are then multiple-test
+#' adjusted using the method of Benjamini and Hochberg, implemented in R's `p.adjust()`
+#' function.
 #'
 #' @param obj An `EZbakRFit` object, which is an `EZbakRFractions` object on
 #' which `AverageAndRegularize()` has been run.
@@ -1151,7 +1340,7 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
     names(ses) <- paste0("logse_", names(ses))
 
     estimates <- c(means,
-                   ses, log10(coverage), se_logses)
+                   ses, coverage, se_logses)
 
   }else{
 
@@ -1159,7 +1348,7 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
     sds <- data %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(sd_groups))) %>%
       dplyr::mutate(group_sd = stats::sd(!!dplyr::sym(parameter)),
-             group_coverage = mean(!!dplyr::sym(coverage_col)))
+             group_coverage = log10(mean(!!dplyr::sym(coverage_col))))
 
     # Robust standard errors
     X <- stats::model.matrix(fit)
@@ -1183,7 +1372,7 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
     rownames(coverages) <- paste0("coverage_", rownames(coverages))
 
     estimates <- c(means, ses,
-                   log10(coverages[,1]),
+                   coverages[,1],
                    se_logses)
 
   }

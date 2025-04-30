@@ -22,6 +22,10 @@ help find this table.}
 
 \item{...}{Additional arguments. Currently goes unused.}
 }
+\value{
+A list of \code{ggplot2} objects visualizing the various aspects of your data
+assessed by \code{EZQC()}.
+}
 \description{
 Run quality control checks
 }

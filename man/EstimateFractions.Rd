@@ -206,23 +206,20 @@ from all features) are estimated for each sample by fitting a single two-compone
 mixture model to all of the reads in that sample. These are used to estimate
 the fraction of reads from each feature that are from each mutational population,
 also using a two-component mixture model.
-}
 \itemize{
 \item With \code{Poisson} set to \code{TRUE}, this is a nucleotide-content adjusted Poisson
 mixture model, which is a more efficient alternative to binomial mixture modeling.
 \item With \code{Poisson} set to \code{FALSE}, this is a binomial mixture model.
 }
-\enumerate{
 \item Low mutation rate from -label: if \code{pold_from_nolabel} is \code{TRUE}, then the background,
 no label mutation rates are estimated from -label samples. By default, a single set of
 background mutation rates are estimated for all samples, but you can change this behavior
 by setting \code{grouping_factors} to specify columns in your \code{metadf} by which samples
 should be stratified.
-}
 \itemize{
-\item This is a great strategy to use if you have low label incorporation rates
+\item This is a great strategy to use if you have low label incorporation rates or
+if you used a fairly short label time.
 }
-\enumerate{
 \item Hierarchical model: if \code{strategy == "hierarchical"}, which is currently
 only compatible for single-mutation type modeling (e.g., standard T-to-C mutation
 modeling), then high T-to-C content mutation rates are estimated for each feature.

@@ -9,10 +9,51 @@
 #'
 #' When running `AverageAndRegularize()` to produce input for `EZDynamics()`, you
 #' must set `parameter` to "logit_fraction_high<muttype>" (<muttype> = type of mutation
-#' modeled by `EstimateFractions()`, e.g., TC), and you must include the label time
+#' modeled by `EstimateFractions()`, e.g., TC). If you have multiple distinct label times,
+#' you must also include the label time (`tl` of your `metadf`)
 #' in your regression formula. `EZDynamics()` models the logit(fraction high <muttype),
 #' and this will depend on the label time (longer label time = higher fraction), which
-#' is why these two conditions must be met.
+#' is why these two conditions must be met. If you only have a single label time though,
+#' `EZDynamics` will be able to impute this one value for all samples from your `metadf`.
+#' You can also include additional interaction terms in your `AverageAndRegularize()`
+#' model for different experimental conditions in which experiments were conducted,
+#' so that inferred kinetic parameters can be compared across these conditions. Currently,
+#' more complex modeling beyond simple stratification of samples by one or more condition
+#' is not possible with `EZDynamics()`.
+#'
+#' For normalization purposes, especially if analyzing pre-mRNA processing dynamics,
+#' you will need to provide `AverageAndRegularize()` with a table of feature lengths
+#' via the `feature_lengths` parameter. This will be used in all cases to length
+#' normalize read counts. Even in the case when you are just modeling mature mRNA
+#' dynamics, this is technically necessary for accurate estimation of scale factors.
+#'
+#' The first step of `EZDynamics()` is attempted inference of normalization scale
+#' factors for read counts. If you have scale factors you calculated yourself,
+#' e.g. via specialized spike-in protocols, you can provide these via the `scale_factors`
+#' parameter. If not, `EZDynamics()` will try to infer these from the fraction labeled's
+#' in each `sample_feature` (e.g., in different subcellular compartments). This relies on
+#' having some `sample_feature`'s that are a combination of other `sample_feature`'s. For
+#' example, if analyzing subcellular fractionation data, you may have 1) total RNA; 2)
+#' cytoplasmic RNA; and 3) nuclear RNA. Total RNA = cytoplasmic + nuclear RNA, and thus
+#' the fraction of reads from labeled RNA is a function of the total cytoplasmic and
+#' nuclear fraction labeled's, as well as the relative molecular abundances of cytoplasmic
+#' and nuclear RNA. The latter is precisely the scale factors we need to estimate.
+#' If you do not have sufficient combinations of data to perform this scale factor estimation,
+#' `EZDynamics()` will only use the fraction labeled's for modeling kinetic parameters.
+#' It can then perform post-hoc normalization to estimate a single synthesis rate constant,
+#' using the downstream rate constants to infer the unknown normalization scale factor necessary
+#' to combine kinetic parameter estimates and read counts to infer this rate constant.
+#'
+#' For estimating kinetic parameters, `EZDynamics()` infers the solution of the linear
+#' system of ODEs specified in your `graph` matrix input. This is done by representing
+#' the system of equations as a matrix, and deriving the general solution of the levels
+#' of each modeled species of RNA from the eigenvalues and eigenvectors of this matrix.
+#' While this makes `EZDynamics()` orders of magnitude more efficient than if it had to
+#' numerically infer the solution for each round of optimization, needing to compute
+#' eigenvalues and eigenvectors in each optimization iteration is still non-trivial,
+#' meaning that `EZDynamics()` may take anywhere from 10s of minutes to a couple hours
+#' to run, depending on how complex your model is and how many distinct set of samples
+#' and experimental conditions you have.
 #'
 #' @param obj Currently must be an EZbakRData object on which `AverageAndRegularize`
 #' has been run. In the future, will also support (in case where all species are
@@ -156,6 +197,7 @@
 #' numerical ID to distinguish the similar outputs.
 #' @importFrom magrittr %>%
 #' @import data.table
+#' @return `EZbakRData` object with an additional "dynamics" table.
 #' @export
 EZDynamics <- function(obj,
                      graph,
@@ -184,6 +226,7 @@ EZDynamics <- function(obj,
                      normalization_exactMatch = TRUE,
                      species_to_sf = NULL,
                      overwrite = TRUE){
+
 
   # Hack to deal with devtools::check() NOTEs
   param_type <- coverage <- sd <- nreps <- tl <- measured_specie <- NULL
@@ -546,6 +589,7 @@ EZDynamics <- function(obj,
 
     }
 
+
     # Don't use reads if can't normalize
     if(is.null(scale_factors) & !is.null(sample_feature)){
       use_coverage <- FALSE
@@ -563,19 +607,31 @@ EZDynamics <- function(obj,
 
     }
 
+    # Add names to modeled_to_measured to avoid shockingly intensive computation
+    # in each optim() function call to find the relevant formula
+    modeled_to_measured <- renameFormulas(modeled_to_measured)
 
 
-    # Don't estimate ksyn if coverage is not being modeled
+
+    ksyn_index <- unique(graph["0",])
+    ksyn_index <- ksyn_index[ksyn_index != 0]
+
     if(!use_coverage){
 
+      # Don't estimate ksyn if coverage is not being modeled
       npars <- npars - 1
 
-      ksyn_index <- unique(graph["0",])
-      ksyn_index <- ksyn_index[ksyn_index != 0]
 
       prior_means <- prior_means[-ksyn_index]
       prior_sds <- prior_sds[-ksyn_index]
 
+      starting_values <- starting_values[-ksyn_index]
+      upper_bounds <- upper_bounds[-ksyn_index]
+      lower_bounds <- lower_bounds[-ksyn_index]
+    }else{
+      starting_values[ksyn_index] <- mean(tidy_avgs$coverage, na.rm = TRUE)
+      upper_bounds[ksyn_index] <- 15
+      lower_bounds[ksyn_index] <- 0
     }
 
 
@@ -768,6 +824,11 @@ EZDynamics <- function(obj,
 
     }
 
+
+    # Add names to modeled_to_measured to avoid shockingly intensive computation
+    # in each optim() function call to find the relevant formula
+    modeled_to_measured <- renameFormulas(modeled_to_measured)
+
     ### Fit model
 
     # Determine initial vector of parameters and their upper and lower bounds
@@ -930,6 +991,32 @@ evaluate_formulas2 <- function(original_vector, formula) {
 
 }
 
+
+# If parameter estimates are nearly identical in generalized ODE
+# likelihood, it will crash due to a singularity in the matrix solution.
+# This function deals with these edge cases by spacing out nearly duplicate
+# values in a vector a small bit
+spread_duplicates <- function(vec, digits = 4, spread = 0.01) {
+
+  rounded_vec <- round(vec, digits)
+  dup_vals <- unique(rounded_vec[duplicated(rounded_vec)])
+
+  result <- vec
+
+  for (val in dup_vals) {
+
+    indices <- which(rounded_vec == val)
+
+    new_vals <- seq(val - spread, val + spread, length.out = length(indices))
+
+    result[indices] <- new_vals
+
+  }
+
+  return(result)
+
+}
+
 # Likelihood function for generalized dynamical systems modeling
 # with averages tables
 dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
@@ -954,12 +1041,20 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
   ### Step 1, construct A
 
   # Make sure parameters are all different values
-  count = 1
-  while(length(unique(round(parameter_ests, digits = 6))) != length(parameter_ests)){
-    parameter_ests <- stats::rnorm(length(parameter_ests),
-                            mean = parameter_ests,
-                            sd = 0.001)
-    count = count + 1
+  count <- 1
+  s <- 0.01
+  while(length(unique(round(parameter_ests, digits = 4))) != length(parameter_ests)){
+    # parameter_ests <- stats::rnorm(length(parameter_ests),
+    #                         mean = parameter_ests,
+    #                         sd = 0.01)
+
+    parameter_ests <- spread_duplicates(parameter_ests,
+                                        spread = s)
+
+
+
+    count <- count + 1
+    s <- s + 0.01
     if(count > 5){
       stop("Infinite while loop!!")
     }
@@ -1006,18 +1101,30 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
   ### Step 2: infer general solution
 
-  Rss <- solve(a = A,
-               b = -param_graph[zero_index,-zero_index])
-  names(Rss) <- rownames(A)
+  tryCatch(
+    {
+      Rss <- solve(a = A,
+                   b = -param_graph[zero_index,-zero_index])
+
+      names(Rss) <- rownames(A)
 
 
-  ev <- eigen(A)
+      ev <- eigen(A)
 
-  lambda <- ev$values
-  V<- ev$vectors
+      lambda <- ev$values
+      V<- ev$vectors
 
 
-  cs <- solve(V, -Rss)
+      cs <- solve(V, -Rss)
+
+    },
+    error = function(x){
+      browser()
+    }
+
+  )
+
+
 
 
   ### Step 3: Infer data for actual measured species
@@ -1041,22 +1148,25 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
     names(result_vector) <- rownames(A)
 
     # Evaluate the formulas
-    sample_formula <- formula_list[[sample_feature]]
-    formula_index <- which(sapply(1:length(sample_formula),
-                                  function(x) all.vars(sample_formula[[x]])[1] == feature_type))
+    sample_formula <- formula_list[[sample_feature]][[feature_type]]
 
     # If feature is not in model, throw it out and data for it
-    if(identical(formula_index, integer(0))){
+    if(is.null(sample_formula)){
 
       indices_to_remove <- c(indices_to_remove, n)
 
     }else{
 
-      sample_formula <- sample_formula[[formula_index]]
 
-      measured_levels <- evaluate_formulas2(result_vector, sample_formula)
 
-      measured_ss <- evaluate_formulas2(Rss, sample_formula)
+      ### Generalized even to modeling contamination
+      # measured_levels <- evaluate_formulas2(result_vector, sample_formula)
+      #
+      # measured_ss <- evaluate_formulas2(Rss, sample_formula)
+      species_to_sum <- all.vars(sample_formula[[3]])
+
+      measured_levels <- sum(result_vector[species_to_sum])
+      measured_ss <- sum(Rss[species_to_sum])
 
       all_fns <- c(all_fns, measured_levels/measured_ss)
       all_ss <- c(all_ss, measured_ss)
@@ -1086,7 +1196,18 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
   if(use_coverage){
 
+    if(length(indices_to_remove) > 0){
+      coverage <- coverage[-indices_to_remove]
+      scale_factor <- scale_factor[-indices_to_remove]
+      nreps <- nreps[-indices_to_remove]
+    }
+
+
     if(alt_coverage){
+
+      if(length(indices_to_remove) > 0){
+        coverage_sd <- coverage_sd[-indices_to_remove]
+      }
 
       # all_reads <- all_ss*scale_factor
 
@@ -1112,10 +1233,12 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
     } else{
 
+
+      # Simple, conservative dispersion parameter estimate of 50
       ll <- ll +
         stats::dnorm(coverage + log10(scale_factor),
                      log10(all_ss),
-                     sqrt((1/((10^coverage)*(log(10)^2))))/sqrt(nreps),
+                     (log(10) * sqrt((1/10^coverage) + 1/100))/sqrt(nreps),
                      log = TRUE)
 
     }
@@ -1143,6 +1266,7 @@ normalize_EZDynamics <- function(norm_df,
                                  species,
                                  design_factors,
                                  species_to_sf = NULL){
+
 
   # Hack to deal with devtools::check() NOTEs
   n <- valid <- NULL
@@ -1595,3 +1719,25 @@ scale_likelihood <- function(pars, M, y, sig){
 
 }
 
+
+# To avoid heavy comps later, conveniently rename
+# list elements of modeled_to_measured so that it is
+# name of modeled species.
+renameFormulas <- function(lst) {
+
+  # Helper to extract the "first variable" used in a formula
+  get_first_var <- function(f) {
+    vars <- all.vars(f)
+    if (length(vars) == 0) {
+      stop("No variables found in formula.")
+    }
+    vars[1]
+  }
+
+  # For each named sublist, rename the formula objects
+  lapply(lst, function(sublist) {
+    # sublist is a list of formula objects
+    new_names <- sapply(sublist, get_first_var)
+    setNames(sublist, new_names)
+  })
+}
