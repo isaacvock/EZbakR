@@ -2024,9 +2024,9 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
 
   # Add new class information
-  if(!("EZbakRArrowFractions" %in% class(obj))){
+  if(!("EZbakRFractions" %in% class(obj))){
 
-    class(obj) <- c("EZbakRArrowFractions", class(obj))
+    class(obj) <- c("EZbakRFractions", class(obj))
 
   }
 

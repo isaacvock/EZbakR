@@ -6,6 +6,7 @@
 \usage{
 NormalizeForDropout(
   obj,
+  normalize_across_tls = FALSE,
   grouping_factors = NULL,
   features = NULL,
   populations = NULL,
@@ -17,6 +18,11 @@ NormalizeForDropout(
 \arguments{
 \item{obj}{An EZbakRFractions object, which is an EZbakRData object on which
 you have run \code{EstimateFractions()}.}
+
+\item{normalize_across_tls}{If TRUE, samples from different label times will
+be normalized by finding a max inferred degradation rate constant (kdeg)
+sample and using that as a reference. Degradation kinetics with this max
+will be assumed to infer reference fraction news at different label times}
 
 \item{grouping_factors}{Which sample-detail columns in the metadf should be used
 to group -s4U samples by for calculating the average -s4U RPM? The default value of
@@ -50,7 +56,7 @@ with a dropout corrected table.
 }
 \description{
 Uses the strategy described \href{https://simonlabcode.github.io/bakR/articles/Dropout.html}{here}, and similar to that originally presented
-in \href{https://academic.oup.com/nar/article/52/7/e35/7612100}{Berg et al. 2024}.
+in \href{https://academic.oup.com/nar/article/52/7/e35/7612100}{Berg et al. 2024},
 to normalize for dropout. Normalizing for dropout means identifying a reference
 sample with low dropout, and estimating dropout in each sample relative to
 that sample.
@@ -89,5 +95,6 @@ By default, all samples with same label time are normalized with respect
 to a reference sample chosen from among them. If you want to further separate
 the groups of samples that are normalized together, specify the columns of
 your metadf by which you want to additionally group factors in the \code{grouping_factors}
-parameter
+parameter. This behavior can be changed by setting \code{normalize_across_tls} to
+\code{TRUE}, which will
 }

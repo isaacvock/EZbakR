@@ -95,81 +95,11 @@ EZQC.EZbakRFractions <- function(obj,
                                  fraction_design = NULL,
                                  ...){
 
-  ### Get mutation rate populations that were analyzed
-  fname <- EZget(obj, type = "fractions",
-                 features = features,
-                 populations = populations,
-                 fraction_design = fraction_design,
-                 returnNameOnly = TRUE)
-  mutrate_populations <- obj[["metadata"]][["fractions"]][[fname]][["populations"]]
 
+  ### Check if input contains an arrow dataset
+  components <- names(obj)
 
-  ### Check raw mutation rates
-  graw <- check_raw_mutation_rates(obj,
-                                   mutrate_populations = mutrate_populations)
-
-
-  ### Check labeled and unlabeled mutation rates
-  glabel <- check_plabeled(obj)
-
-
-  ### Check read count replicate correlation
-  gread <- check_read_count_corr_ezbf(obj,
-                                      features = features,
-                                      populations = populations,
-                                      fraction_design = fraction_design)
-
-
-  ### Check fraction labeled distribution
-  gfld <- check_fl_dist(obj,
-                        features = features,
-                        populations = populations,
-                        fraction_design = fraction_design)
-
-
-  ### Check fraction labeled replicate correlation
-  gflc <- check_fl_corr(obj,
-                        features = features,
-                        populations = populations,
-                        fraction_design = fraction_design)
-
-
-  return(
-    list(
-      Raw_mutrates = graw,
-      Inferred_mutrates = glabel,
-      Readcount_corr = gread,
-      Fraction_labeled_dist = gfld,
-      Fraction_labeled_corr = gflc
-    )
-  )
-
-}
-
-
-
-#' Run quality control checks
-#'
-#' @param obj EZbakRFractions object, which is an EZbakRData object on which
-#' `EstimateFractions` has been run.
-#' @param ... Additional arguments. Currently goes unused.
-#' @param features Set of features analyzed in the fractions table you are
-#' interested QCing. This gets passed to `EZget()` to help find this table.
-#' @param populations Set of mutation types analyzed in the fractions table
-#' you are interested in QCing. This gets passed to `EZget()` to help find this table.
-#' @param fraction_design The fraction "design matrix" specified to get the
-#' fractions table you are interested in QCing. This gets passed to `EZget()` to
-#' help find this table.
-#' @import data.table
-#' @importFrom magrittr %>%
-#' @return A list of `ggplot2` objects visualizing the various aspects of your data
-#' assessed by `EZQC()`.
-#' @export
-EZQC.EZbakRArrowFractions <- function(obj,
-                                 features = NULL,
-                                 populations = NULL,
-                                 fraction_design = NULL,
-                                 ...){
+  arrow <- "cBds" %in% components
 
   ### Get mutation rate populations that were analyzed
   fname <- EZget(obj, type = "fractions",
@@ -181,16 +111,19 @@ EZQC.EZbakRArrowFractions <- function(obj,
 
 
   ### Check raw mutation rates
+  message("CHECKING RAW MUTATION RATES...")
   graw <- check_raw_mutation_rates(obj,
                                    mutrate_populations = mutrate_populations,
-                                   arrow = TRUE)
+                                   arrow = arrow)
 
 
   ### Check labeled and unlabeled mutation rates
+  message("CHECKING INFERRED MUTATION RATES...")
   glabel <- check_plabeled(obj)
 
 
   ### Check read count replicate correlation
+  message("CHECKING READ COUNT CORRELATIONS...")
   gread <- check_read_count_corr_ezbf(obj,
                                       features = features,
                                       populations = populations,
@@ -198,6 +131,7 @@ EZQC.EZbakRArrowFractions <- function(obj,
 
 
   ### Check fraction labeled distribution
+  message("CHECKING FRACTION LABELED DISTRIBUTIONS...")
   gfld <- check_fl_dist(obj,
                         features = features,
                         populations = populations,
@@ -205,6 +139,7 @@ EZQC.EZbakRArrowFractions <- function(obj,
 
 
   ### Check fraction labeled replicate correlation
+  message("CHECKING FRACTION LABELED CORRELATIONS...")
   gflc <- check_fl_corr(obj,
                         features = features,
                         populations = populations,
@@ -222,6 +157,7 @@ EZQC.EZbakRArrowFractions <- function(obj,
   )
 
 }
+
 
 
 
@@ -253,12 +189,21 @@ EZQC.EZbakRData <- function(obj,
                             remove_features = c("NA", "__no_feature"),
                             ...){
 
+  ### Check if input contains an arrow dataset
+  components <- names(obj)
+
+  arrow <- "cBds" %in% components
+
+
   ### Check raw mutation rates
+  message("CHECKING RAW MUTATION RATES...")
   graw <- check_raw_mutation_rates(obj,
-                                   mutrate_populations = mutrate_populations)
+                                   mutrate_populations = mutrate_populations,
+                                   arrow = arrow)
 
 
   ### Check labeled and unlabeled mutation rates
+  message("CHECKING INFERRED MUTATION RATES...")
   mutrates <- EstimateMutRates(obj,
                                populations = mutrate_populations)$mutation_rates
 
@@ -270,12 +215,16 @@ EZQC.EZbakRData <- function(obj,
   }
 
 
+
+
   ### Check read count replicate correlation
+  message("CHECKING READ COUNT CORRELATIONS...")
   gread <- check_read_count_corr_ezbd(obj,
                                       features = features,
                                       filter_cols = filter_cols,
                                       filter_condition = filter_condition,
-                                      remove_features = remove_features)
+                                      remove_features = remove_features,
+                                      arrow = arrow)
 
 
 
@@ -288,6 +237,32 @@ EZQC.EZbakRData <- function(obj,
   )
 
 }
+
+
+
+#' Run quality control checks
+#'
+#' @param obj An EZbakRData object
+#' @param ... Additional arguments. Currently goes unused.
+#' @param mutrate_populations Same as in `EstimateFractions()`. See `?EstimateFractions()`
+#' for details.
+#' @param features Same as in `EstimateFractions()`. See `?EstimateFractions()`
+#' for details.
+#' @param filter_cols Same as in `EstimateFractions()`. See `?EstimateFractions()`
+#' for details.
+#' @param filter_condition Same as in `EstimateFractions()`. See `?EstimateFractions()`
+#' for details.
+#' @param remove_features Same as in `EstimateFractions()`. See `?EstimateFractions()`
+#' for details.
+#' @import data.table
+#' @import arrow
+#' @importFrom magrittr %>%
+#' @return A list of `ggplot2` objects visualizing the various aspects of your data
+#' assessed by `EZQC()`.
+#' @export
+EZQC.EZbakRArrowData <- EZQC.EZbakRData
+
+
 
 
 # Currently assumes cB, not arrow_dataset
@@ -611,7 +586,8 @@ check_read_count_corr_ezbd <- function(obj,
                                        features,
                                        filter_cols,
                                        filter_condition,
-                                       remove_features){
+                                       remove_features,
+                                       arrow = FALSE){
 
 
   # Hack to deal with NOTEs
@@ -619,80 +595,197 @@ check_read_count_corr_ezbd <- function(obj,
   `.` <- list()
 
 
-  cB <- data.table::copy(obj$cB)
-  metadf <- data.table::copy(obj$metadf)
 
-  rep_meta <- infer_replicates(obj,
-                               consider_tl = FALSE)
+  if(arrow){
+
+    cBds <- obj$cBds
+    metadf <- data.table::copy(obj$metadf)
+
+    cBschema <- arrow::schema(cBds)
+    cB_cols <- names(cBschema)
+
+    rep_meta <- infer_replicates(obj,
+                                 consider_tl = FALSE)
 
 
-  ### Filter out groups with no more than 1 replicate
-  IDcol <- ifelse("replicate_id_imputed" %in% colnames(rep_meta),
-                  "replicate_id_imputed",
-                  "replicate_id")
+    ### Filter out groups with no more than 1 replicate
+    IDcol <- ifelse("replicate_id_imputed" %in% colnames(rep_meta),
+                    "replicate_id_imputed",
+                    "replicate_id")
 
-  rep_meta <- rep_meta %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(IDcol))) %>%
-    dplyr::filter(dplyr::n() > 1)
+    rep_meta <- rep_meta %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(IDcol))) %>%
+      dplyr::filter(dplyr::n() > 1)
 
-  if(nrow(rep_meta) == 0){
-    message("Detected no conditions with replicates!
+    if(nrow(rep_meta) == 0){
+      message("Detected no conditions with replicates!
             Skipping read count replicate correlation analysis.")
 
-    return(list())
-
-  }
-
-
-  ### Get read counts for each feature
-
-  # What features are in cB?
-  mutcounts_in_cB <- find_mutcounts(obj)
-
-  basecounts_in_cB <- paste0("n", substr(mutcounts_in_cB, start = 1, stop = 1))
-
-  cB_cols <- colnames(cB)
-
-  features_in_cB <- cB_cols[!(cB_cols %in% c(mutcounts_in_cB,
-                                             basecounts_in_cB,
-                                             "sample", "n"))]
-
-  # Need to determine which columns of the cB to group reads by
-  if(features[1] == "all" & length(features) == 1){
-
-    features_to_analyze <- features_in_cB
-
-  }else{
-
-    if(!all(features %in% features_in_cB)){
-
-      stop("features includes columns that do not exist in your cB!")
-
-    }else{
-
-      features_to_analyze <- features
+      return(list())
 
     }
 
+
+    ### Mutation count columns in cB dataset
+
+    # Mutation counts possible
+    mutcounts <- expand.grid(c("T", "C", "G", "A", "U", "N"),
+                             c("T", "C", "G", "A", "U", "N"))
+    mutcounts <- paste0(mutcounts[,1], mutcounts[,2])
+
+    illegal_mutcounts <- c("TT", "CC", "GG", "AA", "UU")
+
+    mutcounts <- mutcounts[!(mutcounts %in% illegal_mutcounts)]
+
+    # Which mutcounts are in the cB?
+    mutcounts_in_cB <- cB_cols[cB_cols %in% mutcounts]
+
+
+    ### Base count columns in cB
+    basecounts_in_cB <- paste0("n", substr(mutcounts_in_cB, start = 1, stop = 1))
+
+    ### Feature columns
+    features_in_cB <- cB_cols[!(cB_cols %in% c(mutcounts_in_cB,
+                                               basecounts_in_cB,
+                                               "sample", "n"))]
+
+
+    ### Need to determine which columns of the cB to group reads by
+
+    if(features[1] == "all" & length(features) == 1){
+
+      features_to_analyze <- features_in_cB
+
+    }else{
+
+      if(!all(features %in% features_in_cB)){
+
+        stop("features includes columns that do not exist in your cB!")
+
+      }else{
+
+        features_to_analyze <- features
+
+      }
+
+    }
+
+    group_cols <- c("sample", features_to_analyze)
+
+    ### Filter out columns not mapping to any feature (easier and faster in data.table)
+
+    if(filter_cols[1] == "all" & length(filter_cols) == 1){
+
+      filter_cols <- features_to_analyze
+
+    }
+
+    all_samps <- obj$metadf$sample
+
+    cB_list <- vector(
+      mode = "list",
+      length = length(all_samps)
+    )
+
+    for(s in seq_along(all_samps)){
+
+      cBsamp <- cBds %>%
+        dplyr::filter(sample == all_samps[s]) %>%
+        dplyr::collect()
+
+      setDT(cBsamp)
+
+      cB_list[[s]] <- cBsamp[cBsamp[, !Reduce(filter_condition, lapply(.SD, `%in%`, remove_features)),.SDcols = filter_cols], ]
+
+
+    }
+
+    cB <- bind_rows(cB_list)
+
+    setDT(cB)
+
+
+  }else{
+
+    cB <- data.table::copy(obj$cB)
+    metadf <- data.table::copy(obj$metadf)
+
+    rep_meta <- infer_replicates(obj,
+                                 consider_tl = FALSE)
+
+
+    ### Filter out groups with no more than 1 replicate
+    IDcol <- ifelse("replicate_id_imputed" %in% colnames(rep_meta),
+                    "replicate_id_imputed",
+                    "replicate_id")
+
+    rep_meta <- rep_meta %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(IDcol))) %>%
+      dplyr::filter(dplyr::n() > 1)
+
+    if(nrow(rep_meta) == 0){
+      message("Detected no conditions with replicates!
+            Skipping read count replicate correlation analysis.")
+
+      return(list())
+
+    }
+
+
+    ### Get read counts for each feature
+
+    # What features are in cB?
+    mutcounts_in_cB <- find_mutcounts(obj)
+
+    basecounts_in_cB <- paste0("n", substr(mutcounts_in_cB, start = 1, stop = 1))
+
+    cB_cols <- colnames(cB)
+
+    features_in_cB <- cB_cols[!(cB_cols %in% c(mutcounts_in_cB,
+                                               basecounts_in_cB,
+                                               "sample", "n"))]
+
+    # Need to determine which columns of the cB to group reads by
+    if(features[1] == "all" & length(features) == 1){
+
+      features_to_analyze <- features_in_cB
+
+    }else{
+
+      if(!all(features %in% features_in_cB)){
+
+        stop("features includes columns that do not exist in your cB!")
+
+      }else{
+
+        features_to_analyze <- features
+
+      }
+
+    }
+
+    group_cols <- c("sample", features_to_analyze)
+
+    ### Filter out columns not mapping to any feature (easier and faster in data.table)
+
+    if(filter_cols[1] == "all" & length(filter_cols) == 1){
+
+      filter_cols <- features_to_analyze
+
+    }
+
+    cB <- cB[cB[, !Reduce(filter_condition, lapply(.SD, `%in%`, remove_features)),.SDcols = filter_cols], ]
+
+
   }
-
-  group_cols <- c("sample", features_to_analyze)
-
-  ### Filter out columns not mapping to any feature (easier and faster in data.table)
-
-  if(filter_cols[1] == "all" & length(filter_cols) == 1){
-
-    filter_cols <- features_to_analyze
-
-  }
-
-  cB <- cB[cB[, !Reduce(filter_condition, lapply(.SD, `%in%`, remove_features)),.SDcols = filter_cols], ]
 
 
   ### Get read counts
 
   readcnts <- cB[sample %in% rep_meta$sample][,.(reads = sum(n)),
-                                             by = group_cols]
+                                              by = group_cols]
+
+
 
 
   ### Make correlation plots
@@ -1055,6 +1148,10 @@ check_fl_corr <- function(obj,
 infer_replicates <- function(obj,
                              consider_tl){
 
+  components <- names(obj)
+
+  arrow <- "cBds" %in% components
+
   metadf <- data.table::copy(obj$metadf)
 
   if("replicate_id" %in% colnames(metadf)){
@@ -1063,8 +1160,35 @@ infer_replicates <- function(obj,
     new_col <- "replicate_id"
   }
 
-  # Find label time columns
-  mutcounts_in_cB <- find_mutcounts(obj)
+
+  if(arrow){
+
+    # cB columns
+    cB <- obj$cBds
+    cBschema <- arrow::schema(cB)
+    cB_cols <- names(cBschema)
+
+    ### Vectors of potential column names
+
+    # Mutation counts possible
+    mutcounts <- expand.grid(c("T", "C", "G", "A", "U", "N"),
+                             c("T", "C", "G", "A", "U", "N"))
+    mutcounts <- paste0(mutcounts[,1], mutcounts[,2])
+
+    illegal_mutcounts <- c("TT", "CC", "GG", "AA", "UU")
+
+    mutcounts <- mutcounts[!(mutcounts %in% illegal_mutcounts)]
+
+    # Which mutcounts are in the cB?
+    mutcounts_in_cB <- cB_cols[cB_cols %in% mutcounts]
+
+  }else{
+
+    # Find label time columns
+    mutcounts_in_cB <- find_mutcounts(obj)
+
+  }
+
 
   tl_cols_possible <- c("tl", "tpulse", "tchase",
                         paste0("tl_", mutcounts_in_cB),
