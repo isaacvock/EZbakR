@@ -300,17 +300,18 @@ as follows:</p><ol><li><p>The default: global mutation rate parameters (global =
 from all features) are estimated for each sample by fitting a single two-component
 mixture model to all of the reads in that sample. These are used to estimate
 the fraction of reads from each feature that are from each mutational population,
-also using a two-component mixture model.</p></li>
-</ol><ul><li><p>With <code>Poisson</code> set to <code>TRUE</code>, this is a nucleotide-content adjusted Poisson
+also using a two-component mixture model.</p><ul><li><p>With <code>Poisson</code> set to <code>TRUE</code>, this is a nucleotide-content adjusted Poisson
 mixture model, which is a more efficient alternative to binomial mixture modeling.</p></li>
 <li><p>With <code>Poisson</code> set to <code>FALSE</code>, this is a binomial mixture model.</p></li>
-</ul><ol><li><p>Low mutation rate from -label: if <code>pold_from_nolabel</code> is <code>TRUE</code>, then the background,
+</ul></li>
+<li><p>Low mutation rate from -label: if <code>pold_from_nolabel</code> is <code>TRUE</code>, then the background,
 no label mutation rates are estimated from -label samples. By default, a single set of
 background mutation rates are estimated for all samples, but you can change this behavior
 by setting <code>grouping_factors</code> to specify columns in your <code>metadf</code> by which samples
-should be stratified.</p></li>
-</ol><ul><li><p>This is a great strategy to use if you have low label incorporation rates</p></li>
-</ul><ol><li><p>Hierarchical model: if <code>strategy == "hierarchical"</code>, which is currently
+should be stratified.</p><ul><li><p>This is a great strategy to use if you have low label incorporation rates or
+if you used a fairly short label time.</p></li>
+</ul></li>
+<li><p>Hierarchical model: if <code>strategy == "hierarchical"</code>, which is currently
 only compatible for single-mutation type modeling (e.g., standard T-to-C mutation
 modeling), then high T-to-C content mutation rates are estimated for each feature.
 The global sample-wide estimates are used as an informative prior to increase the
@@ -346,7 +347,7 @@ accuracy of this process by avoiding extreme estimates.</p></li>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.2.</p>
 </div>
 
     </footer></div>

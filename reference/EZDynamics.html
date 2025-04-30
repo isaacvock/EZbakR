@@ -316,13 +316,55 @@ numerical ID to distinguish the similar outputs.</p></dd>
 
 </dl></div>
     <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p><code>EZbakRData</code> object with an additional "dynamics" table.</p>
+    </div>
+    <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>When running <code><a href="AverageAndRegularize.html">AverageAndRegularize()</a></code> to produce input for <code>EZDynamics()</code>, you
 must set <code>parameter</code> to "logit_fraction_high<muttype>" (<muttype> = type of mutation
-modeled by <code><a href="EstimateFractions.html">EstimateFractions()</a></code>, e.g., TC), and you must include the label time
+modeled by <code><a href="EstimateFractions.html">EstimateFractions()</a></code>, e.g., TC). If you have multiple distinct label times,
+you must also include the label time (<code>tl</code> of your <code>metadf</code>)
 in your regression formula. <code>EZDynamics()</code> models the logit(fraction high &lt;muttype),
 and this will depend on the label time (longer label time = higher fraction), which
-is why these two conditions must be met.</muttype></muttype></p>
+is why these two conditions must be met. If you only have a single label time though,
+<code>EZDynamics</code> will be able to impute this one value for all samples from your <code>metadf</code>.
+You can also include additional interaction terms in your <code><a href="AverageAndRegularize.html">AverageAndRegularize()</a></code>
+model for different experimental conditions in which experiments were conducted,
+so that inferred kinetic parameters can be compared across these conditions. Currently,
+more complex modeling beyond simple stratification of samples by one or more condition
+is not possible with <code>EZDynamics()</code>.</muttype></muttype></p>
+<p>For normalization purposes, especially if analyzing pre-mRNA processing dynamics,
+you will need to provide <code><a href="AverageAndRegularize.html">AverageAndRegularize()</a></code> with a table of feature lengths
+via the <code>feature_lengths</code> parameter. This will be used in all cases to length
+normalize read counts. Even in the case when you are just modeling mature mRNA
+dynamics, this is technically necessary for accurate estimation of scale factors.</p>
+<p>The first step of <code>EZDynamics()</code> is attempted inference of normalization scale
+factors for read counts. If you have scale factors you calculated yourself,
+e.g. via specialized spike-in protocols, you can provide these via the <code>scale_factors</code>
+parameter. If not, <code>EZDynamics()</code> will try to infer these from the fraction labeled's
+in each <code>sample_feature</code> (e.g., in different subcellular compartments). This relies on
+having some <code>sample_feature</code>'s that are a combination of other <code>sample_feature</code>'s. For
+example, if analyzing subcellular fractionation data, you may have 1) total RNA; 2)
+cytoplasmic RNA; and 3) nuclear RNA. Total RNA = cytoplasmic + nuclear RNA, and thus
+the fraction of reads from labeled RNA is a function of the total cytoplasmic and
+nuclear fraction labeled's, as well as the relative molecular abundances of cytoplasmic
+and nuclear RNA. The latter is precisely the scale factors we need to estimate.
+If you do not have sufficient combinations of data to perform this scale factor estimation,
+<code>EZDynamics()</code> will only use the fraction labeled's for modeling kinetic parameters.
+It can then perform post-hoc normalization to estimate a single synthesis rate constant,
+using the downstream rate constants to infer the unknown normalization scale factor necessary
+to combine kinetic parameter estimates and read counts to infer this rate constant.</p>
+<p>For estimating kinetic parameters, <code>EZDynamics()</code> infers the solution of the linear
+system of ODEs specified in your <code>graph</code> matrix input. This is done by representing
+the system of equations as a matrix, and deriving the general solution of the levels
+of each modeled species of RNA from the eigenvalues and eigenvectors of this matrix.
+While this makes <code>EZDynamics()</code> orders of magnitude more efficient than if it had to
+numerically infer the solution for each round of optimization, needing to compute
+eigenvalues and eigenvectors in each optimization iteration is still non-trivial,
+meaning that <code>EZDynamics()</code> may take anywhere from 10s of minutes to a couple hours
+to run, depending on how complex your model is and how many distinct set of samples
+and experimental conditions you have.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -334,7 +376,7 @@ is why these two conditions must be met.</muttype></muttype></p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.2.</p>
 </div>
 
     </footer></div>

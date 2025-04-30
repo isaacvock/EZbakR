@@ -15,8 +15,10 @@
 <url><loc>https://isaacvock.github.io/EZbakR/reference/AverageAndRegularize.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/CompareParameters.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/CorrectDropout.html</loc></url>
+<url><loc>https://isaacvock.github.io/EZbakR/reference/DeconvolveFractions.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EZDynamics.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EZMAPlot.html</loc></url>
+<url><loc>https://isaacvock.github.io/EZbakR/reference/EZQC.EZbakRArrowData.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EZQC.EZbakRData.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EZQC.EZbakRFractions.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EZQC.html</loc></url>
@@ -36,6 +38,7 @@
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EstimateMutRates.EZbakRData.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EstimateMutRates.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/ImportIsoformQuant.html</loc></url>
+<url><loc>https://isaacvock.github.io/EZbakR/reference/NormalizeForDropout.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/SimpleSim.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/SimulateDynamics.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/SimulateIsoforms.html</loc></url>

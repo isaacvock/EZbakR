@@ -85,6 +85,8 @@ bakR, though slightly improved upon since then.</p>
 <span>  conservative <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  character_limit <span class="op">=</span> <span class="fl">20</span>,</span>
 <span>  feature_lengths <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  feature_sample_counts <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  scale_factor_df <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -236,10 +238,59 @@ data. For example, if your analysis includes features named GF and XF, this
 should be a data frame with columns GF, XF, and length.</p></dd>
 
 
+<dt id="arg-feature-sample-counts">feature_sample_counts<a class="anchor" aria-label="anchor" href="#arg-feature-sample-counts"></a></dt>
+<dd><p>Data frame with columns <feature names> and <code>nsamps</code>,
+where <feature names> are all of the feature columns in the input to
+<code>AverageAndRegularize()</code>, and <code>nsamps</code> is the number of samples that samples
+from that feature combination needs to have over the read count threshold.</feature></feature></p></dd>
+
+
+<dt id="arg-scale-factor-df">scale_factor_df<a class="anchor" aria-label="anchor" href="#arg-scale-factor-df"></a></dt>
+<dd><p>Data frame with columns "sample" and a second column of
+whatever name you please. The second column should denote scale factors by which
+read counts in that sample should be multiplied by in order to normalize these
+read counts.</p></dd>
+
+
 <dt id="arg-overwrite">overwrite<a class="anchor" aria-label="anchor" href="#arg-overwrite"></a></dt>
 <dd><p>If TRUE, identical, existing output will be overwritten.</p></dd>
 
 </dl></div>
+    <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p><code>EZbakRData</code> object with an additional "averages" table, as well as a
+fullfit table under the same list heading, which includes extra information about
+the priors used for regularization purposes.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>The EZbakR website has an extensive vignette walking through various use cases
+and model types that you can fit with <code>AverageAndRegularize()</code>: <a href="https://isaacvock.github.io/EZbakR/articles/Linear-modeling.html">vignette link</a>.
+EZbakR improves upon bakR by balancing extra conservativeness in several steps
+with a more highly powered statistical testing scheme in its <code><a href="CompareParameters.html">CompareParameters()</a></code>
+function. In particular, the following changes to the variance regularization
+scheme were made:</p><ul><li><p>Sample-specific parameter uncertainties are used to generate conservative estimates
+of feature-specific replicate variabilties. In addition, a small floor is set to ensure
+that replicate variance estimates are never below a certain level, for the same reason.</p></li>
+<li><p>Condition-wide replicate variabilities are regressed against both read coverage and
+either a) |logit(estimate)| when modeling average fraction labeled. This captures
+the fact thta estimates are best around a logit(fraction labeled) of 0 and get
+worse for more extreme fraction labeled's.; b) log(kdeg) when modeling log degradation
+rate constants. At first, I considered a strategy similar to the fraction labeled
+modeling, but found that agreement between a fully rigorous MCMC sampling approach
+and EZbakR was significantly improved by just regressing hee value of the log kientic parameter,
+likely due to the non-linear transformation of fraction labeled to log(kdeg);
+and c) only coverage in all other cases.</p></li>
+<li><p>Features with replicate variabilities below the inferred trend have their replicate
+variabilites set equal to that predicted by the trend. This helps limit underestimation
+of parameter variance. Features with above-trend replicate variabilties have their
+replicate variabilities regularized with a Normal prior Normal likelihood Bayesian
+model, as in bakR (so the log(variance) is the inferred mean of this distribution, and
+the known variance is inferred from the amount of variance about the linear dataset-wide
+trend).</p></li>
+</ul><p>All of this allows <code><a href="CompareParameters.html">CompareParameters()</a></code> to use a less conservative statistical test
+when calculating p-values, while still controlling false discovery rates.</p>
+    </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
@@ -250,7 +301,7 @@ should be a data frame with columns GF, XF, and length.</p></dd>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.2.</p>
 </div>
 
     </footer></div>

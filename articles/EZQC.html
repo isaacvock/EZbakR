@@ -109,6 +109,9 @@ vignette</a> is still relevant for interpreting EZbakR’s output.</p>
 <span></span>
 <span><span class="co">### Input: EZbakRData object</span></span>
 <span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EZQC.html">EZQC</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span>
+<span><span class="co">#&gt; CHECKING RAW MUTATION RATES...</span></span>
+<span><span class="co">#&gt; CHECKING INFERRED MUTATION RATES...</span></span>
+<span><span class="co">#&gt; CHECKING READ COUNT CORRELATIONS...</span></span>
 <span><span class="co">#&gt; log10(read counts) correlation for each pair of replicates are:</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 12 × 3</span></span></span>
 <span><span class="co">#&gt;    sample_1 sample_2 correlation</span></span>
@@ -138,6 +141,9 @@ vignette</a> is still relevant for interpreting EZbakR’s output.</p>
 <span><span class="co">#&gt; Estimating fractions</span></span>
 <span><span class="co">#&gt; Processing output</span></span>
 <span><span class="va">qc_fn</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EZQC.html">EZQC</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span>
+<span><span class="co">#&gt; CHECKING RAW MUTATION RATES...</span></span>
+<span><span class="co">#&gt; CHECKING INFERRED MUTATION RATES...</span></span>
+<span><span class="co">#&gt; CHECKING READ COUNT CORRELATIONS...</span></span>
 <span><span class="co">#&gt; log10(read counts) correlation for each pair of replicates are:</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 12 × 3</span></span></span>
 <span><span class="co">#&gt;    sample_1 sample_2 correlation</span></span>
@@ -157,6 +163,7 @@ vignette</a> is still relevant for interpreting EZbakR’s output.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; log10(read counts) correlations are high, suggesting good reproducibility!</span></span>
 <span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; CHECKING FRACTION LABELED DISTRIBUTIONS...</span></span>
 <span><span class="co">#&gt; Average fractions for each sample are:</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 6 × 3</span></span></span>
 <span><span class="co">#&gt;   sample  avg_fraction fraction_type  </span></span>
@@ -170,6 +177,7 @@ vignette</a> is still relevant for interpreting EZbakR’s output.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Labeling rates (e.g., fraction labeled for single label experiments) look good!</span></span>
 <span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; CHECKING FRACTION LABELED CORRELATIONS...</span></span>
 <span><span class="co">#&gt; logit(fraction_highTC) correlation for each pair of replicates are:</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 6 × 3</span></span></span>
 <span><span class="co">#&gt;   sample_1 sample_2 correlation</span></span>
@@ -434,7 +442,7 @@ committing.</li>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.2.</p>
 </div>
 
     </footer>
