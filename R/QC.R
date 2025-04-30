@@ -121,6 +121,11 @@ EZQC.EZbakRFractions <- function(obj,
   message("CHECKING INFERRED MUTATION RATES...")
   glabel <- check_plabeled(obj)
 
+  if(length(glabel$plot) == 1){
+    glabel_plot <- glabel$plot[[1]]
+    glabel_table <- glabel$table[[1]]
+  }
+
 
   ### Check read count replicate correlation
   message("CHECKING READ COUNT CORRELATIONS...")
@@ -146,13 +151,21 @@ EZQC.EZbakRFractions <- function(obj,
                         fraction_design = fraction_design)
 
 
+
   return(
     list(
-      Raw_mutrates = graw,
-      Inferred_mutrates = glabel,
-      Readcount_corr = gread,
-      Fraction_labeled_dist = gfld,
-      Fraction_labeled_corr = gflc
+      Raw_mutrates = graw$plot,
+      Inferred_mutrates = glabel_plot,
+      Readcount_corr = gread$plot,
+      Fraction_labeled_dist = gfld$plot,
+      Fraction_labeled_corr = gflc$plot,
+      Tables = list(
+        Raw_mutrates = graw$table,
+        Inferred_mutrates = glabel_table,
+        Readcount_corr = gread$table,
+        Fraction_labeled_dist = gfld$table,
+        Fraction_labeled_corr = gflc$table
+      )
     )
   )
 
@@ -210,8 +223,10 @@ EZQC.EZbakRData <- function(obj,
 
   glabel <- check_plabeled(obj,
                            mutrates)
-  if(length(glabel) == 1){
-    glabel <- glabel[[1]]
+
+  if(length(glabel$plot) == 1){
+    glabel_plot <- glabel$plot[[1]]
+    glabel_table <- glabel$table[[1]]
   }
 
 
@@ -231,8 +246,13 @@ EZQC.EZbakRData <- function(obj,
   return(
     list(
       Raw_mutrates = graw,
-      Inferred_mutrates = glabel,
-      Readcount_corr = gread
+      Inferred_mutrates = glabel_plot,
+      Readcount_corr = gread,
+      Tables = list(
+        Raw_mutrates = graw$table,
+        Inferred_mutrates = glabel_table,
+        Readcount_corr = gread$table
+      )
     )
   )
 
@@ -439,7 +459,10 @@ check_raw_mutation_rates <- function(obj,
     glist <- glist[[1]]
   }
 
-  return(glist)
+  return(list(
+    plot = glist,
+    table = mutrates
+    ))
 
 }
 
@@ -469,11 +492,13 @@ check_plabeled <- function(obj,
                   length = length(mutrates_to_consider))
   names(glist) <- mutrates_to_consider
 
+  tables <- glist
+
   for(m in seq_along(mutrates_to_consider)){
 
     mutrate_subset <- mutrates[[mutrates_to_consider[m]]]
 
-    glist[[mutrates_to_consider[m]]] <- mutrate_subset %>%
+    table_subset <- mutrate_subset %>%
       tidyr::pivot_longer(
         cols = c("pold", "pnew"),
         names_to = "type",
@@ -482,7 +507,11 @@ check_plabeled <- function(obj,
       dplyr::mutate(
         type = factor(type,
                       levels = c("pold", "pnew"))
-      ) %>%
+      )
+
+    tables[[mutrates_to_consider[m]]] <- table_subset
+
+    glist[[mutrates_to_consider[m]]] <- table_subset %>%
       ggplot2::ggplot(
         ggplot2::aes(x = sample, y = mutrate,
                      fill = type)
@@ -513,7 +542,10 @@ check_plabeled <- function(obj,
   }
 
 
-  return(glist)
+  return(list(
+    plot = glist,
+    table = tables
+    ))
 
 }
 
@@ -572,12 +604,14 @@ check_read_count_corr_ezbf <- function(obj,
 
   ### Make correlation plots
 
-  glist <- make_corr_plots(readcnts,
+  corr_output <- make_corr_plots(readcnts,
                            rep_meta,
                            IDcol)
 
 
-  return(glist)
+  return(list(
+    plot = corr_output$plot,
+    table = corr_output$table))
 
 }
 
@@ -792,12 +826,15 @@ check_read_count_corr_ezbd <- function(obj,
 
   ### Make correlation plots
 
-  glist <- make_corr_plots(readcnts,
+  corr_output <- make_corr_plots(readcnts,
                            rep_meta,
                            IDcol)
 
 
-  return(glist)
+  return(list(
+    plot = corr_output$plot,
+    table = corr_output$table
+  ))
 
 }
 
@@ -952,7 +989,8 @@ make_corr_plots <- function(table,
 
   names(glist) <- paste0("Group_", 1:length(glist))
 
-  return(glist)
+  return(list(plot = glist,
+              table = stat_df))
 
 }
 
@@ -1065,7 +1103,8 @@ check_fl_dist <- function(obj,
   }
 
 
-  return(glist)
+  return(list(plot = glist,
+              table = avg_fractions))
 
 }
 
@@ -1107,7 +1146,7 @@ check_fl_corr <- function(obj,
   fraction_cols <- fraction_cols[grepl("^fraction_", fraction_cols)]
 
 
-  glist <- vector(mode = "list",
+  corr_output <- vector(mode = "list",
                   length = length(fraction_cols))
 
   for(fc in seq_along(fraction_cols)){
@@ -1120,7 +1159,7 @@ check_fl_corr <- function(obj,
       dplyr::rename(fraction = !!dplyr::sym(fraction_cols[fc]))
 
 
-    glist[[fc]] <- make_corr_plots(
+    corr_output[[fc]] <- make_corr_plots(
       setDT(data.table::copy(fractions)),
       rep_meta,
       IDcol,
@@ -1130,18 +1169,25 @@ check_fl_corr <- function(obj,
 
   }
 
-  if(length(glist) == 1){
+  if(length(corr_output) == 1){
 
-    glist <- glist[[1]]
+    glist <- corr_output[[1]]$plot
+    table <- corr_output[[1]]$table
 
   }else{
 
+    glist <- lapply(corr_output, function(x) x$plot)
+    table <- lapply(corr_output, function(x) x$table)
+
+
     names(glist) <- fraction_cols
+    names(table) <- fraction_cols
 
   }
 
 
-  return(glist)
+  return(list(plot = glist,
+              table = table))
 }
 
 
