@@ -39,6 +39,10 @@
 #' metadata for a given fractions table for it to be used. Means that you cannot
 #' specify a subset of features by default. Set this to FALSE if you would like
 #' to specify a feature subset.
+#' @param read_cutoff Minimum number of reads for a feature to be used to fit
+#' the dropout model.
+#' @param dropout_cutoff Maximum ratio of -s4U:+s4U RPMs for a feature to be
+#' used to fit the dropout model (i.e., simple outlier filtering cutoff).
 #' @return An `EZbakRData` object with the specified "fractions" table replaced
 #' with a dropout corrected table.
 #' @importFrom magrittr %>%
@@ -49,7 +53,9 @@ CorrectDropout <- function(obj,
                            populations = NULL,
                            fraction_design = NULL,
                            repeatID = NULL,
-                           exactMatch = TRUE){
+                           exactMatch = TRUE,
+                           read_cutoff = 25,
+                           dropout_cutoff = 5){
 
 
   ### Hack to deal with devtools::check() NOTEs
@@ -102,7 +108,9 @@ CorrectDropout <- function(obj,
                                  populations = populations,
                                  fraction_design = fraction_design,
                                  repeatID = repeatID,
-                                 exactMatch = exactMatch) %>%
+                                 exactMatch = exactMatch,
+                                 read_cutoff = read_cutoff,
+                                 dropout_cutoff = dropout_cutoff) %>%
 
     ### ESTIMATE DROPOUT PARAMETERS:
     dplyr::group_by(sample) %>%
@@ -318,7 +326,9 @@ calculate_dropout <- function(obj,
                               populations = NULL,
                               fraction_design = NULL,
                               repeatID = NULL,
-                              exactMatch = TRUE){
+                              exactMatch = TRUE,
+                              read_cutoff = 25,
+                              dropout_cutoff = 5){
 
   ### Hack to deal with devtools::check() NOTEs
 
@@ -413,7 +423,7 @@ calculate_dropout <- function(obj,
                       by = c(grouping_factors, features_to_analyze)) %>%
     dplyr::mutate(dropout = rpm / nolabel_rpm) %>%
     dplyr::mutate(sig = sqrt((!!dplyr::sym(logit_se))^2 )) %>%
-    dplyr::filter(n > 25 & dropout < 5) # Get rid of outliers
+    dplyr::filter(n > read_cutoff & dropout < dropout_cutoff) # Get rid of outliers
 
 
   return(dropout_df)
