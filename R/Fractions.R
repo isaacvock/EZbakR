@@ -2187,6 +2187,12 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
       ctl_cB <- dplyr::tibble()
       ctl_group_cols <- c("")
 
+      if(length(samples_with_no_label) == 0){
+
+        stop("Cannot set pold_from_nolabel to TRUE if you have no -label controls!")
+
+      }
+
       ### Compile all -label data
       for(c in seq_along(samples_with_no_label)){
 
