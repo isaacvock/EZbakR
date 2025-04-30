@@ -12,7 +12,8 @@ NormalizeForDropout(
   populations = NULL,
   fraction_design = NULL,
   repeatID = NULL,
-  exactMatch = TRUE
+  exactMatch = TRUE,
+  read_cutoff = 25
 )
 }
 \arguments{
@@ -49,6 +50,9 @@ then this is the numerical index by which they are distinguished.}
 metadata for a given fractions table for it to be used. Means that you cannot
 specify a subset of features by default. Set this to FALSE if you would like
 to specify a feature subset.}
+
+\item{read_cutoff}{Minimum number of reads for a feature to be used to fit
+dropout model.}
 }
 \value{
 An \code{EZbakRData} object with the specified "fractions" table replaced

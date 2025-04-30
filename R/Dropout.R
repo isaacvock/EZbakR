@@ -489,6 +489,8 @@ calculate_dropout <- function(obj,
 #' metadata for a given fractions table for it to be used. Means that you cannot
 #' specify a subset of features by default. Set this to FALSE if you would like
 #' to specify a feature subset.
+#' @param read_cutoff Minimum number of reads for a feature to be used to fit
+#' dropout model.
 #' @return An `EZbakRData` object with the specified "fractions" table replaced
 #' with a dropout corrected table.
 #' @importFrom magrittr %>%
@@ -500,7 +502,8 @@ NormalizeForDropout <- function(obj,
                                  populations = NULL,
                                  fraction_design = NULL,
                                  repeatID = NULL,
-                                 exactMatch = TRUE){
+                                 exactMatch = TRUE,
+                                read_cutoff = 25){
 
 
   ### Hack to deal with devtools::check() NOTEs
