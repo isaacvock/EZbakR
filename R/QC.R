@@ -270,6 +270,7 @@ check_raw_mutation_rates <- function(obj,
                                      mutrate_populations,
                                      arrow = FALSE){
 
+
   # Hack to address NOTEs
   n <- muttype <- mutrate <- NULL
 
@@ -333,6 +334,7 @@ check_raw_mutation_rates <- function(obj,
 
 
       cBsamp <- cBds %>%
+        dplyr::filter(sample == all_samples[s]) %>%
         dplyr::collect()
 
       setDT(cBsamp)
