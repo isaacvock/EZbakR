@@ -583,8 +583,8 @@ NormalizeForDropout <- function(obj,
       metadf,
       by = "sample"
     ) %>%
-    dplyr::filter(tl > 0 & n > read_cutoff)
-    dplyr::group_by(sample) %>%
+    dplyr::filter(tl > 0 & n > read_cutoff) %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", grouping_factors)))) %>%
     dplyr::summarise(
       med_fn = ifelse(
         normalize_across_tls,
@@ -604,7 +604,7 @@ NormalizeForDropout <- function(obj,
     ) %>%
     dplyr::ungroup() %>%
     dplyr::select(
-      sample, !!grouping_factors, normalization_reference, nsamps_in_group
+      sample, !!grouping_factors, normalization_reference, reference_samp, nsamps_in_group
     )
 
 
@@ -613,7 +613,7 @@ NormalizeForDropout <- function(obj,
 
   fxn_wide <- fractions %>%
     dplyr::filter(n > read_cutoff & !!dplyr::sym(logit_fraction) > -Inf) %>%
-    dplyr::select(sample, XF, !!fraction_of_interest) %>%
+    dplyr::select(sample, !!features_to_analyze, !!fraction_of_interest) %>%
     pivot_wider(
       names_from = "sample",
       values_from = fraction_of_interest
@@ -636,7 +636,7 @@ NormalizeForDropout <- function(obj,
 
     fxn_subset <- fxn_wide %>%
       dplyr::select(
-        XF,
+        !!features_to_analyze,
         !!samp,
         !!reference
       )
@@ -690,17 +690,17 @@ NormalizeForDropout <- function(obj,
       pdo = ifelse(is.na(pdo), 0, pdo)
     ) %>%
     dplyr::mutate(
-      !!fraction_cols := (!!dplyr::sym(fraction_cols))/((1 - pdo) + !!dplyr::sym(fraction_cols) * pdo),
+      !!fraction_of_interest := (!!dplyr::sym(fraction_of_interest))/((1 - pdo) + !!dplyr::sym(fraction_of_interest) * pdo),
     ) %>%
     dplyr::mutate(
-      !!logit_fraction := EZbakR:::logit(!!dplyr::sym(fraction_cols))
+      !!logit_fraction := EZbakR:::logit(!!dplyr::sym(fraction_of_interest))
     ) %>%
     dplyr::group_by(
       sample
     ) %>%
     dplyr::mutate(
-      num = mean(!!dplyr::sym(fraction_cols))*(1-pdo) + (1-mean(!!dplyr::sym(fraction_cols))),
-      den = !!dplyr::sym(fraction_cols)*(1-pdo) + (1 - !!dplyr::sym(fraction_cols)),
+      num = mean(!!dplyr::sym(fraction_of_interest))*(1-pdo) + (1-mean(!!dplyr::sym(fraction_of_interest))),
+      den = !!dplyr::sym(fraction_of_interest)*(1-pdo) + (1 - !!dplyr::sym(fraction_of_interest)),
       n = ceiling(n*(num/den))
     ) %>%
     dplyr::select(
