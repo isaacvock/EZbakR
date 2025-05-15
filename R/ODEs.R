@@ -1029,7 +1029,6 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
                                 coverage_sd = NULL, scale_factor = NULL){
 
 
-
   ### Step 0, check to see if single replicate of data is being passed
   if(all(nreps == 1)){
     single_replicate <- TRUE
@@ -1141,7 +1140,7 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
     exp_lambda <- exp(lambda*tl)
 
-    scaled_eigenvectors <- V %*% diag(exp_lambda*cs)
+    scaled_eigenvectors <- V %*% diag(exp_lambda*cs, nrow = length(exp_lambda))
 
     result_vector <- rowSums(scaled_eigenvectors) + Rss
 

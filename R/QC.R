@@ -353,7 +353,7 @@ check_raw_mutation_rates <- function(obj,
     for(s in seq_along(all_samples)){
 
 
-      cBsamp <- cBds %>%
+      cBsamp <- cB %>%
         dplyr::filter(sample == all_samples[s]) %>%
         dplyr::collect()
 

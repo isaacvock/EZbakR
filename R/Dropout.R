@@ -674,7 +674,7 @@ NormalizeForDropout <- function(obj,
       dplyr::select(pdo) %>%
       unlist() %>%
       unname() %>%
-      EZbakR:::inv_logit()
+      inv_logit()
 
 
   }
@@ -693,7 +693,7 @@ NormalizeForDropout <- function(obj,
       !!fraction_of_interest := (!!dplyr::sym(fraction_of_interest))/((1 - pdo) + !!dplyr::sym(fraction_of_interest) * pdo),
     ) %>%
     dplyr::mutate(
-      !!logit_fraction := EZbakR:::logit(!!dplyr::sym(fraction_of_interest))
+      !!logit_fraction := logit(!!dplyr::sym(fraction_of_interest))
     ) %>%
     dplyr::group_by(
       sample
@@ -725,8 +725,8 @@ do_norm_ll <- function(param,
 
   Efn <- fndo / ((1 - pdo) + (fndo*pdo))
 
-  ll <- stats::dnorm(EZbakR:::logit(reffn),
-                     EZbakR:::logit(Efn),
+  ll <- stats::dnorm(logit(reffn),
+                     logit(Efn),
                      sig,
                      log = TRUE)
 
@@ -774,8 +774,8 @@ do_norm_ll <- function(param,
 
   Efn <- fndo / ((1 - pdo) + (fndo*pdo))
 
-  ll <- stats::dnorm(EZbakR:::logit(reffn),
-                     EZbakR:::logit(Efn),
+  ll <- stats::dnorm(logit(reffn),
+                     logit(Efn),
                      sig,
                      log = TRUE)
 

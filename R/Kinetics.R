@@ -102,9 +102,11 @@
 #'  RNA, most appropriate if the metabolic label feed time is much shorter than
 #'  the average half-life of an RNA in your system.
 #'  \item tilac: Estimate TILAC-ratio as described in Courvan et al., 2022.
-#'  \item pulse-chase (NOT YET IMPLEMENTED): Estimate kdeg for a pulse-chase experiment. A kdeg will be estimated
+#'  \item pulse-chase: Estimate kdeg for a pulse-chase experiment. By default kdeg will be estimated
 #'  for each time point at which label was present. This includes any pulse-only samples,
-#'  as well as all samples including a chase after the pulse.
+#'  as well as all samples including a chase after the pulse. If you don't want
+#'  to include the estimates from the pulse-only samples in the final output,
+#'  set `exclude_pulse_estimates` to `TRUE`
 #' }
 #' @param features Character vector of the set of features you want to stratify
 #' reads by and estimate proportions of each RNA population. The default of "all"
@@ -123,9 +125,14 @@
 #' those for a given fractions table for that table to be used. Means that you can't
 #' specify a subset of features or populations by default, since this is TRUE
 #' by default.
+#' @param exclude_pulse_estimates If `strategy = "pulse-chase"`, would you like
+#' to exclude the pulse-only kdeg and ksyn estimates from the final output? This
+#' is a good idea if you used a very long pulse with the goal of labeling close
+#' to 100% of all RNA.
 #' @param grouping_factor Which sample-detail columns in the metadf should be used
-#' to group samples by for calculating the average RPM at a particular time point?
-#' Only relevant if `strategy = "NSS"`.
+#' to group samples by for calculating the average RPM (`strategy = "NSS"`) or
+#' pulse fraction labeled (`strategy = "pulse-chase"`) at a particular time point?
+#' Only relevant if `strategy = "NSS"` or `strategy = "pulse-chase"`.
 #' @param reference_factor Which sample-detail column in the metafd should be used to
 #' determine which group of samples provide information about the starting levels of RNA
 #' for each sample? This should have values that match those in `grouping_factor`.
@@ -615,6 +622,76 @@ Standard_kinetic_estimation <- function(obj,
 
     # Estimate uncertainty (assuming normalized_reads ~ Poisson(normalized_reads)/scale_factor)
     kinetics[, se_log_ksyn := sqrt( (1/(normalized_reads*scale_factor)) + se_log_kdeg^2)]
+
+
+  }else if(strategy == "pulse-chase"){
+
+    # Add label time info
+    metadf <- obj$metadf
+
+
+    group_cols <- c(features_to_analyze, grouping_factor)
+
+
+    if(!all(c("tpulse", "tchase") %in% colnames(metadf))){
+
+      stop("If strategy == pulse-chase, metadf needs tpulse and tchase columns!")
+
+    }
+
+
+    kinetics <- kinetics %>%
+      dplyr::inner_join(
+        metadf %>%
+          dplyr::select(
+            sample, tpulse, tchase, !!grouping_factor
+          ),
+        by = "sample"
+      ) %>%
+      dplyr::filter(
+        tpulse > 0
+      ) %>%
+      dplyr::group_by(
+        dplyr::across(
+          dplyr::all_of(group_cols)
+        )
+      ) %>%
+      dplyr::mutate(
+        kdeg = dplyr::case_when(
+          tchase == 0 ~ -log(1 - fraction_highTC) / tpulse,
+          .default = -log(fraction_highTC / mean(fraction_highTC[tchase == 0])) / tchase
+        ),
+        kdeg = ifelse(kdeg <= 0,
+                      -log(1 - 1/(n + 2))/ tchase, # theoretical dynamic range of experiment
+                      kdeg),
+        log_kdeg = log(kdeg),
+        se_log_kdeg = dplyr::case_when(
+          tchase == 0 ~ se_logit_fraction_highTC * abs(fraction_highTC / log(1 - fraction_highTC)),
+          .default = sqrt( ((( 1 - inv_logit(mean(fraction_highTC[tchase == 0])) ) * sqrt(sum(se_logit_fraction_highTC[tchase == 0]^2)) / sum(tchase == 0)) )^2 +
+                             ((((1 - inv_logit(fraction_highTC))) * se_logit_fraction_highTC))^2 ) /
+            kdeg
+        )
+      ) %>%
+      dplyr::mutate(
+        ksyn = normalized_reads * kdeg,
+        log_ksyn = log(ksyn),
+        se_log_ksyn = sqrt( (1/(normalized_reads*scale_factor)) + se_log_kdeg^2)
+      )
+
+
+    if(exclude_pulse_estimates){
+
+      kinetics <- kinetics %>%
+        dplyr::filter(tchase > 0)
+
+    }
+
+
+    # Remove metadf columns
+    kinetics <- kinetics %>%
+      dplyr::select(
+        -tpulse, -tchase, -!!grouping_factor
+      )
 
 
   }

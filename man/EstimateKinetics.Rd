@@ -36,9 +36,11 @@ must also be set.
 RNA, most appropriate if the metabolic label feed time is much shorter than
 the average half-life of an RNA in your system.
 \item tilac: Estimate TILAC-ratio as described in Courvan et al., 2022.
-\item pulse-chase (NOT YET IMPLEMENTED): Estimate kdeg for a pulse-chase experiment. A kdeg will be estimated
+\item pulse-chase: Estimate kdeg for a pulse-chase experiment. By default kdeg will be estimated
 for each time point at which label was present. This includes any pulse-only samples,
-as well as all samples including a chase after the pulse.
+as well as all samples including a chase after the pulse. If you don't want
+to include the estimates from the pulse-only samples in the final output,
+set \code{exclude_pulse_estimates} to \code{TRUE}
 }}
 
 \item{features}{Character vector of the set of features you want to stratify
@@ -64,8 +66,9 @@ specify a subset of features or populations by default, since this is TRUE
 by default.}
 
 \item{grouping_factor}{Which sample-detail columns in the metadf should be used
-to group samples by for calculating the average RPM at a particular time point?
-Only relevant if \code{strategy = "NSS"}.}
+to group samples by for calculating the average RPM (\code{strategy = "NSS"}) or
+pulse fraction labeled (\code{strategy = "pulse-chase"}) at a particular time point?
+Only relevant if \code{strategy = "NSS"} or \code{strategy = "pulse-chase"}.}
 
 \item{reference_factor}{Which sample-detail column in the metafd should be used to
 determine which group of samples provide information about the starting levels of RNA
@@ -86,6 +89,11 @@ would possess the same metadata (features analyzed, populations analyzed,
 and fraction_design), then it will get overwritten with the new output. Else,
 it will be saved as a separate output with the same name + "_#" where "#" is a
 numerical ID to distinguish the similar outputs.}
+
+\item{exclude_pulse_estimates}{If \code{strategy = "pulse-chase"}, would you like
+to exclude the pulse-only kdeg and ksyn estimates from the final output? This
+is a good idea if you used a very long pulse with the goal of labeling close
+to 100\% of all RNA.}
 }
 \value{
 \code{EZbakRKinetics} object.
