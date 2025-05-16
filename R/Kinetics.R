@@ -106,7 +106,17 @@
 #'  for each time point at which label was present. This includes any pulse-only samples,
 #'  as well as all samples including a chase after the pulse. If you don't want
 #'  to include the estimates from the pulse-only samples in the final output,
-#'  set `exclude_pulse_estimates` to `TRUE`
+#'  set `exclude_pulse_estimates` to `TRUE`. Pulse-chases are suboptimal for a number
+#'  of experimental reasons, so we urge users to avoid performing this kind of experiment
+#'  whenever possible (favoring instead a pulse-label design). One of the challenges of
+#'  analyzing pulse-chase data is that the fraction labeled after the pulse must be compared
+#'  to that after each chase. Due to a number of technical reasons, it is possible for the
+#'  estimated labeling after the chase to be **higher* than that after the pulse. It is
+#'  impossible to estimate kinetic parameters in this case. Thus, when this arises,
+#'  a conservative kdeg estimate is imputed, equal to -log(1 - 1/(n+2))/tchase,
+#'  which is the kdeg estimate you would get if you had no detected reads from labeled
+#'  RNA and an uninformative prior on the fraction new (i.e., the estimated fraction
+#'  new is (number of reads from labeled RNA + 1) / (number of reads + 2)).
 #' }
 #' @param features Character vector of the set of features you want to stratify
 #' reads by and estimate proportions of each RNA population. The default of "all"
