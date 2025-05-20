@@ -16,6 +16,7 @@ EstimateKinetics(
   reference_factor = NULL,
   character_limit = 20,
   feature_lengths = NULL,
+  exclude_pulse_estimates = TRUE,
   overwrite = TRUE
 )
 }
@@ -47,7 +48,7 @@ analyzing pulse-chase data is that the fraction labeled after the pulse must be 
 to that after each chase. Due to a number of technical reasons, it is possible for the
 estimated labeling after the chase to be *\emph{higher} than that after the pulse. It is
 impossible to estimate kinetic parameters in this case. Thus, when this arises,
-a conservative kdeg estimate is imputed, equal to \eqn(-log(1 - 1/(n+2))/tchase),
+a conservative kdeg estimate is imputed, equal to -log(1 - 1/(n+2))/tchase,
 which is the kdeg estimate you would get if you had no detected reads from labeled
 RNA and an uninformative prior on the fraction new (i.e., the estimated fraction
 new is (number of reads from labeled RNA + 1) / (number of reads + 2)).
@@ -94,16 +95,16 @@ If this name is greater than \code{character_limit}, then it will default to "fr
 data. For example, if your analysis includes features named GF and XF, this
 should be a data frame with columns GF, XF, and length.}
 
+\item{exclude_pulse_estimates}{If \code{strategy = "pulse-chase"}, would you like
+to exclude the pulse-only kdeg and ksyn estimates from the final output? This
+is a good idea if you used a very long pulse with the goal of labeling close
+to 100\% of all RNA.}
+
 \item{overwrite}{If TRUE and a fractions estimate output already exists that
 would possess the same metadata (features analyzed, populations analyzed,
 and fraction_design), then it will get overwritten with the new output. Else,
 it will be saved as a separate output with the same name + "_#" where "#" is a
 numerical ID to distinguish the similar outputs.}
-
-\item{exclude_pulse_estimates}{If \code{strategy = "pulse-chase"}, would you like
-to exclude the pulse-only kdeg and ksyn estimates from the final output? This
-is a good idea if you used a very long pulse with the goal of labeling close
-to 100\% of all RNA.}
 }
 \value{
 \code{EZbakRKinetics} object.

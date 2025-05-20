@@ -191,6 +191,7 @@ EstimateKinetics <- function(obj,
                              reference_factor = NULL,
                              character_limit = 20,
                              feature_lengths = NULL,
+                             exclude_pulse_estimates = TRUE,
                              overwrite = TRUE){
 
   ### Check that input is valid
@@ -257,6 +258,7 @@ EstimateKinetics <- function(obj,
                                        exactMatch = exactMatch,
                                        character_limit = character_limit,
                                        feature_lengths = feature_lengths,
+                                       exclude_pulse_estimates = exclude_pulse_estimates,
                                        overwrite = overwrite)
 
   }
@@ -282,6 +284,7 @@ Standard_kinetic_estimation <- function(obj,
                                         reference_factor = NULL,
                                         grouping_factor = NULL,
                                         feature_lengths = NULL,
+                                        exclude_pulse_estimates = TRUE,
                                         overwrite = TRUE){
 
   ### Hack to deal with devtools::check() NOTEs
