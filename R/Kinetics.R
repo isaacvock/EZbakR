@@ -639,6 +639,7 @@ Standard_kinetic_estimation <- function(obj,
 
   }else if(strategy == "pulse-chase"){
 
+
     # Add label time info
     metadf <- obj$metadf
 
@@ -651,6 +652,9 @@ Standard_kinetic_estimation <- function(obj,
       stop("If strategy == pulse-chase, metadf needs tpulse and tchase columns!")
 
     }
+
+    cols_to_keep <- c("sample", features_to_analyze, "normalized_reads", "scale_factor")
+    kinetics_cols_to_keep <- c(cols_to_keep, "kdeg", "log_kdeg", "se_log_kdeg", "n")
 
 
     kinetics <- kinetics %>%
@@ -685,6 +689,13 @@ Standard_kinetic_estimation <- function(obj,
             kdeg
         )
       ) %>%
+      dplyr::ungroup() %>%
+      dplyr::inner_join(
+        reads_norm %>%
+          dplyr::select(!!cols_to_keep),
+        by = c("sample", features_to_analyze)
+      ) %>%
+      dplyr::select(!!c(kinetics_cols_to_keep, "tpulse", "tchase")) %>%
       dplyr::mutate(
         ksyn = normalized_reads * kdeg,
         log_ksyn = log(ksyn),
@@ -703,7 +714,7 @@ Standard_kinetic_estimation <- function(obj,
     # Remove metadf columns
     kinetics <- kinetics %>%
       dplyr::select(
-        -tpulse, -tchase, -!!grouping_factor
+        -tpulse, -tchase
       )
 
 

@@ -1429,6 +1429,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                               overwrite = TRUE){
 
 
+  #browser()
   ### Hack to deal with devtools::check() NOTEs
   present <- n <- reads <- params <- coverage <- pold <- pnew <- sd <- lpnew_uncert <- pnew_prior <- ..colvect <- NULL
   fit <- mixture_fit <- NULL
@@ -2083,6 +2084,8 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
                                              grouping_factors = NULL
 ){
 
+
+  #browser()
   ### Hack to deal with devtools::check() NOTEs
   n <- params <- p1 <- p2 <- ..cols_to_keep <- muts <- nucs <- NULL
 
