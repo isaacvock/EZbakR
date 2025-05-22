@@ -639,7 +639,6 @@ Standard_kinetic_estimation <- function(obj,
 
   }else if(strategy == "pulse-chase"){
 
-
     # Add label time info
     metadf <- obj$metadf
 
