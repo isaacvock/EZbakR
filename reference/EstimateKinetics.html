@@ -65,6 +65,7 @@ inference strategies are implemented.</p>
 <span>  reference_factor <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  character_limit <span class="op">=</span> <span class="fl">20</span>,</span>
 <span>  feature_lengths <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  exclude_pulse_estimates <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -90,9 +91,21 @@ must also be set.</p></li>
 RNA, most appropriate if the metabolic label feed time is much shorter than
 the average half-life of an RNA in your system.</p></li>
 <li><p>tilac: Estimate TILAC-ratio as described in Courvan et al., 2022.</p></li>
-<li><p>pulse-chase (NOT YET IMPLEMENTED): Estimate kdeg for a pulse-chase experiment. A kdeg will be estimated
+<li><p>pulse-chase: Estimate kdeg for a pulse-chase experiment. By default kdeg will be estimated
 for each time point at which label was present. This includes any pulse-only samples,
-as well as all samples including a chase after the pulse.</p></li>
+as well as all samples including a chase after the pulse. If you don't want
+to include the estimates from the pulse-only samples in the final output,
+set <code>exclude_pulse_estimates</code> to <code>TRUE</code>. Pulse-chases are suboptimal for a number
+of experimental reasons, so we urge users to avoid performing this kind of experiment
+whenever possible (favoring instead a pulse-label design). One of the challenges of
+analyzing pulse-chase data is that the fraction labeled after the pulse must be compared
+to that after each chase. Due to a number of technical reasons, it is possible for the
+estimated labeling after the chase to be *<em>higher</em> than that after the pulse. It is
+impossible to estimate kinetic parameters in this case. Thus, when this arises,
+a conservative kdeg estimate is imputed, equal to -log(1 - 1/(n+2))/tchase,
+which is the kdeg estimate you would get if you had no detected reads from labeled
+RNA and an uninformative prior on the fraction new (i.e., the estimated fraction
+new is (number of reads from labeled RNA + 1) / (number of reads + 2)).</p></li>
 </ul></dd>
 
 
@@ -130,8 +143,9 @@ by default.</p></dd>
 
 <dt id="arg-grouping-factor">grouping_factor<a class="anchor" aria-label="anchor" href="#arg-grouping-factor"></a></dt>
 <dd><p>Which sample-detail columns in the metadf should be used
-to group samples by for calculating the average RPM at a particular time point?
-Only relevant if <code>strategy = "NSS"</code>.</p></dd>
+to group samples by for calculating the average RPM (<code>strategy = "NSS"</code>) or
+pulse fraction labeled (<code>strategy = "pulse-chase"</code>) at a particular time point?
+Only relevant if <code>strategy = "NSS"</code> or <code>strategy = "pulse-chase"</code>.</p></dd>
 
 
 <dt id="arg-reference-factor">reference_factor<a class="anchor" aria-label="anchor" href="#arg-reference-factor"></a></dt>
@@ -152,6 +166,13 @@ If this name is greater than <code>character_limit</code>, then it will default 
 <dd><p>Table of effective lengths for each feature combination in your
 data. For example, if your analysis includes features named GF and XF, this
 should be a data frame with columns GF, XF, and length.</p></dd>
+
+
+<dt id="arg-exclude-pulse-estimates">exclude_pulse_estimates<a class="anchor" aria-label="anchor" href="#arg-exclude-pulse-estimates"></a></dt>
+<dd><p>If <code>strategy = "pulse-chase"</code>, would you like
+to exclude the pulse-only kdeg and ksyn estimates from the final output? This
+is a good idea if you used a very long pulse with the goal of labeling close
+to 100% of all RNA.</p></dd>
 
 
 <dt id="arg-overwrite">overwrite<a class="anchor" aria-label="anchor" href="#arg-overwrite"></a></dt>
