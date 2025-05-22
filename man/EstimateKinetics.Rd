@@ -16,6 +16,7 @@ EstimateKinetics(
   reference_factor = NULL,
   character_limit = 20,
   feature_lengths = NULL,
+  exclude_pulse_estimates = TRUE,
   overwrite = TRUE
 )
 }
@@ -36,9 +37,21 @@ must also be set.
 RNA, most appropriate if the metabolic label feed time is much shorter than
 the average half-life of an RNA in your system.
 \item tilac: Estimate TILAC-ratio as described in Courvan et al., 2022.
-\item pulse-chase (NOT YET IMPLEMENTED): Estimate kdeg for a pulse-chase experiment. A kdeg will be estimated
+\item pulse-chase: Estimate kdeg for a pulse-chase experiment. By default kdeg will be estimated
 for each time point at which label was present. This includes any pulse-only samples,
-as well as all samples including a chase after the pulse.
+as well as all samples including a chase after the pulse. If you don't want
+to include the estimates from the pulse-only samples in the final output,
+set \code{exclude_pulse_estimates} to \code{TRUE}. Pulse-chases are suboptimal for a number
+of experimental reasons, so we urge users to avoid performing this kind of experiment
+whenever possible (favoring instead a pulse-label design). One of the challenges of
+analyzing pulse-chase data is that the fraction labeled after the pulse must be compared
+to that after each chase. Due to a number of technical reasons, it is possible for the
+estimated labeling after the chase to be *\emph{higher} than that after the pulse. It is
+impossible to estimate kinetic parameters in this case. Thus, when this arises,
+a conservative kdeg estimate is imputed, equal to -log(1 - 1/(n+2))/tchase,
+which is the kdeg estimate you would get if you had no detected reads from labeled
+RNA and an uninformative prior on the fraction new (i.e., the estimated fraction
+new is (number of reads from labeled RNA + 1) / (number of reads + 2)).
 }}
 
 \item{features}{Character vector of the set of features you want to stratify
@@ -64,8 +77,9 @@ specify a subset of features or populations by default, since this is TRUE
 by default.}
 
 \item{grouping_factor}{Which sample-detail columns in the metadf should be used
-to group samples by for calculating the average RPM at a particular time point?
-Only relevant if \code{strategy = "NSS"}.}
+to group samples by for calculating the average RPM (\code{strategy = "NSS"}) or
+pulse fraction labeled (\code{strategy = "pulse-chase"}) at a particular time point?
+Only relevant if \code{strategy = "NSS"} or \code{strategy = "pulse-chase"}.}
 
 \item{reference_factor}{Which sample-detail column in the metafd should be used to
 determine which group of samples provide information about the starting levels of RNA
@@ -80,6 +94,11 @@ If this name is greater than \code{character_limit}, then it will default to "fr
 \item{feature_lengths}{Table of effective lengths for each feature combination in your
 data. For example, if your analysis includes features named GF and XF, this
 should be a data frame with columns GF, XF, and length.}
+
+\item{exclude_pulse_estimates}{If \code{strategy = "pulse-chase"}, would you like
+to exclude the pulse-only kdeg and ksyn estimates from the final output? This
+is a good idea if you used a very long pulse with the goal of labeling close
+to 100\% of all RNA.}
 
 \item{overwrite}{If TRUE and a fractions estimate output already exists that
 would possess the same metadata (features analyzed, populations analyzed,
