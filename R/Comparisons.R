@@ -374,7 +374,6 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     dplyr::inner_join(metadf, by = "sample")
 
 
-
   ### Filter out features that are not present in all samples
 
   num_samps <- length(unique(kinetics$sample))
@@ -428,6 +427,12 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     features_to_keep <- features_to_keep %>%
       dplyr::filter(n == num_samps) %>%
       dplyr::select(!!features_to_analyze)
+
+    if(nrow(features_to_keep) == 0){
+
+      stop("No features made it past filtering!")
+
+    }
 
   }
 
