@@ -1168,3 +1168,83 @@ get_table_name <- function(obj, tabletype,
 
 }
 
+
+
+
+######
+# PRINT METHOD
+######
+
+#' Print method for `EZbakRData` objects
+#'
+#' @param obj An `EZbakRData` object.
+#' @param ... Ignored
+#' @method print EZbakRData
+#' @export
+print.EZbakRData <- function(obj,
+                             max_name_chars = 60,
+                             ...){
+
+
+  elements <- names(obj)
+
+  # Don't care about metadata table
+  elements <- elements[!(elements %in% c("metadata",
+                                         "mutation_rates",
+                                         "readcounts"))]
+
+  element_df <- dplyr::tibble()
+  for(e in seq_along(elements)){
+
+    element <- elements[e]
+
+    num_e <- length(obj[[element]])
+    names_e <- names(obj[[element]])
+
+    if(element == "averages"){
+      names_e <- names_e[!grepl("^fullfit_", names_e)]
+    }
+
+    element_df <- element_df %>%
+      dplyr::bind_rows(
+        dplyr::tibble(
+          element = element,
+          N = num_e,
+          names = paste0(names_e, collapse = "; ")
+        )
+      )
+
+  }
+
+
+  analyses_df <- element_df[-c(1, 2),]
+
+  astring <- ifelse(nrow(analyses_df) == 1, "analysis", "analyses")
+  cat(sprintf("EZbakRData object with %d %s of %d samples\n", nrow(analyses_df), astring, nrow(obj$metadf)))
+
+
+  if(nrow(analyses_df) > 0){
+
+    for(i in 1:nrow(analyses_df)){
+
+      element <- analyses_df$element[i]
+
+      name_str <- analyses_df$names[i]
+      if(nchar(name_str) > 60){
+        name_str <- paste0(substr(name_str, 1, 60, - 3), "...")
+      }
+
+      num_a <- analyses_df$N[i]
+
+      astring <- ifelse(num_a == 1, "analysis", "analyses")
+
+
+
+      cat(sprintf("  %s: %d %s (%s)\n",
+                  element, num_a, astring, name_str))
+    }
+
+  }
+
+
+}
