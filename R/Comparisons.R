@@ -566,7 +566,6 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   message("Estimating coverage vs. variance trend")
 
-
   # Step 1: Filter column names for relevant patterns
   sd_columns <- names(model_fit)[grepl("^logse_", names(model_fit))]
   covariate_names <- substring(sd_columns, 7)
@@ -575,6 +574,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   # Step 2: Iterate and perform regression
   regression_results <- purrr::map(covariate_names, ~ {
+
 
     # If modeling fraction news, then mean absolute value of fraction new should
     # be included in the regression. In general, this is something I would like
@@ -611,7 +611,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
     # Perform linear regression
     lm_result <- stats::lm(formula, data = model_fit %>%
-                             filter(!is.na(!!dplyr::sym(paste0("mean_", covariate_names[1])))))
+                             dplyr::filter(!is.na(!!dplyr::sym(paste0("mean_", covariate_names[1])))))
 
     # Return result
     return(list(covariate = .x, lm_result = lm_result))
