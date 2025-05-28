@@ -374,7 +374,6 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     dplyr::inner_join(metadf, by = "sample")
 
 
-
   ### Filter out features that are not present in all samples
 
   num_samps <- length(unique(kinetics$sample))
@@ -428,6 +427,12 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     features_to_keep <- features_to_keep %>%
       dplyr::filter(n == num_samps) %>%
       dplyr::select(!!features_to_analyze)
+
+    if(nrow(features_to_keep) == 0){
+
+      stop("No features made it past filtering!")
+
+    }
 
   }
 
@@ -561,7 +566,6 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   message("Estimating coverage vs. variance trend")
 
-
   # Step 1: Filter column names for relevant patterns
   sd_columns <- names(model_fit)[grepl("^logse_", names(model_fit))]
   covariate_names <- substring(sd_columns, 7)
@@ -570,6 +574,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   # Step 2: Iterate and perform regression
   regression_results <- purrr::map(covariate_names, ~ {
+
 
     # If modeling fraction news, then mean absolute value of fraction new should
     # be included in the regression. In general, this is something I would like
@@ -606,7 +611,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
     # Perform linear regression
     lm_result <- stats::lm(formula, data = model_fit %>%
-                             filter(!is.na(!!dplyr::sym(paste0("mean_", covariate_names[1])))))
+                             dplyr::filter(!is.na(!!dplyr::sym(paste0("mean_", covariate_names[1])))))
 
     # Return result
     return(list(covariate = .x, lm_result = lm_result))
