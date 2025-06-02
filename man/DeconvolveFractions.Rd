@@ -23,6 +23,10 @@ DeconvolveFractions(
 \arguments{
 \item{obj}{An \code{EZbakRData} object}
 
+\item{feature_type}{Either \code{"gene"} (if deconvolving gene-level fraction news,
+i.e., for resolving fusion gene and component gene fraction news) or
+\code{"isoform"} (if deconvolving transcript isoform fraction news).}
+
 \item{features}{Character vector of the set of features you want to stratify
 reads by and estimate proportions of each RNA population. The default of "all"
 will use all feature columns in the \code{obj}'s cB.}

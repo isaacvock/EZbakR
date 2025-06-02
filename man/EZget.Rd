@@ -136,6 +136,10 @@ where N represents the number of species modeled when running \code{EZDynamics()
 \item{normalize_by_median}{Whether median difference was subtracted from estimated
 kinetic parameter difference. Thus, only relevant if type == "comparisons".}
 
+\item{deconvolved}{Only relevant if type == "fractions". Boolean that is TRUE if
+fractions table is result of performing multi-feature deconvolution with
+\code{DeconvolveFractions()}.}
+
 \item{returnNameOnly}{If TRUE, then only the names of tables that passed your
 search criteria will be returned. Else, the single table passing your search
 criteria will be returned. If there is more than one table that passes your

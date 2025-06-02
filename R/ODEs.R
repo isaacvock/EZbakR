@@ -1737,6 +1737,6 @@ renameFormulas <- function(lst) {
   lapply(lst, function(sublist) {
     # sublist is a list of formula objects
     new_names <- sapply(sublist, get_first_var)
-    setNames(sublist, new_names)
+    stats::setNames(sublist, new_names)
   })
 }

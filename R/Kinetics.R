@@ -291,7 +291,8 @@ Standard_kinetic_estimation <- function(obj,
   tl <- kdeg <- log_kdeg <- se_log_kdeg <- ..cols_to_keep <- ..kinetics_cols_to_keep <- NULL
   ksyn <- normalized_reads <- log_ksyn <- se_log_ksyn <- scale_factor <- n <- nolabel_rpm <- NULL
   old_rpm <- new_rpm <- geom_mean <- rpm <- nolabel_n <- nolabel_reps <- NULL
-  reference_rpm <- reference_n <- reference_reps <- NULL
+  reference_rpm <- reference_n <- reference_reps <- tpulse <- tchase <- NULL
+
 
   rm(..cols_to_keep)
   rm(..kinetics_cols_to_keep)
@@ -325,6 +326,7 @@ Standard_kinetic_estimation <- function(obj,
 
   fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
 
+  se_of_interest <- paste0("se_logit_", fraction_of_interest)
 
   ### Normalize read counts
 
@@ -375,8 +377,6 @@ Standard_kinetic_estimation <- function(obj,
       return(uncert)
 
     }
-
-    se_of_interest <- paste0("se_logit_", fraction_of_interest)
 
     kinetics[, se_log_kdeg := lkdeg_uncert(fn = get(fraction_of_interest),
                                            se_lfn = get(se_of_interest))]
@@ -543,8 +543,6 @@ Standard_kinetic_estimation <- function(obj,
 
     }
 
-    se_of_interest <- paste0("se_logit_", fraction_of_interest)
-
     kinetics <- setDT(kinetics)
     kinetics[, se_log_kdeg := lkdeg_uncert_nss(fn = get(fraction_of_interest),
                                                se_lfn = get(se_of_interest),
@@ -612,7 +610,6 @@ Standard_kinetic_estimation <- function(obj,
 
     }
 
-    se_of_interest <- paste0("se_logit_", fraction_of_interest)
 
     kinetics[, se_log_kdeg := lkdeg_uncert_sf(fn = get(fraction_of_interest),
                                               se_lfn = get(se_of_interest))]
@@ -656,6 +653,7 @@ Standard_kinetic_estimation <- function(obj,
     kinetics_cols_to_keep <- c(cols_to_keep, "kdeg", "log_kdeg", "se_log_kdeg", "n")
 
 
+
     kinetics <- kinetics %>%
       dplyr::inner_join(
         metadf %>%
@@ -674,17 +672,17 @@ Standard_kinetic_estimation <- function(obj,
       ) %>%
       dplyr::mutate(
         kdeg = dplyr::case_when(
-          tchase == 0 ~ -log(1 - fraction_highTC) / tpulse,
-          .default = -log(fraction_highTC / mean(fraction_highTC[tchase == 0])) / tchase
+          tchase == 0 ~ -log(1 - !!dplyr::sym(fraction_of_interest)) / tpulse,
+          .default = -log(!!dplyr::sym(fraction_of_interest) / mean(!!dplyr::sym(fraction_of_interest)[tchase == 0])) / tchase
         ),
         kdeg = ifelse(kdeg <= 0,
                       -log(1 - 1/(n + 2))/ tchase, # theoretical dynamic range of experiment
                       kdeg),
         log_kdeg = log(kdeg),
         se_log_kdeg = dplyr::case_when(
-          tchase == 0 ~ se_logit_fraction_highTC * abs(fraction_highTC / log(1 - fraction_highTC)),
-          .default = sqrt( ((( 1 - inv_logit(mean(fraction_highTC[tchase == 0])) ) * sqrt(sum(se_logit_fraction_highTC[tchase == 0]^2)) / sum(tchase == 0)) )^2 +
-                             ((((1 - inv_logit(fraction_highTC))) * se_logit_fraction_highTC))^2 ) /
+          tchase == 0 ~ !!dplyr::sym(se_of_interest) * abs(!!dplyr::sym(fraction_of_interest) / log(1 - !!dplyr::sym(fraction_of_interest))),
+          .default = sqrt( ((( 1 - inv_logit(mean(!!dplyr::sym(fraction_of_interest)[tchase == 0])) ) * sqrt(sum(!!dplyr::sym(se_of_interest)[tchase == 0]^2)) / sum(tchase == 0)) )^2 +
+                             ((((1 - inv_logit(!!dplyr::sym(fraction_of_interest)))) * !!dplyr::sym(se_of_interest)))^2 ) /
             kdeg
         )
       ) %>%
