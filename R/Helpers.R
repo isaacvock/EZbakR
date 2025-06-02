@@ -1198,12 +1198,13 @@ print.EZbakRData <- function(obj,
 
     element <- elements[e]
 
-    num_e <- length(obj[[element]])
     names_e <- names(obj[[element]])
 
     if(element == "averages"){
       names_e <- names_e[!grepl("^fullfit_", names_e)]
     }
+
+    num_e <- length(names_e)
 
     element_df <- element_df %>%
       dplyr::bind_rows(
