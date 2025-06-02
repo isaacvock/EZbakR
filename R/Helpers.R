@@ -105,6 +105,9 @@
 #' @param normalize_by_median Whether median difference was subtracted from estimated
 #' kinetic parameter difference. Thus, only relevant if type == "comparisons".
 #' @param repeatID Numerical ID for duplicate objects with same metadata.
+#' @param deconvolved Only relevant if type == "fractions". Boolean that is TRUE if
+#' fractions table is result of performing multi-feature deconvolution with
+#' `DeconvolveFractions()`.
 #' @param returnNameOnly If TRUE, then only the names of tables that passed your
 #' search criteria will be returned. Else, the single table passing your search
 #' criteria will be returned. If there is more than one table that passes your
@@ -1177,16 +1180,17 @@ get_table_name <- function(obj, tabletype,
 
 #' Print method for `EZbakRData` objects
 #'
-#' @param obj An `EZbakRData` object.
+#' @param x An `EZbakRData` object.
+#' @param max_name_chars Maximum number of characters to print on each line
 #' @param ... Ignored
 #' @method print EZbakRData
 #' @export
-print.EZbakRData <- function(obj,
+print.EZbakRData <- function(x,
                              max_name_chars = 60,
                              ...){
 
 
-  elements <- names(obj)
+  elements <- names(x)
 
   # Don't care about metadata table
   elements <- elements[!(elements %in% c("metadata",
@@ -1198,7 +1202,7 @@ print.EZbakRData <- function(obj,
 
     element <- elements[e]
 
-    names_e <- names(obj[[element]])
+    names_e <- names(x[[element]])
 
     if(element == "averages"){
       names_e <- names_e[!grepl("^fullfit_", names_e)]
@@ -1221,7 +1225,7 @@ print.EZbakRData <- function(obj,
   analyses_df <- element_df[-c(1, 2),]
 
   astring <- ifelse(nrow(analyses_df) == 1, "analysis", "analyses")
-  cat(sprintf("EZbakRData object with %d %s of %d samples\n", nrow(analyses_df), astring, nrow(obj$metadf)))
+  cat(sprintf("EZbakRData object with %d %s of %d samples\n", nrow(analyses_df), astring, nrow(x$metadf)))
 
 
   if(nrow(analyses_df) > 0){
@@ -1231,8 +1235,8 @@ print.EZbakRData <- function(obj,
       element <- analyses_df$element[i]
 
       name_str <- analyses_df$names[i]
-      if(nchar(name_str) > 60){
-        name_str <- paste0(substr(name_str, 1, 60, - 3), "...")
+      if(nchar(name_str) > max_name_chars){
+        name_str <- paste0(substr(name_str, 1, max_name_chars), "...")
       }
 
       num_a <- analyses_df$N[i]
