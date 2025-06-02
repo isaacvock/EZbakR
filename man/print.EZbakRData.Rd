@@ -4,10 +4,12 @@
 \alias{print.EZbakRData}
 \title{Print method for \code{EZbakRData} objects}
 \usage{
-\method{print}{EZbakRData}(obj, max_name_chars = 60, ...)
+\method{print}{EZbakRData}(x, max_name_chars = 60, ...)
 }
 \arguments{
-\item{obj}{An \code{EZbakRData} object.}
+\item{x}{An \code{EZbakRData} object.}
+
+\item{max_name_chars}{Maximum number of characters to print on each line}
 
 \item{...}{Ignored}
 }

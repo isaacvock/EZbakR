@@ -621,6 +621,9 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
 #' not have their fraction news estimated.
 #'
 #' @param obj An `EZbakRData` object
+#' @param feature_type Either `"gene"` (if deconvolving gene-level fraction news,
+#' i.e., for resolving fusion gene and component gene fraction news) or
+#' `"isoform"` (if deconvolving transcript isoform fraction news).
 #' @param features Character vector of the set of features you want to stratify
 #' reads by and estimate proportions of each RNA population. The default of "all"
 #' will use all feature columns in the `obj`'s cB.
@@ -849,7 +852,7 @@ General_Fraction_Disambiguation <- function(obj, sample_name,
 
   ### Hack to deal with devtools::check() NOTEs
   expected_count <- TPM <- n <- group <- effective_length <- transcript_id <- n <- isoform_cnt <- data <- NULL
-  fnest <- logit_fn <- se_logit_fn <- NULL
+  fnest <- logit_fn <- se_logit_fn <- feature_group_id <- NULL
 
 
   ### THINGS THAT NEED TO BE INFERRED

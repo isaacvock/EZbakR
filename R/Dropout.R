@@ -519,8 +519,9 @@ NormalizeForDropout <- function(obj,
   ### Hack to deal with devtools::check() NOTEs
 
   tl <- n <- nolabel_rpm <- rpm <- pdo <- fit <- global_fraction <- corrected_gf <- corrected_fraction <- corrected_n <- NULL
-  nolabel_n <- nolabel_reps <- dropout <- sig <- NULL
-
+  nolabel_n <- nolabel_reps <- dropout <- sig <- `.` <- NULL
+  med_fn <- normalization_reference <- reference_samp <- NULL
+  nsamps_in_group <- num <- den <- NULL
 
   ##### GENERAL STEPS:
   # 1) Get -s4U RPMs
@@ -614,7 +615,7 @@ NormalizeForDropout <- function(obj,
   fxn_wide <- fractions %>%
     dplyr::filter(n > read_cutoff & !!dplyr::sym(logit_fraction) > -Inf) %>%
     dplyr::select(sample, !!features_to_analyze, !!fraction_of_interest) %>%
-    pivot_wider(
+    tidyr::pivot_wider(
       names_from = "sample",
       values_from = fraction_of_interest
     )
@@ -657,8 +658,8 @@ NormalizeForDropout <- function(obj,
     }
 
     pdos$pdo[i] <- fxn_subset %>%
-      na.omit() %>%
-      summarise(
+      stats::na.omit() %>%
+      dplyr::summarise(
         pdo = stats::optim(
           par = c(-2),
           fn = do_norm_ll,

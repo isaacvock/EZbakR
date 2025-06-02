@@ -736,7 +736,7 @@ check_read_count_corr_ezbd <- function(obj,
 
     }
 
-    cB <- bind_rows(cB_list)
+    cB <- dplyr::bind_rows(cB_list)
 
     setDT(cB)
 
