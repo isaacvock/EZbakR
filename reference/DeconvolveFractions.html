@@ -84,6 +84,12 @@ which performs this deconvolution for transcript isoforms.</p>
 <dd><p>An <code>EZbakRData</code> object</p></dd>
 
 
+<dt id="arg-feature-type">feature_type<a class="anchor" aria-label="anchor" href="#arg-feature-type"></a></dt>
+<dd><p>Either <code>"gene"</code> (if deconvolving gene-level fraction news,
+i.e., for resolving fusion gene and component gene fraction news) or
+<code>"isoform"</code> (if deconvolving transcript isoform fraction news).</p></dd>
+
+
 <dt id="arg-features">features<a class="anchor" aria-label="anchor" href="#arg-features"></a></dt>
 <dd><p>Character vector of the set of features you want to stratify
 reads by and estimate proportions of each RNA population. The default of "all"
