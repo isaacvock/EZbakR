@@ -119,6 +119,40 @@
 #' of interest, still run all checks against queries.
 #' @return Table of interest from the relevant `EZbakRdata` list (set by the
 #' type parameter).
+#' @examples
+#'
+#' # Simulate data to analyze
+#' simdata <- EZSimulate(30)
+#'
+#' # Create EZbakR input
+#' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+#'
+#' # Estimate Fractions
+#' ezbdo <- EstimateFractions(ezbdo)
+#'
+#' # Estimate Kinetics
+#' ezbdo <- EstimateKinetics(ezbdo)
+#'
+#' # Average log(kdeg) estimates across replicate
+#' ezbdo <- AverageAndRegularize(ezbdo)
+#'
+#' #' # Average log(ksyn) estimates across replicate
+#' ezbdo <- AverageAndRegularize(ezbdo, parameter = "log_ksyn")
+#'
+#' # Compare log(kdeg) across conditions
+#' ezbdo <- CompareParameters(
+#' ezbdo,
+#' design_factor = "treatment",
+#' reference = "treatment1",
+#' experimental = "treatment2"
+#' )
+#'
+#' # Get the one and only fractions object
+#' fxns <- EZget(ezbdo, type = "fractions")
+#'
+#' # Get the log(ksyn) averages table
+#' ksyn_avg <- EZget(ezbdo, type = "averages", parameter = "log_ksyn")
+#'
 #' @export
 EZget <- function(obj,
                   type = c("fractions", "kinetics", "readcounts",
@@ -803,6 +837,18 @@ inv_logit <- function(x) exp(x)/(1+exp(x))
 #' @param feature_lengths Table of effective lengths for each feature combination in your
 #' data. For example, if your analysis includes features named GF and XF, this
 #' should be a data frame with columns GF, XF, and length.
+#' @return Data table of normalized read counts.
+#' @examples
+#'
+#' # Simulate data
+#' simdata <- EZSimulate(30)
+#'
+#' # Create EZbakRData object
+#' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+#'
+#' # Get normalized read counts
+#' reads <- get_normalized_read_counts(ezbdo)
+#'
 #' @export
 get_normalized_read_counts <- function(obj,
                                        features_to_analyze,
@@ -813,16 +859,8 @@ get_normalized_read_counts <- function(obj,
 
 }
 
-#' Get normalized read counts from either an `EZbakRFractions` object.
-#'
-#' Uses TMM normalization strategy, similar to that used by DESeq2 and edgeR.
-#'
-#' @param obj An `EZbakRFractions` object.
-#' @param features_to_analyze Features in relevant table
-#' @param fractions_name Name of fractions table to use
-#' @param feature_lengths Table of effective lengths for each feature combination in your
-#' data. For example, if your analysis includes features named GF and XF, this
-#' should be a data frame with columns GF, XF, and length.
+#' @describeIn get_normalized_read_counts Method for class **EZbakRFractions**
+#' Get normalized read counts from fractions table.
 #' @export
 get_normalized_read_counts.EZbakRFractions <- function(obj,
                                                        features_to_analyze,
@@ -839,18 +877,10 @@ get_normalized_read_counts.EZbakRFractions <- function(obj,
 
 }
 
-#' Get normalized read counts from either a cB table in an `EZbakRData` object.
-#'
-#' Uses TMM normalization strategy, similar to that used by DESeq2 and edgeR.
-#'
-#' @param obj An `EZbakRData` object.
-#' @param features_to_analyze Features in relevant table
-#' @param fractions_name Name of fractions table to use
-#' @param feature_lengths Table of effective lengths for each feature combination in your
-#' data. For example, if your analysis includes features named GF and XF, this
-#' should be a data frame with columns GF, XF, and length.
+#' @describeIn get_normalized_read_counts Method for class **EZbakRData**
+#' Get normalized read counts from a cB table.
 #' @export
-get_normalized_read_counts.default <- function(obj,
+get_normalized_read_counts.EZbakRData <- function(obj,
                                                features_to_analyze,
                                                fractions_name = NULL,
                                                feature_lengths = NULL){

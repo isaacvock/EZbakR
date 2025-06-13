@@ -107,7 +107,9 @@ it will be saved as a separate output with the same name + "_#" where "#" is a
 numerical ID to distinguish the similar outputs.}
 }
 \value{
-\code{EZbakRKinetics} object.
+\code{EZbakRKinetics} object, which is just an \code{EZbakRData} object with
+a "kinetics" slot. This includes tables of kinetic parameter estimates for
+each feature in each sample for which kinetic parameters can be estimated.
 }
 \description{
 Simple kinetic parameter (kdeg and ksyn) estimation using fraction estimates

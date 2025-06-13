@@ -55,6 +55,34 @@
 #' a point size is automatically chosen.
 #' @import ggplot2
 #' @importFrom magrittr %>%
+#' @examples
+#'
+#' # Simulate data to analyze
+#' simdata <- EZSimulate(30)
+#'
+#' # Create EZbakR input
+#' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+#'
+#' # Estimate Fractions
+#' ezbdo <- EstimateFractions(ezbdo)
+#'
+#' # Estimate Kinetics
+#' ezbdo <- EstimateKinetics(ezbdo)
+#'
+#' # Average estimates across replicate
+#' ezbdo <- AverageAndRegularize(ezbdo)
+#'
+#' # Compare parameters across conditions
+#' ezbdo <- CompareParameters(
+#' ezbdo,
+#' design_factor = "treatment",
+#' reference = "treatment1",
+#' experimental = "treatment2"
+#' )
+#'
+#' # Make volcano plot (ggplot object that you can save and add/modify layers)
+#' EZVolcanoPlot(ezbdo)
+#'
 #' @return A `ggplot2` object. X-axis = log2(estimate of interest (e.g., fold-change
 #' in degradation rate constant); Y-axis = -log10(multiple test adjusted p-value);
 #' points colored by location relative to FDR and effect size cutoffs.
@@ -255,6 +283,34 @@ EZVolcanoPlot <- function(obj,
 #' a point size is automatically chosen.
 #' @import ggplot2
 #' @importFrom magrittr %>%
+#' @examples
+#'
+#' # Simulate data to analyze
+#' simdata <- EZSimulate(30)
+#'
+#' # Create EZbakR input
+#' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+#'
+#' # Estimate Fractions
+#' ezbdo <- EstimateFractions(ezbdo)
+#'
+#' # Estimate Kinetics
+#' ezbdo <- EstimateKinetics(ezbdo)
+#'
+#' # Average estimates across replicate
+#' ezbdo <- AverageAndRegularize(ezbdo)
+#'
+#' # Compare parameters across conditions
+#' ezbdo <- CompareParameters(
+#' ezbdo,
+#' design_factor = "treatment",
+#' reference = "treatment1",
+#' experimental = "treatment2"
+#' )
+#'
+#' # Make volcano plot (ggplot object that you can save and add/modify layers)
+#' EZMAPlot(ezbdo)
+#'
 #' @return A `ggplot2` object. Y-axis = log2(estimate of interest (e.g., fold-change
 #' in degradation rate constant); X-axis = log10(average normalized read coverage);
 #' points colored by location relative to FDR and effect size cutoffs.

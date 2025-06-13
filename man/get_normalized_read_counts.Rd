@@ -2,9 +2,25 @@
 % Please edit documentation in R/Helpers.R
 \name{get_normalized_read_counts}
 \alias{get_normalized_read_counts}
+\alias{get_normalized_read_counts.EZbakRFractions}
+\alias{get_normalized_read_counts.EZbakRData}
 \title{Get normalized read counts from either a cB table or \code{EZbakRFractions} object.}
 \usage{
 get_normalized_read_counts(
+  obj,
+  features_to_analyze,
+  fractions_name = NULL,
+  feature_lengths = NULL
+)
+
+\method{get_normalized_read_counts}{EZbakRFractions}(
+  obj,
+  features_to_analyze,
+  fractions_name = NULL,
+  feature_lengths = NULL
+)
+
+\method{get_normalized_read_counts}{EZbakRData}(
   obj,
   features_to_analyze,
   fractions_name = NULL,
@@ -22,6 +38,30 @@ get_normalized_read_counts(
 data. For example, if your analysis includes features named GF and XF, this
 should be a data frame with columns GF, XF, and length.}
 }
+\value{
+Data table of normalized read counts.
+}
 \description{
 Uses TMM normalization strategy, similar to that used by DESeq2 and edgeR.
+}
+\section{Methods (by class)}{
+\itemize{
+\item \code{get_normalized_read_counts(EZbakRFractions)}: Method for class \strong{EZbakRFractions}
+Get normalized read counts from fractions table.
+
+\item \code{get_normalized_read_counts(EZbakRData)}: Method for class \strong{EZbakRData}
+Get normalized read counts from a cB table.
+
+}}
+\examples{
+
+# Simulate data
+simdata <- EZSimulate(30)
+
+# Create EZbakRData object
+ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+
+# Get normalized read counts
+reads <- get_normalized_read_counts(ezbdo)
+
 }

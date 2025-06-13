@@ -2,9 +2,67 @@
 % Please edit documentation in R/Fractions.R
 \name{EstimateFractions}
 \alias{EstimateFractions}
+\alias{EstimateFractions.EZbakRData}
+\alias{EstimateFractions.EZbakRArrowData}
 \title{Estimate fractions of each RNA population.}
 \usage{
 EstimateFractions(
+  obj,
+  features = "all",
+  mutrate_populations = "all",
+  fraction_design = NULL,
+  Poisson = TRUE,
+  strategy = c("standard", "hierarchical"),
+  filter_cols = "all",
+  filter_condition = `&`,
+  remove_features = c("NA", "__no_feature"),
+  split_multi_features = FALSE,
+  multi_feature_cols = NULL,
+  multi_feature_sep = "+",
+  pnew_prior_mean = -2.94,
+  pnew_prior_sd = 0.3,
+  pold_prior_mean = -6.5,
+  pold_prior_sd = 0.5,
+  hier_readcutoff = 300,
+  init_pnew_prior_sd = 0.8,
+  pnew_prior_sd_min = 0.01,
+  pnew_prior_sd_max = 0.15,
+  pold_est = NULL,
+  pold_from_nolabel = FALSE,
+  grouping_factors = NULL,
+  character_limit = 20,
+  overwrite = TRUE
+)
+
+\method{EstimateFractions}{EZbakRData}(
+  obj,
+  features = "all",
+  mutrate_populations = "all",
+  fraction_design = NULL,
+  Poisson = TRUE,
+  strategy = c("standard", "hierarchical"),
+  filter_cols = "all",
+  filter_condition = `&`,
+  remove_features = c("NA", "__no_feature"),
+  split_multi_features = FALSE,
+  multi_feature_cols = NULL,
+  multi_feature_sep = "+",
+  pnew_prior_mean = -2.94,
+  pnew_prior_sd = 0.3,
+  pold_prior_mean = -6.5,
+  pold_prior_sd = 0.5,
+  hier_readcutoff = 300,
+  init_pnew_prior_sd = 0.3,
+  pnew_prior_sd_min = 0.01,
+  pnew_prior_sd_max = 0.15,
+  pold_est = NULL,
+  pold_from_nolabel = FALSE,
+  grouping_factors = NULL,
+  character_limit = 20,
+  overwrite = TRUE
+)
+
+\method{EstimateFractions}{EZbakRArrowData}(
   obj,
   features = "all",
   mutrate_populations = "all",
@@ -184,6 +242,13 @@ and fraction_design), then it will get overwritten with the new output. Else,
 it will be saved as a separate output with the same name + "_#" where "#" is a
 numerical ID to distinguish the similar outputs.}
 }
+\value{
+An \code{EZbakRFractions} object, which is just an \code{EZbakRData} object
+with a "fractions" list element. This will include tables of fraction estimates
+(e.g., fraction of reads from the high T-to-C mutation rate population in a
+standard single-label s4U experiment; termed fraction_highTC in the table) for
+all features in all samples.
+}
 \description{
 The first step of any NR-seq analysis is to figure out the fraction of reads
 from each mutational population in your data. For example, if you are performing
@@ -227,6 +292,20 @@ The global sample-wide estimates are used as an informative prior to increase th
 accuracy of this process by avoiding extreme estimates.
 }
 }
+\section{Methods (by class)}{
+\itemize{
+\item \code{EstimateFractions(EZbakRData)}: Method for class \strong{EZbakRData}
+Estimates fractions using an entirely in memory object.
+
+\item \code{EstimateFractions(EZbakRArrowData)}: Mehthod for class \strong{EZbakRArrowData}
+This is an alternative to the fully in memory \strong{EZbakRData} \code{EstimateFractions} method that can help
+with analyses of larger than RAM datasets. The provided "cB" is expected to be
+an on-disk Arrow Dataset. Furthermore, it is expected to be partitioned by the
+sample name, which will allow this method to read only a single-sample worth
+of data into memory at a time. This can significantly reduce RAM usage. Input
+object should be created with \code{EZbakRArrowData()}.
+
+}}
 \examples{
 
 # Simulate data to analyze

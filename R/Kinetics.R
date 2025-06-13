@@ -159,7 +159,9 @@
 #' and fraction_design), then it will get overwritten with the new output. Else,
 #' it will be saved as a separate output with the same name + "_#" where "#" is a
 #' numerical ID to distinguish the similar outputs.
-#' @return `EZbakRKinetics` object.
+#' @return `EZbakRKinetics` object, which is just an `EZbakRData` object with
+#' a "kinetics" slot. This includes tables of kinetic parameter estimates for
+#' each feature in each sample for which kinetic parameters can be estimated.
 #' @import data.table
 #'
 #' @examples

@@ -107,6 +107,11 @@ is advised.}
 
 \item{overwrite}{If TRUE, then identical output will be overwritten if it exists.}
 }
+\value{
+\code{EZbakRData} object with an additional "comparisons" table, detailing
+the result of a comparison of a parameter estimate's valules across two different
+conditions.
+}
 \description{
 \code{CompareParameters()} calculates differences in parameters estimated by
 \code{AverageAndRegularize()} or \code{EZDynamics()} and performs null hypothesis
@@ -138,4 +143,30 @@ which can be useful for certain interaction models.
 meaning that a standard normal distribution is integrated. P-values are then multiple-test
 adjusted using the method of Benjamini and Hochberg, implemented in R's \code{p.adjust()}
 function.
+}
+\examples{
+
+# Simulate data to analyze
+simdata <- EZSimulate(30)
+
+# Create EZbakR input
+ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+
+# Estimate Fractions
+ezbdo <- EstimateFractions(ezbdo)
+
+# Estimate Kinetics
+ezbdo <- EstimateKinetics(ezbdo)
+
+# Average estimates across replicate
+ezbdo <- AverageAndRegularize(ezbdo)
+
+# Compare parameters across conditions
+ezbdo <- CompareParameters(
+ezbdo,
+design_factor = "treatment",
+reference = "treatment1",
+experimental = "treatment2"
+)
+
 }
