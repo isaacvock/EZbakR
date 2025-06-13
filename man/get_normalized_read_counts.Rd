@@ -62,6 +62,6 @@ simdata <- EZSimulate(30)
 ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
 
 # Get normalized read counts
-reads <- get_normalized_read_counts(ezbdo)
+reads <- get_normalized_read_counts(ezbdo, features_to_analyze = "feature")
 
 }

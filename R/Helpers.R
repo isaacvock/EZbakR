@@ -847,7 +847,7 @@ inv_logit <- function(x) exp(x)/(1+exp(x))
 #' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
 #'
 #' # Get normalized read counts
-#' reads <- get_normalized_read_counts(ezbdo)
+#' reads <- get_normalized_read_counts(ezbdo, features_to_analyze = "feature")
 #'
 #' @export
 get_normalized_read_counts <- function(obj,
