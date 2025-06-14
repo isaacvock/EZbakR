@@ -358,6 +358,18 @@ validate_EZbakRKinetics <- function(obj, features){
 #' then kinetics table will be named `kinetics1`
 #' @return An EZbakRKinetics object. This is simply a list of the provided `kinetics` and
 #' `metadf` with class `EZbakRKinetics`
+#' @examples
+#' # Simulate data
+#' ezbdo <- EZSimulate(30)
+#'
+#' # Get kinetics table by estimating (for demonstration)
+#' ezbdo <- EstimateFractions(ezbdo)
+#' ezbdo <- EstimateKinetics(ezbdo)
+#' kinetics <- EZget(ezbdo, type = "kinetics")
+#'
+#' # Create EZbakRFractions object
+#' ezbko <- EZbakRFractions(kinetics, simdata$metadf, features = "feature")
+#'
 #' @export
 EZbakRKinetics <- function(kinetics, metadf, features,
                             name = NULL,

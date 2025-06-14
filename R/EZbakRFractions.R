@@ -425,6 +425,18 @@ validate_EZbakRFractions <- function(obj){
 #' "#" represents a simple numerical ID for the table.
 #' @return An EZbakRFractions object. This is simply a list of the provide `fractions` and
 #' `metadf` with class `EZbakRFractions`
+#' @examples
+#'
+#' # Simulate data
+#' ezbdo <- EZSimulate(30)
+#'
+#' # Get fractions table by estimating (for demonstration)
+#' ezbdo <- EstimateFractions(ezbdo)
+#' fxns <- EZget(ezbdo, type = "fractions")
+#'
+#' # Create EZbakRFractions object
+#' ezbfo <- EZbakRFractions(fxns, simdata$metadf)
+#'
 #' @export
 EZbakRFractions <- function(fractions, metadf,
                             name = NULL, character_limit = 20){

@@ -108,3 +108,28 @@ An EZbakRArrowData object. This is simply a list of the provide \code{cBds} and
 \code{EZbakRArrowData} creates an object of class \code{EZbakRArrowData} and checks the validity
 of the provided input.
 }
+\examples{
+
+# Load dependency
+library(arrow)
+simdata <- EZSimulate(30)
+
+# Create directory to write dataset to
+outdir <- tempdir()
+setwd(outdir)
+
+# Create dataset
+write_dataset(
+  simdata$cB,
+  path = "arrow_dataset",
+  format = "parquet",
+  partitioning = "sample"
+)
+
+# Create EZbakRArrowData object
+ds <- open_dataset("arrow_dataset")
+ezbdo <- EZbakRArrowData(ds,
+                         simdata$metadf)
+
+
+}

@@ -394,6 +394,30 @@ validate_EZbakRArrowData <- function(obj){
 #' @return An EZbakRArrowData object. This is simply a list of the provide `cBds` and
 #' `metadf` with class `EZbakRArrowData`
 #' @import data.table
+#' @examples
+#'
+#' # Load dependency
+#' library(arrow)
+#' simdata <- EZSimulate(30)
+#'
+#' # Create directory to write dataset to
+#' outdir <- tempdir()
+#' setwd(outdir)
+#'
+#' # Create dataset
+#' write_dataset(
+#'   simdata$cB,
+#'   path = "arrow_dataset",
+#'   format = "parquet",
+#'   partitioning = "sample"
+#' )
+#'
+#' # Create EZbakRArrowData object
+#' ds <- open_dataset("arrow_dataset")
+#' ezbdo <- EZbakRArrowData(ds,
+#'                          simdata$metadf)
+#'
+#'
 #' @export
 EZbakRArrowData <- function(cBds, metadf){
 

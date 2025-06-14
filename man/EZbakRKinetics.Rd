@@ -109,3 +109,16 @@ An EZbakRKinetics object. This is simply a list of the provided \code{kinetics} 
 \code{EZbakRKinetics} creates an object of class \code{EZbakRKinetics} and checks the validity
 of the provided input.
 }
+\examples{
+# Simulate data
+ezbdo <- EZSimulate(30)
+
+# Get kinetics table by estimating (for demonstration)
+ezbdo <- EstimateFractions(ezbdo)
+ezbdo <- EstimateKinetics(ezbdo)
+kinetics <- EZget(ezbdo, type = "kinetics")
+
+# Create EZbakRFractions object
+ezbko <- EZbakRFractions(kinetics, simdata$metadf, features = "feature")
+
+}

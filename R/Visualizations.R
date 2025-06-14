@@ -308,7 +308,7 @@ EZVolcanoPlot <- function(obj,
 #' experimental = "treatment2"
 #' )
 #'
-#' # Make volcano plot (ggplot object that you can save and add/modify layers)
+#' # Make MA plot (ggplot object that you can save and add/modify layers)
 #' EZMAPlot(ezbdo)
 #'
 #' @return A `ggplot2` object. Y-axis = log2(estimate of interest (e.g., fold-change
