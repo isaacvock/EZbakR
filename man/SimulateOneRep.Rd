@@ -110,3 +110,6 @@ is new, the number of mutations in the read is drawn from a binomial distributio
 probability of mutation equal to pnew. If a read is old, the number of mutations is instead
 drawn from a binomial distribution with probability of mutation equal to pold.
 }
+\examples{
+simdata <- SimulateOneRep(30)
+}

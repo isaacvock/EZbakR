@@ -109,3 +109,6 @@ fractions of reads belonging to each simulated mutational population. Instead
 these fractions are drawn from a Dirichlet distribution with gene-specific
 parameters.
 }
+\examples{
+simdata <- SimulateMultiLabel(3)
+}

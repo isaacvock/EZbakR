@@ -175,3 +175,9 @@ allows you to simulate multiple distinct treatments, batch effects, interaction 
 etc. The current downside for its flexibility is its relative complexity to implement.
 Easier to use simulators are on the way to EZbakR.
 }
+\examples{
+simdata <- SimulateMultiCondition(30,
+                                  data.frame(sample = c('sampleA', 'sampleB'),
+                                  treatment = c('treatment1', 'treatment2')),
+                                  mean_formula = ~treatment-1)
+}

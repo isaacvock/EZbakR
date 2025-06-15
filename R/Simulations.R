@@ -61,6 +61,8 @@
 #' will be drawn from a normal distribution with this standard deviation.
 #' @import data.table
 #' @importFrom magrittr %>%
+#' @examples
+#' simdata <- SimulateOneRep(30)
 #' @export
 SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
                            sample_name = "sampleA",
@@ -317,6 +319,8 @@ rdirichlet <- function (n, alpha) {
 #' @param Gcont Probability that a nucleotide in a simulated read is a G.
 #' @param Ccont Probability that a nucleotide in a simulated read is a C.
 #' @importFrom magrittr %>%
+#' @examples
+#' simdata <- VectSimulateMultiLabel(30)
 #' @export
 VectSimulateMultiLabel <- function(nfeatures, populations = c("TC"),
                                    fraction_design = create_fraction_design(populations),
@@ -565,6 +569,8 @@ VectSimulateMultiLabel <- function(nfeatures, populations = c("TC"),
 #' @param Gcont Probability that a nucleotide in a simulated read is a G.
 #' @param Ccont Probability that a nucleotide in a simulated read is a C.
 #' @importFrom magrittr %>%
+#' @examples
+#' simdata <- SimulateMultiLabel(3)
 #' @export
 SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
                                fraction_design = create_fraction_design(populations),
@@ -929,6 +935,18 @@ SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
 #' in `treatment_effects`.
 #' @import data.table
 #' @importFrom magrittr %>%
+#' @examples
+#'
+#' # Simulate standard data
+#' simdata_standard <- EZSimulate(30)
+#'
+#' # Simulate dynamical systems data
+#' simdata_ode <- EZSimulate(30,
+#'                           mode = "dynamics",
+#'                           ntreatments = 1,
+#'                           label_time = c(1, 3),
+#'                           dynamics_preset = "nuc2cyto")
+#'
 #' @export
 EZSimulate <- function(nfeatures,
                        mode = c("standard", "dynamics"),
@@ -1254,6 +1272,11 @@ EZSimulate <- function(nfeatures,
 #' then there is not dropout.
 #' @import data.table
 #' @importFrom magrittr %>%
+#' @examples
+#' simdata <- SimulateMultiCondition(30,
+#'                                   data.frame(sample = c('sampleA', 'sampleB'),
+#'                                   treatment = c('treatment1', 'treatment2')),
+#'                                   mean_formula = ~treatment-1)
 #' @export
 SimulateMultiCondition <- function(nfeatures, metadf, mean_formula,
                                    param_details = NULL,
@@ -1719,6 +1742,8 @@ SimulateMultiCondition <- function(nfeatures, metadf, mean_formula,
 #' @param logksyn_sd sdlog of a log-normal distribution from which
 #' ksyns are simulated
 #' @importFrom magrittr %>%
+#' @examples
+#' simdata <- SimulateIsoforms(30)
 #' @export
 SimulateIsoforms <- function(nfeatures,
                              nt = NULL,
@@ -2421,7 +2446,6 @@ check_SimulateMultiCondition_input <- function(args){
 #' in `treatment_effects`.
 #' @param ... Parameters passed to `SimulateOneRep()`.
 #' @importFrom magrittr %>%
-#' @export
 SimulateDynamics <- function(nfeatures, graph, metadf,
                              log_means, log_sds,
                              ntreatments = 1,
