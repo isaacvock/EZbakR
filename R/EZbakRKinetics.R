@@ -360,15 +360,16 @@ validate_EZbakRKinetics <- function(obj, features){
 #' `metadf` with class `EZbakRKinetics`
 #' @examples
 #' # Simulate data
-#' ezbdo <- EZSimulate(30)
+#' simdata <- EZSimulate(30)
 #'
 #' # Get kinetics table by estimating (for demonstration)
+#' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
 #' ezbdo <- EstimateFractions(ezbdo)
 #' ezbdo <- EstimateKinetics(ezbdo)
 #' kinetics <- EZget(ezbdo, type = "kinetics")
 #'
-#' # Create EZbakRFractions object
-#' ezbko <- EZbakRFractions(kinetics, simdata$metadf, features = "feature")
+#' # Create EZbakRKinetics object
+#' ezbko <- EZbakRKinetics(kinetics, simdata$metadf, features = "feature")
 #'
 #' @export
 EZbakRKinetics <- function(kinetics, metadf, features,

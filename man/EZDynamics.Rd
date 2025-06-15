@@ -262,3 +262,49 @@ meaning that \code{EZDynamics()} may take anywhere from 10s of minutes to a coup
 to run, depending on how complex your model is and how many distinct set of samples
 and experimental conditions you have.
 }
+\examples{
+
+##### MODELING CYTOPLASMIC TO NUCLEAR FLOW
+
+### Simulate data and get replicate average fractions estimates
+simdata <- EZSimulate(
+  nfeatures = 30,
+  ntreatments = 1,
+  mode = "dynamics",
+  label_time = c(1, 3),
+  dynamics_preset = "nuc2cyto"
+)
+
+ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+ezbdo <- EstimateFractions(ezbdo)
+ezbdo <- AverageAndRegularize(ezbdo,
+                              formula_mean = ~tl:compartment - 1,
+                              type = "fractions",
+                              parameter = "logit_fraction_highTC")
+
+### ODE model: the graph and measured species
+graph <- matrix(c(0, 1, 0,
+                  0, 0, 2,
+                  3, 0, 0),
+                nrow = 3,
+                ncol = 3,
+                byrow = TRUE)
+colnames(graph) <- c("0", "N", "C")
+rownames(graph) <- colnames(graph)
+
+modeled_to_measured <- list(
+  nuclear = list(GF ~ N),
+  cytoplasm = list(GF ~ C),
+  total = list(GF ~ C + N) # total RNA is a combination of C and N
+)
+
+### Fit model
+ezbdo <- EZDynamics(ezbdo,
+                    graph = graph,
+                    sub_features = "GF",
+                    grouping_features = "GF",
+                    sample_feature = "compartment",
+                    modeled_to_measured = ode_models$nuc2cyto$formulas)
+
+
+}

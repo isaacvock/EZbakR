@@ -116,18 +116,18 @@ simdata <- EZSimulate(30)
 
 # Create directory to write dataset to
 outdir <- tempdir()
-setwd(outdir)
+dataset_dir <- file.path(outdir, "arrow_dataset")
 
 # Create dataset
 write_dataset(
   simdata$cB,
-  path = "arrow_dataset",
+  path = dataset_dir,
   format = "parquet",
   partitioning = "sample"
 )
 
 # Create EZbakRArrowData object
-ds <- open_dataset("arrow_dataset")
+ds <- open_dataset(dataset_dir)
 ezbdo <- EZbakRArrowData(ds,
                          simdata$metadf)
 

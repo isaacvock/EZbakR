@@ -594,15 +594,16 @@ library(arrow)
 simdata <- EZSimulate(nfeatures = 250)
 
 outdir <- tempdir()
+dataset_dir <- file.path(outdir, "arrow_dataset")
 
 write_dataset(
   simdata$cB,
-  path = paste0(outdir, "\\arrow_dataset"),
+  path = dataset_dir,
   format = "parquet",
   partitioning = "sample"
 )
 
-ds <- open_dataset(paste0(outdir, "\\arrow_dataset"))
+ds <- open_dataset(dataset_dir)
 
 ezbdo <- EZbakRArrowData(ds,
                     simdata$metadf)

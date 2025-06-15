@@ -188,6 +188,38 @@ ImportIsoformQuant <- function(obj, files,
 #' @return An `EZbakRData` object with an additional table under the "fractions"
 #' list. Has the same form as the output of `EstimateFractions()`, and will have the
 #' feature column "transcript_id".
+#' @examples
+#'
+#' # Load dependencies
+#' library(dplyr)
+#'
+#' # Simulates a single sample worth of data
+#' simdata_iso <- SimulateIsoforms(nfeatures = 300)
+#'
+#' # We have to manually create the metadf in this case
+#' metadf <- tibble(sample = 'sampleA',
+#'                      tl = 4,
+#'                      condition = 'A')
+#'
+#' ezbdo <- EZbakRData(simdata_iso$cB,
+#'                     metadf)
+#'
+#' ezbdo <- EstimateFractions(ezbdo)
+#'
+#' ### Hack in the true, simulated isoform levels
+#' reads <- simdata_iso$ground_truth %>%
+#'   dplyr::select(transcript_id, true_count, true_TPM) %>%
+#'   dplyr::mutate(sample = 'sampleA',
+#'                 effective_length = 10000) %>%
+#'   dplyr::rename(expected_count = true_count,
+#'                 TPM = true_TPM)
+#'
+#' # Name of table needs to have "isoform_quant" in it
+#' ezbdo[['readcounts']][['simulated_isoform_quant']] <- reads
+#'
+#' ### Perform deconvolution
+#' ezbdo <- EstimateIsoformFractions(ezbdo)
+#'
 #' @export
 EstimateIsoformFractions <- function(obj,
                                      features = NULL,
@@ -665,6 +697,38 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
 #' @return An `EZbakRData` object with an additional table under the "fractions"
 #' list. Has the same form as the output of `EstimateFractions()`, and will have the
 #' feature column "transcript_id".
+#' @examples
+#'
+#' # Load dependencies
+#' library(dplyr)
+#'
+#' # Simulates a single sample worth of data
+#' simdata_iso <- SimulateIsoforms(nfeatures = 30)
+#'
+#' # We have to manually create the metadf in this case
+#' metadf <- tibble(sample = 'sampleA',
+#'                      tl = 4,
+#'                      condition = 'A')
+#'
+#' ezbdo <- EZbakRData(simdata_iso$cB,
+#'                     metadf)
+#'
+#' ezbdo <- EstimateFractions(ezbdo)
+#'
+#' ### Hack in the true, simulated isoform levels
+#' reads <- simdata_iso$ground_truth %>%
+#'   dplyr::select(transcript_id, true_count, true_TPM) %>%
+#'   dplyr::mutate(sample = 'sampleA',
+#'                 effective_length = 10000) %>%
+#'   dplyr::rename(expected_count = true_count,
+#'                 TPM = true_TPM)
+#'
+#' # Name of table needs to have "isoform_quant" in it
+#' ezbdo[['readcounts']][['simulated_isoform_quant']] <- reads
+#'
+#' ### Perform deconvolution
+#' ezbdo <- DeconvolveFractions(ezbdo, feature_type = "isoform")
+#'
 #' @export
 DeconvolveFractions <- function(obj,
                                 feature_type = c("gene", "isoform"),

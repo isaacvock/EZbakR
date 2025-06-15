@@ -428,9 +428,10 @@ validate_EZbakRFractions <- function(obj){
 #' @examples
 #'
 #' # Simulate data
-#' ezbdo <- EZSimulate(30)
+#' simdata <- EZSimulate(30)
 #'
 #' # Get fractions table by estimating (for demonstration)
+#' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
 #' ezbdo <- EstimateFractions(ezbdo)
 #' fxns <- EZget(ezbdo, type = "fractions")
 #'
