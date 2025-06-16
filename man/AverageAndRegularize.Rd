@@ -189,3 +189,21 @@ trend).
 All of this allows \code{CompareParameters()} to use a less conservative statistical test
 when calculating p-values, while still controlling false discovery rates.
 }
+\examples{
+
+# Simulate data to analyze
+simdata <- EZSimulate(30)
+
+# Create EZbakR input
+ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+
+# Estimate Fractions
+ezbdo <- EstimateFractions(ezbdo)
+
+# Estimate Kinetics
+ezbdo <- EstimateKinetics(ezbdo)
+
+# Average estimates across replicate
+ezbdo <- AverageAndRegularize(ezbdo)
+
+}

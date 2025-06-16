@@ -159,7 +159,9 @@
 #' and fraction_design), then it will get overwritten with the new output. Else,
 #' it will be saved as a separate output with the same name + "_#" where "#" is a
 #' numerical ID to distinguish the similar outputs.
-#' @return `EZbakRKinetics` object.
+#' @return `EZbakRKinetics` object, which is just an `EZbakRData` object with
+#' a "kinetics" slot. This includes tables of kinetic parameter estimates for
+#' each feature in each sample for which kinetic parameters can be estimated.
 #' @import data.table
 #'
 #' @examples
@@ -673,7 +675,7 @@ Standard_kinetic_estimation <- function(obj,
       dplyr::mutate(
         kdeg = dplyr::case_when(
           tchase == 0 ~ -log(1 - !!dplyr::sym(fraction_of_interest)) / tpulse,
-          .default = -log(!!dplyr::sym(fraction_of_interest) / mean(!!dplyr::sym(fraction_of_interest)[tchase == 0])) / tchase
+          .default = -log(!!dplyr::sym(fraction_of_interest) / mean((!!dplyr::sym(fraction_of_interest))[tchase == 0])) / tchase
         ),
         kdeg = ifelse(kdeg <= 0,
                       -log(1 - 1/(n + 2))/ tchase, # theoretical dynamic range of experiment
@@ -681,7 +683,7 @@ Standard_kinetic_estimation <- function(obj,
         log_kdeg = log(kdeg),
         se_log_kdeg = dplyr::case_when(
           tchase == 0 ~ !!dplyr::sym(se_of_interest) * abs(!!dplyr::sym(fraction_of_interest) / log(1 - !!dplyr::sym(fraction_of_interest))),
-          .default = sqrt( ((( 1 - inv_logit(mean(!!dplyr::sym(fraction_of_interest)[tchase == 0])) ) * sqrt(sum(!!dplyr::sym(se_of_interest)[tchase == 0]^2)) / sum(tchase == 0)) )^2 +
+          .default = sqrt( ((( 1 - inv_logit(mean((!!dplyr::sym(fraction_of_interest))[tchase == 0])) ) * sqrt(sum((!!dplyr::sym(se_of_interest))[tchase == 0]^2)) / sum(tchase == 0)) )^2 +
                              ((((1 - inv_logit(!!dplyr::sym(fraction_of_interest)))) * !!dplyr::sym(se_of_interest)))^2 ) /
             kdeg
         )

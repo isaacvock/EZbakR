@@ -62,6 +62,20 @@
 #' }
 #' @import data.table
 #' @importFrom magrittr %>%
+#' @examples
+#'
+#' # Simulate data to analyze
+#' simdata <- EZSimulate(30)
+#'
+#' # Create EZbakR input
+#' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+#'
+#' # Estimate Fractions
+#' ezbdo <- EstimateFractions(ezbdo)
+#'
+#' # Run QC
+#' QC <- EZQC(ezbdo)
+#'
 #' @return A list of `ggplot2` objects visualizing the various aspects of your data
 #' assessed by `EZQC()`.
 #' @export

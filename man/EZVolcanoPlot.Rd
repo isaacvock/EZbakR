@@ -100,3 +100,32 @@ and more common for these kind of visualizations, \code{EZVolcanoPlot()} multipl
 the x-axis value by log2(exp(1)), which is the factor required to convert from
 a log to a log2 scale. You can turn this off by setting \code{plotlog2} to \code{FALSE}.
 }
+\examples{
+
+# Simulate data to analyze
+simdata <- EZSimulate(30)
+
+# Create EZbakR input
+ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+
+# Estimate Fractions
+ezbdo <- EstimateFractions(ezbdo)
+
+# Estimate Kinetics
+ezbdo <- EstimateKinetics(ezbdo)
+
+# Average estimates across replicate
+ezbdo <- AverageAndRegularize(ezbdo)
+
+# Compare parameters across conditions
+ezbdo <- CompareParameters(
+ezbdo,
+design_factor = "treatment",
+reference = "treatment1",
+experimental = "treatment2"
+)
+
+# Make volcano plot (ggplot object that you can save and add/modify layers)
+EZVolcanoPlot(ezbdo)
+
+}

@@ -108,3 +108,12 @@ An EZbakRData object. This is simply a list of the provide \code{cB} and
 \code{EZbakRData} creates an object of class \code{EZbakRData} and checks the validity
 of the provided input.
 }
+\examples{
+
+# Simulate data
+simdata <- EZSimulate(30)
+
+# Create EZbakRData object
+ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+
+}

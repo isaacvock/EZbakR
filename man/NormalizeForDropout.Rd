@@ -102,3 +102,18 @@ your metadf by which you want to additionally group factors in the \code{groupin
 parameter. This behavior can be changed by setting \code{normalize_across_tls} to
 \code{TRUE}, which will
 }
+\examples{
+
+# Simulate data to analyze
+simdata <- EZSimulate(30)
+
+# Create EZbakR input
+ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+
+# Estimate Fractions
+ezbdo <- EstimateFractions(ezbdo)
+
+# Normalize for dropout
+ezbdo <- NormalizeForDropout(ezbdo)
+
+}

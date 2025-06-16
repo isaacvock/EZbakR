@@ -113,3 +113,36 @@ Features with estimated TPMs less than \code{TPM_min} (1 by default) or an estim
 counts less than \code{count_min} (10 by default) are removed from convolved feature sets and will
 not have their fraction news estimated.
 }
+\examples{
+
+# Load dependencies
+library(dplyr)
+
+# Simulates a single sample worth of data
+simdata_iso <- SimulateIsoforms(nfeatures = 30)
+
+# We have to manually create the metadf in this case
+metadf <- tibble(sample = 'sampleA',
+                     tl = 4,
+                     condition = 'A')
+
+ezbdo <- EZbakRData(simdata_iso$cB,
+                    metadf)
+
+ezbdo <- EstimateFractions(ezbdo)
+
+### Hack in the true, simulated isoform levels
+reads <- simdata_iso$ground_truth \%>\%
+  dplyr::select(transcript_id, true_count, true_TPM) \%>\%
+  dplyr::mutate(sample = 'sampleA',
+                effective_length = 10000) \%>\%
+  dplyr::rename(expected_count = true_count,
+                TPM = true_TPM)
+
+# Name of table needs to have "isoform_quant" in it
+ezbdo[['readcounts']][['simulated_isoform_quant']] <- reads
+
+### Perform deconvolution
+ezbdo <- DeconvolveFractions(ezbdo, feature_type = "isoform")
+
+}

@@ -84,3 +84,6 @@ map uniquely to a given isoform, while the rest are ambiguous to all isoforms
 from that gene. Mutational content of these reads are simulated as in
 \code{SimulateOneRep()}.
 }
+\examples{
+simdata <- SimulateIsoforms(30)
+}

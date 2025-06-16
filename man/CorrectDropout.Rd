@@ -75,3 +75,18 @@ pdo ranges from 0 (no dropout) to 1 (complete loss of all labeled RNA), and
 is thus interpreted as the percentage of labeled RNA/reads from labeled RNA
 disproportionately lost, relative to the equivalent unlabeled species.
 }
+\examples{
+
+# Simulate data to analyze
+simdata <- EZSimulate(30)
+
+# Create EZbakR input
+ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+
+# Estimate Fractions
+ezbdo <- EstimateFractions(ezbdo)
+
+# Correct for dropout
+ezbdo <- CorrectDropout(ezbdo)
+
+}

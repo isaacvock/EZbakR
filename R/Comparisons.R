@@ -129,6 +129,23 @@
 #' @return `EZbakRData` object with an additional "averages" table, as well as a
 #' fullfit table under the same list heading, which includes extra information about
 #' the priors used for regularization purposes.
+#' @examples
+#'
+#' # Simulate data to analyze
+#' simdata <- EZSimulate(30)
+#'
+#' # Create EZbakR input
+#' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+#'
+#' # Estimate Fractions
+#' ezbdo <- EstimateFractions(ezbdo)
+#'
+#' # Estimate Kinetics
+#' ezbdo <- EstimateKinetics(ezbdo)
+#'
+#' # Average estimates across replicate
+#' ezbdo <- AverageAndRegularize(ezbdo)
+#'
 #' @export
 AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                  type = "kinetics",
@@ -949,8 +966,36 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 #' @param experimental_levels Same as `experimental`, but exclusively parsed in case of
 #' `type` == "dynamics, included for backwards compatibility.
 #' @param overwrite If TRUE, then identical output will be overwritten if it exists.
+#' @return `EZbakRData` object with an additional "comparisons" table, detailing
+#' the result of a comparison of a parameter estimate's valules across two different
+#' conditions.
 #' @import data.table
 #' @importFrom magrittr %>%
+#' @examples
+#'
+#' # Simulate data to analyze
+#' simdata <- EZSimulate(30)
+#'
+#' # Create EZbakR input
+#' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+#'
+#' # Estimate Fractions
+#' ezbdo <- EstimateFractions(ezbdo)
+#'
+#' # Estimate Kinetics
+#' ezbdo <- EstimateKinetics(ezbdo)
+#'
+#' # Average estimates across replicate
+#' ezbdo <- AverageAndRegularize(ezbdo)
+#'
+#' # Compare parameters across conditions
+#' ezbdo <- CompareParameters(
+#' ezbdo,
+#' design_factor = "treatment",
+#' reference = "treatment1",
+#' experimental = "treatment2"
+#' )
+#'
 #' @export
 CompareParameters <- function(obj, design_factor, reference, experimental,
                               param_name,

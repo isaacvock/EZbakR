@@ -77,3 +77,18 @@ physiological impacts of metabolic labeling.
 correlation between replicates, as inferred from your \code{metadf}.
 }
 }
+\examples{
+
+# Simulate data to analyze
+simdata <- EZSimulate(30)
+
+# Create EZbakR input
+ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+
+# Estimate Fractions
+ezbdo <- EstimateFractions(ezbdo)
+
+# Run QC
+QC <- EZQC(ezbdo)
+
+}

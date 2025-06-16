@@ -86,3 +86,17 @@ An EZbakRFractions object. This is simply a list of the provide \code{fractions}
 \code{EZbakRFractions} creates an object of class \code{EZbakRFractions} and checks the validity
 of the provided input.
 }
+\examples{
+
+# Simulate data
+simdata <- EZSimulate(30)
+
+# Get fractions table by estimating (for demonstration)
+ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+ezbdo <- EstimateFractions(ezbdo)
+fxns <- EZget(ezbdo, type = "fractions")
+
+# Create EZbakRFractions object
+ezbfo <- EZbakRFractions(fxns, simdata$metadf)
+
+}

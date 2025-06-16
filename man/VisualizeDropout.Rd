@@ -55,3 +55,18 @@ Plots a measure of dropout (the ratio of -label to +label RPM) as a function
 of feature fraction new, with the model fit depicted. Use this function to
 qualitatively assess model fit and whether the modeling assumptions are met.
 }
+\examples{
+
+# Simulate data to analyze
+simdata <- EZSimulate(30)
+
+# Create EZbakR input
+ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+
+# Estimate Fractions
+ezbdo <- EstimateFractions(ezbdo)
+
+# Visualize Dropout
+ezbdo <- VisualizeDropout(ezbdo)
+
+}

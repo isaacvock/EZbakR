@@ -265,3 +265,16 @@ conditions will be simulated, with the assumed model \code{log(kdeg) ~ treatment
 In other words, Different kdeg values will be simulated for each treatment level, and ksyn
 values will not differ across conditions.
 }
+\examples{
+
+# Simulate standard data
+simdata_standard <- EZSimulate(30)
+
+# Simulate dynamical systems data
+simdata_ode <- EZSimulate(30,
+                          mode = "dynamics",
+                          ntreatments = 1,
+                          label_time = c(1, 3),
+                          dynamics_preset = "nuc2cyto")
+
+}

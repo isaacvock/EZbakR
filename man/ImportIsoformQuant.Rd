@@ -46,3 +46,38 @@ A convenient wrapper to \href{https://bioconductor.org/packages/release/bioc/vig
 data into an EZbakRData object. You need to run this before running
 \code{EstimateIsoformFractions}.
 }
+\examples{
+
+# Dependencies for example
+library(dplyr)
+library(data.table)
+
+# Simulate and analyze data
+simdata <- EZSimulate(30)
+ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+ezbdo <- EstimateFractions(ezbdo)
+
+# Hack to generate example quantification files
+savedir <- tempdir()
+rsem_data <- tibble(
+  transcript_id = paste0("tscript_feature", 1:30),
+  gene_id = paste0("feature", 1:30),
+  length = 1000,
+  effective_length = 1000,
+  expected_count = 1000,
+  TPM = 10,
+  FPKM = 10,
+  IsoPct = 1
+)
+
+fwrite(rsem_data, file.path(savedir, "Sample_1.isoforms.results"), sep = '\t')
+
+files <- file.path(savedir,"Sample_1.isoforms.results")
+names(files) <- "Sample_1"
+
+# Read in file
+ezbdo <- ImportIsoformQuant(ezbdo, files, quant_tool = "rsem")
+
+
+
+}

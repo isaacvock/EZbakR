@@ -387,6 +387,14 @@ validate_EZbakRData <- function(obj){
 #' }
 #' @return An EZbakRData object. This is simply a list of the provide `cB` and
 #' `metadf` with class `EZbakRData`
+#' @examples
+#'
+#' # Simulate data
+#' simdata <- EZSimulate(30)
+#'
+#' # Create EZbakRData object
+#' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+#'
 #' @import data.table
 #' @export
 EZbakRData <- function(cB, metadf){

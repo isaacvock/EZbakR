@@ -45,6 +45,20 @@
 #' used to fit the dropout model (i.e., simple outlier filtering cutoff).
 #' @return An `EZbakRData` object with the specified "fractions" table replaced
 #' with a dropout corrected table.
+#' @examples
+#'
+#' # Simulate data to analyze
+#' simdata <- EZSimulate(30)
+#'
+#' # Create EZbakR input
+#' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+#'
+#' # Estimate Fractions
+#' ezbdo <- EstimateFractions(ezbdo)
+#'
+#' # Correct for dropout
+#' ezbdo <- CorrectDropout(ezbdo)
+#'
 #' @importFrom magrittr %>%
 #' @export
 CorrectDropout <- function(obj,
@@ -207,6 +221,20 @@ CorrectDropout <- function(obj,
 #' specify a subset of features by default. Set this to FALSE if you would like
 #' to specify a feature subset.
 #' @param n_min Minimum raw number of reads to make it to plot
+#' @examples
+#'
+#' # Simulate data to analyze
+#' simdata <- EZSimulate(30)
+#'
+#' # Create EZbakR input
+#' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+#'
+#' # Estimate Fractions
+#' ezbdo <- EstimateFractions(ezbdo)
+#'
+#' # Visualize Dropout
+#' ezbdo <- VisualizeDropout(ezbdo)
+#'
 #' @importFrom magrittr %>%
 #' @return A list of `ggplot2` objects, one for each +label sample.
 #' @export
@@ -504,6 +532,20 @@ calculate_dropout <- function(obj,
 #' @return An `EZbakRData` object with the specified "fractions" table replaced
 #' with a dropout corrected table.
 #' @importFrom magrittr %>%
+#' @examples
+#'
+#' # Simulate data to analyze
+#' simdata <- EZSimulate(30)
+#'
+#' # Create EZbakR input
+#' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+#'
+#' # Estimate Fractions
+#' ezbdo <- EstimateFractions(ezbdo)
+#'
+#' # Normalize for dropout
+#' ezbdo <- NormalizeForDropout(ezbdo)
+#'
 #' @export
 NormalizeForDropout <- function(obj,
                                  normalize_across_tls = FALSE,

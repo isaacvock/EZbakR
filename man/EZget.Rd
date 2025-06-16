@@ -189,3 +189,38 @@ also applies to all functions that require you to specify which table you want
 to use (e.g., \code{EstimateKinetics()}, \code{AverageAndRegularize()}, \code{CompareParameters()},
 etc.).
 }
+\examples{
+
+# Simulate data to analyze
+simdata <- EZSimulate(30)
+
+# Create EZbakR input
+ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+
+# Estimate Fractions
+ezbdo <- EstimateFractions(ezbdo)
+
+# Estimate Kinetics
+ezbdo <- EstimateKinetics(ezbdo)
+
+# Average log(kdeg) estimates across replicate
+ezbdo <- AverageAndRegularize(ezbdo)
+
+#' # Average log(ksyn) estimates across replicate
+ezbdo <- AverageAndRegularize(ezbdo, parameter = "log_ksyn")
+
+# Compare log(kdeg) across conditions
+ezbdo <- CompareParameters(
+ezbdo,
+design_factor = "treatment",
+reference = "treatment1",
+experimental = "treatment2"
+)
+
+# Get the one and only fractions object
+fxns <- EZget(ezbdo, type = "fractions")
+
+# Get the log(ksyn) averages table
+ksyn_avg <- EZget(ezbdo, type = "averages", parameter = "log_ksyn")
+
+}
