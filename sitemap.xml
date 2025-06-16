@@ -29,13 +29,9 @@
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EZbakRFractions.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EZbakRKinetics.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EZget.html</loc></url>
-<url><loc>https://isaacvock.github.io/EZbakR/reference/EstimateFractions.EZbakRArrowData.html</loc></url>
-<url><loc>https://isaacvock.github.io/EZbakR/reference/EstimateFractions.EZbakRData.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EstimateFractions.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EstimateIsoformFractions.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EstimateKinetics.html</loc></url>
-<url><loc>https://isaacvock.github.io/EZbakR/reference/EstimateMutRates.EZbakRArrowData.html</loc></url>
-<url><loc>https://isaacvock.github.io/EZbakR/reference/EstimateMutRates.EZbakRData.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/EstimateMutRates.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/ImportIsoformQuant.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/NormalizeForDropout.html</loc></url>
@@ -50,8 +46,6 @@
 <url><loc>https://isaacvock.github.io/EZbakR/reference/create_fraction_design.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/example_cB.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/example_metadf.html</loc></url>
-<url><loc>https://isaacvock.github.io/EZbakR/reference/get_normalized_read_counts.EZbakRFractions.html</loc></url>
-<url><loc>https://isaacvock.github.io/EZbakR/reference/get_normalized_read_counts.default.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/get_normalized_read_counts.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/index.html</loc></url>
 <url><loc>https://isaacvock.github.io/EZbakR/reference/new_EZbakRArrowData.html</loc></url>

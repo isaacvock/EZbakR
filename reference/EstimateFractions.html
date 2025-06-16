@@ -85,6 +85,64 @@ content. This is what <code>EstimateFractions</code> is for.</p>
 <span>  grouping_factors <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  character_limit <span class="op">=</span> <span class="fl">20</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'EZbakRData'</span></span>
+<span><span class="fu">EstimateFractions</span><span class="op">(</span></span>
+<span>  <span class="va">obj</span>,</span>
+<span>  features <span class="op">=</span> <span class="st">"all"</span>,</span>
+<span>  mutrate_populations <span class="op">=</span> <span class="st">"all"</span>,</span>
+<span>  fraction_design <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  Poisson <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  strategy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"standard"</span>, <span class="st">"hierarchical"</span><span class="op">)</span>,</span>
+<span>  filter_cols <span class="op">=</span> <span class="st">"all"</span>,</span>
+<span>  filter_condition <span class="op">=</span> <span class="va">`&amp;`</span>,</span>
+<span>  remove_features <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"NA"</span>, <span class="st">"__no_feature"</span><span class="op">)</span>,</span>
+<span>  split_multi_features <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  multi_feature_cols <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  multi_feature_sep <span class="op">=</span> <span class="st">"+"</span>,</span>
+<span>  pnew_prior_mean <span class="op">=</span> <span class="op">-</span><span class="fl">2.94</span>,</span>
+<span>  pnew_prior_sd <span class="op">=</span> <span class="fl">0.3</span>,</span>
+<span>  pold_prior_mean <span class="op">=</span> <span class="op">-</span><span class="fl">6.5</span>,</span>
+<span>  pold_prior_sd <span class="op">=</span> <span class="fl">0.5</span>,</span>
+<span>  hier_readcutoff <span class="op">=</span> <span class="fl">300</span>,</span>
+<span>  init_pnew_prior_sd <span class="op">=</span> <span class="fl">0.3</span>,</span>
+<span>  pnew_prior_sd_min <span class="op">=</span> <span class="fl">0.01</span>,</span>
+<span>  pnew_prior_sd_max <span class="op">=</span> <span class="fl">0.15</span>,</span>
+<span>  pold_est <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  pold_from_nolabel <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  grouping_factors <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  character_limit <span class="op">=</span> <span class="fl">20</span>,</span>
+<span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'EZbakRArrowData'</span></span>
+<span><span class="fu">EstimateFractions</span><span class="op">(</span></span>
+<span>  <span class="va">obj</span>,</span>
+<span>  features <span class="op">=</span> <span class="st">"all"</span>,</span>
+<span>  mutrate_populations <span class="op">=</span> <span class="st">"all"</span>,</span>
+<span>  fraction_design <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  Poisson <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  strategy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"standard"</span>, <span class="st">"hierarchical"</span><span class="op">)</span>,</span>
+<span>  filter_cols <span class="op">=</span> <span class="st">"all"</span>,</span>
+<span>  filter_condition <span class="op">=</span> <span class="va">`&amp;`</span>,</span>
+<span>  remove_features <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"NA"</span>, <span class="st">"__no_feature"</span><span class="op">)</span>,</span>
+<span>  split_multi_features <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  multi_feature_cols <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  multi_feature_sep <span class="op">=</span> <span class="st">"+"</span>,</span>
+<span>  pnew_prior_mean <span class="op">=</span> <span class="op">-</span><span class="fl">2.94</span>,</span>
+<span>  pnew_prior_sd <span class="op">=</span> <span class="fl">0.3</span>,</span>
+<span>  pold_prior_mean <span class="op">=</span> <span class="op">-</span><span class="fl">6.5</span>,</span>
+<span>  pold_prior_sd <span class="op">=</span> <span class="fl">0.5</span>,</span>
+<span>  hier_readcutoff <span class="op">=</span> <span class="fl">300</span>,</span>
+<span>  init_pnew_prior_sd <span class="op">=</span> <span class="fl">0.8</span>,</span>
+<span>  pnew_prior_sd_min <span class="op">=</span> <span class="fl">0.01</span>,</span>
+<span>  pnew_prior_sd_max <span class="op">=</span> <span class="fl">0.15</span>,</span>
+<span>  pold_est <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  pold_from_nolabel <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  grouping_factors <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  character_limit <span class="op">=</span> <span class="fl">20</span>,</span>
+<span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -288,6 +346,14 @@ numerical ID to distinguish the similar outputs.</p></dd>
 
 </dl></div>
     <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>An <code>EZbakRFractions</code> object, which is just an <code>EZbakRData</code> object
+with a "fractions" list element. This will include tables of fraction estimates
+(e.g., fraction of reads from the high T-to-C mutation rate population in a
+standard single-label s4U experiment; termed fraction_highTC in the table) for
+all features in all samples.</p>
+    </div>
+    <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p><code>EstimateFractions</code> uses mixture modeling to estimate the fraction of reads from
 each mutational population in your data, and this is done for each feature in your
@@ -317,6 +383,19 @@ modeling), then high T-to-C content mutation rates are estimated for each featur
 The global sample-wide estimates are used as an informative prior to increase the
 accuracy of this process by avoiding extreme estimates.</p></li>
 </ol></div>
+    <div class="section level2">
+    <h2 id="methods-by-class-">Methods (by class)<a class="anchor" aria-label="anchor" href="#methods-by-class-"></a></h2>
+
+<ul><li><p><code>EstimateFractions(EZbakRData)</code>: Method for class <strong>EZbakRData</strong>
+Estimates fractions using an entirely in memory object.</p></li>
+<li><p><code>EstimateFractions(EZbakRArrowData)</code>: Mehthod for class <strong>EZbakRArrowData</strong>
+This is an alternative to the fully in memory <strong>EZbakRData</strong> <code>EstimateFractions</code> method that can help
+with analyses of larger than RAM datasets. The provided "cB" is expected to be
+an on-disk Arrow Dataset. Furthermore, it is expected to be partitioned by the
+sample name, which will allow this method to read only a single-sample worth
+of data into memory at a time. This can significantly reduce RAM usage. Input
+object should be created with <code><a href="EZbakRArrowData.html">EZbakRArrowData()</a></code>.</p></li>
+</ul></div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>

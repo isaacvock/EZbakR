@@ -142,6 +142,36 @@ is thus interpreted as the percentage of labeled RNA/reads from labeled RNA
 disproportionately lost, relative to the equivalent unlabeled species.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Simulate data to analyze</span></span></span>
+<span class="r-in"><span><span class="va">simdata</span> <span class="op">&lt;-</span> <span class="fu"><a href="EZSimulate.html">EZSimulate</a></span><span class="op">(</span><span class="fl">30</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Create EZbakR input</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="EZbakRData.html">EZbakRData</a></span><span class="op">(</span><span class="va">simdata</span><span class="op">$</span><span class="va">cB</span>, <span class="va">simdata</span><span class="op">$</span><span class="va">metadf</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Estimate Fractions</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating mutation rates</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Summarizing data for feature(s) of interest</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Averaging out the nucleotide counts for improved efficiency</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating fractions</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Processing output</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Correct for dropout</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu">CorrectDropout</span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimated rates of dropout are:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    sample        pdo</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 1 sample1 0.26821608</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 2 sample2 0.01000000</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 3 sample3 0.13272591</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 4 sample4 0.01000000</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 5 sample5 0.01000000</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 6 sample6 0.06388398</span>
+<span class="r-in"><span></span></span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

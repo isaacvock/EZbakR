@@ -153,6 +153,29 @@ then kinetics table will be named <code>kinetics1</code></p></dd>
 <code>metadf</code> with class <code>EZbakRKinetics</code></p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Simulate data</span></span></span>
+<span class="r-in"><span><span class="va">simdata</span> <span class="op">&lt;-</span> <span class="fu"><a href="EZSimulate.html">EZSimulate</a></span><span class="op">(</span><span class="fl">30</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Get kinetics table by estimating (for demonstration)</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="EZbakRData.html">EZbakRData</a></span><span class="op">(</span><span class="va">simdata</span><span class="op">$</span><span class="va">cB</span>, <span class="va">simdata</span><span class="op">$</span><span class="va">metadf</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating mutation rates</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Summarizing data for feature(s) of interest</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Averaging out the nucleotide counts for improved efficiency</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating fractions</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Processing output</span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="EstimateKinetics.html">EstimateKinetics</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">kinetics</span> <span class="op">&lt;-</span> <span class="fu"><a href="EZget.html">EZget</a></span><span class="op">(</span><span class="va">ezbdo</span>, type <span class="op">=</span> <span class="st">"kinetics"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Create EZbakRKinetics object</span></span></span>
+<span class="r-in"><span><span class="va">ezbko</span> <span class="op">&lt;-</span> <span class="fu">EZbakRKinetics</span><span class="op">(</span><span class="va">kinetics</span>, <span class="va">simdata</span><span class="op">$</span><span class="va">metadf</span>, features <span class="op">=</span> <span class="st">"feature"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Kinetic parameter estimates missing corresponding uncertainty</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>           quantification will have an imputed uncertainty of 0.</span>
+<span class="r-in"><span></span></span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

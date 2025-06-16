@@ -121,6 +121,34 @@ to specify a feature subset.</p></dd>
     <p>A list of <code>ggplot2</code> objects, one for each +label sample.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Simulate data to analyze</span></span></span>
+<span class="r-in"><span><span class="va">simdata</span> <span class="op">&lt;-</span> <span class="fu"><a href="EZSimulate.html">EZSimulate</a></span><span class="op">(</span><span class="fl">30</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Create EZbakR input</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="EZbakRData.html">EZbakRData</a></span><span class="op">(</span><span class="va">simdata</span><span class="op">$</span><span class="va">cB</span>, <span class="va">simdata</span><span class="op">$</span><span class="va">metadf</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Estimate Fractions</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating mutation rates</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Summarizing data for feature(s) of interest</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Averaging out the nucleotide counts for improved efficiency</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating fractions</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Processing output</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Visualize Dropout</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu">VisualizeDropout</span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Making plot for sample sample1...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Making plot for sample sample2...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Making plot for sample sample3...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Making plot for sample sample4...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Making plot for sample sample5...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Making plot for sample sample6...</span>
+<span class="r-in"><span></span></span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

@@ -66,6 +66,32 @@ be altered using the arguments defined below.</p>
 <span>  pold_est <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  pold_from_nolabel <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  grouping_factors <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'EZbakRData'</span></span>
+<span><span class="fu">EstimateMutRates</span><span class="op">(</span></span>
+<span>  <span class="va">obj</span>,</span>
+<span>  populations <span class="op">=</span> <span class="st">"all"</span>,</span>
+<span>  pnew_prior_mean <span class="op">=</span> <span class="op">-</span><span class="fl">2.94</span>,</span>
+<span>  pnew_prior_sd <span class="op">=</span> <span class="fl">0.3</span>,</span>
+<span>  pold_prior_mean <span class="op">=</span> <span class="op">-</span><span class="fl">6.5</span>,</span>
+<span>  pold_prior_sd <span class="op">=</span> <span class="fl">0.5</span>,</span>
+<span>  pold_est <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  pold_from_nolabel <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  grouping_factors <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'EZbakRArrowData'</span></span>
+<span><span class="fu">EstimateMutRates</span><span class="op">(</span></span>
+<span>  <span class="va">obj</span>,</span>
+<span>  populations <span class="op">=</span> <span class="st">"all"</span>,</span>
+<span>  pnew_prior_mean <span class="op">=</span> <span class="op">-</span><span class="fl">2.94</span>,</span>
+<span>  pnew_prior_sd <span class="op">=</span> <span class="fl">0.3</span>,</span>
+<span>  pold_prior_mean <span class="op">=</span> <span class="op">-</span><span class="fl">6.5</span>,</span>
+<span>  pold_prior_sd <span class="op">=</span> <span class="fl">0.5</span>,</span>
+<span>  pold_est <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  pold_from_nolabel <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  grouping_factors <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -119,6 +145,19 @@ rates in each group of -label samples will be used as the background mutation ra
 +label samples with the same values for the relevant metadf columns.</p></dd>
 
 </dl></div>
+    <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p><code>EZbakRData</code> object with an added <code>mutrates</code> slot containing estimated
+high and low mutation rates for each mutation type modeled.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="methods-by-class-">Methods (by class)<a class="anchor" aria-label="anchor" href="#methods-by-class-"></a></h2>
+
+<ul><li><p><code>EstimateMutRates(EZbakRData)</code>: Method for class <strong>EZbakRData</strong>
+Estimates mutation rates using a fully in memory object.</p></li>
+<li><p><code>EstimateMutRates(EZbakRArrowData)</code>: Method for class <strong>EZbakRArrowData</strong>
+Estimate mutation rates using a partially on-disk object.</p></li>
+</ul></div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>

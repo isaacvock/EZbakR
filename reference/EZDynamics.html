@@ -367,6 +367,62 @@ to run, depending on how complex your model is and how many distinct set of samp
 and experimental conditions you have.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">##### MODELING CYTOPLASMIC TO NUCLEAR FLOW</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">### Simulate data and get replicate average fractions estimates</span></span></span>
+<span class="r-in"><span><span class="va">simdata</span> <span class="op">&lt;-</span> <span class="fu"><a href="EZSimulate.html">EZSimulate</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  nfeatures <span class="op">=</span> <span class="fl">30</span>,</span></span>
+<span class="r-in"><span>  ntreatments <span class="op">=</span> <span class="fl">1</span>,</span></span>
+<span class="r-in"><span>  mode <span class="op">=</span> <span class="st">"dynamics"</span>,</span></span>
+<span class="r-in"><span>  label_time <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">3</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  dynamics_preset <span class="op">=</span> <span class="st">"nuc2cyto"</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="EZbakRData.html">EZbakRData</a></span><span class="op">(</span><span class="va">simdata</span><span class="op">$</span><span class="va">cB</span>, <span class="va">simdata</span><span class="op">$</span><span class="va">metadf</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating mutation rates</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Summarizing data for feature(s) of interest</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Averaging out the nucleotide counts for improved efficiency</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating fractions</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Processing output</span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="AverageAndRegularize.html">AverageAndRegularize</a></span><span class="op">(</span><span class="va">ezbdo</span>,</span></span>
+<span class="r-in"><span>                              formula_mean <span class="op">=</span> <span class="op">~</span><span class="va">tl</span><span class="op">:</span><span class="va">compartment</span> <span class="op">-</span> <span class="fl">1</span>,</span></span>
+<span class="r-in"><span>                              type <span class="op">=</span> <span class="st">"fractions"</span>,</span></span>
+<span class="r-in"><span>                              parameter <span class="op">=</span> <span class="st">"logit_fraction_highTC"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Fitting linear model</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating coverage vs. variance trend</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Regularizing variance estimates</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">### ODE model: the graph and measured species</span></span></span>
+<span class="r-in"><span><span class="va">graph</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span>,</span></span>
+<span class="r-in"><span>                  <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">2</span>,</span></span>
+<span class="r-in"><span>                  <span class="fl">3</span>, <span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                nrow <span class="op">=</span> <span class="fl">3</span>,</span></span>
+<span class="r-in"><span>                ncol <span class="op">=</span> <span class="fl">3</span>,</span></span>
+<span class="r-in"><span>                byrow <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">graph</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"0"</span>, <span class="st">"N"</span>, <span class="st">"C"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">graph</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">graph</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">modeled_to_measured</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  nuclear <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">GF</span> <span class="op">~</span> <span class="va">N</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  cytoplasm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">GF</span> <span class="op">~</span> <span class="va">C</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  total <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">GF</span> <span class="op">~</span> <span class="va">C</span> <span class="op">+</span> <span class="va">N</span><span class="op">)</span> <span class="co"># total RNA is a combination of C and N</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">### Fit model</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu">EZDynamics</span><span class="op">(</span><span class="va">ezbdo</span>,</span></span>
+<span class="r-in"><span>                    graph <span class="op">=</span> <span class="va">graph</span>,</span></span>
+<span class="r-in"><span>                    sub_features <span class="op">=</span> <span class="st">"GF"</span>,</span></span>
+<span class="r-in"><span>                    grouping_features <span class="op">=</span> <span class="st">"GF"</span>,</span></span>
+<span class="r-in"><span>                    sample_feature <span class="op">=</span> <span class="st">"compartment"</span>,</span></span>
+<span class="r-in"><span>                    modeled_to_measured <span class="op">=</span> <span class="va">ode_models</span><span class="op">$</span><span class="va">nuc2cyto</span><span class="op">$</span><span class="va">formulas</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span></span></span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

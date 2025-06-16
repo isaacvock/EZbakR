@@ -302,6 +302,54 @@ to use (e.g., <code><a href="EstimateKinetics.html">EstimateKinetics()</a></code
 etc.).</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Simulate data to analyze</span></span></span>
+<span class="r-in"><span><span class="va">simdata</span> <span class="op">&lt;-</span> <span class="fu"><a href="EZSimulate.html">EZSimulate</a></span><span class="op">(</span><span class="fl">30</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Create EZbakR input</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="EZbakRData.html">EZbakRData</a></span><span class="op">(</span><span class="va">simdata</span><span class="op">$</span><span class="va">cB</span>, <span class="va">simdata</span><span class="op">$</span><span class="va">metadf</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Estimate Fractions</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating mutation rates</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Summarizing data for feature(s) of interest</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Averaging out the nucleotide counts for improved efficiency</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating fractions</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Processing output</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Estimate Kinetics</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="EstimateKinetics.html">EstimateKinetics</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Average log(kdeg) estimates across replicate</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="AverageAndRegularize.html">AverageAndRegularize</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Fitting linear model</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating coverage vs. variance trend</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Regularizing variance estimates</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">#' # Average log(ksyn) estimates across replicate</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="AverageAndRegularize.html">AverageAndRegularize</a></span><span class="op">(</span><span class="va">ezbdo</span>, parameter <span class="op">=</span> <span class="st">"log_ksyn"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Fitting linear model</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating coverage vs. variance trend</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Regularizing variance estimates</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Compare log(kdeg) across conditions</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="CompareParameters.html">CompareParameters</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span>,</span></span>
+<span class="r-in"><span>design_factor <span class="op">=</span> <span class="st">"treatment"</span>,</span></span>
+<span class="r-in"><span>reference <span class="op">=</span> <span class="st">"treatment1"</span>,</span></span>
+<span class="r-in"><span>experimental <span class="op">=</span> <span class="st">"treatment2"</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Get the one and only fractions object</span></span></span>
+<span class="r-in"><span><span class="va">fxns</span> <span class="op">&lt;-</span> <span class="fu">EZget</span><span class="op">(</span><span class="va">ezbdo</span>, type <span class="op">=</span> <span class="st">"fractions"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Get the log(ksyn) averages table</span></span></span>
+<span class="r-in"><span><span class="va">ksyn_avg</span> <span class="op">&lt;-</span> <span class="fu">EZget</span><span class="op">(</span><span class="va">ezbdo</span>, type <span class="op">=</span> <span class="st">"averages"</span>, parameter <span class="op">=</span> <span class="st">"log_ksyn"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

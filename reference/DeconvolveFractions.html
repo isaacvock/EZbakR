@@ -192,6 +192,55 @@ counts less than <code>count_min</code> (10 by default) are removed from convolv
 not have their fraction news estimated.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Load dependencies</span></span></span>
+<span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Attaching package: ‘dplyr’</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The following objects are masked from ‘package:stats’:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     filter, lag</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The following objects are masked from ‘package:base’:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     intersect, setdiff, setequal, union</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Simulates a single sample worth of data</span></span></span>
+<span class="r-in"><span><span class="va">simdata_iso</span> <span class="op">&lt;-</span> <span class="fu"><a href="SimulateIsoforms.html">SimulateIsoforms</a></span><span class="op">(</span>nfeatures <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># We have to manually create the metadf in this case</span></span></span>
+<span class="r-in"><span><span class="va">metadf</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span>sample <span class="op">=</span> <span class="st">'sampleA'</span>,</span></span>
+<span class="r-in"><span>                     tl <span class="op">=</span> <span class="fl">4</span>,</span></span>
+<span class="r-in"><span>                     condition <span class="op">=</span> <span class="st">'A'</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="EZbakRData.html">EZbakRData</a></span><span class="op">(</span><span class="va">simdata_iso</span><span class="op">$</span><span class="va">cB</span>,</span></span>
+<span class="r-in"><span>                    <span class="va">metadf</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating mutation rates</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Summarizing data for feature(s) of interest</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Averaging out the nucleotide counts for improved efficiency</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating fractions</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Processing output</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">### Hack in the true, simulated isoform levels</span></span></span>
+<span class="r-in"><span><span class="va">reads</span> <span class="op">&lt;-</span> <span class="va">simdata_iso</span><span class="op">$</span><span class="va">ground_truth</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span></span>
+<span class="r-in"><span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">transcript_id</span>, <span class="va">true_count</span>, <span class="va">true_TPM</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span></span>
+<span class="r-in"><span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>sample <span class="op">=</span> <span class="st">'sampleA'</span>,</span></span>
+<span class="r-in"><span>                effective_length <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span></span>
+<span class="r-in"><span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/rename.html" class="external-link">rename</a></span><span class="op">(</span>expected_count <span class="op">=</span> <span class="va">true_count</span>,</span></span>
+<span class="r-in"><span>                TPM <span class="op">=</span> <span class="va">true_TPM</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Name of table needs to have "isoform_quant" in it</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span><span class="op">[[</span><span class="st">'readcounts'</span><span class="op">]</span><span class="op">]</span><span class="op">[[</span><span class="st">'simulated_isoform_quant'</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">reads</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">### Perform deconvolution</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu">DeconvolveFractions</span><span class="op">(</span><span class="va">ezbdo</span>, feature_type <span class="op">=</span> <span class="st">"isoform"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Analyzing sample sampleA...</span>
+<span class="r-in"><span></span></span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

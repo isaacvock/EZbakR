@@ -115,6 +115,78 @@ physiological impacts of metabolic labeling.</p></li>
 correlation between replicates, as inferred from your <code>metadf</code>.</p></li>
 </ul></div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Simulate data to analyze</span></span></span>
+<span class="r-in"><span><span class="va">simdata</span> <span class="op">&lt;-</span> <span class="fu"><a href="EZSimulate.html">EZSimulate</a></span><span class="op">(</span><span class="fl">30</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Create EZbakR input</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="EZbakRData.html">EZbakRData</a></span><span class="op">(</span><span class="va">simdata</span><span class="op">$</span><span class="va">cB</span>, <span class="va">simdata</span><span class="op">$</span><span class="va">metadf</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Estimate Fractions</span></span></span>
+<span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating mutation rates</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Summarizing data for feature(s) of interest</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Averaging out the nucleotide counts for improved efficiency</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating fractions</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Processing output</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Run QC</span></span></span>
+<span class="r-in"><span><span class="va">QC</span> <span class="op">&lt;-</span> <span class="fu">EZQC</span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> CHECKING RAW MUTATION RATES...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> CHECKING INFERRED MUTATION RATES...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> CHECKING READ COUNT CORRELATIONS...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> log10(read counts) correlation for each pair of replicates are:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 12 × 3</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    sample_1 sample_2 correlation</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 1</span> sample1  sample2        0.990</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 2</span> sample1  sample3        0.994</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 3</span> sample1  sample7        0.987</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 4</span> sample2  sample3        0.984</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 5</span> sample2  sample7        0.981</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 6</span> sample3  sample7        0.987</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 7</span> sample4  sample5        0.986</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 8</span> sample4  sample6        0.986</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 9</span> sample4  sample8        0.991</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">10</span> sample5  sample6        0.988</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">11</span> sample5  sample8        0.985</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">12</span> sample6  sample8        0.991</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> log10(read counts) correlations are high, suggesting good reproducibility!</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> CHECKING FRACTION LABELED DISTRIBUTIONS...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Average fractions for each sample are:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 6 × 3</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   sample  avg_fraction fraction_type  </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> sample1        0.276 fraction_highTC</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> sample2        0.288 fraction_highTC</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span> sample3        0.274 fraction_highTC</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span> sample4        0.279 fraction_highTC</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span> sample5        0.270 fraction_highTC</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span> sample6        0.282 fraction_highTC</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Labeling rates (e.g., fraction labeled for single label experiments) look good!</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> CHECKING FRACTION LABELED CORRELATIONS...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> logit(fraction_highTC) correlation for each pair of replicates are:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 6 × 3</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   sample_1 sample_2 correlation</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> sample1  sample2        0.930</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> sample1  sample3        0.967</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span> sample2  sample3        0.931</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span> sample4  sample5        0.924</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span> sample4  sample6        0.913</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span> sample5  sample6        0.930</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> logit(fraction_highTC) correlations are high, suggesting good reproducibility!</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 
