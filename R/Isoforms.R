@@ -24,6 +24,40 @@
 #' @return An `EZbakRData` object with an additional element in the `readcounts`
 #' list named "isform_quant_<quant_tool>". It contains TPM, expected_count,
 #' and effective length information for each transcript_id and each sample.
+#' @examples
+#'
+#' # Dependencies for example
+#' library(dplyr)
+#' library(data.table)
+#'
+#' # Simulate and analyze data
+#' simdata <- EZSimulate(30)
+#' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+#' ezbdo <- EstimateFractions(ezbdo)
+#'
+#' # Hack to generate example quantification files
+#' savedir <- tempdir()
+#' rsem_data <- tibble(
+#'   transcript_id = paste0("tscript_feature", 1:30),
+#'   gene_id = paste0("feature", 1:30),
+#'   length = 1000,
+#'   effective_length = 1000,
+#'   expected_count = 1000,
+#'   TPM = 10,
+#'   FPKM = 10,
+#'   IsoPct = 1
+#' )
+#'
+#' fwrite(rsem_data, file.path(savedir, "Sample_1.isoforms.results"), sep = '\t')
+#'
+#' files <- file.path(savedir,"Sample_1.isoforms.results")
+#' names(files) <- "Sample_1"
+#'
+#' # Read in file
+#' ezbdo <- ImportIsoformQuant(ezbdo, files, quant_tool = "rsem")
+#'
+#'
+#'
 #' @export
 ImportIsoformQuant <- function(obj, files,
                                quant_tool = c("none", "salmon", "sailfish",

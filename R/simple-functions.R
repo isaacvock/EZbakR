@@ -8,6 +8,11 @@
 #' @param rlen Length of simulated reads
 #' @param Ucont Fraction of nucleotides in simulated reads that are Ts (U in RNA)
 #' @importFrom magrittr %>%
+#' @examples
+#'
+#' # Simulate 1 gene worth of data data
+#' simdata <- SimpleSim()
+#'
 #' @export
 SimpleSim <- function(nreads = 1000, fn = 0.5,
                       pnew = 0.05, pold = 0.001,

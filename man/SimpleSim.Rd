@@ -30,3 +30,9 @@ be new will be determined by a draw from a Bernoulli(fn) distribution.}
 \description{
 Simple simulation function
 }
+\examples{
+
+# Simulate 1 gene worth of data data
+simdata <- SimpleSim()
+
+}
