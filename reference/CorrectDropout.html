@@ -52,6 +52,7 @@ in <a href="https://academic.oup.com/nar/article/52/7/e35/7612100" class="extern
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">CorrectDropout</span><span class="op">(</span></span>
 <span>  <span class="va">obj</span>,</span>
+<span>  strategy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"grandR"</span>, <span class="st">"bakR"</span><span class="op">)</span>,</span>
 <span>  grouping_factors <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  features <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  populations <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -70,6 +71,21 @@ in <a href="https://academic.oup.com/nar/article/52/7/e35/7612100" class="extern
 <dl><dt id="arg-obj">obj<a class="anchor" aria-label="anchor" href="#arg-obj"></a></dt>
 <dd><p>An EZbakRFractions object, which is an EZbakRData object on which
 you have run <code><a href="EstimateFractions.html">EstimateFractions()</a></code>.</p></dd>
+
+
+<dt id="arg-strategy">strategy<a class="anchor" aria-label="anchor" href="#arg-strategy"></a></dt>
+<dd><p>Which dropout correction strategy to use. Options are:</p><ul><li><p>grandR: Described <a href="https://academic.oup.com/nar/article/52/7/e35/7612100" class="external-link">here</a>.
+Cite that work and <a href="https://www.nature.com/articles/s41467-023-39163-4" class="external-link">grandR</a> if using this strategy. Quasi-non-parametric strategy
+that finds an estimate of the dropout rate that eliminates any linear correlation
+between the newness of a transcript and the difference in +s4U and -s4U normalized
+read counts.</p></li>
+<li><p>bakR: Described <a href="https://simonlabcode.github.io/bakR/articles/Dropout.html" class="external-link">here</a>.
+Uses a simple generative model of dropout to derive a likelihood function, and the
+dropout rate is estimated via the method of maximum likelihood.</p></li>
+</ul><p>The "bakR" strategy has the advantage of being model-derived, making it possible
+to assess model fit and thus whether the simple assumptions of both the "bakR"
+and "grandR" dropout models are met. The "grandR" strategy has the advantage of
+being more robust. Thus, the "grandR" strategy is currently used by default.</p></dd>
 
 
 <dt id="arg-grouping-factors">grouping_factors<a class="anchor" aria-label="anchor" href="#arg-grouping-factors"></a></dt>
@@ -162,13 +178,13 @@ disproportionately lost, relative to the equivalent unlabeled species.</p>
 <span class="r-in"><span><span class="co"># Correct for dropout</span></span></span>
 <span class="r-in"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu">CorrectDropout</span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Estimated rates of dropout are:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>    sample        pdo</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 1 sample1 0.26821608</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 2 sample2 0.01000000</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 3 sample3 0.13272591</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 4 sample4 0.01000000</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 5 sample5 0.01000000</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 6 sample6 0.06388398</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    sample       pdo</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 1 sample1 0.0100000</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 2 sample2 0.0100000</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 3 sample3 0.0100000</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 4 sample4 0.3799101</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 5 sample5 0.4072284</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 6 sample6 0.4034133</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

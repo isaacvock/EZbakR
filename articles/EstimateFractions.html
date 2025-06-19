@@ -454,26 +454,37 @@ address these two challenges.</p>
 <h3 id="correcting-for-dropout">Correcting for dropout<a class="anchor" aria-label="anchor" href="#correcting-for-dropout"></a>
 </h3>
 <p>If you have -label data to compare to, EZbakR can use this data to
-quantify and correct for dropout. The strategy used by EZbakR is
-identical to that previously implemented in bakR. You can read more
-about the mathematical details of this strategy <a href="https://simonlabcode.github.io/bakR/articles/Dropout.html" class="external-link">here</a>.
-To implement dropout correction, run <code><a href="../reference/CorrectDropout.html">CorrectDropout()</a></code>,
+quantify and correct for dropout. Currently, the default strategy used
+by EZbakR is similar to that implemented in <a href="https://www.nature.com/articles/s41467-023-39163-4" class="external-link">grandR</a> and
+originally described <a href="https://academic.oup.com/nar/article/52/7/e35/7612100" class="external-link">here</a>.
+Alternatively, EZbakR also implements that previously implemented in
+bakR.</p>
+<p>Internal benchmarks suggest that that grandR strategy is a bit
+conservative (overestimates dropout) but more robust than the bakR
+strategy. The bakR strategy has the advantage of being explicitly
+derived from a particular generative model of dropout (details <a href="(https://simonlabcode.github.io/bakR/articles/Dropout.html)" class="external-link">here</a>),
+allowing for things like model fit assessment. This sort of
+functionality is currently not implemented in EZbakR though, so I have
+chosen to default to the grandR strategy for now.</p>
+<p>To implement dropout correction, run <code><a href="../reference/CorrectDropout.html">CorrectDropout()</a></code>,
 specifying which metadf sample characteristic columns should be used to
 associate -label and +label samples:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/CorrectDropout.html">CorrectDropout</a></span><span class="op">(</span><span class="va">ezbdo</span>, </span>
 <span>                        grouping_factors <span class="op">=</span> <span class="st">"treatment"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Estimated rates of dropout are:</span></span>
-<span><span class="co">#&gt;    sample        pdo</span></span>
-<span><span class="co">#&gt; 1 sample1 0.03318047</span></span>
-<span><span class="co">#&gt; 2 sample2 0.05441552</span></span>
-<span><span class="co">#&gt; 3 sample3 0.01149796</span></span>
-<span><span class="co">#&gt; 4 sample4 0.06025934</span></span></code></pre></div>
+<span><span class="co">#&gt;    sample  pdo</span></span>
+<span><span class="co">#&gt; 1 sample1 0.01</span></span>
+<span><span class="co">#&gt; 2 sample2 0.01</span></span>
+<span><span class="co">#&gt; 3 sample3 0.01</span></span>
+<span><span class="co">#&gt; 4 sample4 0.01</span></span></code></pre></div>
 <p><code>grouping_factors</code> is technically not a required argument,
 as EZbakR will try to infer it automatically. EZbakR assumes that all
 metadf sample characteristic columns should be used for grouping though,
-so its important to know that this default can be altered as
-necessary.</p>
+so its important to know that this default can be altered as necessary.
+To alter the correction strategy, set the <code>strategy</code>
+parameter of <code><a href="../reference/CorrectDropout.html">CorrectDropout()</a></code> (options being “grandR” and
+“bakR”).</p>
 </div>
 <div class="section level3">
 <h3 id="inferring-background-mutation-rates-from--label-data">Inferring background mutation rates from -label data<a class="anchor" aria-label="anchor" href="#inferring-background-mutation-rates-from--label-data"></a>
