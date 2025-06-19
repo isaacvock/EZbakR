@@ -6,6 +6,7 @@
 \usage{
 CorrectDropout(
   obj,
+  strategy = c("grandR", "bakR"),
   grouping_factors = NULL,
   features = NULL,
   populations = NULL,
@@ -19,6 +20,22 @@ CorrectDropout(
 \arguments{
 \item{obj}{An EZbakRFractions object, which is an EZbakRData object on which
 you have run \code{EstimateFractions()}.}
+
+\item{strategy}{Which dropout correction strategy to use. Options are:
+\itemize{
+\item grandR: Described \href{https://academic.oup.com/nar/article/52/7/e35/7612100}{here}.
+Cite that work and \href{https://www.nature.com/articles/s41467-023-39163-4}{grandR} if using this strategy. Quasi-non-parametric strategy
+that finds an estimate of the dropout rate that eliminates any linear correlation
+between the newness of a transcript and the difference in +s4U and -s4U normalized
+read counts.
+\item bakR: Described \href{https://simonlabcode.github.io/bakR/articles/Dropout.html}{here}.
+Uses a simple generative model of dropout to derive a likelihood function, and the
+dropout rate is estimated via the method of maximum likelihood.
+}
+The "bakR" strategy has the advantage of being model-derived, making it possible
+to assess model fit and thus whether the simple assumptions of both the "bakR"
+and "grandR" dropout models are met. The "grandR" strategy has the advantage of
+being more robust. Thus, the "grandR" strategy is currently used by default.}
 
 \item{grouping_factors}{Which sample-detail columns in the metadf should be used
 to group -s4U samples by for calculating the average -s4U RPM? The default value of

@@ -1208,17 +1208,7 @@ get_table_name <- function(obj, tabletype,
 # PRINT METHOD
 ######
 
-#' Print method for `EZbakRData` objects
-#'
-#' @param x An `EZbakRData` object.
-#' @param max_name_chars Maximum number of characters to print on each line
-#' @param ... Ignored
-#' @method print EZbakRData
-#' @export
-print.EZbakRData <- function(x,
-                             max_name_chars = 60,
-                             ...){
-
+ezprint <- function(x, max_name_chars, arrow = FALSE){
 
   elements <- names(x)
 
@@ -1255,7 +1245,12 @@ print.EZbakRData <- function(x,
   analyses_df <- element_df[-c(1, 2),]
 
   astring <- ifelse(nrow(analyses_df) == 1, "analysis", "analyses")
-  cat(sprintf("EZbakRData object with %d %s of %d samples\n", nrow(analyses_df), astring, nrow(x$metadf)))
+
+  if(arrow){
+    cat(sprintf("EZbakRArrowData object with %d %s of %d samples\n", nrow(analyses_df), astring, nrow(x$metadf)))
+  }else{
+    cat(sprintf("EZbakRData object with %d %s of %d samples\n", nrow(analyses_df), astring, nrow(x$metadf)))
+  }
 
 
   if(nrow(analyses_df) > 0){
@@ -1280,6 +1275,41 @@ print.EZbakRData <- function(x,
     }
 
   }
+
+}
+
+#' Print method for `EZbakRData` objects
+#'
+#' @param x An `EZbakRData` object.
+#' @param max_name_chars Maximum number of characters to print on each line
+#' @param ... Ignored
+#' @method print EZbakRData
+#' @export
+print.EZbakRData <- function(x,
+                             max_name_chars = 60,
+                             ...){
+
+
+  ezprint(x, max_name_chars, FALSE)
+
+
+}
+
+
+
+#' Print method for `EZbakRArrowData` objects
+#'
+#' @param x An `EZbakRArrowData` object.
+#' @param max_name_chars Maximum number of characters to print on each line
+#' @param ... Ignored
+#' @method print EZbakRArrowData
+#' @export
+print.EZbakRArrowData <- function(x,
+                             max_name_chars = 60,
+                             ...){
+
+
+  ezprint(x, max_name_chars, arrow = TRUE)
 
 
 }

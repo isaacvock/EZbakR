@@ -179,7 +179,6 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   }
 
-
   ### Hack to deal with devtools::check() NOTEs
   n <- log_normalized_reads <- logse <- logse_from_uncert <- replicates <- NULL
   coverage <- se_mean <- se_logse <- coverages <- parameters <- normalized_reads <- NULL
