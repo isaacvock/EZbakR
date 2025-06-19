@@ -6,7 +6,7 @@
 \usage{
 VisualizeDropout(
   obj,
-  plot_type = c("bakR", "grandR"),
+  plot_type = c("grandR", "bakR"),
   grouping_factors = NULL,
   features = NULL,
   populations = NULL,

@@ -21,19 +21,19 @@
 #' you have run `EstimateFractions()`.
 #' @param strategy Which dropout correction strategy to use. Options are:
 #' \itemize{
-#'  \item bakR: Described [here](https://simonlabcode.github.io/bakR/articles/Dropout.html).
-#'  Uses a simple generative model of dropout to derive a likelihood function, and the
-#'  dropout rate is estimated via the method of maximum likelihood.
 #'  \item grandR: Described [here](https://academic.oup.com/nar/article/52/7/e35/7612100).
 #'  Cite that work and [grandR](https://www.nature.com/articles/s41467-023-39163-4) if using this strategy. Quasi-non-parametric strategy
 #'  that finds an estimate of the dropout rate that eliminates any linear correlation
 #'  between the newness of a transcript and the difference in +s4U and -s4U normalized
 #'  read counts.
+#'  \item bakR: Described [here](https://simonlabcode.github.io/bakR/articles/Dropout.html).
+#'  Uses a simple generative model of dropout to derive a likelihood function, and the
+#'  dropout rate is estimated via the method of maximum likelihood.
 #' }
 #' The "bakR" strategy has the advantage of being model-derived, making it possible
 #' to assess model fit and thus whether the simple assumptions of both the "bakR"
 #' and "grandR" dropout models are met. The "grandR" strategy has the advantage of
-#' being a bit more robust.
+#' being more robust. Thus, the "grandR" strategy is currently used by default.
 #' @param grouping_factors Which sample-detail columns in the metadf should be used
 #' to group -s4U samples by for calculating the average -s4U RPM? The default value of
 #' `NULL` will cause all sample-detail columns to be used.
@@ -77,7 +77,7 @@
 #' @importFrom magrittr %>%
 #' @export
 CorrectDropout <- function(obj,
-                           strategy = c("bakR", "grandR"),
+                           strategy = c("grandR", "bakR"),
                            grouping_factors = NULL,
                            features = NULL,
                            populations = NULL,
@@ -265,7 +265,7 @@ CorrectDropout <- function(obj,
 #' @return A list of `ggplot2` objects, one for each +label sample.
 #' @export
 VisualizeDropout <- function(obj,
-                             plot_type = c("bakR", "grandR"),
+                             plot_type = c("grandR", "bakR"),
                              grouping_factors = NULL,
                              features = NULL,
                              populations = NULL,
@@ -878,7 +878,7 @@ dropout_likelihood <- function(param, dropout, theta, sig, nolabel_rpm, n, ranks
 
     new_dropout <- log(new_label_rpm) - log(nolabel_rpm)
 
-    return(abs(cor(ranks, new_dropout)))
+    return(abs(stats::cor(ranks, new_dropout)))
 
   }
 
