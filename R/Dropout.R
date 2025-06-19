@@ -19,6 +19,21 @@
 #'
 #' @param obj An EZbakRFractions object, which is an EZbakRData object on which
 #' you have run `EstimateFractions()`.
+#' @param strategy Which dropout correction strategy to use. Options are:
+#' \itemize{
+#'  \item bakR: Described [here](https://simonlabcode.github.io/bakR/articles/Dropout.html).
+#'  Uses a simple generative model of dropout to derive a likelihood function, and the
+#'  dropout rate is estimated via the method of maximum likelihood.
+#'  \item grandR: Described [here](https://academic.oup.com/nar/article/52/7/e35/7612100).
+#'  Cite that work and [grandR](https://www.nature.com/articles/s41467-023-39163-4) if using this strategy. Quasi-non-parametric strategy
+#'  that finds an estimate of the dropout rate that eliminates any linear correlation
+#'  between the newness of a transcript and the difference in +s4U and -s4U normalized
+#'  read counts.
+#' }
+#' The "bakR" strategy has the advantage of being model-derived, making it possible
+#' to assess model fit and thus whether the simple assumptions of both the "bakR"
+#' and "grandR" dropout models are met. The "grandR" strategy has the advantage of
+#' being a bit more robust.
 #' @param grouping_factors Which sample-detail columns in the metadf should be used
 #' to group -s4U samples by for calculating the average -s4U RPM? The default value of
 #' `NULL` will cause all sample-detail columns to be used.
@@ -62,6 +77,7 @@
 #' @importFrom magrittr %>%
 #' @export
 CorrectDropout <- function(obj,
+                           strategy = c("bakR", "grandR"),
                            grouping_factors = NULL,
                            features = NULL,
                            populations = NULL,
@@ -71,6 +87,7 @@ CorrectDropout <- function(obj,
                            read_cutoff = 25,
                            dropout_cutoff = 5){
 
+  strategy <- match.arg(strategy)
 
   ### Hack to deal with devtools::check() NOTEs
 
@@ -134,7 +151,11 @@ CorrectDropout <- function(obj,
         dropout_likelihood,
         theta = !!dplyr::sym(fraction_of_interest),
         dropout = dropout,
+        n = n,
+        nolabel_rpm = nolabel_rpm,
         sig = sig,
+        ranks = rank(!!dplyr::sym(fraction_of_interest)),
+        strategy = strategy,
         method = "L-BFGS-B",
         upper = c(0.99, 100),
         lower = c(0.01, 1) # Scale factor can't be < 1 because -s4U molecule count > +s4U molecule count
@@ -200,6 +221,11 @@ CorrectDropout <- function(obj,
 #'
 #' @param obj An EZbakRFractions object, which is an EZbakRData object on which
 #' you have run `EstimateFractions()`.
+#' @param plot_type Which type of plot to make. Options are:
+#' \itemize{
+#'  \item bakR: X-axis is fraction new (a.k.a. NTR) and Y-axis is dropout (no label n / label n)
+#'  \item grandR: X-axis is fraction new rank (a.k.a. NTR rank) and Y-axis is log(dropout)
+#' }
 #' @param grouping_factors Which sample-detail columns in the metadf should be used
 #' to group -s4U samples by for calculating the average -s4U RPM? The default value of
 #' `NULL` will cause all sample-detail columns to be used.
@@ -239,6 +265,7 @@ CorrectDropout <- function(obj,
 #' @return A list of `ggplot2` objects, one for each +label sample.
 #' @export
 VisualizeDropout <- function(obj,
+                             plot_type = c("bakR", "grandR"),
                              grouping_factors = NULL,
                              features = NULL,
                              populations = NULL,
@@ -247,6 +274,8 @@ VisualizeDropout <- function(obj,
                              exactMatch = TRUE,
                              n_min = 50){
 
+
+  plot_type = match.arg(plot_type)
 
   ### Hack to deal with devtools::check() NOTEs
 
@@ -310,32 +339,66 @@ VisualizeDropout <- function(obj,
 
     message(paste0("Making plot for sample ", samps[s], "..."))
 
-    plot_list[[s]] <- dropout_df %>%
-      dplyr::filter(sample == samps[s] &
-                      n > n_min) %>%
-      dplyr::mutate(
-        point_density = get_density(
-          x = !!dplyr::sym(fraction_of_interest),
-          y = dropout,
-          n = 200
-        )
-      ) %>%
-      ggplot2::ggplot(
-        ggplot2::aes(x = !!dplyr::sym(fraction_of_interest),
+    if(plot_type == "bakR"){
+
+      plot_list[[s]] <- dropout_df %>%
+        dplyr::filter(sample == samps[s] &
+                        n > n_min) %>%
+        dplyr::mutate(
+          point_density = get_density(
+            x = !!dplyr::sym(fraction_of_interest),
             y = dropout,
-            color = point_density)
-      ) +
-      ggplot2::geom_point() +
-      ggplot2::theme_classic() +
-      ggplot2::scale_color_viridis_c() +
-      ggplot2::xlab("fraction labeled") +
-      ggplot2::ylab("Dropout") +
-      ggplot2::geom_hline(
-        yintercept = 1,
-        color = 'darkred',
-        linewidth = 0.75,
-        linetype = 'dotted'
-      )
+            n = 200
+          )
+        ) %>%
+        ggplot2::ggplot(
+          ggplot2::aes(x = !!dplyr::sym(fraction_of_interest),
+                       y = dropout,
+                       color = point_density)
+        ) +
+        ggplot2::geom_point() +
+        ggplot2::theme_classic() +
+        ggplot2::scale_color_viridis_c() +
+        ggplot2::xlab("fraction labeled") +
+        ggplot2::ylab("Dropout") +
+        ggplot2::geom_hline(
+          yintercept = 1,
+          color = 'darkred',
+          linewidth = 0.75,
+          linetype = 'dotted'
+        )
+
+    }else{
+
+      plot_list[[s]] <- dropout_df %>%
+        dplyr::filter(sample == samps[s] &
+                        n > n_min) %>%
+        dplyr::mutate(
+          point_density = get_density(
+            x = rank(!!dplyr::sym(fraction_of_interest)),
+            y = log(dropout),
+            n = 200
+          )
+        ) %>%
+        ggplot2::ggplot(
+          ggplot2::aes(x = rank(!!dplyr::sym(fraction_of_interest)),
+                       y = log(dropout),
+                       color = point_density)
+        ) +
+        ggplot2::geom_point() +
+        ggplot2::theme_classic() +
+        ggplot2::scale_color_viridis_c() +
+        ggplot2::xlab("NTR rank") +
+        ggplot2::ylab("log(Dropout)") +
+        ggplot2::geom_hline(
+          yintercept = 0,
+          color = 'darkred',
+          linewidth = 0.75,
+          linetype = 'dotted'
+        )
+
+    }
+
 
   }
 
@@ -781,19 +844,43 @@ do_norm_ll <- function(param,
 
 # Dropout likelihood function
 # log(dropout) ~ Normal(f(pdo, theta, scale), sig)
-dropout_likelihood <- function(param, dropout, theta, sig){
+dropout_likelihood <- function(param, dropout, theta, sig, nolabel_rpm, n, ranks, strategy){
 
-  pdo <- param[1]
-  scale <- param[2]
 
-  Edropout <- log((-(scale*pdo)*theta)/((1-pdo) + theta*pdo) + scale)
+  if(strategy == "bakR"){
 
-  ll <- stats::dnorm(dropout,
-                     Edropout,
-                     sig,
-                     log = TRUE)
+    pdo <- param[1]
+    scale <- param[2]
 
-  return(-sum(ll))
+    Edropout <- log((-(scale*pdo)*theta)/((1-pdo) + theta*pdo) + scale)
+
+    ll <- stats::dnorm(dropout,
+                       Edropout,
+                       sig,
+                       log = TRUE)
+
+    return(-sum(ll))
+
+  }else{
+
+    # Minmize correlation between dropout metric and fraction new rank
+
+    pdo <- param[1]
+
+    corrected_fraction <- (theta)/((1 - pdo) + theta * pdo)
+    global_fraction <- sum(theta*n)/sum(n)
+
+    corrected_gf <- global_fraction/((1 - pdo) + global_fraction * pdo)
+    corrected_n <- ceiling(n * (corrected_gf*(1 - pdo) + (1 - corrected_gf) /
+                                  (corrected_fraction*(1 - pdo) + (1 - corrected_fraction))))
+
+    new_label_rpm <- corrected_n / (sum(corrected_n)/1000000)
+
+    new_dropout <- log(new_label_rpm) - log(nolabel_rpm)
+
+    return(abs(cor(ranks, new_dropout)))
+
+  }
 
 
 }

@@ -6,6 +6,7 @@
 \usage{
 VisualizeDropout(
   obj,
+  plot_type = c("bakR", "grandR"),
   grouping_factors = NULL,
   features = NULL,
   populations = NULL,
@@ -18,6 +19,12 @@ VisualizeDropout(
 \arguments{
 \item{obj}{An EZbakRFractions object, which is an EZbakRData object on which
 you have run \code{EstimateFractions()}.}
+
+\item{plot_type}{Which type of plot to make. Options are:
+\itemize{
+\item bakR: X-axis is fraction new (a.k.a. NTR) and Y-axis is dropout (no label n / label n)
+\item grandR: X-axis is fraction new rank (a.k.a. NTR rank) and Y-axis is log(dropout)
+}}
 
 \item{grouping_factors}{Which sample-detail columns in the metadf should be used
 to group -s4U samples by for calculating the average -s4U RPM? The default value of
