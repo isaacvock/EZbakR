@@ -13,7 +13,9 @@ VisualizeDropout(
   fraction_design = NULL,
   repeatID = NULL,
   exactMatch = TRUE,
-  n_min = 50
+  n_min = 50,
+  dropout_cutoff = 5,
+  ...
 )
 }
 \arguments{
@@ -53,6 +55,10 @@ specify a subset of features by default. Set this to FALSE if you would like
 to specify a feature subset.}
 
 \item{n_min}{Minimum raw number of reads to make it to plot}
+
+\item{dropout_cutoff}{Maximum dropout value included in plot.}
+
+\item{...}{Parameters passed to internal \code{calculate_dropout()} function;}
 }
 \value{
 A list of \code{ggplot2} objects, one for each +label sample.

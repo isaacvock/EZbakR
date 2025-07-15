@@ -58,6 +58,9 @@
 #' the dropout model.
 #' @param dropout_cutoff Maximum ratio of -s4U:+s4U RPMs for a feature to be
 #' used to fit the dropout model (i.e., simple outlier filtering cutoff).
+#' @param ... Parameters passed to internal `calculate_dropout()` function;
+#' namely `dropout_cutoff_min`, which sets the minimum dropout value used for
+#' fitting the dropout model.
 #' @return An `EZbakRData` object with the specified "fractions" table replaced
 #' with a dropout corrected table.
 #' @examples
@@ -85,7 +88,8 @@ CorrectDropout <- function(obj,
                            repeatID = NULL,
                            exactMatch = TRUE,
                            read_cutoff = 25,
-                           dropout_cutoff = 5){
+                           dropout_cutoff = 5,
+                           ...){
 
   strategy <- match.arg(strategy)
 
@@ -141,11 +145,12 @@ CorrectDropout <- function(obj,
                                  repeatID = repeatID,
                                  exactMatch = exactMatch,
                                  read_cutoff = read_cutoff,
-                                 dropout_cutoff = dropout_cutoff) %>%
+                                 dropout_cutoff = dropout_cutoff,
+                                 ...) %>%
 
     ### ESTIMATE DROPOUT PARAMETERS:
     dplyr::group_by(sample) %>%
-    dplyr::mutate(
+    dplyr::summarise(
       fit = I(list(stats::optim(
         par = c(0.2, 2),
         dropout_likelihood,
@@ -166,6 +171,10 @@ CorrectDropout <- function(obj,
       scale := purrr::map_dbl(fit, ~ .x$par[2]),
     ) %>%
     dplyr::select(-fit) %>%
+    dplyr::inner_join(
+      fractions,
+      by = "sample"
+    ) %>%
 
     ### CORRECT DROPOUT:
     dplyr::mutate(corrected_fraction =
@@ -247,6 +256,8 @@ CorrectDropout <- function(obj,
 #' specify a subset of features by default. Set this to FALSE if you would like
 #' to specify a feature subset.
 #' @param n_min Minimum raw number of reads to make it to plot
+#' @param dropout_cutoff Maximum dropout value included in plot.
+#' @param ... Parameters passed to internal `calculate_dropout()` function;
 #' @examples
 #'
 #' # Simulate data to analyze
@@ -272,7 +283,9 @@ VisualizeDropout <- function(obj,
                              fraction_design = NULL,
                              repeatID = NULL,
                              exactMatch = TRUE,
-                             n_min = 50){
+                             n_min = 50,
+                             dropout_cutoff = 5,
+                             ...){
 
 
   plot_type = match.arg(plot_type)
@@ -327,7 +340,9 @@ VisualizeDropout <- function(obj,
                                   populations = populations,
                                   fraction_design = fraction_design,
                                   repeatID = repeatID,
-                                  exactMatch = exactMatch)
+                                  exactMatch = exactMatch,
+                                  dropout_cutoff = dropout_cutoff,
+                                  ...)
 
   ### Make dropout plots
 
@@ -419,7 +434,8 @@ calculate_dropout <- function(obj,
                               repeatID = NULL,
                               exactMatch = TRUE,
                               read_cutoff = 25,
-                              dropout_cutoff = 5){
+                              dropout_cutoff = 5,
+                              dropout_cutoff_min = 0.5){
 
   ### Hack to deal with devtools::check() NOTEs
 
@@ -427,6 +443,7 @@ calculate_dropout <- function(obj,
   nolabel_n <- nolabel_reps <- dropout <- sig <- NULL
 
 
+  dropout_cutoff_max <- dropout_cutoff
   ##### GENERAL STEPS:
   # 1) Get -s4U RPMs
   # 2) Get +s4U RPMs
@@ -514,7 +531,9 @@ calculate_dropout <- function(obj,
                       by = c(grouping_factors, features_to_analyze)) %>%
     dplyr::mutate(dropout = rpm / nolabel_rpm) %>%
     dplyr::mutate(sig = sqrt((!!dplyr::sym(logit_se))^2 )) %>%
-    dplyr::filter(n > read_cutoff & dropout < dropout_cutoff) # Get rid of outliers
+    dplyr::filter(n > read_cutoff &
+                    dropout < dropout_cutoff_max &
+                    dropout > dropout_cutoff_min) # Get rid of outliers
 
 
   return(dropout_df)
@@ -854,7 +873,7 @@ dropout_likelihood <- function(param, dropout, theta, sig, nolabel_rpm, n, ranks
 
     Edropout <- log((-(scale*pdo)*theta)/((1-pdo) + theta*pdo) + scale)
 
-    ll <- stats::dnorm(dropout,
+    ll <- stats::dnorm(log(dropout),
                        Edropout,
                        sig,
                        log = TRUE)

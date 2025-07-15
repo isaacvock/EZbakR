@@ -1297,6 +1297,15 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
     unlist() %>%
     unname()
 
+  samples_with_no_label <- metadf %>%
+    dplyr::rowwise() %>%
+    dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) == 0)) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(sample) %>%
+    unlist() %>%
+    unname()
+
+
 
   ### Estimate fraction new for each feature in each sample
   message("Estimating fractions for each sample:")
