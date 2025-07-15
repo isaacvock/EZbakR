@@ -60,7 +60,8 @@ in <a href="https://academic.oup.com/nar/article/52/7/e35/7612100" class="extern
 <span>  repeatID <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  exactMatch <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  read_cutoff <span class="op">=</span> <span class="fl">25</span>,</span>
-<span>  dropout_cutoff <span class="op">=</span> <span class="fl">5</span></span>
+<span>  dropout_cutoff <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -135,6 +136,12 @@ the dropout model.</p></dd>
 <dd><p>Maximum ratio of -s4U:+s4U RPMs for a feature to be
 used to fit the dropout model (i.e., simple outlier filtering cutoff).</p></dd>
 
+
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dd><p>Parameters passed to internal <code>calculate_dropout()</code> function;
+namely <code>dropout_cutoff_min</code>, which sets the minimum dropout value used for
+fitting the dropout model.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -183,8 +190,8 @@ disproportionately lost, relative to the equivalent unlabeled species.</p>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> 2 sample2 0.0100000</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> 3 sample3 0.0100000</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> 4 sample4 0.3799101</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 5 sample5 0.4072284</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 6 sample6 0.4034133</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 5 sample5 0.3017325</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 6 sample6 0.2588305</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
