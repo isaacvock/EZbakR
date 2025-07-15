@@ -1062,6 +1062,9 @@ check_fl_dist <- function(obj,
 
 
       glist[[fc]][[samples[s]]] <- fractions %>%
+        dplyr::filter(
+          sample == samples[s]
+        ) %>%
         ggplot2::ggplot(aes(x = fraction)) +
         ggplot2::geom_density() +
         ggplot2::theme_classic() +
