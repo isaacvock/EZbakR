@@ -14,7 +14,8 @@ CorrectDropout(
   repeatID = NULL,
   exactMatch = TRUE,
   read_cutoff = 25,
-  dropout_cutoff = 5
+  dropout_cutoff = 5,
+  ...
 )
 }
 \arguments{
@@ -68,6 +69,10 @@ the dropout model.}
 
 \item{dropout_cutoff}{Maximum ratio of -s4U:+s4U RPMs for a feature to be
 used to fit the dropout model (i.e., simple outlier filtering cutoff).}
+
+\item{...}{Parameters passed to internal \code{calculate_dropout()} function;
+namely \code{dropout_cutoff_min}, which sets the minimum dropout value used for
+fitting the dropout model.}
 }
 \value{
 An \code{EZbakRData} object with the specified "fractions" table replaced
