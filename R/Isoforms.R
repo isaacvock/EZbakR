@@ -458,18 +458,29 @@ fit_beta_regression <- function(data){
   fns <- Fns_onegene$fn
   v <- Fns_onegene$nreads
 
+  tryCatch(
+    {
+      fit <- stats::optim(par = rep(0, times = ncol(design_matrix)),
+                          beta_r_likelihood,
+                          data = fns,
+                          design_matrix = design_matrix,
+                          v = v,
+                          method = "L-BFGS-B",
+                          upper = 9,
+                          lower = -9,
+                          prior_a = 0,
+                          prior_b = 1.25,
+                          hessian = TRUE)
 
-  fit <- stats::optim(par = rep(0, times = ncol(design_matrix)),
-               beta_r_likelihood,
-               data = fns,
-               design_matrix = design_matrix,
-               v = v,
-               method = "L-BFGS-B",
-               upper = 9,
-               lower = -9,
-               prior_a = 0,
-               prior_b = 1.25,
-               hessian = TRUE)
+    },
+    error = function(e){
+      message(paste0("Estimation of isoform fraction news failed for
+                     features: [",
+                     paste0(data$transcript_id, collapse = ", "), "]"))
+      stop("Error from optim: ", e)
+    }
+  )
+
 
   uncertainty <- sqrt(diag(solve(fit$hessian)))
 

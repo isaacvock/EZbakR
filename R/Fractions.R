@@ -2603,18 +2603,28 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
 
     if(twocomp){
 
-      fit <- stats::optim(par = 0,
-                          fn = two_comp_likelihood,
-                          dataset = dataset,
-                          Poisson = Poisson,
-                          pnew = pnew,
-                          pold = pold,
-                          mutcols = mutcols,
-                          basecols = basecols,
-                          upper = 7,
-                          lower = -7,
-                          method = "L-BFGS-B",
-                          hessian = TRUE)
+      tryCatch(
+        {
+          fit <- stats::optim(par = 0,
+                              fn = two_comp_likelihood,
+                              dataset = dataset,
+                              Poisson = Poisson,
+                              pnew = pnew,
+                              pold = pold,
+                              mutcols = mutcols,
+                              basecols = basecols,
+                              upper = 7,
+                              lower = -7,
+                              method = "L-BFGS-B",
+                              hessian = TRUE)
+
+        },
+        error = function(e){
+          message(paste0(c(paste0("Fitting of the generalized mixture model failed for following data: "), utils::capture.output(dataset)), collapse = "\n"))
+          stop("Error message from optim: ", e)
+        }
+      )
+
 
       outlist <- list(fit$par, logit(1 - inv_logit(fit$par)))
 
@@ -2624,18 +2634,27 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
 
     }else{
 
-      fit <- stats::optim(par = rep(0, times = nrow(mutrate_design)),
-                          fn = generalized_likelihood,
-                          dataset = dataset,
-                          Poisson = Poisson,
-                          mutrate_design = mutrate_design,
-                          pnew = pnew,
-                          pold = pold,
-                          twocomp = twocomp,
-                          mutcols = mutcols,
-                          basecols = basecols,
-                          method = "L-BFGS-B",
-                          hessian = TRUE)
+      tryCatch(
+        {
+          fit <- stats::optim(par = rep(0, times = nrow(mutrate_design)),
+                              fn = generalized_likelihood,
+                              dataset = dataset,
+                              Poisson = Poisson,
+                              mutrate_design = mutrate_design,
+                              pnew = pnew,
+                              pold = pold,
+                              twocomp = twocomp,
+                              mutcols = mutcols,
+                              basecols = basecols,
+                              method = "L-BFGS-B",
+                              hessian = TRUE)
+
+        },
+        error = function(e){
+          message(paste0(c(paste0("Fitting of the generalized mixture model failed for following data: "), utils::capture.output(dataset)), collapse = "\n"))
+          stop("Error message from optim: ", e)
+        }
+      )
 
       # Figure out what to call each of the fractions
       # Probably "p""muttype""old/new"_"muttype""old/new"
