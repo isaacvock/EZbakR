@@ -901,8 +901,6 @@ EstimateMutRates.EZbakRData <- function(obj,
   cB <- data.table::setDT(cB)
 
 
-
-
   # Figure out which mutation counts are in the cB
   mutcounts_in_cB <- find_mutcounts(obj)
 
