@@ -2148,6 +2148,19 @@ softmax <- function(vect){
 #################################################
 
 
+log_add2 <- function(a, b){
+  ## recycle to common length (base R handles this automatically in pmax)
+  m   <- pmax(a, b)
+
+  ## core computation
+  out <- m + log1p(exp(-abs(a - b)))   # safe for |a-b| >> 0
+
+  ## both a and b are -Inf  ->  log(0)
+  out[is.infinite(m) & m < 0] <- -Inf
+  out
+
+}
+
 
 # Two-component mixture model likelihood
 tcmml <- function(param, muts, nucs, n,
@@ -2190,11 +2203,13 @@ tcmml <- function(param, muts, nucs, n,
 
   if(Poisson){
 
-    ll <- fn*stats::dpois(muts, nucs*pnew) + (1 - fn)*stats::dpois(muts, nucs*pold)
+    ll <- log_add2(log(fn) + stats::dpois(muts, nucs*pnew, log = TRUE),
+                   log(1 - fn) + stats::dpois(muts, nucs*pold, log = TRUE))
 
   }else{
 
-    ll <- fn*stats::dbinom(muts, nucs, pnew) + (1 - fn)*stats::dbinom(muts, nucs, pold)
+    ll <- log_add2(log(fn) + stats::dbinom(muts, nucs, pnew, log = TRUE),
+                   log(1 - fn) + stats::dbinom(muts, nucs, pold, log = TRUE))
 
   }
 
@@ -2255,7 +2270,7 @@ tcmml <- function(param, muts, nucs, n,
   # }
 
 
-  ll <- -(sum(n*log(ll)) + prior)
+  ll <- -(sum(n*ll) + prior)
 
 
 
@@ -2370,26 +2385,22 @@ two_comp_likelihood <- function(param, muts, nucs, Poisson = TRUE,
 
   if(Poisson){
 
-    likelihoods <- inv_logit(param[1])*stats::dpois(muts,
-                                             lambda = pnew*nucs ) +
-
-      (1 - inv_logit(param[1]))*stats::dpois(muts,
-                                      lambda = pold*nucs )
+    ll <- log_add2(
+      log(inv_logit(param[1])) + stats::dpois(muts, lambda = pnew*nucs, log = TRUE ),
+      log(1 - inv_logit(param[1])) + stats::dpois(muts, lambda = pold*nucs, log = TRUE )
+    )
 
   }else{
 
-    likelihoods <- inv_logit(param[1])*stats::dbinom(x = muts,
-                                              size = nucs,
-                                              prob = pnew) +
-
-      (1 - inv_logit(param[1]))*stats::dbinom(x = muts,
-                                       size = nucs,
-                                       prob = pold)
+    ll <- log_add2(
+      log(inv_logit(param[1])) + stats::dbinom(x = muts,size = nucs, prob = pnew, log = TRUE),
+      log(1 - inv_logit(param[1])) + stats::dbinom(x = muts, size = nucs, prob = pold, log = TRUE)
+    )
 
 
   }
 
-  return(-sum(n*log(likelihoods)) - stats::dnorm(param[1], log = TRUE))
+  return(-sum(n*ll) - stats::dnorm(param[1], log = TRUE))
 
 
 }
