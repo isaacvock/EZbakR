@@ -5,6 +5,8 @@ EZbakR is a highly flexible tool for analyses of nucleotide recoding RNA-seq dat
 To install or update, run:
 
 ```
+if (!require("roxygen2", quietly = TRUE))
+    install.packages("roxygen2")
 if (!require("remotes", quietly = TRUE))
     install.packages("remotes")
 remotes::install_github("isaacvock/EZbakR")
