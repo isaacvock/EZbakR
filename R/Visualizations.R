@@ -673,10 +673,266 @@ EZMAPlot <- function(obj,
 }
 
 
+#' Make an MAPlot from EZbakR comparison
+#'
+#' Make a plot of effect size (y-axis) vs. log10(read coverage) (x-axis),
+#' coloring points by position relative to user-defined decision cutoffs.
+#'
+#' `EZMAPlot()` accepts as input the output of `CompareParameters()`, i.e.,
+#' an `EZbakRData` object with at least one "comparisons" table. It will plot
+#' the "avg_coverage" column in this table vs. the "difference" column.
+#' In the simplest case, "difference" represents a log-fold change in a kinetic
+#' parameter (e.g., kdeg) estimate. More complicated linear model fits and
+#' comparisons can yield different parameter estimates.
+#'
+#' NOTE: some outputs of `CompareParameters()` are not meant for visualization
+#' via an MA plot. For example, when fitting certain interaction models,
+#' some of the parameter estimates may represent average log(kinetic paramter)
+#' in one condition. See discussion of one example of this [here](https://github.com/simonlabcode/bakR/issues/7#issuecomment-2371431127).
+#'
+#' EZbakR estimates kinetic parameters in `EstimateKinetics()` and `EZDynamics()`
+#' on a log-scale. By default, since log2-fold changes are a bit easier to interpret
+#' and more common for these kind of visualizations, `EZMAPlot()` multiplies
+#' the y-axis value by log2(exp(1)), which is the factor required to convert from
+#' a log to a log2 scale. You can turn this off by setting `plotlog2` to `FALSE`.
+#'
+#' @param obj An object of class `EZbakRCompare`, which is an `EZbakRData` object
+#' on which you have run `CompareParameters`
+#' @param data_type Specifies what data to use for the PCA. Options are "fraction_labeled" (default;
+#' means using fraction high T-to-C or other mutation type estimate from EZbakR) or "reads" (means
+#' using log10(read counts + 1)).
+#' @param features Character vector of feature names for which comparisons were made.
+#' @param exactMatch If TRUE, then `features` and `populations` have to exactly match
+#' those for a given fractions table for that table to be used. Means that you can't
+#' specify a subset of features or populations by default, since this is TRUE
+#' by default.
+#' @param variance_decile Integer between (inclusive) 1 and 9. Features with sample-to-sample
+#' variance greater than the nth decile (n = `variance_decile`) will go into PCA.
+#' @param center From `prcomp()`: a logical value indicating whether the variables should be shifted to be zero centered.
+#' Alternately, a vector of length equal the number of columns of x can be supplied. The value is passed to scale.
+#' @param scale From `prcomp()`: a logical value indicating whether the variables should be scaled to have unit variance
+#'  before the analysis takes place. Alternatively, a vector of length equal the number of columns of x can be supplied.
+#'  The value is passed to scale.
+#' @param point_size Size of points in PCA plot
+#' @param metadf_cols_to_use Columns in the EZbakR metadf that will be used to
+#' color points in the PCA plot. Points will be colored by the interaction between
+#' all of these columns (i.e., samples with unique combinations of values of these columns
+#' will get unique colors). Default is to use all columns (except "sample"), specified
+#' as "all".
+#' @import ggplot2
+#' @importFrom magrittr %>%
+#' @examples
+#'
+#' # Simulate data to analyze
+#' simdata <- EZSimulate(30)
+#'
+#' # Create EZbakR input
+#' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+#'
+#' # Estimate Fractions
+#' ezbdo <- EstimateFractions(ezbdo)
+#'
+#'
+#' # Make MA plot (ggplot object that you can save and add/modify layers)
+#' EZpcaPlot(ezbdo)
+#'
+#' @return A `ggplot2` object.
+#' @export
+EZpcaPlot <- function(obj, data_type = c("fraction_labeled", "reads"),  features = NULL, exactMatch = TRUE,
+                      variance_decile = 7, center = TRUE, scale = TRUE,
+                      point_size = 3, metadf_cols_to_use = "all"){
 
-# EZPCAplot <- function(){
-#
-#
-#   return(ggpca)
-#
-# }
+
+  data_type <- match.arg(data_type)
+
+  # Bind variables locally to resolve devtools::check() Notes
+  PC1 <- PC2 <- NULL
+
+  ### Extract logit(fn)
+
+  fractions_name <- EZget(obj,
+                          features = features,
+                          repeatID = repeatID,
+                          exactMatch = exactMatch,
+                          returnNameOnly = TRUE)
+
+  fraction_table <- obj[["fractions"]][[fractions_name]]
+
+
+  ### Get useful metadata
+  features_to_analyze <- obj[["metadata"]][["fractions"]][[fractions_name]][["features"]]
+
+  fraction_cols <- colnames(fraction_table)
+
+  fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
+  logit_col <- paste0("logit_", fraction_of_interest)
+
+
+  ### Sample information table used in plot annotation
+
+  sample_lookup <- obj$metadf
+
+
+  if(metadf_cols_to_use == "all"){
+    metadf_cols_to_use <- colnames(obj$metadf)[colnames(obj$metadf) != "sample"]
+  }
+
+  if(!(all(metadf_cols_to_use %in% colnames(obj$metadf)))){
+    stop("Some of the metadf_cols_to_use specified are not in your metadf!")
+  }
+
+
+
+
+  if("tl" %in% colnames(sample_lookup)){
+
+    nlabel_fed <- sample_lookup %>%
+      dplyr::filter(
+        tl > 0
+      ) %>%
+      nrow()
+
+  }else if("tpulse" %in% colnames(sample_lookup)){
+
+    nlabel_fed <- sample_lookup %>%
+      dplyr::filter(
+        tpulse > 0
+      ) %>%
+      nrow()
+
+  }
+
+  ### Make logit(fn) matrix
+
+
+  data_col <- ifelse(
+    data_type == "fraction_labeled",
+    logit_col,
+    "log10_n"
+  )
+
+
+  if(data_col == logit_col){
+
+    logit_fn_df <- fraction_table %>%
+      dplyr::filter(
+        !!dplyr::sym(fraction_of_interest) > 0
+      ) %>%
+      dplyr::ungroup() %>%
+      dplyr::group_by(
+        dplyr::across(
+          dplyr::all_of(features_to_analyze)
+        )
+      ) %>%
+      dplyr::filter(
+        dplyr::n() == nlabel_fed
+      )
+
+  }else{
+
+    logit_fn_df <- fraction_table %>%
+      dplyr::ungroup() %>%
+      dplyr::select(
+        sample, !!features_to_analyze, n
+      ) %>%
+      tidyr::pivot_wider(
+        values_from = "n",
+        names_from = "sample",
+        values_fill = 0
+      ) %>%
+      tidyr::pivot_longer(
+        cols = -features_to_analyze,
+        names_to = "sample",
+        values_to = "n"
+      ) %>%
+      dplyr::mutate(
+        log10_n = log10(n + 1)
+      ) %>%
+      dplyr::ungroup() %>%
+      dplyr::group_by(
+        dplyr::across(
+          dplyr::all_of(features_to_analyze)
+        )
+      )
+
+  }
+
+
+  logit_fn_df <- logit_fn_df %>%
+    dplyr::mutate(
+      variance = var(!!dplyr::sym(data_col))
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::filter(
+      variance > quantile(variance, probs = seq(0, 1, 0.1))[variance_decile]
+    ) %>%
+    dplyr::select(
+      sample, !!features_to_analyze, !!data_col
+    ) %>%
+    tidyr::pivot_wider(
+      values_from = !!data_col,
+      names_from = "sample"
+    )
+
+  logit_fn_mat <- logit_fn_df %>%
+    dplyr::select(
+      -!!features_to_analyze
+    )
+
+
+  ### Perform PCA
+
+  fn_pcs <- stats::prcomp(t(logit_fn_mat), center = center, scale. = scale)
+
+
+  ### Extract loadings and PCs
+
+  fn_eigenvect <- fn_pcs$x
+
+  fn_PC1 <- fn_eigenvect[,c("PC1")]
+  fn_PC2 <- fn_eigenvect[,c("PC2")]
+
+
+  meta_cols <- colnames(obj$metadf)[colnames(obj$metadf) != "sample"]
+
+
+  samps_to_keep <- colnames(logit_fn_mat)
+  fn_pca_df <- dplyr::tibble(PC1 = fn_PC1,
+                      PC2 = fn_PC2) %>%
+    dplyr::bind_cols(obj$metadf %>%
+                       dplyr::filter(
+                         sample %in% samps_to_keep
+                       ) %>%
+                       dplyr::select(
+                         !!metadf_cols_to_use
+                       )
+                ) %>%
+    dplyr::mutate(
+      combo = interaction(
+        dplyr::across(
+          dplyr::all_of(metadf_cols_to_use)
+        ),
+        drop = TRUE, lex.order = TRUE, sep = ":"
+      )
+    )
+
+  fn_prop_var <- unclass(summary(fn_pcs))$importance[c("Proportion of Variance"),]
+
+  ### Plot
+
+  legend_title <- paste0(meta_cols[meta_cols %in% metadf_cols_to_use], collapse=":")
+
+  g_pca <- ggplot(fn_pca_df, aes(x = PC1, y = PC2, color = combo)) +
+    geom_point(size = point_size) +
+    xlab(paste0("PC1 (", fn_prop_var[1]*100, "% of var.)")) +
+    ylab(paste0("PC2 (", fn_prop_var[2]*100, "% of var.)")) +
+    theme_classic() +
+    scale_color_viridis_d() +
+    guides(color = guide_legend(title=legend_title))
+
+
+
+
+  return(g_pca)
+
+}

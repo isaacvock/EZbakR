@@ -19,7 +19,13 @@ EZMAPlot(
   plotlog2 = TRUE,
   FDR_cutoff = 0.05,
   difference_cutoff = log(2),
-  size = NULL
+  size = NULL,
+  features_to_highlight = NULL,
+  highlight_shape = 21,
+  highlight_size_diff = 1,
+  highlight_stroke = 0.7,
+  highlight_fill = NA,
+  highlight_color = "black"
 )
 }
 \arguments{
@@ -79,6 +85,9 @@ features be than the original plot points.}
 
 \item{highlight_stroke}{Stroke width of the points overlayed on the highlighted
 features.}
+
+\item{highlight_fill}{Fill color of the points overlayed on the highlighted
+features. Default is for them to be fill-less (\code{highlight_fill == NA}).}
 
 \item{highlight_color}{Color of the points overlayed on the highlighted points.}
 }

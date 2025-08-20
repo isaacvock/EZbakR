@@ -25,6 +25,7 @@ EZVolcanoPlot(
   highlight_shape = 21,
   highlight_size_diff = 1,
   highlight_stroke = 0.7,
+  highlight_fill = NA,
   highlight_color = "black"
 )
 }
@@ -91,7 +92,10 @@ features be than the original plot points.}
 \item{highlight_stroke}{Stroke width of the points overlayed on the highlighted
 features.}
 
-\item{highlight_color}{Color of the points overlayed on the highlighted points.}
+\item{highlight_fill}{Fill color of the points overlayed on the highlighted
+features. Default is for them to be fill-less (\code{highlight_fill == NA}).}
+
+\item{highlight_color}{Stroke color of the points overlayed on the highlighted points.}
 }
 \value{
 A \code{ggplot2} object. X-axis = log2(estimate of interest (e.g., fold-change
