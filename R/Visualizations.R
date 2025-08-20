@@ -53,6 +53,19 @@
 #' @param difference_cutoff Minimum absolute difference cutoff by which to color points.
 #' @param size Size of points, passed to `geom_point()` size parameter. If not specified,
 #' a point size is automatically chosen.
+#' @param features_to_highlight Features you want to highlight in the plot (black circle
+#' will be drawn around them). This can either be a data frame with one column per
+#' feature type in the comparison table you are visualizing, or a vector of feature names
+#' if the relevant comparison table will only have one feature type noted.
+#' @param highlight_shape Shape of points overlayed on highlighted features. Defaults
+#' to an open circle
+#' @param highlight_size_diff Sets how much larger should the points overlayed on the highlighted
+#' features be than the original plot points.
+#' @param highlight_stroke Stroke width of the points overlayed on the highlighted
+#' features.
+#' @param highlight_fill Fill color of the points overlayed on the highlighted
+#' features. Default is for them to be fill-less (`highlight_fill == NA`).
+#' @param highlight_color Stroke color of the points overlayed on the highlighted points.
 #' @import ggplot2
 #' @importFrom magrittr %>%
 #' @examples
@@ -102,9 +115,15 @@ EZVolcanoPlot <- function(obj,
                           plotlog2 = TRUE,
                           FDR_cutoff = 0.05,
                           difference_cutoff = log(2),
-                          size = NULL){
+                          size = NULL,
+                          features_to_highlight = NULL,
+                          highlight_shape = 21,
+                          highlight_size_diff = 1,
+                          highlight_stroke = 0.7,
+                          highlight_fill = NA,
+                          highlight_color = "black"){
 
-  # Check for backwards compatibility
+  # Check for the sake of backwards compatibility
   if(!is.null(condition) & is.null(design_factor)){
     design_factor <- condition
   }
@@ -131,6 +150,78 @@ EZVolcanoPlot <- function(obj,
 
   comparison <- obj[['comparisons']][[comparison_name]]
   metadata <- obj[['metadata']][['comparisons']][[comparison_name]]
+
+
+  # Track which features user wants highlighted
+  if(!is.null(features_to_highlight)){
+
+    features <- obj[['metadata']][['comparisons']][['features']]
+
+    if(is.null(features)){
+      # Mainly for backwards compatibility where a bug prevented the features
+      # entry of the comparisons metadata from getting updated. Just try to
+      # join by the features that exist and hope for the best.
+
+      comparison <- comparison %>%
+        dplyr::left_join(
+          features_to_highlight %>%
+            dplyr::mutate(
+              highlight = TRUE
+            )
+        ) %>%
+        tidyr::replace_na(
+          list(
+            highlight = FALSE
+          )
+        )
+
+    }else{
+
+      if(is.vector(features_to_highlight)){
+        # Make into one column data frame is user provided a single vector of
+        # feature names
+
+        if(length(features) > 1){
+
+          stop("You provided a vector to features_to_highlight but your comparison table has more than one feature!
+              features_to_highlight must be a data frame with columns for each of the feature
+              types tracked in the relevant comparison table.")
+
+        }
+
+        features_to_highlight <- dplyr::tibble(
+          !!features := features_to_highlight
+        )
+
+      }
+
+      if(!(all(features %in% colnames(features_to_highlight)))){
+        stop("Not all features in comparison table are columns in features_to_highlight!")
+      }
+
+
+      comparison <- comparison %>%
+        dplyr::left_join(
+          features_to_highlight %>%
+            dplyr::mutate(
+              highlight = TRUE
+            ),
+          by = features
+        ) %>%
+        tidyr::replace_na(
+          list(
+            highlight = FALSE
+          )
+        )
+
+    }
+
+
+
+
+
+  }
+
 
   # Infer x-axis scale and label
   if(plotlog2){
@@ -226,6 +317,21 @@ EZVolcanoPlot <- function(obj,
 
   }
 
+  if(!is.null(features_to_highlight)){
+
+    ggv <- ggv +
+      geom_point(
+        data = dplyr::filter(comparison, highlight),
+        aes(x = difference*scale_factor, y = -log10(padj)),
+        inherit.aes = FALSE,
+        shape = highlight_shape,
+        size  = size + highlight_size_diff,
+        stroke = highlight_stroke,
+        fill = highlight_fill,
+        color = highlight_color
+      )
+
+  }
 
   return(ggv)
 }
@@ -281,6 +387,19 @@ EZVolcanoPlot <- function(obj,
 #' @param difference_cutoff Minimum absolute difference cutoff by which to color points.
 #' @param size Size of points, passed to `geom_point()` size parameter. If not specified,
 #' a point size is automatically chosen.
+#' @param features_to_highlight Features you want to highlight in the plot (black circle
+#' will be drawn around them). This can either be a data frame with one column per
+#' feature type in the comparison table you are visualizing, or a vector of feature names
+#' if the relevant comparison table will only have one feature type noted.
+#' @param highlight_shape Shape of points overlayed on highlighted features. Defaults
+#' to an open circle
+#' @param highlight_size_diff Sets how much larger should the points overlayed on the highlighted
+#' features be than the original plot points.
+#' @param highlight_fill Fill color of the points overlayed on the highlighted
+#' features. Default is for them to be fill-less (`highlight_fill == NA`).
+#' @param highlight_stroke Stroke width of the points overlayed on the highlighted
+#' features.
+#' @param highlight_color Color of the points overlayed on the highlighted points.
 #' @import ggplot2
 #' @importFrom magrittr %>%
 #' @examples
@@ -316,20 +435,26 @@ EZVolcanoPlot <- function(obj,
 #' points colored by location relative to FDR and effect size cutoffs.
 #' @export
 EZMAPlot <- function(obj,
-                         parameter = "log_kdeg",
+                     parameter = "log_kdeg",
                      design_factor = NULL,
                      reference = NULL,
                      experimental = NULL,
                      param_name = NULL,
                      param_function = NULL,
-                         features = NULL,
+                     features = NULL,
                      condition = NULL,
                      repeatID = NULL,
                      exactMatch = TRUE,
-                         plotlog2 = TRUE,
-                         FDR_cutoff = 0.05,
+                     plotlog2 = TRUE,
+                     FDR_cutoff = 0.05,
                      difference_cutoff = log(2),
-                         size = NULL){
+                     size = NULL,
+                     features_to_highlight = NULL,
+                     highlight_shape = 21,
+                     highlight_size_diff = 1,
+                     highlight_stroke = 0.7,
+                     highlight_fill = NA,
+                     highlight_color = "black"){
 
 
   # Check for backwards compatibility
@@ -367,6 +492,73 @@ EZMAPlot <- function(obj,
          meaning.")
 
   }
+
+
+  # Track which features user wants highlighted
+  if(!is.null(features_to_highlight)){
+
+    features <- obj[['metadata']][['comparisons']][['features']]
+
+    if(is.null(features)){
+      # Mainly for backwards compatibility where a bug prevented the features
+      # entry of the comparisons metadata from getting updated. Just try to
+      # join by the features that exist and hope for the best.
+
+      comparison <- comparison %>%
+        dplyr::left_join(
+          features_to_highlight %>%
+            dplyr::mutate(
+              highlight = TRUE
+            )
+        ) %>%
+        tidyr::replace_na(
+          list(
+            highlight = FALSE
+          )
+        )
+
+    }else{
+
+      if(is.vector(features_to_highlight)){
+        # Make into one column data frame is user provided a single vector of
+        # feature names
+
+        if(length(features) > 1){
+
+          stop("You provided a vector to features_to_highlight but your comparison table has more than one feature!
+              features_to_highlight must be a data frame with columns for each of the feature
+              types tracked in the relevant comparison table.")
+
+        }
+
+        features_to_highlight <- dplyr::tibble(
+          !!features := features_to_highlight
+        )
+
+      }
+
+      if(!(all(features %in% colnames(features_to_highlight)))){
+        stop("Not all features in comparison table are columns in features_to_highlight!")
+      }
+
+
+      comparison <- comparison %>%
+        dplyr::left_join(
+          features_to_highlight %>%
+            dplyr::mutate(
+              highlight = TRUE
+            ),
+          by = features
+        ) %>%
+        tidyr::replace_na(
+          list(
+            highlight = FALSE
+          )
+        )
+
+    }
+  }
+
 
   # Infer x-axis scale and label
   if(plotlog2){
@@ -460,12 +652,31 @@ EZMAPlot <- function(obj,
   }
 
 
+  if(!is.null(features_to_highlight)){
+
+    ggma <- ggma +
+      geom_point(
+        data = dplyr::filter(comparison, highlight),
+        aes(y = difference*scale_factor, x = avg_coverage),
+        inherit.aes = FALSE,
+        shape = highlight_shape,
+        size  = size + highlight_size_diff,
+        stroke = highlight_stroke,
+        fill = highlight_fill,
+        color = highlight_color
+      )
+
+  }
+
 
   return(ggma)
 }
 
 
-# EZbakRPCAPlot <- function(obj){
+
+# EZPCAplot <- function(){
+#
 #
 #   return(ggpca)
+#
 # }

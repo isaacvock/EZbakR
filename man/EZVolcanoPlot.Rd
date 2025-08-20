@@ -20,7 +20,12 @@ EZVolcanoPlot(
   plotlog2 = TRUE,
   FDR_cutoff = 0.05,
   difference_cutoff = log(2),
-  size = NULL
+  size = NULL,
+  features_to_highlight = NULL,
+  highlight_shape = 21,
+  highlight_size_diff = 1,
+  highlight_stroke = 0.7,
+  highlight_color = "black"
 )
 }
 \arguments{
@@ -71,6 +76,22 @@ would be log2(exp(1)) to convert log() to log2().}
 
 \item{size}{Size of points, passed to \code{geom_point()} size parameter. If not specified,
 a point size is automatically chosen.}
+
+\item{features_to_highlight}{Features you want to highlight in the plot (black circle
+will be drawn around them). This can either be a data frame with one column per
+feature type in the comparison table you are visualizing, or a vector of feature names
+if the relevant comparison table will only have one feature type noted.}
+
+\item{highlight_shape}{Shape of points overlayed on highlighted features. Defaults
+to an open circle}
+
+\item{highlight_size_diff}{Sets how much larger should the points overlayed on the highlighted
+features be than the original plot points.}
+
+\item{highlight_stroke}{Stroke width of the points overlayed on the highlighted
+features.}
+
+\item{highlight_color}{Color of the points overlayed on the highlighted points.}
 }
 \value{
 A \code{ggplot2} object. X-axis = log2(estimate of interest (e.g., fold-change

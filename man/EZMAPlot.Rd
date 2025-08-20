@@ -65,6 +65,22 @@ you want to plot log2(parameter) difference.}
 
 \item{size}{Size of points, passed to \code{geom_point()} size parameter. If not specified,
 a point size is automatically chosen.}
+
+\item{features_to_highlight}{Features you want to highlight in the plot (black circle
+will be drawn around them). This can either be a data frame with one column per
+feature type in the comparison table you are visualizing, or a vector of feature names
+if the relevant comparison table will only have one feature type noted.}
+
+\item{highlight_shape}{Shape of points overlayed on highlighted features. Defaults
+to an open circle}
+
+\item{highlight_size_diff}{Sets how much larger should the points overlayed on the highlighted
+features be than the original plot points.}
+
+\item{highlight_stroke}{Stroke width of the points overlayed on the highlighted
+features.}
+
+\item{highlight_color}{Color of the points overlayed on the highlighted points.}
 }
 \value{
 A \code{ggplot2} object. Y-axis = log2(estimate of interest (e.g., fold-change
