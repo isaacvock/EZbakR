@@ -441,6 +441,26 @@ EZMAPlot <- function(obj,
     ylab(axislabel)
 
 
+  if(abs(difference_cutoff) > 0){
+
+    intercept <- difference_cutoff * ifelse(plotlog2,
+                                            log2(exp(1)),
+                                            1)
+
+    ggma <- ggma +
+      geom_hline(yintercept = -intercept,
+                 color = 'darkred',
+                 linetype = "dotted",
+                 linewidth = 0.75) +
+      geom_hline(yintercept = intercept,
+                 color = 'darkred',
+                 linetype = "dotted",
+                 linewidth = 0.75)
+
+  }
+
+
+
   return(ggma)
 }
 
