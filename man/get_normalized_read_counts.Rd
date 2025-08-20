@@ -10,21 +10,24 @@ get_normalized_read_counts(
   obj,
   features_to_analyze,
   fractions_name = NULL,
-  feature_lengths = NULL
+  feature_lengths = NULL,
+  scale_factors = NULL
 )
 
 \method{get_normalized_read_counts}{EZbakRFractions}(
   obj,
   features_to_analyze,
   fractions_name = NULL,
-  feature_lengths = NULL
+  feature_lengths = NULL,
+  scale_factors = NULL
 )
 
 \method{get_normalized_read_counts}{EZbakRData}(
   obj,
   features_to_analyze,
   fractions_name = NULL,
-  feature_lengths = NULL
+  feature_lengths = NULL,
+  scale_factors = NULL
 )
 }
 \arguments{

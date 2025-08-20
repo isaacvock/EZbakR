@@ -853,7 +853,8 @@ inv_logit <- function(x) exp(x)/(1+exp(x))
 get_normalized_read_counts <- function(obj,
                                        features_to_analyze,
                                        fractions_name = NULL,
-                                       feature_lengths = NULL){
+                                       feature_lengths = NULL,
+                                       scale_factors = NULL){
 
   UseMethod("get_normalized_read_counts")
 
@@ -865,12 +866,13 @@ get_normalized_read_counts <- function(obj,
 get_normalized_read_counts.EZbakRFractions <- function(obj,
                                                        features_to_analyze,
                                                        fractions_name = NULL,
-                                                       feature_lengths = NULL){
+                                                       feature_lengths = NULL,
+                                                       scale_factors = NULL){
 
 
   reads <- data.table::setDT(data.table::copy(obj[['fractions']][[fractions_name]]))
 
-  reads <- normalize_reads(reads, features_to_analyze, feature_lengths)
+  reads <- normalize_reads(reads, features_to_analyze, feature_lengths, scale_factors)
 
   return(reads)
 
@@ -883,7 +885,8 @@ get_normalized_read_counts.EZbakRFractions <- function(obj,
 get_normalized_read_counts.EZbakRData <- function(obj,
                                                features_to_analyze,
                                                fractions_name = NULL,
-                                               feature_lengths = NULL){
+                                               feature_lengths = NULL,
+                                               scale_factors = NULL){
 
   ### Hack to deal with devtools::check() NOTEs
   n <- NULL
@@ -900,30 +903,54 @@ get_normalized_read_counts.EZbakRData <- function(obj,
 
 
   # Normalize
-  reads <- normalize_reads(reads, features_to_analyze, feature_lengths)
+  reads <- normalize_reads(reads, features_to_analyze, feature_lengths, scale_factors)
 
   return(reads)
 
 }
 
-normalize_reads <- function(reads, features_to_analyze, feature_lengths){
+normalize_reads <- function(reads, features_to_analyze, feature_lengths, scale_factors){
 
-  ### Hack to deal with devtools::check() NOTEs
-  geom_mean <- n <- normalized_reads <- scale_factor <- NULL
 
-  `.` <- list
+  if(is.null(scale_factors)){
 
-  # Median of ratios normalization
-  reads[, geom_mean := exp(mean(log(n))), by = features_to_analyze]
-  scales <- reads[, .(scale_factor =  stats::median(n/geom_mean)), by = .(sample)]
+    ### Hack to deal with devtools::check() NOTEs
+    geom_mean <- n <- normalized_reads <- scale_factor <- NULL
 
-  setkey(scales, sample)
-  setkey(reads, sample)
+    `.` <- list
 
-  # Normalize read counts
-  reads_norm <- reads[scales, nomatch = NULL]
-  reads_norm[,normalized_reads := n/scale_factor]
+    # Median of ratios normalization
+    reads[, geom_mean := exp(mean(log(n))), by = features_to_analyze]
+    scales <- reads[, .(scale_factor =  stats::median(n/geom_mean)), by = .(sample)]
 
+    setkey(scales, sample)
+    setkey(reads, sample)
+
+    # Normalize read counts
+    reads_norm <- reads[scales, nomatch = NULL]
+    reads_norm[,normalized_reads := n/scale_factor]
+
+
+  }else{
+
+    ### Hack to deal with devtools::check() NOTEs
+    geom_mean <- n <- normalized_reads <- scale_factor <- NULL
+
+    `.` <- list
+
+    # Median of ratios normalization
+    scales <- scale_factors
+    setDT(scales)
+
+    setkey(scales, sample)
+    setkey(reads, sample)
+
+    # Normalize read counts
+    reads_norm <- reads[scales, nomatch = NULL]
+    reads_norm[,normalized_reads := n/scale_factor]
+
+
+  }
 
   # Length normalize if lengths provided
   if (!is.null(feature_lengths)){
@@ -940,8 +967,8 @@ normalize_reads <- function(reads, features_to_analyze, feature_lengths){
     reads_norm <- reads_norm[feature_lengths, nomatch = NULL]
 
     # Length normalize (and add 1 to length to avoid divide by 0)
-      # TO-DO: Figure out why there would ever be cases of XF __no_feature
-      # and GF some feature for intron-less features
+    # TO-DO: Figure out why there would ever be cases of XF __no_feature
+    # and GF some feature for intron-less features
     reads_norm[, normalized_reads := normalized_reads / (length / 1000)]
 
 

@@ -17,6 +17,7 @@ EstimateKinetics(
   character_limit = 20,
   feature_lengths = NULL,
   exclude_pulse_estimates = TRUE,
+  scale_factors = NULL,
   overwrite = TRUE
 )
 }
@@ -99,6 +100,13 @@ should be a data frame with columns GF, XF, and length.}
 to exclude the pulse-only kdeg and ksyn estimates from the final output? This
 is a good idea if you used a very long pulse with the goal of labeling close
 to 100\% of all RNA.}
+
+\item{scale_factors}{Data frame with two columns, "sample" and "scale_factor".
+sample should be the sample name, and scale_factor is the factor which read counts
+in that sample should be \strong{divided} to get the normalized read counts. This should match
+the convention from DESeq2 and thus you can provide, for example, scale factors derived
+from DESeq2 for this. By default, EZbakR uses DESeq2's median of ratios normalization
+method, but specifying \code{scale_factors} is useful when you have spike-ins.}
 
 \item{overwrite}{If TRUE and a fractions estimate output already exists that
 would possess the same metadata (features analyzed, populations analyzed,

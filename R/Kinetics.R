@@ -154,6 +154,12 @@
 #' @param feature_lengths Table of effective lengths for each feature combination in your
 #' data. For example, if your analysis includes features named GF and XF, this
 #' should be a data frame with columns GF, XF, and length.
+#' @param scale_factors Data frame with two columns, "sample" and "scale_factor".
+#' sample should be the sample name, and scale_factor is the factor which read counts
+#' in that sample should be **divided** to get the normalized read counts. This should match
+#' the convention from DESeq2 and thus you can provide, for example, scale factors derived
+#' from DESeq2 for this. By default, EZbakR uses DESeq2's median of ratios normalization
+#' method, but specifying `scale_factors` is useful when you have spike-ins.
 #' @param overwrite If TRUE and a fractions estimate output already exists that
 #' would possess the same metadata (features analyzed, populations analyzed,
 #' and fraction_design), then it will get overwritten with the new output. Else,
@@ -194,6 +200,7 @@ EstimateKinetics <- function(obj,
                              character_limit = 20,
                              feature_lengths = NULL,
                              exclude_pulse_estimates = TRUE,
+                             scale_factors = NULL,
                              overwrite = TRUE){
 
   ### Check that input is valid
@@ -260,6 +267,7 @@ EstimateKinetics <- function(obj,
                                        exactMatch = exactMatch,
                                        character_limit = character_limit,
                                        feature_lengths = feature_lengths,
+                                       scale_factors = scale_factors,
                                        exclude_pulse_estimates = exclude_pulse_estimates,
                                        overwrite = overwrite)
 
@@ -286,6 +294,7 @@ Standard_kinetic_estimation <- function(obj,
                                         reference_factor = NULL,
                                         grouping_factor = NULL,
                                         feature_lengths = NULL,
+                                        scale_factors = NULL,
                                         exclude_pulse_estimates = TRUE,
                                         overwrite = TRUE){
 
@@ -337,7 +346,8 @@ Standard_kinetic_estimation <- function(obj,
   reads_norm <- get_normalized_read_counts(obj = obj,
                                            features_to_analyze = features_to_analyze,
                                            fractions_name = fractions_name,
-                                           feature_lengths = feature_lengths)
+                                           feature_lengths = feature_lengths,
+                                           scale_factors = scale_factors)
 
 
 
