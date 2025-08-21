@@ -618,7 +618,7 @@ EZget <- function(obj,
 
     if(length(possible_tables) == 0){
 
-      stop("No tables fit your search criterion!")
+      return(NULL)
 
     }else{
 

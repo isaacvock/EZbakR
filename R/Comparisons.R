@@ -217,6 +217,9 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                       repeatID = repeatID,
                       returnNameOnly = TRUE)
 
+  if(is.null(param_name)){
+    stop("No tables from your EZbakR analysis match your search criteria!")
+  }
 
   # Get fractions
   kinetics <- obj[[type]][[param_name]]
@@ -1089,6 +1092,10 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                          repeatID = repeatID,
                          returnNameOnly = TRUE)
 
+
+  if(is.null(averages_name)){
+    stop("No tables from your EZbakR analysis match your search criteria!")
+  }
 
   # Get fractions
   parameter_est <- obj[[type]][[averages_name]]

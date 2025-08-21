@@ -831,6 +831,11 @@ DeconvolveFractions <- function(obj,
            Either specify additional criterion (i.e., features, populations,
            or fraction_design) or explicitly specify the table name (fraction_name).")
     }
+
+    if(is.null(fraction_name)){
+      stop("No tables from your EZbakR analysis match your search criteria!")
+    }
+
   }
 
 

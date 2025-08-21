@@ -325,6 +325,9 @@ Standard_kinetic_estimation <- function(obj,
                           exactMatch = exactMatch,
                           returnNameOnly = TRUE)
 
+  if(is.null(fractions_name)){
+    stop("No tables from your EZbakR analysis match your search criteria!")
+  }
 
   # Get fractions
   kinetics <- obj[["fractions"]][[fractions_name]]

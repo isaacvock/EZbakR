@@ -148,6 +148,10 @@ EZVolcanoPlot <- function(obj,
                           exactMatch = exactMatch,
                           returnNameOnly = TRUE)
 
+  if(is.null(comparison_name)){
+    stop("No tables from your EZbakR analysis match your search criteria!")
+  }
+
   comparison <- obj[['comparisons']][[comparison_name]]
   metadata <- obj[['metadata']][['comparisons']][[comparison_name]]
 
@@ -481,6 +485,10 @@ EZMAPlot <- function(obj,
                            exactMatch = exactMatch,
                            returnNameOnly = TRUE)
 
+  if(is.null(comparison_name)){
+    stop("No tables from your EZbakR analysis match your search criteria!")
+  }
+
   comparison <- obj[['comparisons']][[comparison_name]]
   metadata <- obj[['metadata']][['comparisons']][[comparison_name]]
 
@@ -755,6 +763,10 @@ EZpcaPlot <- function(obj, data_type = c("fraction_labeled", "reads"),  features
                           repeatID = repeatID,
                           exactMatch = exactMatch,
                           returnNameOnly = TRUE)
+
+  if(is.null(fractions_name)){
+    stop("No tables from your EZbakR analysis match your search criteria!")
+  }
 
   fraction_table <- obj[["fractions"]][[fractions_name]]
 
