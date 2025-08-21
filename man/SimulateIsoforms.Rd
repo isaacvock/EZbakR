@@ -52,6 +52,8 @@ data table (the cB table).}
 \item{readlength}{Length of simulated reads. In this simple simulation, all reads
 are simulated as being exactly this length.}
 
+\item{Ucont}{Percentage of nucleotides simulated to be U's.}
+
 \item{avg_numiso}{Average number of isoforms for each feature. Feature-specific
 isoform counts are drawn from a Poisson distribution with this average. NOTE:
 to insure that all features have multiple isoforms, the simulated number of
@@ -73,8 +75,6 @@ ksyns are simulated}
 
 \item{logksyn_sd}{sdlog of a log-normal distribution from which
 ksyns are simulated}
-
-\item{Ucont_alpha}{Percentage of nucleotides simulated to be U's.}
 }
 \description{
 \code{SimulateIsoforms()} performs a simple simulation of isoform-specific kinetic
