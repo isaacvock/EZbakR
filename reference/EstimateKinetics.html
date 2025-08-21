@@ -66,6 +66,7 @@ inference strategies are implemented.</p>
 <span>  character_limit <span class="op">=</span> <span class="fl">20</span>,</span>
 <span>  feature_lengths <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  exclude_pulse_estimates <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  scale_factors <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -173,6 +174,15 @@ should be a data frame with columns GF, XF, and length.</p></dd>
 to exclude the pulse-only kdeg and ksyn estimates from the final output? This
 is a good idea if you used a very long pulse with the goal of labeling close
 to 100% of all RNA.</p></dd>
+
+
+<dt id="arg-scale-factors">scale_factors<a class="anchor" aria-label="anchor" href="#arg-scale-factors"></a></dt>
+<dd><p>Data frame with two columns, "sample" and "scale_factor".
+sample should be the sample name, and scale_factor is the factor which read counts
+in that sample should be <strong>divided</strong> to get the normalized read counts. This should match
+the convention from DESeq2 and thus you can provide, for example, scale factors derived
+from DESeq2 for this. By default, EZbakR uses DESeq2's median of ratios normalization
+method, but specifying <code>scale_factors</code> is useful when you have spike-ins.</p></dd>
 
 
 <dt id="arg-overwrite">overwrite<a class="anchor" aria-label="anchor" href="#arg-overwrite"></a></dt>

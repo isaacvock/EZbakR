@@ -91,7 +91,8 @@ drawn from a binomial distribution with probability of mutation equal to pold.</
 <span>  logksyn_sd <span class="op">=</span> <span class="fl">0.7</span>,</span>
 <span>  seqdepth <span class="op">=</span> <span class="va">nfeatures</span> <span class="op">*</span> <span class="fl">2500</span>,</span>
 <span>  readlength <span class="op">=</span> <span class="fl">200</span>,</span>
-<span>  Ucont <span class="op">=</span> <span class="fl">0.25</span>,</span>
+<span>  Ucont_alpha <span class="op">=</span> <span class="fl">25</span>,</span>
+<span>  Ucont_beta <span class="op">=</span> <span class="fl">75</span>,</span>
 <span>  feature_pnew <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  pnew_kdeg_corr <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  logit_pnew_mean <span class="op">=</span> <span class="op">-</span><span class="fl">2.5</span>,</span>
@@ -190,8 +191,14 @@ the total number of reads to simulate.</p></dd>
 are simulated as being exactly this length.</p></dd>
 
 
-<dt id="arg-ucont">Ucont<a class="anchor" aria-label="anchor" href="#arg-ucont"></a></dt>
-<dd><p>Probability that a nucleotide in a simulated read is a U.</p></dd>
+<dt id="arg-ucont-alpha">Ucont_alpha<a class="anchor" aria-label="anchor" href="#arg-ucont-alpha"></a></dt>
+<dd><p>Probability that a nucleotide in a simulated read from a given feature
+is a U is drawn from a beta distribution with shape1 = <code>Ucont_alpha</code>.</p></dd>
+
+
+<dt id="arg-ucont-beta">Ucont_beta<a class="anchor" aria-label="anchor" href="#arg-ucont-beta"></a></dt>
+<dd><p>Probability that a nucleotide in a simulated read from a given feature
+is a U is drawn from a beta distribution with shape2 = <code>Ucont_beta</code>.</p></dd>
 
 
 <dt id="arg-feature-pnew">feature_pnew<a class="anchor" aria-label="anchor" href="#arg-feature-pnew"></a></dt>

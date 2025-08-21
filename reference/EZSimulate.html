@@ -97,7 +97,8 @@ values will not differ across conditions.</p>
 <span>  pnew <span class="op">=</span> <span class="fl">0.05</span>,</span>
 <span>  pold <span class="op">=</span> <span class="fl">0.001</span>,</span>
 <span>  readlength <span class="op">=</span> <span class="fl">200</span>,</span>
-<span>  Ucont <span class="op">=</span> <span class="fl">0.25</span>,</span>
+<span>  Ucont_alpha <span class="op">=</span> <span class="fl">25</span>,</span>
+<span>  Ucont_beta <span class="op">=</span> <span class="fl">75</span>,</span>
 <span>  feature_prefix <span class="op">=</span> <span class="st">"Gene"</span>,</span>
 <span>  dispslope <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  dispint <span class="op">=</span> <span class="fl">0.01</span>,</span>
@@ -241,8 +242,14 @@ and pdiff_kd, pdiff_ks, and pdiff_both are all set to the equivalently named par
 are simulated as being exactly this length.</p></dd>
 
 
-<dt id="arg-ucont">Ucont<a class="anchor" aria-label="anchor" href="#arg-ucont"></a></dt>
-<dd><p>Probability that a nucleotide in a simulated read is a U.</p></dd>
+<dt id="arg-ucont-alpha">Ucont_alpha<a class="anchor" aria-label="anchor" href="#arg-ucont-alpha"></a></dt>
+<dd><p>Probability that a nucleotide in a simulated read from a given feature
+is a U is drawn from a beta distribution with shape1 = <code>Ucont_alpha</code>.</p></dd>
+
+
+<dt id="arg-ucont-beta">Ucont_beta<a class="anchor" aria-label="anchor" href="#arg-ucont-beta"></a></dt>
+<dd><p>Probability that a nucleotide in a simulated read from a given feature
+is a U is drawn from a beta distribution with shape2 = <code>Ucont_beta</code>.</p></dd>
 
 
 <dt id="arg-feature-prefix">feature_prefix<a class="anchor" aria-label="anchor" href="#arg-feature-prefix"></a></dt>

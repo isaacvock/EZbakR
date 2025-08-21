@@ -473,11 +473,11 @@ associate -label and +label samples:</p>
 <code class="sourceCode R"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/CorrectDropout.html">CorrectDropout</a></span><span class="op">(</span><span class="va">ezbdo</span>, </span>
 <span>                        grouping_factors <span class="op">=</span> <span class="st">"treatment"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Estimated rates of dropout are:</span></span>
-<span><span class="co">#&gt;    sample  pdo</span></span>
-<span><span class="co">#&gt; 1 sample1 0.01</span></span>
-<span><span class="co">#&gt; 2 sample2 0.01</span></span>
-<span><span class="co">#&gt; 3 sample3 0.01</span></span>
-<span><span class="co">#&gt; 4 sample4 0.01</span></span></code></pre></div>
+<span><span class="co">#&gt;    sample        pdo</span></span>
+<span><span class="co">#&gt; 1 sample1 0.01000000</span></span>
+<span><span class="co">#&gt; 2 sample2 0.01000000</span></span>
+<span><span class="co">#&gt; 3 sample3 0.01000000</span></span>
+<span><span class="co">#&gt; 4 sample4 0.01101129</span></span></code></pre></div>
 <p><code>grouping_factors</code> is technically not a required argument,
 as EZbakR will try to infer it automatically. EZbakR assumes that all
 metadf sample characteristic columns should be used for grouping though,

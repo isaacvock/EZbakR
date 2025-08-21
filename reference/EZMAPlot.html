@@ -65,7 +65,13 @@ coloring points by position relative to user-defined decision cutoffs.</p>
 <span>  plotlog2 <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  FDR_cutoff <span class="op">=</span> <span class="fl">0.05</span>,</span>
 <span>  difference_cutoff <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span>,</span>
-<span>  size <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  size <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  features_to_highlight <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  highlight_shape <span class="op">=</span> <span class="fl">21</span>,</span>
+<span>  highlight_size_diff <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  highlight_stroke <span class="op">=</span> <span class="fl">0.7</span>,</span>
+<span>  highlight_fill <span class="op">=</span> <span class="cn">NA</span>,</span>
+<span>  highlight_color <span class="op">=</span> <span class="st">"black"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -144,6 +150,37 @@ you want to plot log2(parameter) difference.</p></dd>
 <dt id="arg-size">size<a class="anchor" aria-label="anchor" href="#arg-size"></a></dt>
 <dd><p>Size of points, passed to <code>geom_point()</code> size parameter. If not specified,
 a point size is automatically chosen.</p></dd>
+
+
+<dt id="arg-features-to-highlight">features_to_highlight<a class="anchor" aria-label="anchor" href="#arg-features-to-highlight"></a></dt>
+<dd><p>Features you want to highlight in the plot (black circle
+will be drawn around them). This can either be a data frame with one column per
+feature type in the comparison table you are visualizing, or a vector of feature names
+if the relevant comparison table will only have one feature type noted.</p></dd>
+
+
+<dt id="arg-highlight-shape">highlight_shape<a class="anchor" aria-label="anchor" href="#arg-highlight-shape"></a></dt>
+<dd><p>Shape of points overlayed on highlighted features. Defaults
+to an open circle</p></dd>
+
+
+<dt id="arg-highlight-size-diff">highlight_size_diff<a class="anchor" aria-label="anchor" href="#arg-highlight-size-diff"></a></dt>
+<dd><p>Sets how much larger should the points overlayed on the highlighted
+features be than the original plot points.</p></dd>
+
+
+<dt id="arg-highlight-stroke">highlight_stroke<a class="anchor" aria-label="anchor" href="#arg-highlight-stroke"></a></dt>
+<dd><p>Stroke width of the points overlayed on the highlighted
+features.</p></dd>
+
+
+<dt id="arg-highlight-fill">highlight_fill<a class="anchor" aria-label="anchor" href="#arg-highlight-fill"></a></dt>
+<dd><p>Fill color of the points overlayed on the highlighted
+features. Default is for them to be fill-less (<code>highlight_fill == NA</code>).</p></dd>
+
+
+<dt id="arg-highlight-color">highlight_color<a class="anchor" aria-label="anchor" href="#arg-highlight-color"></a></dt>
+<dd><p>Color of the points overlayed on the highlighted points.</p></dd>
 
 </dl></div>
     <div class="section level2">
