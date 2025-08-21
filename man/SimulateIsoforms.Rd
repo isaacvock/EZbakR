@@ -74,11 +74,7 @@ ksyns are simulated}
 \item{logksyn_sd}{sdlog of a log-normal distribution from which
 ksyns are simulated}
 
-\item{Ucont_alpha}{Probability that a nucleotide in a simulated read from a given feature
-is a U is drawn from a beta distribution with shape1 = \code{Ucont_alpha}.}
-
-\item{Ucont_beta}{Probability that a nucleotide in a simulated read from a given feature
-is a U is drawn from a beta distribution with shape2 = \code{Ucont_beta}.}
+\item{Ucont_alpha}{Percentage of nucleotides simulated to be U's.}
 }
 \description{
 \code{SimulateIsoforms()} performs a simple simulation of isoform-specific kinetic

@@ -129,7 +129,7 @@ EZVolcanoPlot <- function(obj,
   }
 
   ### Hack to deal with devtools::check() NOTEs
-  comparison_name <- difference <- padj <- conclusion <- NULL
+  comparison_name <- difference <- padj <- conclusion <- highlight <- NULL
 
 
   ### Find the object you want to get
@@ -467,7 +467,7 @@ EZMAPlot <- function(obj,
   }
 
   ### Hack to deal with devtools::check() NOTEs
-  comparison_name <- difference <- avg_coverage <- conclusion <- NULL
+  comparison_name <- difference <- avg_coverage <- conclusion <- highlight <- NULL
 
 
   ### Find the object you want to get
@@ -750,6 +750,7 @@ EZpcaPlot <- function(obj, data_type = c("fraction_labeled", "reads"),  features
                       variance_decile = 7, center = TRUE, scale = TRUE,
                       point_size = 3, metadf_cols_to_use = "all"){
 
+  repeatID <- tl <- tpulse <- n <- variance <- combo <- NULL
 
   data_type <- match.arg(data_type)
 
@@ -872,11 +873,11 @@ EZpcaPlot <- function(obj, data_type = c("fraction_labeled", "reads"),  features
 
   logit_fn_df <- logit_fn_df %>%
     dplyr::mutate(
-      variance = var(!!dplyr::sym(data_col))
+      variance = stats::var(!!dplyr::sym(data_col))
     ) %>%
     dplyr::ungroup() %>%
     dplyr::filter(
-      variance > quantile(variance, probs = seq(0, 1, 0.1))[variance_decile]
+      variance > stats::quantile(variance, probs = seq(0, 1, 0.1))[variance_decile]
     ) %>%
     dplyr::select(
       sample, !!features_to_analyze, !!data_col

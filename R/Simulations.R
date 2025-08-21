@@ -1748,10 +1748,7 @@ SimulateMultiCondition <- function(nfeatures, metadf, mean_formula,
 #' @param funique Fraction of reads that uniquely "map" to a single isoform.
 #' @param readlength Length of simulated reads. In this simple simulation, all reads
 #' are simulated as being exactly this length.
-#' @param Ucont_alpha Probability that a nucleotide in a simulated read from a given feature
-#' is a U is drawn from a beta distribution with shape1 = `Ucont_alpha`.
-#' @param Ucont_beta Probability that a nucleotide in a simulated read from a given feature
-#' is a U is drawn from a beta distribution with shape2 = `Ucont_beta`.
+#' @param Ucont_alpha Percentage of nucleotides simulated to be U's.
 #' @param avg_numiso Average number of isoforms for each feature. Feature-specific
 #' isoform counts are drawn from a Poisson distribution with this average. NOTE:
 #' to insure that all features have multiple isoforms, the simulated number of

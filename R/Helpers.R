@@ -837,6 +837,8 @@ inv_logit <- function(x) exp(x)/(1+exp(x))
 #' @param feature_lengths Table of effective lengths for each feature combination in your
 #' data. For example, if your analysis includes features named GF and XF, this
 #' should be a data frame with columns GF, XF, and length.
+#' @param scale_factors Dataframe with two columns, one being "sample" (sample names)
+#' and the other being "scale_factor" (value to divide read counts by to normalize them)
 #' @return Data table of normalized read counts.
 #' @examples
 #'
