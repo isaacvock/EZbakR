@@ -52,7 +52,7 @@ data table (the cB table).}
 \item{readlength}{Length of simulated reads. In this simple simulation, all reads
 are simulated as being exactly this length.}
 
-\item{Ucont}{Probability that a nucleotide in a simulated read is a U.}
+\item{Ucont}{Percentage of nucleotides simulated to be U's.}
 
 \item{avg_numiso}{Average number of isoforms for each feature. Feature-specific
 isoform counts are drawn from a Poisson distribution with this average. NOTE:

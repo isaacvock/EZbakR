@@ -14,7 +14,8 @@ SimulateMultiCondition(
   pnew = 0.05,
   pold = 0.001,
   readlength = 200,
-  Ucont = 0.25,
+  Ucont_alpha = 25,
+  Ucont_beta = 75,
   feature_prefix = "Gene",
   dispslope = 5,
   dispint = 0.01,
@@ -111,7 +112,11 @@ the total number of reads to simulate.}
 \item{readlength}{Length of simulated reads. In this simple simulation, all reads
 are simulated as being exactly this length.}
 
-\item{Ucont}{Probability that a nucleotide in a simulated read is a U.}
+\item{Ucont_alpha}{Probability that a nucleotide in a simulated read from a given feature
+is a U is drawn from a beta distribution with shape1 = \code{Ucont_alpha}.}
+
+\item{Ucont_beta}{Probability that a nucleotide in a simulated read from a given feature
+is a U is drawn from a beta distribution with shape2 = \code{Ucont_beta}.}
 
 \item{feature_prefix}{Name given to the i-th feature is \code{paste0(feature_prefix, i)}. Shows up in the
 \code{feature} column of the output simulated data table.}

@@ -217,6 +217,9 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                       repeatID = repeatID,
                       returnNameOnly = TRUE)
 
+  if(is.null(param_name)){
+    stop("No tables from your EZbakR analysis match your search criteria!")
+  }
 
   # Get fractions
   kinetics <- obj[[type]][[param_name]]
@@ -1090,6 +1093,10 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                          returnNameOnly = TRUE)
 
 
+  if(is.null(averages_name)){
+    stop("No tables from your EZbakR analysis match your search criteria!")
+  }
+
   # Get fractions
   parameter_est <- obj[[type]][[averages_name]]
 
@@ -1279,7 +1286,7 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
 
   if(length(obj[['comparisons']]) > 0){
     output_name <- decide_output(obj, output_name, type = "comparisons",
-                                 features = features, parameter = parameter,
+                                 features = features_to_analyze, parameter = parameter,
                                  design_factor = design_factor,
                                  reference = reference,
                                  experimental = experimental,
@@ -1298,7 +1305,7 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
 
       repeatID <- length(EZget(obj,
                                type = 'comparisons',
-                               features = features,
+                               features = features_to_analyze,
                                parameter = parameter,
                                design_factor = design_factor,
                                reference = reference,
@@ -1320,7 +1327,7 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
 
   obj[["comparisons"]][[output_name]] <- dplyr::as_tibble(comparison)
 
-  obj[["metadata"]][["comparisons"]][[output_name]] <- list(features = features,
+  obj[["metadata"]][["comparisons"]][[output_name]] <- list(features = features_to_analyze,
                                                             parameter = parameter,
                                                             design_factor = design_factor,
                                                             reference = reference,

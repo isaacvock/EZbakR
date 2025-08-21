@@ -50,7 +50,10 @@
 #' the total number of reads to simulate.
 #' @param readlength Length of simulated reads. In this simple simulation, all reads
 #' are simulated as being exactly this length.
-#' @param Ucont Probability that a nucleotide in a simulated read is a U.
+#' @param Ucont_alpha Probability that a nucleotide in a simulated read from a given feature
+#' is a U is drawn from a beta distribution with shape1 = `Ucont_alpha`.
+#' @param Ucont_beta Probability that a nucleotide in a simulated read from a given feature
+#' is a U is drawn from a beta distribution with shape2 = `Ucont_beta`.
 #' @param feature_pnew Boolean; if TRUE, simulate a different pnew for each feature
 #' @param pnew_kdeg_corr Boolean; only relevant if `feature_pnew` is TRUE. If so, then
 #' setting `pnew_kdeg_corr` to TRUE will ensure that higher kdeg transcripts have a higher
@@ -72,7 +75,7 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
                            logkdeg_mean = -1.9, logkdeg_sd = 0.7,
                            logksyn_mean = 2.3, logksyn_sd = 0.7,
                            seqdepth = nfeatures*2500, readlength = 200,
-                           Ucont = 0.25, feature_pnew = FALSE,
+                           Ucont_alpha = 25, Ucont_beta = 75, feature_pnew = FALSE,
                            pnew_kdeg_corr = FALSE,
                            logit_pnew_mean = -2.5, logit_pnew_sd = 0.1){
 
@@ -158,9 +161,17 @@ SimulateOneRep <- function(nfeatures, read_vect = NULL, label_time = 2,
                         size = 1,
                         prob = rep(fn_vect, times = read_vect))
 
+  # Simulate feature-specific U-contents
+  Ucont <- stats::rbeta(
+    n = nfeatures,
+    shape1 = Ucont_alpha,
+    shape2 = Ucont_beta
+  )
+
   nT_count <- stats::rbinom(n = totreads,
                      size = readlength,
-                     prob = Ucont)
+                     prob = rep(Ucont,
+                                times = read_vect))
 
   if(feature_pnew){
 
@@ -852,7 +863,10 @@ SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
 #' @param pold Probability that a T is mutated to a C if a read is old.
 #' @param readlength Length of simulated reads. In this simple simulation, all reads
 #' are simulated as being exactly this length.
-#' @param Ucont Probability that a nucleotide in a simulated read is a U.
+#' @param Ucont_alpha Probability that a nucleotide in a simulated read from a given feature
+#' is a U is drawn from a beta distribution with shape1 = `Ucont_alpha`.
+#' @param Ucont_beta Probability that a nucleotide in a simulated read from a given feature
+#' is a U is drawn from a beta distribution with shape2 = `Ucont_beta`.
 #' @param logkdeg_mean Mean of normal distribution from which reference log(kdeg)
 #' linear model parameter is drawn from for each feature if `param_details` is not provided.
 #' @param feature_prefix Name given to the i-th feature is `paste0(feature_prefix, i)`. Shows up in the
@@ -956,7 +970,8 @@ EZSimulate <- function(nfeatures,
                        param_details = NULL,
                        seqdepth = nfeatures*2500, label_time = 2,
                        pnew = 0.05, pold = 0.001,
-                       readlength = 200, Ucont = 0.25,
+                       readlength = 200, Ucont_alpha = 25,
+                       Ucont_beta = 75,
                        feature_prefix = "Gene",
                        dispslope = 5, dispint = 0.01,
                        logkdegsdtrend_slope = -0.3,
@@ -1022,7 +1037,8 @@ EZSimulate <- function(nfeatures,
                                         param_details = param_details,
                                         seqdepth = seqdepth, label_time = label_time,
                                         pnew = pnew, pold = pold, readlength = readlength,
-                                        Ucont = Ucont, feature_prefix = feature_prefix,
+                                        Ucont_alpha = Ucont_alpha, Ucont_beta = Ucont_beta,
+                                        feature_prefix = feature_prefix,
                                         dispslope = dispslope, dispint = dispint,
                                         logkdegsdtrend_slope = logkdegsdtrend_slope,
                                         logkdegsdtrend_intercept = logkdegsdtrend_intercept,
@@ -1048,7 +1064,8 @@ EZSimulate <- function(nfeatures,
                                         param_details = param_details,
                                         seqdepth = seqdepth, label_time = label_time,
                                         pnew = pnew, pold = pold, readlength = readlength,
-                                        Ucont = Ucont, feature_prefix = feature_prefix,
+                                        Ucont_alpha = Ucont_alpha, Ucont_beta = Ucont_beta,
+                                        feature_prefix = feature_prefix,
                                         dispslope = dispslope, dispint = dispint,
                                         logkdegsdtrend_slope = logkdegsdtrend_slope,
                                         logkdegsdtrend_intercept = logkdegsdtrend_intercept,
@@ -1233,7 +1250,10 @@ EZSimulate <- function(nfeatures,
 #' @param pold Probability that a T is mutated to a C if a read is old.
 #' @param readlength Length of simulated reads. In this simple simulation, all reads
 #' are simulated as being exactly this length.
-#' @param Ucont Probability that a nucleotide in a simulated read is a U.
+#' @param Ucont_alpha Probability that a nucleotide in a simulated read from a given feature
+#' is a U is drawn from a beta distribution with shape1 = `Ucont_alpha`.
+#' @param Ucont_beta Probability that a nucleotide in a simulated read from a given feature
+#' is a U is drawn from a beta distribution with shape2 = `Ucont_beta`.
 #' @param logkdeg_mean Mean of normal distribution from which reference log(kdeg)
 #' linear model parameter is drawn from for each feature if `param_details` is not provided.
 #' @param feature_prefix Name given to the i-th feature is `paste0(feature_prefix, i)`. Shows up in the
@@ -1282,7 +1302,8 @@ SimulateMultiCondition <- function(nfeatures, metadf, mean_formula,
                                    param_details = NULL,
                                    seqdepth = nfeatures*2500, label_time = 2,
                                    pnew = 0.05, pold = 0.001,
-                                   readlength = 200, Ucont = 0.25,
+                                   readlength = 200, Ucont_alpha = 25,
+                                   Ucont_beta = 75,
                                    feature_prefix = "Gene",
                                    dispslope = 5, dispint = 0.01,
                                    logkdegsdtrend_slope = -0.3,
@@ -1624,7 +1645,10 @@ SimulateMultiCondition <- function(nfeatures, metadf, mean_formula,
                                    kdeg_vect = exp(extract_ith(logkdegs, s)),
                                    ksyn_vect = exp(extract_ith(logksyns, s)),
                                    pnew = as.numeric(metadf[s, "pnew"]),
-                                   pold = as.numeric(metadf[s, "pold"]))
+                                   pold = as.numeric(metadf[s, "pold"]),
+                                   readlength = readlength,
+                                   Ucont_alpha = Ucont_alpha,
+                                   Ucont_beta = Ucont_beta)
 
   }
 
@@ -1724,7 +1748,7 @@ SimulateMultiCondition <- function(nfeatures, metadf, mean_formula,
 #' @param funique Fraction of reads that uniquely "map" to a single isoform.
 #' @param readlength Length of simulated reads. In this simple simulation, all reads
 #' are simulated as being exactly this length.
-#' @param Ucont Probability that a nucleotide in a simulated read is a U.
+#' @param Ucont Percentage of nucleotides simulated to be U's.
 #' @param avg_numiso Average number of isoforms for each feature. Feature-specific
 #' isoform counts are drawn from a Poisson distribution with this average. NOTE:
 #' to insure that all features have multiple isoforms, the simulated number of
@@ -2188,24 +2212,33 @@ check_SimulateOneRep_input <- function(args){
 
 
 
-  ### Ucont
-  Ucont <- args$Ucont
+  ### Ucont parameters
+  Ucont_alpha <- args$Ucont_alpha
 
-  if(!is.numeric(Ucont)){
+  if(!is.numeric(Ucont_alpha)){
 
-    stop("Ucont must be numeric!")
-
-  }
-
-  if(Ucont <= 0){
-
-    stop("Ucont must be > 0")
+    stop("Ucont_alpha must be numeric!")
 
   }
 
-  if(Ucont > 1){
+  if(Ucont_alpha <= 0){
 
-    stop("Ucont must be <= 1")
+    stop("Ucont_alpha must be > 0")
+
+  }
+
+
+  Ucont_beta <- args$Ucont_beta
+
+  if(!is.numeric(Ucont_beta)){
+
+    stop("Ucont_beta must be numeric!")
+
+  }
+
+  if(Ucont_beta <= 0){
+
+    stop("Ucont_beta must be > 0")
 
   }
 
@@ -2362,26 +2395,36 @@ check_SimulateMultiCondition_input <- function(args){
 
 
 
-  ### Ucont
-  Ucont <- args$Ucont
+  ### Ucont parameters
+  Ucont_alpha <- args$Ucont_alpha
 
-  if(!is.numeric(Ucont)){
+  if(!is.numeric(Ucont_alpha)){
 
-    stop("Ucont must be numeric!")
-
-  }
-
-  if(Ucont <= 0){
-
-    stop("Ucont must be > 0")
+    stop("Ucont_alpha must be numeric!")
 
   }
 
-  if(Ucont > 1){
+  if(Ucont_alpha <= 0){
 
-    stop("Ucont must be <= 1")
+    stop("Ucont_alpha must be > 0")
 
   }
+
+
+  Ucont_beta <- args$Ucont_beta
+
+  if(!is.numeric(Ucont_beta)){
+
+    stop("Ucont_beta must be numeric!")
+
+  }
+
+  if(Ucont_beta <= 0){
+
+    stop("Ucont_beta must be > 0")
+
+  }
+
 
 
 }

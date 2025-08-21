@@ -121,6 +121,11 @@ EZQC.EZbakRFractions <- function(obj,
                  populations = populations,
                  fraction_design = fraction_design,
                  returnNameOnly = TRUE)
+
+  if(is.null(fname)){
+    stop("No tables from your EZbakR analysis match your search criteria!")
+  }
+
   mutrate_populations <- obj[["metadata"]][["fractions"]][[fname]][["populations"]]
 
 
@@ -605,6 +610,11 @@ check_read_count_corr_ezbf <- function(obj,
                  populations = populations,
                  fraction_design = fraction_design,
                  returnNameOnly = TRUE)
+
+  if(is.null(fname)){
+    stop("No tables from your EZbakR analysis match your search criteria!")
+  }
+
   fraction <- obj[["fractions"]][[fname]]
   features <- obj[["metadata"]][["fractions"]][[fname]]$features
 
@@ -1023,6 +1033,11 @@ check_fl_dist <- function(obj,
   ### Get read counts for each feature
   fname <- EZget(obj, type = "fractions",
                  returnNameOnly = TRUE)
+
+  if(is.null(fname)){
+    stop("No tables from your EZbakR analysis match your search criteria!")
+  }
+
   fraction_table <- obj[["fractions"]][[fname]]
   features <- obj[["metadata"]][["fractions"]][[fname]]$features
 
@@ -1156,6 +1171,11 @@ check_fl_corr <- function(obj,
   ### Get read counts for each feature
   fname <- EZget(obj, type = "fractions",
                  returnNameOnly = TRUE)
+
+  if(is.null(fname)){
+    stop("No tables from your EZbakR analysis match your search criteria!")
+  }
+
   fraction_table <- obj[["fractions"]][[fname]]
   features <- obj[["metadata"]][["fractions"]][[fname]]$features
 

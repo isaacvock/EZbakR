@@ -21,7 +21,8 @@ SimulateOneRep(
   logksyn_sd = 0.7,
   seqdepth = nfeatures * 2500,
   readlength = 200,
-  Ucont = 0.25,
+  Ucont_alpha = 25,
+  Ucont_beta = 75,
   feature_pnew = FALSE,
   pnew_kdeg_corr = FALSE,
   logit_pnew_mean = -2.5,
@@ -84,7 +85,11 @@ the total number of reads to simulate.}
 \item{readlength}{Length of simulated reads. In this simple simulation, all reads
 are simulated as being exactly this length.}
 
-\item{Ucont}{Probability that a nucleotide in a simulated read is a U.}
+\item{Ucont_alpha}{Probability that a nucleotide in a simulated read from a given feature
+is a U is drawn from a beta distribution with shape1 = \code{Ucont_alpha}.}
+
+\item{Ucont_beta}{Probability that a nucleotide in a simulated read from a given feature
+is a U is drawn from a beta distribution with shape2 = \code{Ucont_beta}.}
 
 \item{feature_pnew}{Boolean; if TRUE, simulate a different pnew for each feature}
 

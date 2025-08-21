@@ -315,6 +315,11 @@ VisualizeDropout <- function(obj,
                           fraction_design = fraction_design,
                           returnNameOnly = TRUE)
 
+
+  if(is.null(fractions_name)){
+    stop("No tables from your EZbakR analysis match your search criteria!")
+  }
+
   # Get fractions
   fractions <- obj[["fractions"]][[fractions_name]]
 
@@ -462,6 +467,11 @@ calculate_dropout <- function(obj,
                           populations = populations,
                           fraction_design = fraction_design,
                           returnNameOnly = TRUE)
+
+
+  if(is.null(fractions_name)){
+    stop("No tables from your EZbakR analysis match your search criteria!")
+  }
 
   # Get fractions
   fractions <- obj[["fractions"]][[fractions_name]]
@@ -665,6 +675,10 @@ NormalizeForDropout <- function(obj,
                           populations = populations,
                           fraction_design = fraction_design,
                           returnNameOnly = TRUE)
+
+  if(is.null(fractions_name)){
+    stop("No tables from your EZbakR analysis match your search criteria!")
+  }
 
   # Get fractions
   fractions <- obj[["fractions"]][[fractions_name]]
