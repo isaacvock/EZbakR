@@ -1,0 +1,296 @@
+# Estimate kinetic parameters
+
+Simple kinetic parameter (kdeg and ksyn) estimation using fraction
+estimates from
+[`EstimateFractions()`](https://isaacvock.github.io/EZbakR/reference/EstimateFractions.md).
+Several slightly different kinetic parameter inference strategies are
+implemented.
+
+## Usage
+
+``` r
+EstimateKinetics(
+  obj,
+  strategy = c("standard", "tilac", "NSS", "shortfeed", "pulse-chase"),
+  features = NULL,
+  populations = NULL,
+  fraction_design = NULL,
+  repeatID = NULL,
+  exactMatch = TRUE,
+  grouping_factor = NULL,
+  reference_factor = NULL,
+  character_limit = 20,
+  feature_lengths = NULL,
+  exclude_pulse_estimates = TRUE,
+  scale_factors = NULL,
+  overwrite = TRUE
+)
+```
+
+## Arguments
+
+- obj:
+
+  An `EZbakRFractions` object, which is an `EZbakRData` object on which
+  [`EstimateFractions()`](https://isaacvock.github.io/EZbakR/reference/EstimateFractions.md)
+  has been run.
+
+- strategy:
+
+  Kinetic parameter estimation strategy. Options include:
+
+  - standard: Estimate a single new read and old read mutation rate for
+    each sample. This is done via a binomial mixture model aggregating
+    over
+
+  - NSS: Use strategy similar to that presented in Narain et al., 2021
+    that assumes you have data which provides a reference for how much
+    RNA was present at the start of each labeling. In this case,
+    `grouping_factor` and `reference_factor` must also be set.
+
+  - shortfeed: Estimate kinetic parameters assuming no degradation of
+    labeled RNA, most appropriate if the metabolic label feed time is
+    much shorter than the average half-life of an RNA in your system.
+
+  - tilac: Estimate TILAC-ratio as described in Courvan et al., 2022.
+
+  - pulse-chase: Estimate kdeg for a pulse-chase experiment. By default
+    kdeg will be estimated for each time point at which label was
+    present. This includes any pulse-only samples, as well as all
+    samples including a chase after the pulse. If you don't want to
+    include the estimates from the pulse-only samples in the final
+    output, set `exclude_pulse_estimates` to `TRUE`. Pulse-chases are
+    suboptimal for a number of experimental reasons, so we urge users to
+    avoid performing this kind of experiment whenever possible (favoring
+    instead a pulse-label design). One of the challenges of analyzing
+    pulse-chase data is that the fraction labeled after the pulse must
+    be compared to that after each chase. Due to a number of technical
+    reasons, it is possible for the estimated labeling after the chase
+    to be \**higher* than that after the pulse. It is impossible to
+    estimate kinetic parameters in this case. Thus, when this arises, a
+    conservative kdeg estimate is imputed, equal to -log(1 -
+    1/(n+2))/tchase, which is the kdeg estimate you would get if you had
+    no detected reads from labeled RNA and an uninformative prior on the
+    fraction new (i.e., the estimated fraction new is (number of reads
+    from labeled RNA + 1) / (number of reads + 2)).
+
+- features:
+
+  Character vector of the set of features you want to stratify reads by
+  and estimate proportions of each RNA population. The default of "all"
+  will use all feature columns in the `obj`'s cB.
+
+- populations:
+
+  Mutational populations that were analyzed to generate the fractions
+  table to use. For example, this would be "TC" for a standard s4U-based
+  nucleotide recoding experiment.
+
+- fraction_design:
+
+  "Design matrix" specifying which RNA populations exist in your
+  samples. By default, this will be created automatically and will
+  assume that all combinations of the `mutrate_populations` you have
+  requested to analyze are present in your data. If this is not the case
+  for your data, then you will have to create one manually. See docs for
+  `EstimateFractions` (run ?EstimateFractions()) for more details.
+
+- repeatID:
+
+  If multiple `fractions` tables exist with the same metadata, then this
+  is the numerical index by which they are distinguished.
+
+- exactMatch:
+
+  If TRUE, then `features` and `populations` have to exactly match those
+  for a given fractions table for that table to be used. Means that you
+  can't specify a subset of features or populations by default, since
+  this is TRUE by default.
+
+- grouping_factor:
+
+  Which sample-detail columns in the metadf should be used to group
+  samples by for calculating the average RPM (`strategy = "NSS"`) or
+  pulse fraction labeled (`strategy = "pulse-chase"`) at a particular
+  time point? Only relevant if `strategy = "NSS"` or
+  `strategy = "pulse-chase"`.
+
+- reference_factor:
+
+  Which sample-detail column in the metafd should be used to determine
+  which group of samples provide information about the starting levels
+  of RNA for each sample? This should have values that match those in
+  `grouping_factor`. \#' Only relevant if `strategy = "NSS"`.
+
+- character_limit:
+
+  Maximum number of characters for naming out fractions output. EZbakR
+  will try to name this as a "\_" separated character vector of all of
+  the features analyzed. If this name is greater than `character_limit`,
+  then it will default to "fraction#", where "#" represents a simple
+  numerical ID for the table.
+
+- feature_lengths:
+
+  Table of effective lengths for each feature combination in your data.
+  For example, if your analysis includes features named GF and XF, this
+  should be a data frame with columns GF, XF, and length.
+
+- exclude_pulse_estimates:
+
+  If `strategy = "pulse-chase"`, would you like to exclude the
+  pulse-only kdeg and ksyn estimates from the final output? This is a
+  good idea if you used a very long pulse with the goal of labeling
+  close to 100% of all RNA.
+
+- scale_factors:
+
+  Data frame with two columns, "sample" and "scale_factor". sample
+  should be the sample name, and scale_factor is the factor which read
+  counts in that sample should be **divided** to get the normalized read
+  counts. This should match the convention from DESeq2 and thus you can
+  provide, for example, scale factors derived from DESeq2 for this. By
+  default, EZbakR uses DESeq2's median of ratios normalization method,
+  but specifying `scale_factors` is useful when you have spike-ins.
+
+- overwrite:
+
+  If TRUE and a fractions estimate output already exists that would
+  possess the same metadata (features analyzed, populations analyzed,
+  and fraction_design), then it will get overwritten with the new
+  output. Else, it will be saved as a separate output with the same
+  name + "\_#" where "#" is a numerical ID to distinguish the similar
+  outputs.
+
+## Value
+
+`EZbakRKinetics` object, which is just an `EZbakRData` object with a
+"kinetics" slot. This includes tables of kinetic parameter estimates for
+each feature in each sample for which kinetic parameters can be
+estimated.
+
+## Details
+
+`EstimateKinetics()` estimates the kinetics and RNA synthesis and
+degradation from standard single-label NR-seq data. It also technically
+supports analyses of the dual-label TILAC experiment, but that
+functionality is not as actively tested or maintained as the more
+standard analyses.
+
+`EstimateKinetics()` assumes a simple linear ODE model of RNA dynamics:
+\$\$\frac{\text{dR}}{\text{dt}} = k\_{\text{syn}} -
+k\_{\text{deg}}\*\text{R}\$\$ where:
+
+- R = Amount of RNA
+
+- \\k\_{\text{syn}}\\ = Synthesis rate constant
+
+- \\k\_{\text{deg}}\\ = Degradation rate constant and for which the
+  general solution is: \$\$\text{R(t)} =
+  \text{R(0)}e^{-k\_{\text{deg}}\text{t}} + (1 -
+  \frac{k\_{\text{syn}}}{k\_{\text{deg}}})e^{-k\_{\text{deg}}\text{t}}
+  \$\$ where \\\text{R(0)}\\ is the initial RNA level.
+
+The default kinetic parameter estimation strategy
+(`strategy == "standard"`) assumes that for labeled RNA (or more
+precisely RNA synthesized in the presence of label) \\\text{R(0)} = 0\\.
+Thus, it assumes a pulse-label rather than pulse-chase experimental
+design (I've written several places, like
+[here](https://simonlabcode.github.io/bakR/articles/Troubleshooting.html#experimental-suggestions)
+and
+[here](https://isaacvock.github.io/EZbakR/articles/EstimateKinetics.html#pulse-chase-analyses)
+for example, about why pulse-label designs are superior to pulse-chases
+in almost all settings).
+
+For unlabeled RNA, it assumes that \\\text{R(0)} =
+\frac{k\_{\text{syn}}}{k\_{\text{deg}}}\\. This is known as the
+steady-state assumption and is the key assumption of this method. More
+broadly, assuming steady-state means that this method assumes that RNA
+levels from a given feature are constant for the entire metabolic
+labeling duration. As EZbakR is designed for analyses of bulk NR-seq
+data, "constant" means that the average RNA levels across all profiled
+cells is constant (thus asynchronous populations of dividing cells still
+count as steady-state, even if the RNA expression landscapes in
+individual cells are quite dynamic). This assumption may be violated in
+cases where labeling coincides with or closely follows a perturbation
+(e.g., drug treatment). When the steady-state assumption hold, there is
+a simple relationship between the fraction of reads from labeled RNA
+(\\\theta\\) and the turnover kinetics of the RNA: \$\$\theta = 1 -
+e^{-k\_{\text{deg}}t}\$\$ The power in this approach is thus that
+turnover kinetics are estimated from an "internally normalized"
+quantity: \\\theta\\ (termed the "fraction new", "fraction labeled",
+"fraction high mutation content", or new-to-total ratio (NTR), depending
+on where you look or who you ask). "Internally normalized" means that a
+normalization scale factor does not need to be estimated in order to
+accurately infer turnover kinetics. \\\theta\\ represents a ratio of
+read counts from the same feature in the same library, thus any scale
+factor would appear in both the numerator and denominator of this
+estimate and cancel out.
+
+When this assumption is valid, the `strategy = "NSS"` approach may be
+preferable. This approach relies on the same model of RNA dynamics, but
+now assumes that the initial RNA levels (\\\text{R(0)}\\ for the
+unlabeled RNA) are not at the steady-state levels dictated by the
+current synthesis and turnover kinetics. The idea for this strategy was
+first presented in [Narain et al.
+2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC8354102/). To run this
+approach, you need to be able to estimate the initial RNA levels of each
+label-fed sample, as the fraction of reads from labeled RNA will no
+longer. only reflect the turnover kinetics (as the old RNA is assumed to
+potentially not have reached the new steady-state levels yet). This
+means that for each label-fed sample, you need to have a sample whose
+assayed RNA population represents the starting RNA population for the
+label-fed sample. EZbakR will use these reference samples to infer
+\\\text{R(0)}\\ for unlabeled RNAs and estimate turnover kinetics from
+the ratio of this quantity to the remaining unlabeled RNA levels after
+labeling: \$\$\theta\_{\text{NSS}} =
+\frac{\text{R(tl)}}{\text{R(0)}}\$\$ While I really like the idea of
+this strategy, it is not without some severe limitations. For one, the
+major benefit of NR-seq, internally normalized estimation of turnover
+kinetics, is out the window. Thus, read counts need to be normalized
+between the relevant reference and label-fed sample pairs. In addition,
+the variance patterns of this ratio are somewhat unfortunate. Its
+variance is incredibly high for more stable RNAs, severely limiting the
+effective dynamic range of this approach relative to steady-state
+analyses. I continue to work to refine EZbakR's implementation of this
+approach, but for now I urge caution in its use and interpretation. See
+my discussion of an alternative approach for navigating non-steady-state
+data
+[here](https://simonlabcode.github.io/bakR/articles/NSS.html#going-beyond-the-steady-state-assumption).
+
+As an aside, you may wonder how this strategy deals with dynamic
+regulation of synthesis and degradation rate constants *during
+labeling*. To answer this, you have to realize that the duration of
+metabolic labeling represents an integration time over which the best we
+can do is assess average kinetics. Thus, if rate constants are changing
+during the labeling, this strategy can still be thought of as providing
+a an estimate of the time averaged synthesis and turnover kinetics
+during the label time.
+
+Eventually, I will get around to implementing pulse-chase support in
+`EstimateKinetics()`. I haven't yet because I don't like pulse-chase
+experiments and think they are way more popular than they should be for
+purely historical reasons. But lots of people keep doing pulse-chase
+NR-seq so c'est la vie.
+
+## Examples
+
+``` r
+# Simulate data to analyze
+simdata <- SimulateOneRep(30)
+
+# Create EZbakR input
+metadf <- data.frame(sample = "sampleA", tl = 2)
+ezbdo <- EZbakRData(simdata$cB, metadf)
+
+# Estimate Fractions
+ezbdo <- EstimateFractions(ezbdo)
+#> Estimating mutation rates
+#> Summarizing data for feature(s) of interest
+#> Averaging out the nucleotide counts for improved efficiency
+#> Estimating fractions
+#> Processing output
+
+# Estimate Kinetics
+ezbdo <- EstimateKinetics(ezbdo)
+```
