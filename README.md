@@ -22,7 +22,7 @@ Check out some of the blogs I have written on the topic:
 
 1. [An introduction on how to interpret NR-seq data](https://isaacvock.github.io/posts/post-with-code/). In this post, I use the task of building up an NR-seq simulator in R to help you develop an intuition for the important features of NR-seq data. Code is interactive and can be edited and re-executed in your browser without any additional setup (thanks to Quarto-live and webr).
 2. [An introduction on how to analyze NR-seq data](https://isaacvock.github.io/posts/nrseq_analysis/). In this post, I motivate the concept of mixture modeling, the gold standard analysis strategy implemented in tools like EZbakR and GRAND-SLAM. I also show you how to implement the strategy yourself in R (code is interactive once again).
-3. Coming soon: an in-depth, nearly exhaustive, guide to NR-seq data. Covers the history, data interpretation, data processing, analyzing processed data, designing experiments, and extensions of NR-seq that have been developed. This will be taken from Chapter 1 of my [thesis](https://github.com/isaacvock/Thesis).
+3. [Coming soon](https://isaacvock.github.io/posts/nrseq_deepdive/): an in-depth, nearly exhaustive, guide to NR-seq data. Covers the history, data interpretation, data processing, analyzing processed data, designing experiments, and extensions of NR-seq that have been developed. This will be taken from Chapter 1 of my [thesis](https://github.com/isaacvock/Thesis).
 
 ## Vignettes
 
