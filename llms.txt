@@ -40,10 +40,11 @@ Check out some of the blogs I have written on the topic:
     analysis strategy implemented in tools like EZbakR and GRAND-SLAM. I
     also show you how to implement the strategy yourself in R (code is
     interactive once again).
-3.  Coming soon: an in-depth, nearly exhaustive, guide to NR-seq data.
-    Covers the history, data interpretation, data processing, analyzing
-    processed data, designing experiments, and extensions of NR-seq that
-    have been developed. This will be taken from Chapter 1 of my
+3.  [Coming soon](https://isaacvock.github.io/posts/nrseq_deepdive/): an
+    in-depth, nearly exhaustive, guide to NR-seq data. Covers the
+    history, data interpretation, data processing, analyzing processed
+    data, designing experiments, and extensions of NR-seq that have been
+    developed. This will be taken from Chapter 1 of my
     [thesis](https://github.com/isaacvock/Thesis).
 
 ## Vignettes
