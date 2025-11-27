@@ -44,4 +44,5 @@ Depends:
     R (>= 3.5)
 LazyData: true
 VignetteBuilder: knitr
-URL: https://isaacvock.github.io/EZbakR/
+URL: https://isaacvock.github.io/EZbakR/, https://github.com/isaacvock/EZbakR
+BugReports: https://github.com/isaacvock/EZbakR/issues
