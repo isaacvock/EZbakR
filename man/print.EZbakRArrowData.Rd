@@ -13,6 +13,22 @@
 
 \item{...}{Ignored}
 }
+\value{
+The input \code{EZbakRData} object, invisibly
+}
 \description{
 Print method for \code{EZbakRArrowData} objects
+}
+\examples{
+
+# Simulate data to analyze
+simdata <- SimulateOneRep(30)
+
+# Create EZbakR input
+metadf <- data.frame(sample = "sampleA", tl = 2)
+ezbdo <- EZbakRData(simdata$cB, metadf)
+
+# Print
+print(ezbdo)
+
 }

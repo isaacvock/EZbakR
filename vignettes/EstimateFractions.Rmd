@@ -288,7 +288,7 @@ that previously implemented in bakR.
 Internal benchmarks suggest that that grandR
 strategy is a bit conservative (overestimates dropout) but more robust than the
 bakR strategy. The bakR strategy has the advantage of being explicitly derived
-from a particular generative model of dropout (details [here]((https://simonlabcode.github.io/bakR/articles/Dropout.html))), allowing
+from a particular generative model of dropout (details [here](https://simonlabcode.github.io/bakR/articles/Dropout.html)), allowing
 for things like model fit assessment. This sort of functionality is currently
 not implemented in EZbakR though, so I have chosen to default to the grandR 
 strategy for now.

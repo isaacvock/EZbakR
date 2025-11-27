@@ -1313,6 +1313,19 @@ ezprint <- function(x, max_name_chars, arrow = FALSE){
 #' @param max_name_chars Maximum number of characters to print on each line
 #' @param ... Ignored
 #' @method print EZbakRData
+#' @return The input `EZbakRData` object, invisibly
+#' @examples
+#'
+#' # Simulate data to analyze
+#' simdata <- SimulateOneRep(30)
+#'
+#' # Create EZbakR input
+#' metadf <- data.frame(sample = "sampleA", tl = 2)
+#' ezbdo <- EZbakRData(simdata$cB, metadf)
+#'
+#' # Print
+#' print(ezbdo)
+#'
 #' @export
 print.EZbakRData <- function(x,
                              max_name_chars = 60,
@@ -1320,7 +1333,7 @@ print.EZbakRData <- function(x,
 
 
   ezprint(x, max_name_chars, FALSE)
-
+  invisible(x)
 
 }
 
@@ -1332,6 +1345,19 @@ print.EZbakRData <- function(x,
 #' @param max_name_chars Maximum number of characters to print on each line
 #' @param ... Ignored
 #' @method print EZbakRArrowData
+#' @return The input `EZbakRData` object, invisibly
+#' @examples
+#'
+#' # Simulate data to analyze
+#' simdata <- SimulateOneRep(30)
+#'
+#' # Create EZbakR input
+#' metadf <- data.frame(sample = "sampleA", tl = 2)
+#' ezbdo <- EZbakRData(simdata$cB, metadf)
+#'
+#' # Print
+#' print(ezbdo)
+#'
 #' @export
 print.EZbakRArrowData <- function(x,
                              max_name_chars = 60,
@@ -1339,6 +1365,6 @@ print.EZbakRArrowData <- function(x,
 
 
   ezprint(x, max_name_chars, arrow = TRUE)
-
+  invisible(x)
 
 }

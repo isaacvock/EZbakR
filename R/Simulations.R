@@ -802,7 +802,7 @@ SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
 #' @param metadf A data frame with the following columns:
 #' \itemize{
 #'  \item sample: Names given to samples to simulate.
-#'  \item <details>: Any number of columns with any names (not taken by other metadf columns)
+#'  \item \code{<details>}: Any number of columns with any names (not taken by other metadf columns)
 #'  storing factors by which the samples can be stratified. These can be referenced
 #'  in `mean_formula`, described below.
 #' }
@@ -817,7 +817,7 @@ SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
 #'  \item Ucont
 #' }
 #' @param mean_formula A formula object that specifies the linear model used to
-#' relate the factors in the <details> columns of `metadf` to average log(kdegs) and
+#' relate the factors in the \code{<details>} columns of `metadf` to average log(kdegs) and
 #' log(ksyns) in each sample.
 #' @param param_details A data frame with one row for each column of the design matrix
 #' obtained from `model.matrix(mean_formula, metadf)` that describes how to simulate
@@ -856,8 +856,7 @@ SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
 #' logkdeg_sd and logksyn_sd are set to the equivalently named parameter values
 #' described below for the reference and `logkdeg_diff_sd` and `logksyn_diff_sd` for all other parameters,
 #' and pdiff_kd, pdiff_ks, and pdiff_both are all set to the equivalently named parameter values.
-#' @param seqdepth Only relevant if `read_vect` is not provided; in that case, this is
-#' the total number of reads to simulate.
+#' @param seqdepth Total number of reads in each sample.
 #' @param label_time Length of s^4^U feed to simulate.
 #' @param pnew Probability that a T is mutated to a C if a read is new.
 #' @param pold Probability that a T is mutated to a C if a read is old.
@@ -899,7 +898,6 @@ SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
 #' differ from the reference.
 #' @param pdiff_both Proportion of features for which BOTH non-reference log(kdeg) and log(ksyn) linear model parameters
 #' differ from the reference.
-#' ksyns are simulated
 #' @param pdo Dropout rate; think of this as the probability that a s4U containing
 #' molecule is lost during library preparation and sequencing. If `pdo` is 0 (default)
 #' then there is not dropout.
@@ -918,7 +916,6 @@ SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
 #'  mature nuclear RNA can be exported to the cytoplasm. Only  mature RNA degrades.}
 #' }
 #' @param unassigned_name String to give to reads not assigned to a given feature.
-#' @param seqdepth Total number of reads in each sample.
 #' @param dispersion Negative binomial `size` parameter to use for simulating read counts
 #' @param lfn_sd Logit(fn) replicate variability.
 #' @param log_means Vector of log-Normal logmeans from which the distribution of
@@ -1189,7 +1186,7 @@ EZSimulate <- function(nfeatures,
 #' @param metadf A data frame with the following columns:
 #' \itemize{
 #'  \item sample: Names given to samples to simulate.
-#'  \item <details>: Any number of columns with any names (not taken by other metadf columns)
+#'  \item \code{<details>}: Any number of columns with any names (not taken by other metadf columns)
 #'  storing factors by which the samples can be stratified. These can be referenced
 #'  in `mean_formula`, described below.
 #' }
@@ -1204,7 +1201,7 @@ EZSimulate <- function(nfeatures,
 #'  \item Ucont
 #' }
 #' @param mean_formula A formula object that specifies the linear model used to
-#' relate the factors in the <details> columns of `metadf` to average log(kdegs) and
+#' relate the factors in the \code{<details>} columns of `metadf` to average log(kdegs) and
 #' log(ksyns) in each sample.
 #' @param param_details A data frame with one row for each column of the design matrix
 #' obtained from `model.matrix(mean_formula, metadf)` that describes how to simulate

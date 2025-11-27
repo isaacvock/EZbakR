@@ -73,7 +73,7 @@ is only relevant if \code{metadf} is not provided.}
 \item{metadf}{A data frame with the following columns:
 \itemize{
 \item sample: Names given to samples to simulate.
-\item \if{html}{\out{<details>}}: Any number of columns with any names (not taken by other metadf columns)
+\item \code{<details>}: Any number of columns with any names (not taken by other metadf columns)
 storing factors by which the samples can be stratified. These can be referenced
 in \code{mean_formula}, described below.
 }
@@ -89,7 +89,7 @@ parameter:
 }}
 
 \item{mean_formula}{A formula object that specifies the linear model used to
-relate the factors in the \if{html}{\out{<details>}} columns of \code{metadf} to average log(kdegs) and
+relate the factors in the \code{<details>} columns of \code{metadf} to average log(kdegs) and
 log(ksyns) in each sample.}
 
 \item{param_details}{A data frame with one row for each column of the design matrix
@@ -195,8 +195,7 @@ differ from the reference.}
 differ from the reference.}
 
 \item{pdiff_both}{Proportion of features for which BOTH non-reference log(kdeg) and log(ksyn) linear model parameters
-differ from the reference.
-ksyns are simulated}
+differ from the reference.}
 
 \item{pdo}{Dropout rate; think of this as the probability that a s4U containing
 molecule is lost during library preparation and sequencing. If \code{pdo} is 0 (default)

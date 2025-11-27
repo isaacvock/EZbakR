@@ -153,7 +153,7 @@ present in your data. If this is not the case for your data, then you will have
 to create one manually. See docs for \code{EstimateFractions} (run ?EstimateFractions()) for more details.}
 
 \item{parameter}{Parameter to average across replicates of a given condition.
-Has to be "logit_fraction_high\if{html}{\out{<muttype>}}", where \if{html}{\out{<muttype>}} is the type of
+Has to be \verb{logit_fraction_high<muttype>}, where \verb{<muttype>} is the type of
 mutation modeled in \code{EstimateFractions()} (e.g, TC) in this case.}
 
 \item{repeatID}{If multiple \code{fractions} tables exist with the same metadata,
@@ -215,10 +215,10 @@ involves assaying different species in different samples).
 }
 \details{
 When running \code{AverageAndRegularize()} to produce input for \code{EZDynamics()}, you
-must set \code{parameter} to "logit_fraction_high\if{html}{\out{<muttype>}}" (\if{html}{\out{<muttype>}} = type of mutation
+must set \code{parameter} to \verb{logit_fraction_high<muttype>} (\verb{<muttype>} = type of mutation
 modeled by \code{EstimateFractions()}, e.g., TC). If you have multiple distinct label times,
 you must also include the label time (\code{tl} of your \code{metadf})
-in your regression formula. \code{EZDynamics()} models the logit(fraction high <muttype),
+in your regression formula. \code{EZDynamics()} models the logit(fraction high \verb{<muttype>}),
 and this will depend on the label time (longer label time = higher fraction), which
 is why these two conditions must be met. If you only have a single label time though,
 \code{EZDynamics} will be able to impute this one value for all samples from your \code{metadf}.

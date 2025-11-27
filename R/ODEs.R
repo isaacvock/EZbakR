@@ -8,10 +8,10 @@
 #' involves assaying different species in different samples).
 #'
 #' When running `AverageAndRegularize()` to produce input for `EZDynamics()`, you
-#' must set `parameter` to "logit_fraction_high<muttype>" (<muttype> = type of mutation
+#' must set `parameter` to `logit_fraction_high<muttype>` (`<muttype>` = type of mutation
 #' modeled by `EstimateFractions()`, e.g., TC). If you have multiple distinct label times,
 #' you must also include the label time (`tl` of your `metadf`)
-#' in your regression formula. `EZDynamics()` models the logit(fraction high <muttype),
+#' in your regression formula. `EZDynamics()` models the logit(fraction high `<muttype>`),
 #' and this will depend on the label time (longer label time = higher fraction), which
 #' is why these two conditions must be met. If you only have a single label time though,
 #' `EZDynamics` will be able to impute this one value for all samples from your `metadf`.
@@ -155,7 +155,7 @@
 #' present in your data. If this is not the case for your data, then you will have
 #' to create one manually. See docs for `EstimateFractions` (run ?EstimateFractions()) for more details.
 #' @param parameter Parameter to average across replicates of a given condition.
-#' Has to be "logit_fraction_high<muttype>", where <muttype> is the type of
+#' Has to be `logit_fraction_high<muttype>`, where `<muttype>` is the type of
 #' mutation modeled in `EstimateFractions()` (e.g, TC) in this case.
 #' @param repeatID If multiple `fractions` tables exist with the same metadata,
 #' then this is the numerical index by which they are distinguished.
