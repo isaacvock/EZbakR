@@ -1,3 +1,3 @@
-# EZbakR (development version)
+# EZbakR 0.1.0
 
 * Initial CRAN submission.
