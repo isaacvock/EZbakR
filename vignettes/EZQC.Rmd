@@ -107,11 +107,11 @@ Possible solutions:
 
 **Potential problem #3**: Poor correlation of read counts across replicates, especially between -label and +label, or different label time +label, samples.
 
-This may be a sign of dropout, described [here](https://academic.oup.com/nar/article/52/7/e35/7612100), , [here](https://www.biorxiv.org/content/10.1101/2023.05.24.542133v1), and [here](https://simonlabcode.github.io/bakR/articles/Dropout.html). This is when reads from highly labeled RNA are underrepresented in +label data. You can try:
+This may be a sign of dropout, described [here](https://pubmed.ncbi.nlm.nih.gov/38381903/), , [here](https://pubmed.ncbi.nlm.nih.gov/37292657/), and [here](https://simonlabcode.github.io/bakR/articles/Dropout.html). This is when reads from highly labeled RNA are underrepresented in +label data. You can try:
 
 1. Decreasing metabolic label concentration.
 1. Decreasing metabolic label feed time.
-1. Using the RNA handling protocol suggested [here](https://www.biorxiv.org/content/10.1101/2023.05.24.542133v1).
+1. Using the RNA handling protocol suggested [here](https://pubmed.ncbi.nlm.nih.gov/37292657/).
 1. Better read alignment settings to avoid loss of high mutation content reads. See the potential solutions to problem #1 described above for details.
 1. Running EZbakR's `CorrectDropout()` to try and bioinformatically correct for the biases induced by dropout. This requires you to have -label data from all distinct biological conditions. 
 

@@ -744,7 +744,7 @@ For your convenience, EZbakR provides a list of popular graphs and formulas in a
 1. preRNA: Simplest model of pre-RNA and mature RNA dynamics: 0 -> P -> M -> 0
 1. preRNAwithPdeg: Same as preRNA, but now pre-RNA can also degrade.
 1. nuc2cytowithNdeg: Same as nuc2cyto, but now nuclear RNA can also degrade.
-1. subtlseq: Subcellular TimeLapse-seq model, similar to that described in [Iestwaart et al., 2024](https://www.cell.com/molecular-cell/fulltext/S1097-2765(24)00511-2#:~:text=Thus%2C%20RNA%20flow%20impacts%20cell,processing%2C%20including%20splicing%20and%20polyadenylation.). Simplest model discussed there, lacking nuclear degradation: 0 -> CH -> NP -> CY -> PL -> 0, and CY can also degrade. CH = chromatin bound RNA. NP = nucleoplasmic RNA, not on chromatin. CY = cytoplasmic RNA, not on polysomes. PL = polysome bound RNA.
+1. subtlseq: Subcellular TimeLapse-seq model, similar to that described in [Iestwaart et al., 2024](https://pubmed.ncbi.nlm.nih.gov/38964322/). Simplest model discussed there, lacking nuclear degradation: 0 -> CH -> NP -> CY -> PL -> 0, and CY can also degrade. CH = chromatin bound RNA. NP = nucleoplasmic RNA, not on chromatin. CY = cytoplasmic RNA, not on polysomes. PL = polysome bound RNA.
 
 In the Quickstart documentation above, I used the formula lists stored in these in several cases to simplify the code. They make some hard assumptions about what you called certain compartments in your metadf, so be a bit careful with this.
 

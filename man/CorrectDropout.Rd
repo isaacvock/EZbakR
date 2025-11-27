@@ -85,7 +85,7 @@ in \href{https://pubmed.ncbi.nlm.nih.gov/38381903/}{Berg et al. 2024}.
 \details{
 Dropout is the disproportionate loss of labeled RNA/reads from said RNA
 described independently \href{https://pubmed.ncbi.nlm.nih.gov/38381903/}{here}
-and \href{https://www.biorxiv.org/content/10.1101/2023.05.24.542133v1}{here}. It can originate from a combination of
+and \href{https://pubmed.ncbi.nlm.nih.gov/37292657/}{here}. It can originate from a combination of
 bioinformatic (loss of high mutation content reads due to alignment problems),
 technical (loss of labeled RNA during RNA extraction), and biological (transcriptional
 shutoff in rare cases caused by metabolic label toxicity) sources.

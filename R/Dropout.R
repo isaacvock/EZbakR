@@ -5,7 +5,7 @@
 #'
 #' Dropout is the disproportionate loss of labeled RNA/reads from said RNA
 #' described independently [here](https://pubmed.ncbi.nlm.nih.gov/38381903/)
-#' and [here](https://www.biorxiv.org/content/10.1101/2023.05.24.542133v1). It can originate from a combination of
+#' and [here](https://pubmed.ncbi.nlm.nih.gov/37292657/). It can originate from a combination of
 #' bioinformatic (loss of high mutation content reads due to alignment problems),
 #' technical (loss of labeled RNA during RNA extraction), and biological (transcriptional
 #' shutoff in rare cases caused by metabolic label toxicity) sources.
