@@ -102,6 +102,13 @@ are simulated as being exactly this length.}
 
 \item{Ccont}{Probability that a nucleotide in a simulated read is a C.}
 }
+\value{
+List with two elements:
+\itemize{
+\item cB: Tibble that can be passed as the \code{cB} arg to \code{EZbakRData()}.
+\item ground_truth: Tibble containing simulated ground truth.
+}
+}
 \description{
 Generalizes SimulateOneRep() to simulate any combination of mutation types.
 Currently, no kinetic model is used to relate certain parameters to the

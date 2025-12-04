@@ -64,6 +64,11 @@
 #' will be drawn from a normal distribution with this standard deviation.
 #' @import data.table
 #' @importFrom magrittr %>%
+#' @return List with two elements:
+#' \itemize{
+#'  \item cB: Tibble that can be passed as the `cB` arg to `EZbakRData()`.
+#'  \item ground_truth: Tibble containing simulated ground truth.
+#' }
 #' @examples
 #' simdata <- SimulateOneRep(30)
 #' @export
@@ -330,6 +335,11 @@ rdirichlet <- function (n, alpha) {
 #' @param Gcont Probability that a nucleotide in a simulated read is a G.
 #' @param Ccont Probability that a nucleotide in a simulated read is a C.
 #' @importFrom magrittr %>%
+#' @return List with two elements:
+#' \itemize{
+#'  \item cB: Tibble that can be passed as the `cB` arg to `EZbakRData()`.
+#'  \item ground_truth: Tibble containing simulated ground truth.
+#' }
 #' @examples
 #' simdata <- VectSimulateMultiLabel(30)
 #' @export
@@ -580,6 +590,11 @@ VectSimulateMultiLabel <- function(nfeatures, populations = c("TC"),
 #' @param Gcont Probability that a nucleotide in a simulated read is a G.
 #' @param Ccont Probability that a nucleotide in a simulated read is a C.
 #' @importFrom magrittr %>%
+#' @return List with two elements:
+#' \itemize{
+#'  \item cB: Tibble that can be passed as the `cB` arg to `EZbakRData()`.
+#'  \item ground_truth: Tibble containing simulated ground truth.
+#' }
 #' @examples
 #' simdata <- SimulateMultiLabel(3)
 #' @export
@@ -946,6 +961,14 @@ SimulateMultiLabel <- function(nfeatures, populations = c("TC"),
 #' in `treatment_effects`.
 #' @import data.table
 #' @importFrom magrittr %>%
+#' @return A list containing 5 elements:
+#' \itemize{
+#'  \item cB: Tibble that can be provided as the `cB` arg to `EZbakRData()`.
+#'  \item metadf: Tibble that can be provided as the `metadf` arg to `EZbakRData()`.
+#'  \item PerRepTruth: Tibble containing replicate-by-replicate simulated ground truth
+#'  \item AvgTruth: Tibble containing average simulated ground truth
+#'  \item param_details: Tibble containing information about simulated linear model parameters
+#' }
 #' @examples
 #'
 #' # Simulate standard data
@@ -1289,6 +1312,15 @@ EZSimulate <- function(nfeatures,
 #' then there is not dropout.
 #' @import data.table
 #' @importFrom magrittr %>%
+#' @return A list containing 6 elements:
+#' \itemize{
+#'  \item cB: Tibble that can be provided as the `cB` arg to `EZbakRData()`.
+#'  \item metadf: Tibble that can be provided as the `metadf` arg to `EZbakRData()`.
+#'  \item PerRepTruth: Tibble containing replicate-by-replicate simulated ground truth
+#'  \item AvgTruth: Tibble containing average simulated ground truth
+#'  \item param_details: Tibble containing information about simulated linear model parameters
+#'  \item UnbiasedFractions: Tibble containing no dropout ground truth
+#' }
 #' @examples
 #' simdata <- SimulateMultiCondition(30,
 #'                                   data.frame(sample = c('sampleA', 'sampleB'),
@@ -1763,6 +1795,11 @@ SimulateMultiCondition <- function(nfeatures, metadf, mean_formula,
 #' @param logksyn_sd sdlog of a log-normal distribution from which
 #' ksyns are simulated
 #' @importFrom magrittr %>%
+#' @return List with two elements:
+#' \itemize{
+#'  \item cB: Tibble that can be passed as the `cB` arg to `EZbakRData()`.
+#'  \item ground_truth: Tibble containing simulated ground truth.
+#' }
 #' @examples
 #' simdata <- SimulateIsoforms(30)
 #' @export

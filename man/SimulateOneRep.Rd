@@ -103,6 +103,13 @@ will be drawn from a normal distribution with this mean.}
 \item{logit_pnew_sd}{If \code{feature_pnew} is TRUE, then the logit(pnew) for each feature
 will be drawn from a normal distribution with this standard deviation.}
 }
+\value{
+List with two elements:
+\itemize{
+\item cB: Tibble that can be passed as the \code{cB} arg to \code{EZbakRData()}.
+\item ground_truth: Tibble containing simulated ground truth.
+}
+}
 \description{
 In \code{SimulateOneRep}, users have the option to either provide vectors of feature-specific
 read counts, fraction news, kdegs, and ksyns for the simulation, or to have those drawn

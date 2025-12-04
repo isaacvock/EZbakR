@@ -254,6 +254,16 @@ Remaining parameters will make it so indices order parameters from fastest to sl
 \item{log_sds}{Vector of log-Normal logsds from which the distribution of
 feature-specific parameters will be drawn from. If not provided, will be 0.4 for all parameters.}
 }
+\value{
+A list containing 5 elements:
+\itemize{
+\item cB: Tibble that can be provided as the \code{cB} arg to \code{EZbakRData()}.
+\item metadf: Tibble that can be provided as the \code{metadf} arg to \code{EZbakRData()}.
+\item PerRepTruth: Tibble containing replicate-by-replicate simulated ground truth
+\item AvgTruth: Tibble containing average simulated ground truth
+\item param_details: Tibble containing information about simulated linear model parameters
+}
+}
 \description{
 \code{EZSimulate()} is a user friendly wrapper to \code{SimulateMultiCondition()}. It
 sets convenient defaults so as to quickly generate easy to interpret output.

@@ -173,6 +173,17 @@ ksyns are simulated}
 molecule is lost during library preparation and sequencing. If \code{pdo} is 0 (default)
 then there is not dropout.}
 }
+\value{
+A list containing 6 elements:
+\itemize{
+\item cB: Tibble that can be provided as the \code{cB} arg to \code{EZbakRData()}.
+\item metadf: Tibble that can be provided as the \code{metadf} arg to \code{EZbakRData()}.
+\item PerRepTruth: Tibble containing replicate-by-replicate simulated ground truth
+\item AvgTruth: Tibble containing average simulated ground truth
+\item param_details: Tibble containing information about simulated linear model parameters
+\item UnbiasedFractions: Tibble containing no dropout ground truth
+}
+}
 \description{
 \code{SimulateMultiCondition} is a highly flexibly simulator that combines linear modeling
 of log(kdeg)'s and log(ksyn)'s with \code{SimulateOneRep} to simulate an NR-seq dataset. The linear model
