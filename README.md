@@ -2,17 +2,22 @@
 
 EZbakR is a highly flexible tool for analyses of nucleotide recoding RNA-seq datasets (NR-seq; e.g., [TimeLapse-seq](https://www.nature.com/articles/nmeth.4582), [SLAM-seq](https://www.nature.com/articles/nmeth.4435), [TUC-seq](https://pubmed.ncbi.nlm.nih.gov/31768978/), etc.). See [our paper](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1013179) for a discussion of the motivation behind EZbakR and its companion pipeline [fastq2EZbakR](https://github.com/isaacvock/fastq2EZbakR), as well as validation of all of its novel functionality.
 
-To install or update, run:
+[EZbakR is now on CRAN](https://isaacvock.github.io/posts/ezbakR_update/), so to install, you can now run:
 
 ```
+install.packages('EZbakR')
+```
+
+To install the up-to-date development version, you can still run:
+
+```
+
 if (!require("roxygen2", quietly = TRUE))
     install.packages("roxygen2")
 if (!require("remotes", quietly = TRUE))
     install.packages("remotes")
 remotes::install_github("isaacvock/EZbakR")
 ```
-
-At this point, changes will be made weekly, so updating frequently is highly recommended.
 
 Documentation is here: [https://isaacvock.github.io/EZbakR/](https://isaacvock.github.io/EZbakR/)
 
