@@ -43,7 +43,7 @@ SimulateMultiCondition(
 \item{metadf}{A data frame with the following columns:
 \itemize{
 \item sample: Names given to samples to simulate.
-\item \if{html}{\out{<details>}}: Any number of columns with any names (not taken by other metadf columns)
+\item \code{<details>}: Any number of columns with any names (not taken by other metadf columns)
 storing factors by which the samples can be stratified. These can be referenced
 in \code{mean_formula}, described below.
 }
@@ -59,7 +59,7 @@ parameter:
 }}
 
 \item{mean_formula}{A formula object that specifies the linear model used to
-relate the factors in the \if{html}{\out{<details>}} columns of \code{metadf} to average log(kdegs) and
+relate the factors in the \code{<details>} columns of \code{metadf} to average log(kdegs) and
 log(ksyns) in each sample.}
 
 \item{param_details}{A data frame with one row for each column of the design matrix
@@ -172,6 +172,17 @@ ksyns are simulated}
 \item{pdo}{Dropout rate; think of this as the probability that a s4U containing
 molecule is lost during library preparation and sequencing. If \code{pdo} is 0 (default)
 then there is not dropout.}
+}
+\value{
+A list containing 6 elements:
+\itemize{
+\item cB: Tibble that can be provided as the \code{cB} arg to \code{EZbakRData()}.
+\item metadf: Tibble that can be provided as the \code{metadf} arg to \code{EZbakRData()}.
+\item PerRepTruth: Tibble containing replicate-by-replicate simulated ground truth
+\item AvgTruth: Tibble containing average simulated ground truth
+\item param_details: Tibble containing information about simulated linear model parameters
+\item UnbiasedFractions: Tibble containing no dropout ground truth
+}
 }
 \description{
 \code{SimulateMultiCondition} is a highly flexibly simulator that combines linear modeling

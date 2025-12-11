@@ -24,7 +24,7 @@ you have run \code{EstimateFractions()}.}
 
 \item{strategy}{Which dropout correction strategy to use. Options are:
 \itemize{
-\item grandR: Described \href{https://academic.oup.com/nar/article/52/7/e35/7612100}{here}.
+\item grandR: Described \href{https://pubmed.ncbi.nlm.nih.gov/38381903/}{here}.
 Cite that work and \href{https://www.nature.com/articles/s41467-023-39163-4}{grandR} if using this strategy. Quasi-non-parametric strategy
 that finds an estimate of the dropout rate that eliminates any linear correlation
 between the newness of a transcript and the difference in +s4U and -s4U normalized
@@ -80,12 +80,12 @@ with a dropout corrected table.
 }
 \description{
 Uses the strategy described \href{https://simonlabcode.github.io/bakR/articles/Dropout.html}{here}, and similar to that originally presented
-in \href{https://academic.oup.com/nar/article/52/7/e35/7612100}{Berg et al. 2024}.
+in \href{https://pubmed.ncbi.nlm.nih.gov/38381903/}{Berg et al. 2024}.
 }
 \details{
 Dropout is the disproportionate loss of labeled RNA/reads from said RNA
-described independently \href{https://academic.oup.com/nar/article/52/7/e35/7612100}{here}
-and \href{https://www.biorxiv.org/content/10.1101/2023.05.24.542133v1}{here}. It can originate from a combination of
+described independently \href{https://pubmed.ncbi.nlm.nih.gov/38381903/}{here}
+and \href{https://pubmed.ncbi.nlm.nih.gov/37292657/}{here}. It can originate from a combination of
 bioinformatic (loss of high mutation content reads due to alignment problems),
 technical (loss of labeled RNA during RNA extraction), and biological (transcriptional
 shutoff in rare cases caused by metabolic label toxicity) sources.

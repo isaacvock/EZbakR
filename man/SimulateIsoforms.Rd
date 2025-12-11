@@ -76,6 +76,13 @@ ksyns are simulated}
 \item{logksyn_sd}{sdlog of a log-normal distribution from which
 ksyns are simulated}
 }
+\value{
+List with two elements:
+\itemize{
+\item cB: Tibble that can be passed as the \code{cB} arg to \code{EZbakRData()}.
+\item ground_truth: Tibble containing simulated ground truth.
+}
+}
 \description{
 \code{SimulateIsoforms()} performs a simple simulation of isoform-specific kinetic
 parameters to showcase and test \code{EstimateIsoformFractions()}. It assumes that

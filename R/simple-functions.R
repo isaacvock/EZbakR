@@ -8,6 +8,12 @@
 #' @param rlen Length of simulated reads
 #' @param Ucont Fraction of nucleotides in simulated reads that are Ts (U in RNA)
 #' @importFrom magrittr %>%
+#' @return Tibble with 3 columns:
+#' \itemize{
+#'  \item nT: Simulated number of Ts
+#'  \item TC: Simulated number of T-to-C mutations
+#'  \item n: Number of simulated reads with nT Ts and TC mutations.
+#' }
 #' @examples
 #'
 #' # Simulate 1 gene worth of data data

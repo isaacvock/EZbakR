@@ -142,7 +142,7 @@ then you can see its contents. More specifically, lazily loaded means that this 
 into memory until you ask for it, via something like a \code{print()} call.)
 
 As another example, consider TILAC, a NR-seq extension developed by the Simon lab. TILAC was originally
-described in \href{https://academic.oup.com/nar/article/50/19/e110/6677324}{Courvan et al., 2022}. In this
+described in \href{https://pubmed.ncbi.nlm.nih.gov/36018791/}{Courvan et al., 2022}. In this
 method, two populations of RNA, one from s^4U fed cells and one from s^6G fed cells, are pooled
 and prepped for sequencing together. This allows for internally controlled comparisons of RNA
 abundance without spike-ins. s^4U is recoded to a cytosine analog by TimeLapse chemistry

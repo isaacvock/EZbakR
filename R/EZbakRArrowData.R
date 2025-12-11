@@ -123,7 +123,7 @@ validate_EZbakRArrowData <- function(obj){
 
   # If only one mutation type tracked in cBds, then need either tl or tchase + tpulse
   # If more than one mutation type tracked in cBds, need tl_<muttype> for each
-  # <muttype (e.g., TC, GA, etc.) in the cBds.
+  # <muttype> (e.g., TC, GA, etc.) in the cBds.
   if(length(mutcounts_in_cB) > 1){
 
     tl_expected <- paste0("tl_", mutcounts_in_cB)
@@ -377,7 +377,7 @@ validate_EZbakRArrowData <- function(obj){
 #'    \item If a pulse-chase experimental design was used (!!this is strongly discouraged
 #'    unless you have a legitimate reason to prefer this design to a pulse-label
 #'    design!!), then you should have columns named `tpulse` and `tchase`, corresponding
-#'    to the pulse and chase times respectively. The same _<muttype> convention should
+#'    to the pulse and chase times respectively. The same `<muttype>` convention should
 #'    be used in the case of multi-label pulse-chase designs.
 #'  }
 #' \item sample characteristics: The remaining columns can be named whatever you like

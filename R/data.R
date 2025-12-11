@@ -16,7 +16,7 @@
 #' TILAC `fraction_design` table for `EstimateFractions`
 #'
 #' An example `fraction_design` table for a TILAC experiment. TILAC was originally
-#' described in [Courvan et al., 2022](https://academic.oup.com/nar/article/50/19/e110/6677324). In this
+#' described in [Courvan et al., 2022](https://pubmed.ncbi.nlm.nih.gov/36018791/). In this
 #' method, two populations of RNA, one from s^4U fed cells and one from s^6G fed cells, are pooled
 #' and prepped for sequencing together. This allows for internally controlled comparisons of RNA
 #' abundance without spike-ins. s^4U is recoded to a cytosine analog by TimeLapse chemistry

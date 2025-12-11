@@ -1,26 +1,28 @@
 Package: EZbakR
-Title: Analyze and Integrate Any Type of Nucleotide Recoding RNA-seq Data
-Version: 0.0.0.9000
+Title: Analyze and Integrate Any Type of Nucleotide Recoding RNA-Seq Data
+Version: 0.1.0
 Authors@R:
     person(given = "Isaac",
            family = "Vock",
-           role = c("aut", "cre"),
+           role = c("aut", "cre", "cph"),
            email = "isaac.vock@gmail.com",
            comment = c(ORCID = "0000-0002-7178-6886"))
-Description: A complete rewrite and reimagination of bakR. Designed to support
-	a wide array of analyses of nucleotide recoding RNA-seq (NR-seq) datasets of any
-	type. Specifially designed with the following NR-seq methods in mind: TimeLapse-seq/
-	SLAM-seq/TUC-seq, Start-TimeLapse-seq (STL-seq), TT-TimeLapse-seq (TT-TL-seq), TILAC,
-	subcellular TimeLapse-seq. Support for single cell NR-seq methods is provided though
-	may be expanded in the future. Also designed to support nucleotide specific mutational
-	analyses and thus analyses of any mutational probing RNA-seq method (SHAPE-seq, DMS-MaPseq,
-	TRIBE, DART-seq, etc.).
+Description: A complete rewrite and reimagining of 'bakR' (see 'Vock et al.' (2025) <doi:10.1371/journal.pcbi.1013179>).
+  Designed to support a wide array of analyses of nucleotide recoding RNA-seq (NR-seq) datasets of any
+	type, including TimeLapse-seq/SLAM-seq/TUC-seq, Start-TimeLapse-seq (STL-seq),
+	TT-TimeLapse-seq (TT-TL-seq), and subcellular NR-seq. 'EZbakR' extends
+	standard NR-seq standard NR-seq mutational modeling to support multi-label analyses
+	(e.g., 4sU and 6sG dual labeling), and implements an improved hierarchical model to better
+	account for transcript-to-transcript variance in metabolic label incorporation.
+	'EZbakR' also generalized dynamical systems modeling of NR-seq data to support analyses
+	of premature mRNA processing and flow between subcellular compartments. Finally,
+	'EZbakR' implements flexible and well-powered comparative analyses of all
+	estimated parameters via design matrix-specified generalized linear modeling.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
-Suggests: 
-    furrr,
+Suggests:
     knitr,
     MASS,
     rmarkdown,
@@ -38,8 +40,9 @@ Imports:
     rlang,
     tidyr,
     tximport
-Depends: 
+Depends:
     R (>= 3.5)
 LazyData: true
 VignetteBuilder: knitr
-URL: https://isaacvock.github.io/EZbakR/
+URL: https://isaacvock.github.io/EZbakR/, https://github.com/isaacvock/EZbakR
+BugReports: https://github.com/isaacvock/EZbakR/issues

@@ -27,6 +27,14 @@ be new will be determined by a draw from a Bernoulli(fn) distribution.}
 
 \item{Ucont}{Fraction of nucleotides in simulated reads that are Ts (U in RNA)}
 }
+\value{
+Tibble with 3 columns:
+\itemize{
+\item nT: Simulated number of Ts
+\item TC: Simulated number of T-to-C mutations
+\item n: Number of simulated reads with nT Ts and TC mutations.
+}
+}
 \description{
 Simple simulation function
 }

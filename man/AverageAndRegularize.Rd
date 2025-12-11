@@ -133,8 +133,8 @@ of the features. If this is too long, only the parameter name will be used.}
 data. For example, if your analysis includes features named GF and XF, this
 should be a data frame with columns GF, XF, and length.}
 
-\item{feature_sample_counts}{Data frame with columns \if{html}{\out{<feature names>}} and \code{nsamps},
-where \if{html}{\out{<feature names>}} are all of the feature columns in the input to
+\item{feature_sample_counts}{Data frame with columns \verb{<feature names>} and \code{nsamps},
+where \verb{<feature names>} are all of the feature columns in the input to
 \code{AverageAndRegularize()}, and \code{nsamps} is the number of samples that samples
 from that feature combination needs to have over the read count threshold.}
 

@@ -115,8 +115,8 @@
 #' @param feature_lengths Table of effective lengths for each feature combination in your
 #' data. For example, if your analysis includes features named GF and XF, this
 #' should be a data frame with columns GF, XF, and length.
-#' @param feature_sample_counts Data frame with columns <feature names> and `nsamps`,
-#' where <feature names> are all of the feature columns in the input to
+#' @param feature_sample_counts Data frame with columns `<feature names>` and `nsamps`,
+#' where `<feature names>` are all of the feature columns in the input to
 #' `AverageAndRegularize()`, and `nsamps` is the number of samples that samples
 #' from that feature combination needs to have over the read count threshold.
 #' @param scale_factor_df Data frame with columns "sample" and a second column of

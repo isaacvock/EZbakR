@@ -85,7 +85,7 @@ then performing standard nucleotide recoding chemistry, you will include
 \item If a pulse-chase experimental design was used (!!this is strongly discouraged
 unless you have a legitimate reason to prefer this design to a pulse-label
 design!!), then you should have columns named \code{tpulse} and \code{tchase}, corresponding
-to the pulse and chase times respectively. The same _\if{html}{\out{<muttype>}} convention should
+to the pulse and chase times respectively. The same \verb{<muttype>} convention should
 be used in the case of multi-label pulse-chase designs.
 }
 \item sample characteristics: The remaining columns can be named whatever you like

@@ -371,7 +371,7 @@ validate_EZbakRData <- function(obj){
 #'    \item If a pulse-chase experimental design was used (!!this is strongly discouraged
 #'    unless you have a legitimate reason to prefer this design to a pulse-label
 #'    design!!), then you should have columns named `tpulse` and `tchase`, corresponding
-#'    to the pulse and chase times respectively. The same _<muttype> convention should
+#'    to the pulse and chase times respectively. The same `_<muttype>` convention should
 #'    be used in the case of multi-label pulse-chase designs.
 #'  }
 #' \item sample characteristics: The remaining columns can be named whatever you like

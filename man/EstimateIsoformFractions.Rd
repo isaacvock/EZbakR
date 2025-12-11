@@ -110,7 +110,7 @@ not have their fraction news estimated.
 library(dplyr)
 
 # Simulates a single sample worth of data
-simdata_iso <- SimulateIsoforms(nfeatures = 300)
+simdata_iso <- SimulateIsoforms(nfeatures = 100)
 
 # We have to manually create the metadf in this case
 metadf <- tibble(sample = 'sampleA',
