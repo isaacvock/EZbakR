@@ -60,13 +60,15 @@
 <div class="page-header"><h1 id="welcome-to-ezbakr">Welcome to EZbakR!<a class="anchor" aria-label="anchor" href="#welcome-to-ezbakr"></a>
 </h1></div>
 <p>EZbakR is a highly flexible tool for analyses of nucleotide recoding RNA-seq datasets (NR-seq; e.g., <a href="https://www.nature.com/articles/nmeth.4582" class="external-link">TimeLapse-seq</a>, <a href="https://www.nature.com/articles/nmeth.4435" class="external-link">SLAM-seq</a>, <a href="https://pubmed.ncbi.nlm.nih.gov/31768978/" class="external-link">TUC-seq</a>, etc.). See <a href="https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1013179" class="external-link">our paper</a> for a discussion of the motivation behind EZbakR and its companion pipeline <a href="https://github.com/isaacvock/fastq2EZbakR" class="external-link">fastq2EZbakR</a>, as well as validation of all of its novel functionality.</p>
-<p>To install or update, run:</p>
-<pre><code><span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="st"><a href="https://roxygen2.r-lib.org/" class="external-link">"roxygen2"</a></span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
+<p><a href="https://isaacvock.github.io/posts/ezbakR_update/" class="external-link">EZbakR is now on CRAN</a>, so to install, you can now run:</p>
+<pre><code><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">'EZbakR'</span><span class="op">)</span></span></code></pre>
+<p>To install the up-to-date development version, you can still run:</p>
+<pre><code><span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="st"><a href="https://roxygen2.r-lib.org/" class="external-link">"roxygen2"</a></span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"roxygen2"</span><span class="op">)</span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="st"><a href="https://remotes.r-lib.org" class="external-link">"remotes"</a></span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"remotes"</span><span class="op">)</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"isaacvock/EZbakR"</span><span class="op">)</span></span></code></pre>
-<p>At this point, changes will be made weekly, so updating frequently is highly recommended.</p>
 <p>Documentation is here: <a href="https://isaacvock.github.io/EZbakR/">https://isaacvock.github.io/EZbakR/</a></p>
 <div class="section level3">
 <h3 id="want-to-learn-more-about-how-to-interpret-and-analyze-nr-seq-data">Want to learn more about how to interpret and analyze NR-seq data?<a class="anchor" aria-label="anchor" href="#want-to-learn-more-about-how-to-interpret-and-analyze-nr-seq-data"></a>
@@ -148,7 +150,14 @@
 <p>NR-seq refers to a class of methods that combine RNA-seq, metabolic labeling, and unique metabolic label recoding chemistries. These methods were originally developed to dissect the kinetics of RNA synthesis and degradation. Excitingly though, a treasure trove of extensions of the original methods have been created over the years. To-date, nucleotide recoding has been combined with the likes of <a href="https://www.nature.com/articles/nmeth.4582" class="external-link">TT-seq</a>, <a href="https://www.sciencedirect.com/science/article/pii/S1097276521006869?via%3Dihub" class="external-link">Start-seq</a>, <a href="https://www.nature.com/articles/s41592-021-01250-z" class="external-link">Ribo-seq</a>, <a href="https://www.nature.com/articles/s41586-019-1369-y" class="external-link">scRNA-seq</a> (other examples of this <a href="https://www.nature.com/articles/s41592-020-0935-4" class="external-link">here</a>, <a href="https://www.nature.com/articles/s41587-020-0480-9" class="external-link">here</a>, and <a href="https://www.biorxiv.org/content/10.1101/2023.07.06.547989v1" class="external-link">here</a>), <a href="https://www.nature.com/articles/s41587-023-01948-9" class="external-link">Perturb-seq</a>, <a href="https://www.biorxiv.org/content/10.1101/2020.05.01.073296v1" class="external-link">long-read sequencing</a>, and <a href="https://www.biorxiv.org/content/10.1101/2022.08.21.504696v1.full" class="external-link">subcellular fractionation</a>. In addition, while the original methods used 4-thiouridine (s<sup>4</sup>U), the same chemistry has been found to work with <a href="https://pubs.acs.org/doi/full/10.1021/jacs.8b08554" class="external-link">6-thioguanosine</a> (s<sup>6</sup>G), opening the door to dual-labeling experimental designs (e.g., <a href="https://academic.oup.com/nar/article/50/19/e110/6677324" class="external-link">TILAC</a>). EZbakR and its companion pipeline <a href="https://github.com/isaacvock/fastq2EZbakR" class="external-link">fastq2EZbakR</a> aim to provide an integrated and flexible framework to support this exciting class of methods.</p>
 </div>
 </div>
-  </main><aside class="col-md-3"><div class="license">
+  </main><aside class="col-md-3"><div class="links">
+<h2 data-toc-skip>Links</h2>
+<ul class="list-unstyled">
+<li><a href="https://cloud.r-project.org/package=EZbakR" class="external-link">View on CRAN</a></li>
+</ul>
+</div>
+
+<div class="license">
 <h2 data-toc-skip>License</h2>
 <ul class="list-unstyled">
 <li><a href="LICENSE.html">Full license</a></li>

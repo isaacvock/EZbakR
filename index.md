@@ -10,16 +10,19 @@ for a discussion of the motivation behind EZbakR and its companion
 pipeline [fastq2EZbakR](https://github.com/isaacvock/fastq2EZbakR), as
 well as validation of all of its novel functionality.
 
-To install or update, run:
+[EZbakR is now on
+CRAN](https://isaacvock.github.io/posts/ezbakR_update/), so to install,
+you can now run:
+
+    install.packages('EZbakR')
+
+To install the up-to-date development version, you can still run:
 
     if (!require("roxygen2", quietly = TRUE))
         install.packages("roxygen2")
     if (!require("remotes", quietly = TRUE))
         install.packages("remotes")
     remotes::install_github("isaacvock/EZbakR")
-
-At this point, changes will be made weekly, so updating frequently is
-highly recommended.
 
 Documentation is here: <https://isaacvock.github.io/EZbakR/>
 
