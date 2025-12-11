@@ -2,17 +2,32 @@
 
 EZbakR is a highly flexible tool for analyses of nucleotide recoding RNA-seq datasets (NR-seq; e.g., [TimeLapse-seq](https://www.nature.com/articles/nmeth.4582), [SLAM-seq](https://www.nature.com/articles/nmeth.4435), [TUC-seq](https://pubmed.ncbi.nlm.nih.gov/31768978/), etc.). See [our paper](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1013179) for a discussion of the motivation behind EZbakR and its companion pipeline [fastq2EZbakR](https://github.com/isaacvock/fastq2EZbakR), as well as validation of all of its novel functionality.
 
-To install or update, run:
+[EZbakR is now on CRAN](https://isaacvock.github.io/posts/ezbakR_update/), so to install, you can now run:
 
 ```
+install.packages('EZbakR')
+```
+
+To install the up-to-date development version, you can still run:
+
+```
+
+if (!require("roxygen2", quietly = TRUE))
+    install.packages("roxygen2")
 if (!require("remotes", quietly = TRUE))
     install.packages("remotes")
 remotes::install_github("isaacvock/EZbakR")
 ```
 
-At this point, changes will be made weekly, so updating frequently is highly recommended.
-
 Documentation is here: [https://isaacvock.github.io/EZbakR/](https://isaacvock.github.io/EZbakR/)
+
+### Want to learn more about how to interpret and analyze NR-seq data?
+
+Check out some of the blogs I have written on the topic:
+
+1. [An introduction on how to interpret NR-seq data](https://isaacvock.github.io/posts/post-with-code/). In this post, I use the task of building up an NR-seq simulator in R to help you develop an intuition for the important features of NR-seq data. Code is interactive and can be edited and re-executed in your browser without any additional setup (thanks to Quarto-live and webr).
+2. [An introduction on how to analyze NR-seq data](https://isaacvock.github.io/posts/nrseq_analysis/). In this post, I motivate the concept of mixture modeling, the gold standard analysis strategy implemented in tools like EZbakR and GRAND-SLAM. I also show you how to implement the strategy yourself in R (code is interactive once again).
+3. [An in-depth NR-seq review](https://isaacvock.github.io/posts/nrseq_deepdive/): Covers the history, data interpretation, data processing, analyzing processed data, designing experiments, and extensions of NR-seq that have been developed. This is taken from Chapter 1 of my [thesis](https://github.com/isaacvock/Thesis).
 
 ## Vignettes
 
@@ -23,13 +38,17 @@ Currently, the following functionalities have dedicated vignettes:
 3. [Estimating kinetics](https://isaacvock.github.io/EZbakR/articles/EstimateKinetics.html): Estimating kinetic parameters of synthesis and degradation in a standard NR-seq experiment. For standard, single label, NR-seq analyses, this is the next step in your analysis workflow after estimating the fraction of reads that are from labeled RNA. This is done with EZbakR's [`EstimateKinetics()`](https://isaacvock.github.io/EZbakR/reference/EstimateKinetics.html) function.
 4. [Quality Control](https://isaacvock.github.io/EZbakR/articles/EZQC.html): Assessing the quality of your NR-seq data. This is done with EZbakR's [`EZQC()`](https://isaacvock.github.io/EZbakR/reference/EZQC.html) function.
 5. [Comparative analyses](https://isaacvock.github.io/EZbakR/articles/Linear-modeling.html): Fitting a flexible generalized linear model to your NR-seq data so as to perform comparative analyses of estimated kinetic parameters that complements differential expression analyses. This is done with EZbakR's [`AverageAndRegularize()`](https://isaacvock.github.io/EZbakR/reference/AverageAndRegularize.html) and [`CompareParameters()`](https://isaacvock.github.io/EZbakR/reference/CompareParameters.html) functions.
-6. [Dynamical systems modeling](https://isaacvock.github.io/EZbakR/articles/EZDynamics.html). This is done with EZbakR's [`EZDynamics()`](https://isaacvock.github.io/EZbakR/reference/EZDynamics.html) function.
-7. [Navigating EZbakR output](https://isaacvock.github.io/EZbakR/articles/EZget.html). This is done with the EZbakR's [`EZget()`](https://isaacvock.github.io/EZbakR/reference/EZget.html) function.
+6. [Dynamical systems modeling](https://isaacvock.github.io/EZbakR/articles/EZDynamics.html). For analyses of subcellular fractionation and/or pre-mRNA processing dynamics. This is done with EZbakR's [`EZDynamics()`](https://isaacvock.github.io/EZbakR/reference/EZDynamics.html) function.
+7. [Navigating EZbakR output](https://isaacvock.github.io/EZbakR/articles/EZget.html). Conveniently fetching data from EZbakR analyses. This is done with EZbakR's [`EZget()`](https://isaacvock.github.io/EZbakR/reference/EZget.html) function.
 
-Other implemented functionality that will have vignettes in the future includes:
+Other implemented functionality that may be of interest includes:
 
 1. Providing fractions or kinetic parameter estimates as input. The former works similarly to how it did in bakR, and is implemented via the [`EZbakRFractions()`](https://isaacvock.github.io/EZbakR/reference/EZbakRFractions.html) function. THe latter is unique to EZbakR and is implemented via the [`EZbakRKinetics()`](https://isaacvock.github.io/EZbakR/reference/EZbakRKinetics.html) function.
 2. Simulating NR-seq data. There are a number of simulation functions implemented in EZbakR. [`EZSimulate()`](https://isaacvock.github.io/EZbakR/reference/EZSimulate.html) is a convenient wrapper to several of these.
+
+## Update (3/15/2025): Analyses of transcript isoforms
+
+We recently (3/14/2025) put out [a preprint](https://www.biorxiv.org/content/10.1101/2025.03.12.642874v1) describing a method by which to analyze the kinetics of individual transcript isoforms using short read NR-seq data from total RNA. While this strategy is touched on a little bit in one of the EZbakR vignettes ([this one](https://isaacvock.github.io/EZbakR/articles/EstimateFractions.html#isoform-deconvolution)), I have also developed a full fastq-to-volcano plot walkthrough using real downsampled fastq files from that preprint so you can see how every step of the fastq2EZbakR and EZbakR pipeline needs to be configured/run for these analyses. The tutorial is [here](https://isaacvock.github.io/Isoform_Tutorial_Docs/), and the data used in that tutorial is [here](https://github.com/isaacvock/Isoform_Analysis_Tutorial). Over the next couple weeks I will be adding some extra details/analyses to this tutorial, but in its current form (as of 3/15/2025), all of the basics of performing isoform-level analyses are covered there. It also acts as a hand-on tutorial for all of the EZbakR-suite and can thus useful to checkout and try out even if you aren't interested in this particular analysis strategy.
 
 ## What's new?
 
