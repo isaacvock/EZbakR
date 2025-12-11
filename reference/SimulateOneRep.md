@@ -171,6 +171,15 @@ SimulateOneRep(
   If `feature_pnew` is TRUE, then the logit(pnew) for each feature will
   be drawn from a normal distribution with this standard deviation.
 
+## Value
+
+List with two elements:
+
+- cB: Tibble that can be passed as the `cB` arg to
+  [`EZbakRData()`](https://isaacvock.github.io/EZbakR/reference/EZbakRData.md).
+
+- ground_truth: Tibble containing simulated ground truth.
+
 ## Examples
 
 ``` r

@@ -134,12 +134,12 @@ mutation content. This population is also expected to exist in a
 standard NR-seq dataset, so its `present` value is also \`TRUE.
 
 For a more complicated example, consider the fractions design matirx for
-[TILAC](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9638901/). TILAC is
-a method where an s⁴U labeled RNA population is mixed with an s⁶G
-labeled population. In this case, there are expected to be reads with
-either high T-to-C content (new reads from the s⁴U labeled sample), high
-G-to-A content (new reads from the s⁶G labeled sample), and reads with
-low T-to-C and G-to-A mutational content (old reads from either sample).
+[TILAC](https://pubmed.ncbi.nlm.nih.gov/36018791/). TILAC is a method
+where an s⁴U labeled RNA population is mixed with an s⁶G labeled
+population. In this case, there are expected to be reads with either
+high T-to-C content (new reads from the s⁴U labeled sample), high G-to-A
+content (new reads from the s⁶G labeled sample), and reads with low
+T-to-C and G-to-A mutational content (old reads from either sample).
 However, you will NEVER expect a read with **both** high T-to-C and high
 G-to-A content, as there are no samples subjected to both labels:
 
@@ -331,8 +331,7 @@ If you have -label data to compare to, EZbakR can use this data to
 quantify and correct for dropout. Currently, the default strategy used
 by EZbakR is similar to that implemented in
 [grandR](https://www.nature.com/articles/s41467-023-39163-4) and
-originally described
-[here](https://academic.oup.com/nar/article/52/7/e35/7612100).
+originally described [here](https://pubmed.ncbi.nlm.nih.gov/38381903/).
 Alternatively, EZbakR also implements that previously implemented in
 bakR.
 
@@ -340,7 +339,8 @@ Internal benchmarks suggest that that grandR strategy is a bit
 conservative (overestimates dropout) but more robust than the bakR
 strategy. The bakR strategy has the advantage of being explicitly
 derived from a particular generative model of dropout (details
-[here](NA)), allowing for things like model fit assessment. This sort of
+[here](https://simonlabcode.github.io/bakR/articles/Dropout.html)),
+allowing for things like model fit assessment. This sort of
 functionality is currently not implemented in EZbakR though, so I have
 chosen to default to the grandR strategy for now.
 

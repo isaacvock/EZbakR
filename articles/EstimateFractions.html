@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">EZbakR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -42,11 +42,13 @@
     <li><a class="dropdown-item" href="../articles/EZQC.html">QCing your NR-seq data with EZbakR: EZQC()</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/isaacvock/EZbakR/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -63,7 +65,7 @@
       <h1>Universal first step: EstimateFractions()</h1>
             
       
-
+      <small class="dont-index">Source: <a href="https://github.com/isaacvock/EZbakR/blob/main/vignettes/EstimateFractions.Rmd" class="external-link"><code>vignettes/EstimateFractions.Rmd</code></a></small>
       <div class="d-none name"><code>EstimateFractions.Rmd</code></div>
     </div>
 
@@ -199,10 +201,10 @@ that it pertains to the population of reads with low T-to-C mutation
 content. This population is also expected to exist in a standard NR-seq
 dataset, so its <code>present</code> value is also `TRUE.</p>
 <p>For a more complicated example, consider the fractions design matirx
-for <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9638901/" class="external-link">TILAC</a>.
-TILAC is a method where an s<sup>4</sup>U labeled RNA population is
-mixed with an s<sup>6</sup>G labeled population. In this case, there are
-expected to be reads with either high T-to-C content (new reads from the
+for <a href="https://pubmed.ncbi.nlm.nih.gov/36018791/" class="external-link">TILAC</a>. TILAC
+is a method where an s<sup>4</sup>U labeled RNA population is mixed with
+an s<sup>6</sup>G labeled population. In this case, there are expected
+to be reads with either high T-to-C content (new reads from the
 s<sup>4</sup>U labeled sample), high G-to-A content (new reads from the
 s<sup>6</sup>G labeled sample), and reads with low T-to-C and G-to-A
 mutational content (old reads from either sample). However, you will
@@ -456,13 +458,13 @@ address these two challenges.</p>
 <p>If you have -label data to compare to, EZbakR can use this data to
 quantify and correct for dropout. Currently, the default strategy used
 by EZbakR is similar to that implemented in <a href="https://www.nature.com/articles/s41467-023-39163-4" class="external-link">grandR</a> and
-originally described <a href="https://academic.oup.com/nar/article/52/7/e35/7612100" class="external-link">here</a>.
+originally described <a href="https://pubmed.ncbi.nlm.nih.gov/38381903/" class="external-link">here</a>.
 Alternatively, EZbakR also implements that previously implemented in
 bakR.</p>
 <p>Internal benchmarks suggest that that grandR strategy is a bit
 conservative (overestimates dropout) but more robust than the bakR
 strategy. The bakR strategy has the advantage of being explicitly
-derived from a particular generative model of dropout (details <a href="(https://simonlabcode.github.io/bakR/articles/Dropout.html)" class="external-link">here</a>),
+derived from a particular generative model of dropout (details <a href="https://simonlabcode.github.io/bakR/articles/Dropout.html" class="external-link">here</a>),
 allowing for things like model fit assessment. This sort of
 functionality is currently not implemented in EZbakR though, so I have
 chosen to default to the grandR strategy for now.</p>

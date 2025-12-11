@@ -5,14 +5,14 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Analyze and Integrate Any Type of Nucleotide Recoding RNA-seq Data • EZbakR</title>
+<title>Analyze and Integrate Any Type of Nucleotide Recoding RNA-Seq Data • EZbakR</title>
 <script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Analyze and Integrate Any Type of Nucleotide Recoding RNA-seq Data">
-<meta name="description" content="A complete rewrite and reimagination of bakR. Designed to support a wide array of analyses of nucleotide recoding RNA-seq (NR-seq) datasets of any type. Specifially designed with the following NR-seq methods in mind: TimeLapse-seq/ SLAM-seq/TUC-seq, Start-TimeLapse-seq (STL-seq), TT-TimeLapse-seq (TT-TL-seq), TILAC, subcellular TimeLapse-seq. Support for single cell NR-seq methods is provided though may be expanded in the future. Also designed to support nucleotide specific mutational analyses and thus analyses of any mutational probing RNA-seq method (SHAPE-seq, DMS-MaPseq, TRIBE, DART-seq, etc.).">
-<meta property="og:description" content="A complete rewrite and reimagination of bakR. Designed to support a wide array of analyses of nucleotide recoding RNA-seq (NR-seq) datasets of any type. Specifially designed with the following NR-seq methods in mind: TimeLapse-seq/ SLAM-seq/TUC-seq, Start-TimeLapse-seq (STL-seq), TT-TimeLapse-seq (TT-TL-seq), TILAC, subcellular TimeLapse-seq. Support for single cell NR-seq methods is provided though may be expanded in the future. Also designed to support nucleotide specific mutational analyses and thus analyses of any mutational probing RNA-seq method (SHAPE-seq, DMS-MaPseq, TRIBE, DART-seq, etc.).">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Analyze and Integrate Any Type of Nucleotide Recoding RNA-Seq Data">
+<meta name="description" content="A complete rewrite and reimagining of bakR (see Vock et al. (2025) &lt;doi:10.1371/journal.pcbi.1013179&gt;). Designed to support a wide array of analyses of nucleotide recoding RNA-seq (NR-seq) datasets of any type, including TimeLapse-seq/SLAM-seq/TUC-seq, Start-TimeLapse-seq (STL-seq), TT-TimeLapse-seq (TT-TL-seq), and subcellular NR-seq. EZbakR extends standard NR-seq standard NR-seq mutational modeling to support multi-label analyses (e.g., 4sU and 6sG dual labeling), and implements an improved hierarchical model to better account for transcript-to-transcript variance in metabolic label incorporation. EZbakR also generalized dynamical systems modeling of NR-seq data to support analyses of premature mRNA processing and flow between subcellular compartments. Finally, EZbakR implements flexible and well-powered comparative analyses of all estimated parameters via design matrix-specified generalized linear modeling.">
+<meta property="og:description" content="A complete rewrite and reimagining of bakR (see Vock et al. (2025) &lt;doi:10.1371/journal.pcbi.1013179&gt;). Designed to support a wide array of analyses of nucleotide recoding RNA-seq (NR-seq) datasets of any type, including TimeLapse-seq/SLAM-seq/TUC-seq, Start-TimeLapse-seq (STL-seq), TT-TimeLapse-seq (TT-TL-seq), and subcellular NR-seq. EZbakR extends standard NR-seq standard NR-seq mutational modeling to support multi-label analyses (e.g., 4sU and 6sG dual labeling), and implements an improved hierarchical model to better account for transcript-to-transcript variance in metabolic label incorporation. EZbakR also generalized dynamical systems modeling of NR-seq data to support analyses of premature mRNA processing and flow between subcellular compartments. Finally, EZbakR implements flexible and well-powered comparative analyses of all estimated parameters via design matrix-specified generalized linear modeling.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">EZbakR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,11 +44,13 @@
     <li><a class="dropdown-item" href="articles/EZQC.html">QCing your NR-seq data with EZbakR: EZQC()</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json">
 </form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/isaacvock/EZbakR/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -140,20 +142,22 @@
 <li>Linear model-based averaging of replicate data to support more complex experimental designs and maximally flexible comparative analyses.</li>
 <li>Greater flexibility in terms of the input data structure. Namely, multiple different features can be specified in your input cB table, and multiple different experimental details can be included in your input metadf table.</li>
 <li>A novel transcript isoform deconvolution strategy that allows for isoform-specific kinetic parameter estimation.</li>
-<li>Generalized linear dynamical systems modeling of NR-seq data. Supports analyses of subcellular fractionation NR-seq extensions, such as those described <a href="https://www.cell.com/molecular-cell/fulltext/S1097-2765(24)00511-2#:~:text=Thus%2C%20RNA%20flow%20impacts%20cell,processing%2C%20including%20splicing%20and%20polyadenylation." class="external-link">here</a>, <a href="https://www.biorxiv.org/content/10.1101/2024.03.11.584215v1" class="external-link">here</a>, and <a href="https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1012059" class="external-link">here</a>. Also supports analyses of pre-mRNA processing dynamics.</li>
+<li>Generalized linear dynamical systems modeling of NR-seq data. Supports analyses of subcellular fractionation NR-seq extensions, such as those described <a href="https://pubmed.ncbi.nlm.nih.gov/38964322/" class="external-link">here</a>, <a href="https://pubmed.ncbi.nlm.nih.gov/39548324/" class="external-link">here</a>, and <a href="https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1012059" class="external-link">here</a>. Also supports analyses of pre-mRNA processing dynamics.</li>
 </ol>
 <p>In the near future, EZbakR will support anything bakR can do that isn’t currently implemented (Namely <code>DissectMechanisms()</code> and various visualization functions). There are also a number of exciting developments on the horizon, so stay tuned!</p>
 </div>
 <div class="section level2">
 <h2 id="what-is-nr-seq">What is NR-seq?<a class="anchor" aria-label="anchor" href="#what-is-nr-seq"></a>
 </h2>
-<p>NR-seq refers to a class of methods that combine RNA-seq, metabolic labeling, and unique metabolic label recoding chemistries. These methods were originally developed to dissect the kinetics of RNA synthesis and degradation. Excitingly though, a treasure trove of extensions of the original methods have been created over the years. To-date, nucleotide recoding has been combined with the likes of <a href="https://www.nature.com/articles/nmeth.4582" class="external-link">TT-seq</a>, <a href="https://www.sciencedirect.com/science/article/pii/S1097276521006869?via%3Dihub" class="external-link">Start-seq</a>, <a href="https://www.nature.com/articles/s41592-021-01250-z" class="external-link">Ribo-seq</a>, <a href="https://www.nature.com/articles/s41586-019-1369-y" class="external-link">scRNA-seq</a> (other examples of this <a href="https://www.nature.com/articles/s41592-020-0935-4" class="external-link">here</a>, <a href="https://www.nature.com/articles/s41587-020-0480-9" class="external-link">here</a>, and <a href="https://www.biorxiv.org/content/10.1101/2023.07.06.547989v1" class="external-link">here</a>), <a href="https://www.nature.com/articles/s41587-023-01948-9" class="external-link">Perturb-seq</a>, <a href="https://www.biorxiv.org/content/10.1101/2020.05.01.073296v1" class="external-link">long-read sequencing</a>, and <a href="https://www.biorxiv.org/content/10.1101/2022.08.21.504696v1.full" class="external-link">subcellular fractionation</a>. In addition, while the original methods used 4-thiouridine (s<sup>4</sup>U), the same chemistry has been found to work with <a href="https://pubs.acs.org/doi/full/10.1021/jacs.8b08554" class="external-link">6-thioguanosine</a> (s<sup>6</sup>G), opening the door to dual-labeling experimental designs (e.g., <a href="https://academic.oup.com/nar/article/50/19/e110/6677324" class="external-link">TILAC</a>). EZbakR and its companion pipeline <a href="https://github.com/isaacvock/fastq2EZbakR" class="external-link">fastq2EZbakR</a> aim to provide an integrated and flexible framework to support this exciting class of methods.</p>
+<p>NR-seq refers to a class of methods that combine RNA-seq, metabolic labeling, and unique metabolic label recoding chemistries. These methods were originally developed to dissect the kinetics of RNA synthesis and degradation. Excitingly though, a treasure trove of extensions of the original methods have been created over the years. To-date, nucleotide recoding has been combined with the likes of <a href="https://www.nature.com/articles/nmeth.4582" class="external-link">TT-seq</a>, <a href="https://www.sciencedirect.com/science/article/pii/S1097276521006869?via%3Dihub" class="external-link">Start-seq</a>, <a href="https://www.nature.com/articles/s41592-021-01250-z" class="external-link">Ribo-seq</a>, <a href="https://www.nature.com/articles/s41586-019-1369-y" class="external-link">scRNA-seq</a> (other examples of this <a href="https://www.nature.com/articles/s41592-020-0935-4" class="external-link">here</a>, <a href="https://www.nature.com/articles/s41587-020-0480-9" class="external-link">here</a>, and <a href="https://www.sciencedirect.com/science/article/pii/S2405471224001194" class="external-link">here</a>), <a href="https://www.nature.com/articles/s41587-023-01948-9" class="external-link">Perturb-seq</a>, <a href="https://www.biorxiv.org/content/10.1101/2020.05.01.073296v1" class="external-link">long-read sequencing</a>, and <a href="https://pubmed.ncbi.nlm.nih.gov/38964322/" class="external-link">subcellular fractionation</a>. In addition, while the original methods used 4-thiouridine (s<sup>4</sup>U), the same chemistry has been found to work with <a href="https://pubs.acs.org/doi/full/10.1021/jacs.8b08554" class="external-link">6-thioguanosine</a> (s<sup>6</sup>G), opening the door to dual-labeling experimental designs (e.g., <a href="https://pubmed.ncbi.nlm.nih.gov/36018791/" class="external-link">TILAC</a>). EZbakR and its companion pipeline <a href="https://github.com/isaacvock/fastq2EZbakR" class="external-link">fastq2EZbakR</a> aim to provide an integrated and flexible framework to support this exciting class of methods.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
 <li><a href="https://cloud.r-project.org/package=EZbakR" class="external-link">View on CRAN</a></li>
+<li><a href="https://github.com/isaacvock/EZbakR/" class="external-link">Browse source code</a></li>
+<li><a href="https://github.com/isaacvock/EZbakR/issues" class="external-link">Report a bug</a></li>
 </ul>
 </div>
 
@@ -176,7 +180,7 @@
 <div class="developers">
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
-<li>Isaac Vock <br><small class="roles"> Author, maintainer </small> <a href="https://orcid.org/0000-0002-7178-6886" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
+<li>Isaac Vock <br><small class="roles"> Author, maintainer, copyright holder </small> <a href="https://orcid.org/0000-0002-7178-6886" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
 </ul>
 </div>
 

@@ -117,6 +117,15 @@ SimulateIsoforms(
 
   sdlog of a log-normal distribution from which ksyns are simulated
 
+## Value
+
+List with two elements:
+
+- cB: Tibble that can be passed as the `cB` arg to
+  [`EZbakRData()`](https://isaacvock.github.io/EZbakR/reference/EZbakRData.md).
+
+- ground_truth: Tibble containing simulated ground truth.
+
 ## Examples
 
 ``` r

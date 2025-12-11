@@ -125,7 +125,7 @@ QC <- EZQC(ezbdo)
 #> Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
 #> ℹ Please use `linewidth` instead.
 #> ℹ The deprecated feature was likely used in the EZbakR package.
-#>   Please report the issue to the authors.
+#>   Please report the issue at <https://github.com/isaacvock/EZbakR/issues>.
 #> CHECKING READ COUNT CORRELATIONS...
 #> log10(read counts) correlation for each pair of replicates are:
 #> # A tibble: 12 × 3

@@ -179,9 +179,8 @@ in EZbakR include:
 10. Generalized linear dynamical systems modeling of NR-seq data.
     Supports analyses of subcellular fractionation NR-seq extensions,
     such as those described
-    [here](https://www.cell.com/molecular-cell/fulltext/S1097-2765(24)00511-2#:~:text=Thus%2C%20RNA%20flow%20impacts%20cell,processing%2C%20including%20splicing%20and%20polyadenylation.),
-    [here](https://www.biorxiv.org/content/10.1101/2024.03.11.584215v1),
-    and
+    [here](https://pubmed.ncbi.nlm.nih.gov/38964322/),
+    [here](https://pubmed.ncbi.nlm.nih.gov/39548324/), and
     [here](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1012059).
     Also supports analyses of pre-mRNA processing dynamics.
 
@@ -205,18 +204,18 @@ recoding has been combined with the likes of
 examples of this
 [here](https://www.nature.com/articles/s41592-020-0935-4),
 [here](https://www.nature.com/articles/s41587-020-0480-9), and
-[here](https://www.biorxiv.org/content/10.1101/2023.07.06.547989v1)),
+[here](https://www.sciencedirect.com/science/article/pii/S2405471224001194)),
 [Perturb-seq](https://www.nature.com/articles/s41587-023-01948-9),
 [long-read
 sequencing](https://www.biorxiv.org/content/10.1101/2020.05.01.073296v1),
 and [subcellular
-fractionation](https://www.biorxiv.org/content/10.1101/2022.08.21.504696v1.full).
-In addition, while the original methods used 4-thiouridine (s⁴U), the
-same chemistry has been found to work with
+fractionation](https://pubmed.ncbi.nlm.nih.gov/38964322/). In addition,
+while the original methods used 4-thiouridine (s⁴U), the same chemistry
+has been found to work with
 [6-thioguanosine](https://pubs.acs.org/doi/full/10.1021/jacs.8b08554)
 (s⁶G), opening the door to dual-labeling experimental designs (e.g.,
-[TILAC](https://academic.oup.com/nar/article/50/19/e110/6677324)).
-EZbakR and its companion pipeline
+[TILAC](https://pubmed.ncbi.nlm.nih.gov/36018791/)). EZbakR and its
+companion pipeline
 [fastq2EZbakR](https://github.com/isaacvock/fastq2EZbakR) aim to provide
 an integrated and flexible framework to support this exciting class of
 methods.

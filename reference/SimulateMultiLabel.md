@@ -165,6 +165,15 @@ SimulateMultiLabel(
 
   Probability that a nucleotide in a simulated read is a C.
 
+## Value
+
+List with two elements:
+
+- cB: Tibble that can be passed as the `cB` arg to
+  [`EZbakRData()`](https://isaacvock.github.io/EZbakR/reference/EZbakRData.md).
+
+- ground_truth: Tibble containing simulated ground truth.
+
 ## Examples
 
 ``` r
@@ -173,5 +182,5 @@ simdata <- SimulateMultiLabel(3)
 #> `.name_repair` is omitted as of tibble 2.0.0.
 #> ℹ Using compatibility `.name_repair`.
 #> ℹ The deprecated feature was likely used in the EZbakR package.
-#>   Please report the issue to the authors.
+#>   Please report the issue at <https://github.com/isaacvock/EZbakR/issues>.
 ```

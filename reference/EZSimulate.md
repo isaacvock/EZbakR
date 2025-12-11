@@ -109,9 +109,10 @@ EZSimulate(
 
   - sample: Names given to samples to simulate.
 
-  - : Any number of columns with any names (not taken by other metadf
-    columns) storing factors by which the samples can be stratified.
-    These can be referenced in `mean_formula`, described below.
+  - `<details>`: Any number of columns with any names (not taken by
+    other metadf columns) storing factors by which the samples can be
+    stratified. These can be referenced in `mean_formula`, described
+    below.
 
   These parameters (described more below) can also be included in metadf
   to specify sample-specific simulation parameter:
@@ -131,10 +132,8 @@ EZSimulate(
 - mean_formula:
 
   A formula object that specifies the linear model used to relate the
-  factors in the
-
-  columns of `metadf` to average log(kdegs) and log(ksyns) in each
-  sample.
+  factors in the `<details>` columns of `metadf` to average log(kdegs)
+  and log(ksyns) in each sample.
 
 - param_details:
 
@@ -324,8 +323,7 @@ EZSimulate(
 - pdiff_both:
 
   Proportion of features for which BOTH non-reference log(kdeg) and
-  log(ksyn) linear model parameters differ from the reference. ksyns are
-  simulated
+  log(ksyn) linear model parameters differ from the reference.
 
 - pdo:
 
@@ -429,6 +427,24 @@ EZSimulate(
   Vector of log-Normal logsds from which the distribution of
   feature-specific parameters will be drawn from. If not provided, will
   be 0.4 for all parameters.
+
+## Value
+
+A list containing 5 elements:
+
+- cB: Tibble that can be provided as the `cB` arg to
+  [`EZbakRData()`](https://isaacvock.github.io/EZbakR/reference/EZbakRData.md).
+
+- metadf: Tibble that can be provided as the `metadf` arg to
+  [`EZbakRData()`](https://isaacvock.github.io/EZbakR/reference/EZbakRData.md).
+
+- PerRepTruth: Tibble containing replicate-by-replicate simulated ground
+  truth
+
+- AvgTruth: Tibble containing average simulated ground truth
+
+- param_details: Tibble containing information about simulated linear
+  model parameters
 
 ## Examples
 

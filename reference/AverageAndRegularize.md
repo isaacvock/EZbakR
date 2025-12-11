@@ -207,10 +207,11 @@ AverageAndRegularize(
 
 - feature_sample_counts:
 
-  Data frame with columns and `nsamps`, where are all of the feature
-  columns in the input to `AverageAndRegularize()`, and `nsamps` is the
-  number of samples that samples from that feature combination needs to
-  have over the read count threshold.
+  Data frame with columns `<feature names>` and `nsamps`, where
+  `<feature names>` are all of the feature columns in the input to
+  `AverageAndRegularize()`, and `nsamps` is the number of samples that
+  samples from that feature combination needs to have over the read
+  count threshold.
 
 - scale_factor_df:
 

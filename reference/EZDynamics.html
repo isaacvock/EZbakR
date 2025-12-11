@@ -17,7 +17,7 @@ involves assaying different species in different samples)."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">EZbakR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,8 +36,10 @@ involves assaying different species in different samples)."></head><body>
     <li><a class="dropdown-item" href="../articles/EZDynamics.html">Dynamical systems modeling in EZbakR: EZDynamics()</a></li>
     <li><a class="dropdown-item" href="../articles/EZQC.html">QCing your NR-seq data with EZbakR: EZQC()</a></li>
   </ul></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/isaacvock/EZbakR/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul></div>
 
 
@@ -47,7 +49,7 @@ involves assaying different species in different samples)."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Generalized dynamical systems modeling</h1>
-
+      <small class="dont-index">Source: <a href="https://github.com/isaacvock/EZbakR/blob/main/R/ODEs.R" class="external-link"><code>R/ODEs.R</code></a></small>
       <div class="d-none name"><code>EZDynamics.Rd</code></div>
     </div>
 
@@ -249,8 +251,8 @@ to create one manually. See docs for <code>EstimateFractions</code> (run ?Estima
 
 <dt id="arg-parameter">parameter<a class="anchor" aria-label="anchor" href="#arg-parameter"></a></dt>
 <dd><p>Parameter to average across replicates of a given condition.
-Has to be "logit_fraction_high<muttype>", where <muttype> is the type of
-mutation modeled in <code><a href="EstimateFractions.html">EstimateFractions()</a></code> (e.g, TC) in this case.</muttype></muttype></p></dd>
+Has to be <code>logit_fraction_high&lt;muttype&gt;</code>, where <code>&lt;muttype&gt;</code> is the type of
+mutation modeled in <code><a href="EstimateFractions.html">EstimateFractions()</a></code> (e.g, TC) in this case.</p></dd>
 
 
 <dt id="arg-repeatid">repeatID<a class="anchor" aria-label="anchor" href="#arg-repeatid"></a></dt>
@@ -322,10 +324,10 @@ numerical ID to distinguish the similar outputs.</p></dd>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>When running <code><a href="AverageAndRegularize.html">AverageAndRegularize()</a></code> to produce input for <code>EZDynamics()</code>, you
-must set <code>parameter</code> to "logit_fraction_high<muttype>" (<muttype> = type of mutation
+must set <code>parameter</code> to <code>logit_fraction_high&lt;muttype&gt;</code> (<code>&lt;muttype&gt;</code> = type of mutation
 modeled by <code><a href="EstimateFractions.html">EstimateFractions()</a></code>, e.g., TC). If you have multiple distinct label times,
 you must also include the label time (<code>tl</code> of your <code>metadf</code>)
-in your regression formula. <code>EZDynamics()</code> models the logit(fraction high &lt;muttype),
+in your regression formula. <code>EZDynamics()</code> models the logit(fraction high <code>&lt;muttype&gt;</code>),
 and this will depend on the label time (longer label time = higher fraction), which
 is why these two conditions must be met. If you only have a single label time though,
 <code>EZDynamics</code> will be able to impute this one value for all samples from your <code>metadf</code>.
@@ -333,7 +335,7 @@ You can also include additional interaction terms in your <code><a href="Average
 model for different experimental conditions in which experiments were conducted,
 so that inferred kinetic parameters can be compared across these conditions. Currently,
 more complex modeling beyond simple stratification of samples by one or more condition
-is not possible with <code>EZDynamics()</code>.</muttype></muttype></p>
+is not possible with <code>EZDynamics()</code>.</p>
 <p>For normalization purposes, especially if analyzing pre-mRNA processing dynamics,
 you will need to provide <code><a href="AverageAndRegularize.html">AverageAndRegularize()</a></code> with a table of feature lengths
 via the <code>feature_lengths</code> parameter. This will be used in all cases to length

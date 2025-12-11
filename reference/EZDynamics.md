@@ -213,7 +213,8 @@ EZDynamics(
 - parameter:
 
   Parameter to average across replicates of a given condition. Has to be
-  "logit_fraction_high", where is the type of mutation modeled in
+  `logit_fraction_high<muttype>`, where `<muttype>` is the type of
+  mutation modeled in
   [`EstimateFractions()`](https://isaacvock.github.io/EZbakR/reference/EstimateFractions.md)
   (e.g, TC) in this case.
 
@@ -294,11 +295,12 @@ EZDynamics(
 When running
 [`AverageAndRegularize()`](https://isaacvock.github.io/EZbakR/reference/AverageAndRegularize.md)
 to produce input for `EZDynamics()`, you must set `parameter` to
-"logit_fraction_high" ( = type of mutation modeled by
+`logit_fraction_high<muttype>` (`<muttype>` = type of mutation modeled
+by
 [`EstimateFractions()`](https://isaacvock.github.io/EZbakR/reference/EstimateFractions.md),
 e.g., TC). If you have multiple distinct label times, you must also
 include the label time (`tl` of your `metadf`) in your regression
-formula. `EZDynamics()` models the logit(fraction high \<muttype), and
+formula. `EZDynamics()` models the logit(fraction high `<muttype>`), and
 this will depend on the label time (longer label time = higher
 fraction), which is why these two conditions must be met. If you only
 have a single label time though, `EZDynamics` will be able to impute

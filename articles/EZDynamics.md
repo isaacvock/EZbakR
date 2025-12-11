@@ -963,11 +963,11 @@ save you the suspense and tell you that it has 6 elements:
     degrade.
 5.  subtlseq: Subcellular TimeLapse-seq model, similar to that described
     in [Iestwaart et al.,
-    2024](https://www.cell.com/molecular-cell/fulltext/S1097-2765(24)00511-2#:~:text=Thus%2C%20RNA%20flow%20impacts%20cell,processing%2C%20including%20splicing%20and%20polyadenylation.).
-    Simplest model discussed there, lacking nuclear degradation: 0 -\>
-    CH -\> NP -\> CY -\> PL -\> 0, and CY can also degrade. CH =
-    chromatin bound RNA. NP = nucleoplasmic RNA, not on chromatin. CY =
-    cytoplasmic RNA, not on polysomes. PL = polysome bound RNA.
+    2024](https://pubmed.ncbi.nlm.nih.gov/38964322/). Simplest model
+    discussed there, lacking nuclear degradation: 0 -\> CH -\> NP -\> CY
+    -\> PL -\> 0, and CY can also degrade. CH = chromatin bound RNA. NP
+    = nucleoplasmic RNA, not on chromatin. CY = cytoplasmic RNA, not on
+    polysomes. PL = polysome bound RNA.
 
 In the Quickstart documentation above, I used the formula lists stored
 in these in several cases to simplify the code. They make some hard

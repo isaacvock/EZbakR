@@ -42,6 +42,16 @@ SimpleSim(
 
   Fraction of nucleotides in simulated reads that are Ts (U in RNA)
 
+## Value
+
+Tibble with 3 columns:
+
+- nT: Simulated number of Ts
+
+- TC: Simulated number of T-to-C mutations
+
+- n: Number of simulated reads with nT Ts and TC mutations.
+
 ## Examples
 
 ``` r

@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">EZbakR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -42,11 +42,13 @@
     <li><a class="dropdown-item" href="../articles/EZQC.html">QCing your NR-seq data with EZbakR: EZQC()</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/isaacvock/EZbakR/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -63,7 +65,7 @@
       <h1>Dynamical systems modeling in EZbakR: EZDynamics()</h1>
             
       
-
+      <small class="dont-index">Source: <a href="https://github.com/isaacvock/EZbakR/blob/main/vignettes/EZDynamics.Rmd" class="external-link"><code>vignettes/EZDynamics.Rmd</code></a></small>
       <div class="d-none name"><code>EZDynamics.Rmd</code></div>
     </div>
 
@@ -978,12 +980,11 @@ degrade.</li>
 <li>nuc2cytowithNdeg: Same as nuc2cyto, but now nuclear RNA can also
 degrade.</li>
 <li>subtlseq: Subcellular TimeLapse-seq model, similar to that described
-in <a href="https://www.cell.com/molecular-cell/fulltext/S1097-2765(24)00511-2#:~:text=Thus%2C%20RNA%20flow%20impacts%20cell,processing%2C%20including%20splicing%20and%20polyadenylation." class="external-link">Iestwaart
-et al., 2024</a>. Simplest model discussed there, lacking nuclear
-degradation: 0 -&gt; CH -&gt; NP -&gt; CY -&gt; PL -&gt; 0, and CY can
-also degrade. CH = chromatin bound RNA. NP = nucleoplasmic RNA, not on
-chromatin. CY = cytoplasmic RNA, not on polysomes. PL = polysome bound
-RNA.</li>
+in <a href="https://pubmed.ncbi.nlm.nih.gov/38964322/" class="external-link">Iestwaart et al.,
+2024</a>. Simplest model discussed there, lacking nuclear degradation: 0
+-&gt; CH -&gt; NP -&gt; CY -&gt; PL -&gt; 0, and CY can also degrade. CH
+= chromatin bound RNA. NP = nucleoplasmic RNA, not on chromatin. CY =
+cytoplasmic RNA, not on polysomes. PL = polysome bound RNA.</li>
 </ol>
 <p>In the Quickstart documentation above, I used the formula lists
 stored in these in several cases to simplify the code. They make some

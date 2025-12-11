@@ -56,9 +56,10 @@ SimulateMultiCondition(
 
   - sample: Names given to samples to simulate.
 
-  - : Any number of columns with any names (not taken by other metadf
-    columns) storing factors by which the samples can be stratified.
-    These can be referenced in `mean_formula`, described below.
+  - `<details>`: Any number of columns with any names (not taken by
+    other metadf columns) storing factors by which the samples can be
+    stratified. These can be referenced in `mean_formula`, described
+    below.
 
   These parameters (described more below) can also be included in metadf
   to specify sample-specific simulation parameter:
@@ -78,10 +79,8 @@ SimulateMultiCondition(
 - mean_formula:
 
   A formula object that specifies the linear model used to relate the
-  factors in the
-
-  columns of `metadf` to average log(kdegs) and log(ksyns) in each
-  sample.
+  factors in the `<details>` columns of `metadf` to average log(kdegs)
+  and log(ksyns) in each sample.
 
 - param_details:
 
@@ -280,6 +279,26 @@ SimulateMultiCondition(
   Dropout rate; think of this as the probability that a s4U containing
   molecule is lost during library preparation and sequencing. If `pdo`
   is 0 (default) then there is not dropout.
+
+## Value
+
+A list containing 6 elements:
+
+- cB: Tibble that can be provided as the `cB` arg to
+  [`EZbakRData()`](https://isaacvock.github.io/EZbakR/reference/EZbakRData.md).
+
+- metadf: Tibble that can be provided as the `metadf` arg to
+  [`EZbakRData()`](https://isaacvock.github.io/EZbakR/reference/EZbakRData.md).
+
+- PerRepTruth: Tibble containing replicate-by-replicate simulated ground
+  truth
+
+- AvgTruth: Tibble containing average simulated ground truth
+
+- param_details: Tibble containing information about simulated linear
+  model parameters
+
+- UnbiasedFractions: Tibble containing no dropout ground truth
 
 ## Examples
 

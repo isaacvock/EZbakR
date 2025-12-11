@@ -165,6 +165,15 @@ VectSimulateMultiLabel(
 
   Probability that a nucleotide in a simulated read is a C.
 
+## Value
+
+List with two elements:
+
+- cB: Tibble that can be passed as the `cB` arg to
+  [`EZbakRData()`](https://isaacvock.github.io/EZbakR/reference/EZbakRData.md).
+
+- ground_truth: Tibble containing simulated ground truth.
+
 ## Examples
 
 ``` r

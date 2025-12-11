@@ -84,8 +84,8 @@ EZbakRFractions(fractions, metadf, name = NULL, character_limit = 20)
       discouraged unless you have a legitimate reason to prefer this
       design to a pulse-label design!!), then you should have columns
       named `tpulse` and `tchase`, corresponding to the pulse and chase
-      times respectively. The same \_ convention should be used in the
-      case of multi-label pulse-chase designs.
+      times respectively. The same `_<muttype>` convention should be
+      used in the case of multi-label pulse-chase designs.
 
   - sample characteristics: The remaining columns can be named whatever
     you like and should include distinguishing features of groups of

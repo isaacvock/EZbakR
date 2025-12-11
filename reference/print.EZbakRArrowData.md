@@ -22,3 +22,22 @@ print(x, max_name_chars = 60, ...)
 - ...:
 
   Ignored
+
+## Value
+
+The input `EZbakRData` object, invisibly
+
+## Examples
+
+``` r
+# Simulate data to analyze
+simdata <- SimulateOneRep(30)
+
+# Create EZbakR input
+metadf <- data.frame(sample = "sampleA", tl = 2)
+ezbdo <- EZbakRData(simdata$cB, metadf)
+
+# Print
+print(ezbdo)
+#> EZbakRData object with 0 analyses of 1 samples
+```

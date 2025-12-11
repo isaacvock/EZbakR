@@ -169,15 +169,15 @@ EstimateFractions(
 
   As another example, consider TILAC, a NR-seq extension developed by
   the Simon lab. TILAC was originally described in [Courvan et al.,
-  2022](https://academic.oup.com/nar/article/50/19/e110/6677324). In
-  this method, two populations of RNA, one from s^4U fed cells and one
-  from s^6G fed cells, are pooled and prepped for sequencing together.
-  This allows for internally controlled comparisons of RNA abundance
-  without spike-ins. s^4U is recoded to a cytosine analog by TimeLapse
-  chemistry (or similar chemistry) and s^6G is recoded to an adenine
-  analog. Thus, `fraction_design` includes columns called `TC` and `GA`.
-  A unique aspect of the TILAC `fraction_design` table is that one of
-  the possible populations, `TC` and `GA` both `TRUE`, is denoted as not
+  2022](https://pubmed.ncbi.nlm.nih.gov/36018791/). In this method, two
+  populations of RNA, one from s^4U fed cells and one from s^6G fed
+  cells, are pooled and prepped for sequencing together. This allows for
+  internally controlled comparisons of RNA abundance without spike-ins.
+  s^4U is recoded to a cytosine analog by TimeLapse chemistry (or
+  similar chemistry) and s^6G is recoded to an adenine analog. Thus,
+  `fraction_design` includes columns called `TC` and `GA`. A unique
+  aspect of the TILAC `fraction_design` table is that one of the
+  possible populations, `TC` and `GA` both `TRUE`, is denoted as not
   present (`present` = `FALSE`). This is because there is no RNA that
   was exposed to both s^4U and s^6G, thus a population of reads with
   both high T-to-C and G-to-A mutational content should not exist. To
