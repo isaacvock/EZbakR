@@ -1034,48 +1034,100 @@ EZSimulate <- function(nfeatures,
     ### Set parameters
     if(is.null(metadf)){
 
-      mean_formula <- stats::as.formula('~treatment-1')
-      metadf_s4U <- dplyr::tibble(sample = paste0('sample', 1:(nreps*ntreatments)),
-                                  treatment = rep(paste0('treatment', 1:ntreatments),
-                                                  each = nreps),
-                                  label_time = label_time)
+      # Number of label times
+      ntl <- length(label_time)
+      if(ntl == 1){
+        mean_formula <- stats::as.formula('~treatment-1')
+        metadf_s4U <- dplyr::tibble(sample = paste0('sample', 1:(nreps*ntreatments)),
+                                    treatment = rep(paste0('treatment', 1:ntreatments),
+                                                    each = nreps),
+                                    label_time = label_time)
 
-      ctl_start <- nreps*ntreatments + 1
-      ctl_end <- nreps*ntreatments + nctlreps*ntreatments
+        ctl_start <- nreps*ntreatments + 1
+        ctl_end <- nreps*ntreatments + nctlreps*ntreatments
 
-      metadf_ctl <- dplyr::tibble(sample = paste0('sample', ctl_start:ctl_end),
-                                  treatment = rep(paste0('treatment', 1:ntreatments),
-                                                  each = nctlreps),
-                                  label_time = 0)
+        metadf_ctl <- dplyr::tibble(sample = paste0('sample', ctl_start:ctl_end),
+                                    treatment = rep(paste0('treatment', 1:ntreatments),
+                                                    each = nctlreps),
+                                    label_time = 0)
 
-      metadf <- dplyr::bind_rows(metadf_s4U,
-                                 metadf_ctl)
-
-
-      simdata <- SimulateMultiCondition(nfeatures = nfeatures, metadf = metadf,
-                                        mean_formula = mean_formula,
-                                        param_details = param_details,
-                                        seqdepth = seqdepth, label_time = label_time,
-                                        pnew = pnew, pold = pold, readlength = readlength,
-                                        Ucont_alpha = Ucont_alpha, Ucont_beta = Ucont_beta,
-                                        feature_prefix = feature_prefix,
-                                        dispslope = dispslope, dispint = dispint,
-                                        logkdegsdtrend_slope = logkdegsdtrend_slope,
-                                        logkdegsdtrend_intercept = logkdegsdtrend_intercept,
-                                        logksynsdtrend_slope = logksynsdtrend_slope,
-                                        logksynsdtrend_intercept = logksynsdtrend_intercept,
-                                        logkdeg_mean = logkdeg_mean, logkdeg_sd = logkdeg_sd,
-                                        logksyn_mean = logksyn_mean, logksyn_sd = logksyn_sd,
-                                        logkdeg_diff_avg = logkdeg_diff_avg,
-                                        logksyn_diff_avg = logksyn_diff_avg,
-                                        logkdeg_diff_sd = logkdeg_diff_sd,
-                                        logksyn_diff_sd = logksyn_diff_sd,
-                                        pdiff_kd = pdiff_kd, pdiff_ks = pdiff_ks,
-                                        pdiff_both = pdiff_both, pdo = pdo)
+        metadf <- dplyr::bind_rows(metadf_s4U,
+                                   metadf_ctl)
 
 
-      simdata[['metadf']] <- metadf %>%
-        dplyr::rename(tl = label_time)
+        simdata <- SimulateMultiCondition(nfeatures = nfeatures, metadf = metadf,
+                                          mean_formula = mean_formula,
+                                          param_details = param_details,
+                                          seqdepth = seqdepth, label_time = label_time,
+                                          pnew = pnew, pold = pold, readlength = readlength,
+                                          Ucont_alpha = Ucont_alpha, Ucont_beta = Ucont_beta,
+                                          feature_prefix = feature_prefix,
+                                          dispslope = dispslope, dispint = dispint,
+                                          logkdegsdtrend_slope = logkdegsdtrend_slope,
+                                          logkdegsdtrend_intercept = logkdegsdtrend_intercept,
+                                          logksynsdtrend_slope = logksynsdtrend_slope,
+                                          logksynsdtrend_intercept = logksynsdtrend_intercept,
+                                          logkdeg_mean = logkdeg_mean, logkdeg_sd = logkdeg_sd,
+                                          logksyn_mean = logksyn_mean, logksyn_sd = logksyn_sd,
+                                          logkdeg_diff_avg = logkdeg_diff_avg,
+                                          logksyn_diff_avg = logksyn_diff_avg,
+                                          logkdeg_diff_sd = logkdeg_diff_sd,
+                                          logksyn_diff_sd = logksyn_diff_sd,
+                                          pdiff_kd = pdiff_kd, pdiff_ks = pdiff_ks,
+                                          pdiff_both = pdiff_both, pdo = pdo)
+
+
+        simdata[['metadf']] <- metadf %>%
+          dplyr::rename(tl = label_time)
+      }else{
+
+        mean_formula <- stats::as.formula('~treatment-1')
+        metadf_s4U <- dplyr::tibble(sample = paste0('sample', 1:(nreps*ntreatments*ntl)),
+                                    treatment = rep(rep(paste0('treatment', 1:ntreatments),
+                                                    each = nreps),
+                                                    times = ntl),
+                                    label_time = rep(label_time,
+                                                     each = nreps*ntreatments))
+
+        ctl_start <- nreps*ntreatments*ntl + 1
+        ctl_end <- nreps*ntreatments*ntl + nctlreps*ntreatments
+
+        metadf_ctl <- dplyr::tibble(sample = paste0('sample', ctl_start:ctl_end),
+                                    treatment = rep(paste0('treatment', 1:ntreatments),
+                                                    each = nctlreps),
+                                    label_time = 0)
+
+        metadf <- dplyr::bind_rows(metadf_s4U,
+                                   metadf_ctl)
+
+
+        simdata <- SimulateMultiCondition(nfeatures = nfeatures, metadf = metadf,
+                                          mean_formula = mean_formula,
+                                          param_details = param_details,
+                                          seqdepth = seqdepth, label_time = label_time,
+                                          pnew = pnew, pold = pold, readlength = readlength,
+                                          Ucont_alpha = Ucont_alpha, Ucont_beta = Ucont_beta,
+                                          feature_prefix = feature_prefix,
+                                          dispslope = dispslope, dispint = dispint,
+                                          logkdegsdtrend_slope = logkdegsdtrend_slope,
+                                          logkdegsdtrend_intercept = logkdegsdtrend_intercept,
+                                          logksynsdtrend_slope = logksynsdtrend_slope,
+                                          logksynsdtrend_intercept = logksynsdtrend_intercept,
+                                          logkdeg_mean = logkdeg_mean, logkdeg_sd = logkdeg_sd,
+                                          logksyn_mean = logksyn_mean, logksyn_sd = logksyn_sd,
+                                          logkdeg_diff_avg = logkdeg_diff_avg,
+                                          logksyn_diff_avg = logksyn_diff_avg,
+                                          logkdeg_diff_sd = logkdeg_diff_sd,
+                                          logksyn_diff_sd = logksyn_diff_sd,
+                                          pdiff_kd = pdiff_kd, pdiff_ks = pdiff_ks,
+                                          pdiff_both = pdiff_both, pdo = pdo)
+
+
+        simdata[['metadf']] <- metadf %>%
+          dplyr::rename(tl = label_time)
+      }
+
+
 
     }else{
 
@@ -2316,7 +2368,7 @@ check_SimulateMultiCondition_input <- function(args){
 
   }
 
-  if(tl < 0){
+  if(any(tl < 0)){
 
     stop("label_time must be >= 0!")
 
