@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">EZbakR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -235,7 +235,7 @@ truth:</p>
 <span></span>
 <span></span>
 <span><span class="va">gPk1</span> <span class="op">&lt;-</span> <span class="va">compare</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>density <span class="op">=</span> <span class="fu">get_density</span><span class="op">(</span></span>
+<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>density <span class="op">=</span> <span class="fu">EZbakR</span><span class="fu">:::</span><span class="fu">get_density</span><span class="op">(</span></span>
 <span>    x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="va">true_k1</span><span class="op">)</span>,</span>
 <span>    y <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">logk1</span><span class="op">)</span><span class="op">/</span><span class="va">true_scale_factor</span><span class="op">)</span>,</span>
 <span>    n <span class="op">=</span> <span class="fl">200</span></span>
@@ -262,7 +262,7 @@ truth:</p>
 <span></span>
 <span></span>
 <span><span class="va">gPk2</span> <span class="op">&lt;-</span> <span class="va">compare</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>density <span class="op">=</span> <span class="fu">get_density</span><span class="op">(</span></span>
+<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>density <span class="op">=</span> <span class="fu">EZbakR</span><span class="fu">:::</span><span class="fu">get_density</span><span class="op">(</span></span>
 <span>    x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="va">true_k2</span><span class="op">)</span>,</span>
 <span>    y <span class="op">=</span> <span class="va">logk2</span>,</span>
 <span>    n <span class="op">=</span> <span class="fl">200</span></span>
@@ -286,7 +286,7 @@ truth:</p>
 <span>    legend.title<span class="op">=</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size<span class="op">=</span><span class="fl">12</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">gPk3</span> <span class="op">&lt;-</span> <span class="va">compare</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>density <span class="op">=</span> <span class="fu">get_density</span><span class="op">(</span></span>
+<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>density <span class="op">=</span> <span class="fu">EZbakR</span><span class="fu">:::</span><span class="fu">get_density</span><span class="op">(</span></span>
 <span>    x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="va">true_k3</span><span class="op">)</span>,</span>
 <span>    y <span class="op">=</span> <span class="va">logk3</span>,</span>
 <span>    n <span class="op">=</span> <span class="fl">200</span></span>
@@ -312,7 +312,7 @@ truth:</p>
 <span><span class="va">gPk1</span></span>
 <span><span class="va">gPk2</span></span>
 <span><span class="va">gPk3</span></span></code></pre></div>
-<p><img src="EZDynamics_files/figure-html/pressure1-1.png" class="r-plt" width="40%"><img src="EZDynamics_files/figure-html/pressure1-2.png" class="r-plt" width="40%"><img src="EZDynamics_files/figure-html/pressure1-3.png" class="r-plt" width="40%"></p>
+<p><img src="EZDynamics_files/figure-html/pressure1-1.png" class="r-plt" alt="" width="40%"><img src="EZDynamics_files/figure-html/pressure1-2.png" class="r-plt" alt="" width="40%"><img src="EZDynamics_files/figure-html/pressure1-3.png" class="r-plt" alt="" width="40%"></p>
 </div>
 <div class="section level3">
 <h3 id="modeling-nuclear-degradation">Modeling nuclear degradation<a class="anchor" aria-label="anchor" href="#modeling-nuclear-degradation"></a>
@@ -392,6 +392,85 @@ that N can degrade to 0:</p>
 <span>                    modeled_to_measured <span class="op">=</span> <span class="va">ode_models</span><span class="op">$</span><span class="va">nuc2cytowithNdeg</span><span class="op">$</span><span class="va">formulas</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
+<h3 id="multi-label-time-modeling">Multi-label time modeling<a class="anchor" aria-label="anchor" href="#multi-label-time-modeling"></a>
+</h3>
+<p>The simplest use case of <code><a href="../reference/EZDynamics.html">EZDynamics()</a></code> is for estimating
+synthesis and degradation rate constants using multiple label times.
+Thus, the scenario is:</p>
+<p>Data: Whole-cell NR-seq data with more than one non-zero label
+time</p>
+<p>Goal: Fit the simple model 0 -&gt; M -&gt; 0; mature RNA (M) is
+synthesized and eventually degraded.</p>
+<p>Pre-requisites:</p>
+<ol style="list-style-type: decimal">
+<li>Create EZbakRData object.</li>
+<li>Run EstimateFractions to estimate the fraction of reads from labeled
+RNA in each replicate of each label time.</li>
+<li>Run AverageAndRegularize to average fractions across replicates of
+each label time.</li>
+</ol>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
+<span><span class="co">### SIMULATE DATA</span></span>
+<span></span>
+<span><span class="va">simdata</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EZSimulate.html">EZSimulate</a></span><span class="op">(</span>nfeatures <span class="op">=</span> <span class="fl">200</span>,</span>
+<span>                      ntreatments <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>                      label_time <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span>
+<span>              </span>
+<span><span class="co">### EZBAKR ANALYSES</span></span>
+<span></span>
+<span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EZbakRData.html">EZbakRData</a></span><span class="op">(</span><span class="va">simdata</span><span class="op">$</span><span class="va">cB</span>, <span class="va">simdata</span><span class="op">$</span><span class="va">metadf</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EstimateFractions.html">EstimateFractions</a></span><span class="op">(</span><span class="va">ezbdo</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Estimating mutation rates</span></span>
+<span><span class="co">#&gt; Summarizing data for feature(s) of interest</span></span>
+<span><span class="co">#&gt; Averaging out the nucleotide counts for improved efficiency</span></span>
+<span><span class="co">#&gt; Estimating fractions</span></span>
+<span><span class="co">#&gt; Processing output</span></span>
+<span></span>
+<span></span>
+<span><span class="co"># Averaging fractions rather than kinetics</span></span>
+<span><span class="co"># Note the model, which specifies that we want to average data for a given</span></span>
+<span><span class="co"># label time (tl) and experimental condition (treatment).</span></span>
+<span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/AverageAndRegularize.html">AverageAndRegularize</a></span><span class="op">(</span><span class="va">ezbdo</span>,</span>
+<span>                              formula_mean <span class="op">=</span> <span class="op">~</span><span class="va">tl</span><span class="op">:</span><span class="va">treatment</span> <span class="op">-</span> <span class="fl">1</span>,</span>
+<span>                              type <span class="op">=</span> <span class="st">"fractions"</span>,</span>
+<span>                              parameter <span class="op">=</span> <span class="st">"logit_fraction_highTC"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Fitting linear model</span></span>
+<span><span class="co">#&gt; Estimating coverage vs. variance trend</span></span>
+<span><span class="co">#&gt; Regularizing variance estimates</span></span></code></pre></div>
+<p>Input to EZDynamics():</p>
+<ol style="list-style-type: decimal">
+<li>EZbakRData object on which you have run AverageAndRegularize</li>
+<li>A matrix, referred to as a “graph”, describing the species you are
+modeling and their relationships to one another:</li>
+</ol>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co">### Input #2: the graph</span></span>
+<span><span class="va">graph</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>,</span>
+<span>                  <span class="fl">2</span>, <span class="fl">0</span><span class="op">)</span>,</span>
+<span>                nrow <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>                ncol <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>                byrow <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">graph</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"0"</span>, <span class="st">"M"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">graph</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">graph</span><span class="op">)</span></span></code></pre></div>
+<ol style="list-style-type: decimal">
+<li>A list of equations describing how the RNA you actually measured is
+related to the species you are modeling:</li>
+</ol>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">modeled_to_measured</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  <span class="va">feature</span> <span class="op">~</span> <span class="va">M</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Running EZDynamics:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ezbdo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EZDynamics.html">EZDynamics</a></span><span class="op">(</span><span class="va">ezbdo</span>,</span>
+<span>                    graph <span class="op">=</span> <span class="va">graph</span>,</span>
+<span>                    sub_features <span class="op">=</span> <span class="st">"feature"</span>,</span>
+<span>                    grouping_features <span class="op">=</span> <span class="st">"feature"</span>,</span>
+<span>                    modeled_to_measured <span class="op">=</span> <span class="va">modeled_to_measured</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
 <h3 id="modeling-pre--and-mature-rna-dynamics">Modeling pre- and mature RNA dynamics<a class="anchor" aria-label="anchor" href="#modeling-pre--and-mature-rna-dynamics"></a>
 </h3>
 <p>Data: Total RNA NR-seq data</p>
@@ -410,7 +489,7 @@ though.</p>
 <p>The graph in this case looks just like the nuclear to cytoplasmic
 model without nuclear degradation. In fact, it’s identical but with the
 column and row names changed for clarity:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">graph</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span>,</span>
 <span>                  <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">2</span>,</span>
 <span>                  <span class="fl">3</span>, <span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span>,</span>
@@ -420,7 +499,7 @@ column and row names changed for clarity:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">graph</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"0"</span>, <span class="st">"P"</span>, <span class="st">"M"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">graph</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">graph</span><span class="op">)</span></span></code></pre></div>
 <p>A couple things change this time when running the model:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span></span>
 <span><span class="co">##### SIMULATE DATA</span></span>
@@ -499,7 +578,7 @@ premature RNA (NP) is first synthesized, and then either processed to
 mature nuclear RNA (NM), or exported to the cytoplasm (CP). NM can then
 be exported to mature cytoplasmic RNA (CM), and CP can be processed to
 CM. The graph in this case looks like:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">graph</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span>,</span>
 <span>                  <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">2</span>, <span class="fl">3</span>, <span class="fl">0</span>,</span>
 <span>                  <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">4</span>,</span>
@@ -513,7 +592,7 @@ CM. The graph in this case looks like:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">graph</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">graph</span><span class="op">)</span></span></code></pre></div>
 <p>Fitting this model looks like a combination of the nuc2cyto and
 preRNA models:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">##### SIMULATE DATA</span></span>
 <span></span>
 <span><span class="va">simdata</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/EZSimulate.html">EZSimulate</a></span><span class="op">(</span>nfeatures <span class="op">=</span> <span class="fl">50</span>,</span>
@@ -575,7 +654,7 @@ preRNA models:</p>
 single biological condition. What if you have multiple distinct
 conditions and want to compare parameter estimates across these
 conditions? EZbakR can do that too! Here’s an example of how:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co">### SIMULATE DATA</span></span>
 <span></span>
@@ -652,7 +731,7 @@ conditions? EZbakR can do that too! Here’s an example of how:</p>
 <span>              design_factor <span class="op">=</span> <span class="st">"treatment"</span>,</span>
 <span>              reference <span class="op">=</span> <span class="st">"treatment1"</span>,</span>
 <span>              experimental <span class="op">=</span> <span class="st">"treatment2"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="EZDynamics_files/figure-html/unnamed-chunk-12-1.png" class="r-plt" width="576"></p>
+<p><img src="EZDynamics_files/figure-html/unnamed-chunk-16-1.png" class="r-plt" alt="" width="576"></p>
 </div>
 </div>
 <div class="section level2">
@@ -706,7 +785,7 @@ to bottom), from left to right.</p>
 <p>For example, if we wanted to model the nuclear export of synthesized
 RNA (N), and the eventual degradation of cytoplasmic RNA (C), we could
 define the following “graph”:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">graph</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span>,</span>
 <span>    <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">2</span>,</span>
@@ -828,7 +907,7 @@ data. Assume in your <code>metadf</code> you have a column called
 <code>compartment</code>, which specifies which samples represent which
 of these three fractions. For example, your <code>metadf</code> might
 look like:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">metadf</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  sample <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"cyto_1"</span>, <span class="st">"cyto_2"</span>,</span>
 <span>             <span class="st">"nuc_1"</span>, <span class="st">"nuc_2"</span>,</span>
@@ -845,7 +924,7 @@ shows up in your metadf. Each element needs to describe how XF in that
 sample is related to the species in your graph. Say you referred to two
 species in your graph, nuclear RNA (N in the graph) and cytoplasmic RNA
 (C in the graph). <code>modeled_to_measured</code> would then be:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mtom</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  total <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">XF</span> <span class="op">~</span> <span class="va">C</span> <span class="op">+</span> <span class="va">N</span><span class="op">)</span>,</span>
 <span>  nuclear <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">XF</span> <span class="op">~</span> <span class="va">N</span><span class="op">)</span>,</span>
@@ -873,7 +952,7 @@ mapping to exclusively exonic regions. GF represents data for all reads
 (intronic and exonic) from a gene. In this case, we will need to provide
 a list with one element per feature. Here is what a reasonable
 <code>modeled_to_measured</code> list might look like in this case:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mtom</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  <span class="va">XF</span> <span class="op">~</span> <span class="va">M</span>,</span>
 <span>  <span class="va">GF</span> <span class="op">~</span> <span class="va">P</span></span>
@@ -906,7 +985,7 @@ mapping reads, which are (almost) definitively mature RNA, while the
 latter would represent reads that don’t overlap splice junctions, and
 could thus come from either premature or mature RNA. The formula in this
 case would look like:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mtom</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  <span class="va">XF_sj</span> <span class="op">~</span> <span class="va">M</span>,</span>
 <span>  <span class="va">XF_nosj</span> <span class="op">~</span> <span class="va">P</span> <span class="op">+</span> <span class="va">M</span>,</span>
@@ -926,7 +1005,7 @@ of lists, with one inner-list per compartment (e.g., total, nuclear, and
 cytoplasmic) with each inner-list describing how the multiple cB feature
 columns are related to the modeled species. Let’s say you are fitting
 the following model (in “graph” form):</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">graph</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span>,</span>
 <span>                  <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">2</span>, <span class="fl">3</span>, <span class="fl">0</span>,</span>
 <span>                  <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">4</span>,</span>
@@ -942,7 +1021,7 @@ the following model (in “graph” form):</p>
 pre-RNA; and CM = cytoplasmic mature RNA. If your metadf looks like what
 it did in Example 1 of this section, then
 <code>modeled_to_measured</code> might look like:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mtom</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  total <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="va">GF</span> <span class="op">~</span> <span class="va">NP</span> <span class="op">+</span> <span class="va">CP</span>,</span>

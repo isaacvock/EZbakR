@@ -10,14 +10,14 @@
 Source:
 [`DESCRIPTION`](https://github.com/isaacvock/EZbakR/blob/main/DESCRIPTION)
 
-Vock I (2025). *EZbakR: Analyze and Integrate Any Type of Nucleotide
-Recoding RNA-Seq Data*. R package version 0.1.0,
+Vock I (2026). *EZbakR: Analyze and Integrate Any Type of Nucleotide
+Recoding RNA-Seq Data*. R package version 0.2.0,
 <https://isaacvock.github.io/EZbakR/>.
 
     @Manual{,
       title = {EZbakR: Analyze and Integrate Any Type of Nucleotide Recoding RNA-Seq Data},
       author = {Isaac Vock},
-      year = {2025},
-      note = {R package version 0.1.0},
+      year = {2026},
+      note = {R package version 0.2.0},
       url = {https://isaacvock.github.io/EZbakR/},
     }

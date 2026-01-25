@@ -177,7 +177,7 @@ true_scale_factor <- mean(exp(compare$logk1[compare$logk1 < 9.9]) / compare$true
 
 
 gPk1 <- compare %>%
-  dplyr::mutate(density = get_density(
+  dplyr::mutate(density = EZbakR:::get_density(
     x = log(true_k1),
     y = log(exp(logk1)/true_scale_factor),
     n = 200
@@ -204,7 +204,7 @@ gPk1 <- compare %>%
 
 
 gPk2 <- compare %>%
-  dplyr::mutate(density = get_density(
+  dplyr::mutate(density = EZbakR:::get_density(
     x = log(true_k2),
     y = logk2,
     n = 200
@@ -228,7 +228,7 @@ gPk2 <- compare %>%
     legend.title=element_text(size=12))
 
 gPk3 <- compare %>%
-  dplyr::mutate(density = get_density(
+  dplyr::mutate(density = EZbakR:::get_density(
     x = log(true_k3),
     y = logk3,
     n = 200
@@ -337,6 +337,94 @@ ezbdo <- EZDynamics(ezbdo,
                     grouping_features = "GF",
                     sample_feature = "compartment",
                     modeled_to_measured = ode_models$nuc2cytowithNdeg$formulas)
+```
+
+### Multi-label time modeling
+
+The simplest use case of
+[`EZDynamics()`](https://isaacvock.github.io/EZbakR/reference/EZDynamics.md)
+is for estimating synthesis and degradation rate constants using
+multiple label times. Thus, the scenario is:
+
+Data: Whole-cell NR-seq data with more than one non-zero label time
+
+Goal: Fit the simple model 0 -\> M -\> 0; mature RNA (M) is synthesized
+and eventually degraded.
+
+Pre-requisites:
+
+1.  Create EZbakRData object.
+2.  Run EstimateFractions to estimate the fraction of reads from labeled
+    RNA in each replicate of each label time.
+3.  Run AverageAndRegularize to average fractions across replicates of
+    each label time.
+
+``` r
+
+### SIMULATE DATA
+
+simdata <- EZSimulate(nfeatures = 200,
+                      ntreatments = 2,
+                      label_time = c(1, 2, 4))
+              
+### EZBAKR ANALYSES
+
+ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+
+ezbdo <- EstimateFractions(ezbdo)
+#> Estimating mutation rates
+#> Summarizing data for feature(s) of interest
+#> Averaging out the nucleotide counts for improved efficiency
+#> Estimating fractions
+#> Processing output
+
+
+# Averaging fractions rather than kinetics
+# Note the model, which specifies that we want to average data for a given
+# label time (tl) and experimental condition (treatment).
+ezbdo <- AverageAndRegularize(ezbdo,
+                              formula_mean = ~tl:treatment - 1,
+                              type = "fractions",
+                              parameter = "logit_fraction_highTC")
+#> Fitting linear model
+#> Estimating coverage vs. variance trend
+#> Regularizing variance estimates
+```
+
+Input to EZDynamics():
+
+1.  EZbakRData object on which you have run AverageAndRegularize
+2.  A matrix, referred to as a “graph”, describing the species you are
+    modeling and their relationships to one another:
+
+``` r
+### Input #2: the graph
+graph <- matrix(c(0, 1,
+                  2, 0),
+                nrow = 2,
+                ncol = 2,
+                byrow = TRUE)
+colnames(graph) <- c("0", "M")
+rownames(graph) <- colnames(graph)
+```
+
+1.  A list of equations describing how the RNA you actually measured is
+    related to the species you are modeling:
+
+``` r
+modeled_to_measured <- list(
+  feature ~ M
+)
+```
+
+Running EZDynamics:
+
+``` r
+ezbdo <- EZDynamics(ezbdo,
+                    graph = graph,
+                    sub_features = "feature",
+                    grouping_features = "feature",
+                    modeled_to_measured = modeled_to_measured)
 ```
 
 ### Modeling pre- and mature RNA dynamics
@@ -613,7 +701,7 @@ EZVolcanoPlot(ezbdo,
               experimental = "treatment2")
 ```
 
-![](EZDynamics_files/figure-html/unnamed-chunk-12-1.png)
+![](EZDynamics_files/figure-html/unnamed-chunk-16-1.png)
 
 ## Taking a deeper dive
 

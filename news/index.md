@@ -1,6 +1,6 @@
 # Changelog
 
-## EZbakR (development version)
+## EZbakR 0.2.0
 
 ## EZbakR 0.1.0
 
