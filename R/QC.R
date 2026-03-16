@@ -120,7 +120,8 @@ EZQC.EZbakRFractions <- function(obj,
                  features = features,
                  populations = populations,
                  fraction_design = fraction_design,
-                 returnNameOnly = TRUE)
+                 returnNameOnly = TRUE,
+                 ...)
 
   if(is.null(fname)){
     stop("No tables from your EZbakR analysis match your search criteria!")
@@ -151,7 +152,8 @@ EZQC.EZbakRFractions <- function(obj,
   gread <- check_read_count_corr_ezbf(obj,
                                       features = features,
                                       populations = populations,
-                                      fraction_design = fraction_design)
+                                      fraction_design = fraction_design,
+                                      ...)
 
 
   ### Check fraction labeled distribution
@@ -573,7 +575,8 @@ check_plabeled <- function(obj,
 # Using EZbakRFractions object
 check_read_count_corr_ezbf <- function(obj,
                                        features, populations,
-                                       fraction_design){
+                                       fraction_design,
+                                       ...){
 
 
   # Hack to deal with NOTEs
@@ -609,7 +612,8 @@ check_read_count_corr_ezbf <- function(obj,
                  features = features,
                  populations = populations,
                  fraction_design = fraction_design,
-                 returnNameOnly = TRUE)
+                 returnNameOnly = TRUE,
+                 ...)
 
   if(is.null(fname)){
     stop("No tables from your EZbakR analysis match your search criteria!")
