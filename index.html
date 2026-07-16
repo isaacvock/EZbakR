@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">EZbakR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -131,7 +131,7 @@
 </li>
 <li>Additional kinetic parameter estimation strategies:
 <ul>
-<li>Non-steady-state analyses as introduced in <a href="https://www.sciencedirect.com/science/article/pii/S1097276521004962" class="external-link">Narain et al., 2021</a>.</li>
+<li>Non-steady-state analyses as introduced in <a href="https://doi.org/10.1016/j.molcel.2021.06.016" class="external-link">Narain et al., 2021</a>.</li>
 <li>Short-feed analyses that assume negligible degradation of existing RNA.</li>
 <li>Synthesis rate estimation is implemented as a part of all strategies.</li>
 </ul>
@@ -149,7 +149,7 @@
 <div class="section level2">
 <h2 id="what-is-nr-seq">What is NR-seq?<a class="anchor" aria-label="anchor" href="#what-is-nr-seq"></a>
 </h2>
-<p>NR-seq refers to a class of methods that combine RNA-seq, metabolic labeling, and unique metabolic label recoding chemistries. These methods were originally developed to dissect the kinetics of RNA synthesis and degradation. Excitingly though, a treasure trove of extensions of the original methods have been created over the years. To-date, nucleotide recoding has been combined with the likes of <a href="https://www.nature.com/articles/nmeth.4582" class="external-link">TT-seq</a>, <a href="https://www.sciencedirect.com/science/article/pii/S1097276521006869?via%3Dihub" class="external-link">Start-seq</a>, <a href="https://www.nature.com/articles/s41592-021-01250-z" class="external-link">Ribo-seq</a>, <a href="https://www.nature.com/articles/s41586-019-1369-y" class="external-link">scRNA-seq</a> (other examples of this <a href="https://www.nature.com/articles/s41592-020-0935-4" class="external-link">here</a>, <a href="https://www.nature.com/articles/s41587-020-0480-9" class="external-link">here</a>, and <a href="https://www.sciencedirect.com/science/article/pii/S2405471224001194" class="external-link">here</a>), <a href="https://www.nature.com/articles/s41587-023-01948-9" class="external-link">Perturb-seq</a>, <a href="https://www.biorxiv.org/content/10.1101/2020.05.01.073296v1" class="external-link">long-read sequencing</a>, and <a href="https://pubmed.ncbi.nlm.nih.gov/38964322/" class="external-link">subcellular fractionation</a>. In addition, while the original methods used 4-thiouridine (s<sup>4</sup>U), the same chemistry has been found to work with <a href="https://pubs.acs.org/doi/full/10.1021/jacs.8b08554" class="external-link">6-thioguanosine</a> (s<sup>6</sup>G), opening the door to dual-labeling experimental designs (e.g., <a href="https://pubmed.ncbi.nlm.nih.gov/36018791/" class="external-link">TILAC</a>). EZbakR and its companion pipeline <a href="https://github.com/isaacvock/fastq2EZbakR" class="external-link">fastq2EZbakR</a> aim to provide an integrated and flexible framework to support this exciting class of methods.</p>
+<p>NR-seq refers to a class of methods that combine RNA-seq, metabolic labeling, and unique metabolic label recoding chemistries. These methods were originally developed to dissect the kinetics of RNA synthesis and degradation. Excitingly though, a treasure trove of extensions of the original methods have been created over the years. To-date, nucleotide recoding has been combined with the likes of <a href="https://doi.org/10.1038/nmeth.4582" class="external-link">TT-seq</a>, <a href="https://doi.org/10.1016/j.molcel.2021.08.019" class="external-link">Start-seq</a>, <a href="https://doi.org/10.1038/s41592-021-01250-z" class="external-link">Ribo-seq</a>, <a href="https://doi.org/10.1038/s41586-019-1369-y" class="external-link">scRNA-seq</a> (other examples of this <a href="https://doi.org/10.1038/s41592-020-0935-4" class="external-link">here</a>, <a href="https://doi.org/10.1038/s41587-020-0480-9" class="external-link">here</a>, and <a href="https://doi.org/10.1016/j.cels.2024.04.004" class="external-link">here</a>), <a href="https://doi.org/10.1038/s41587-023-01948-9" class="external-link">Perturb-seq</a>, <a href="https://www.biorxiv.org/content/10.1101/2020.05.01.073296v1" class="external-link">long-read sequencing</a>, and <a href="https://doi.org/10.1016/j.molcel.2024.06.008" class="external-link">subcellular fractionation</a>. In addition, while the original methods used 4-thiouridine (s<sup>4</sup>U), the same chemistry has been found to work with <a href="https://pubmed.ncbi.nlm.nih.gov/30353734/" class="external-link">6-thioguanosine</a> (s<sup>6</sup>G), opening the door to dual-labeling experimental designs (e.g., <a href="https://pubmed.ncbi.nlm.nih.gov/36018791/" class="external-link">TILAC</a>). EZbakR and its companion pipeline <a href="https://github.com/isaacvock/fastq2EZbakR" class="external-link">fastq2EZbakR</a> aim to provide an integrated and flexible framework to support this exciting class of methods.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">

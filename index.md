@@ -156,7 +156,7 @@ in EZbakR include:
     - More efficient and accurate uncertainty quantification.
 3.  Additional kinetic parameter estimation strategies:
     - Non-steady-state analyses as introduced in [Narain et al.,
-      2021](https://www.sciencedirect.com/science/article/pii/S1097276521004962).
+      2021](https://doi.org/10.1016/j.molcel.2021.06.016).
     - Short-feed analyses that assume negligible degradation of existing
       RNA.
     - Synthesis rate estimation is implemented as a part of all
@@ -198,23 +198,21 @@ were originally developed to dissect the kinetics of RNA synthesis and
 degradation. Excitingly though, a treasure trove of extensions of the
 original methods have been created over the years. To-date, nucleotide
 recoding has been combined with the likes of
-[TT-seq](https://www.nature.com/articles/nmeth.4582),
-[Start-seq](https://www.sciencedirect.com/science/article/pii/S1097276521006869?via%3Dihub),
-[Ribo-seq](https://www.nature.com/articles/s41592-021-01250-z),
-[scRNA-seq](https://www.nature.com/articles/s41586-019-1369-y) (other
-examples of this
-[here](https://www.nature.com/articles/s41592-020-0935-4),
-[here](https://www.nature.com/articles/s41587-020-0480-9), and
-[here](https://www.sciencedirect.com/science/article/pii/S2405471224001194)),
-[Perturb-seq](https://www.nature.com/articles/s41587-023-01948-9),
-[long-read
+[TT-seq](https://doi.org/10.1038/nmeth.4582),
+[Start-seq](https://doi.org/10.1016/j.molcel.2021.08.019),
+[Ribo-seq](https://doi.org/10.1038/s41592-021-01250-z),
+[scRNA-seq](https://doi.org/10.1038/s41586-019-1369-y) (other examples
+of this [here](https://doi.org/10.1038/s41592-020-0935-4),
+[here](https://doi.org/10.1038/s41587-020-0480-9), and
+[here](https://doi.org/10.1016/j.cels.2024.04.004)),
+[Perturb-seq](https://doi.org/10.1038/s41587-023-01948-9), [long-read
 sequencing](https://www.biorxiv.org/content/10.1101/2020.05.01.073296v1),
 and [subcellular
-fractionation](https://pubmed.ncbi.nlm.nih.gov/38964322/). In addition,
-while the original methods used 4-thiouridine (s⁴U), the same chemistry
-has been found to work with
-[6-thioguanosine](https://pubs.acs.org/doi/full/10.1021/jacs.8b08554)
-(s⁶G), opening the door to dual-labeling experimental designs (e.g.,
+fractionation](https://doi.org/10.1016/j.molcel.2024.06.008). In
+addition, while the original methods used 4-thiouridine (s⁴U), the same
+chemistry has been found to work with
+[6-thioguanosine](https://pubmed.ncbi.nlm.nih.gov/30353734/) (s⁶G),
+opening the door to dual-labeling experimental designs (e.g.,
 [TILAC](https://pubmed.ncbi.nlm.nih.gov/36018791/)). EZbakR and its
 companion pipeline
 [fastq2EZbakR](https://github.com/isaacvock/fastq2EZbakR) aim to provide
