@@ -1,6 +1,6 @@
 Package: EZbakR
 Title: Analyze and Integrate Any Type of Nucleotide Recoding RNA-Seq Data
-Version: 0.2.0
+Version: 0.2.1
 Authors@R:
     person(given = "Isaac",
            family = "Vock",
@@ -21,7 +21,7 @@ Description: A complete rewrite and reimagining of 'bakR' (see 'Vock et al.' (20
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Suggests:
     knitr,
     MASS,
