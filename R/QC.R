@@ -493,7 +493,7 @@ check_plabeled <- function(obj,
 
 
   # Hack to deal with NOTEs
-  mutrate <- NULL
+  mutrate <- type <- NULL
 
 
   # Gotta fetch mutrates
