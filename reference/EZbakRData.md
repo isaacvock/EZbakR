@@ -169,6 +169,7 @@ An EZbakRData object. This is simply a list of the provide `cB` and
 ## Examples
 
 ``` r
+
 # Simulate data
 simdata <- EZSimulate(30)
 

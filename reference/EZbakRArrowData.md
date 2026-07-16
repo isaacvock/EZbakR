@@ -169,6 +169,7 @@ and `metadf` with class `EZbakRArrowData`
 ## Examples
 
 ``` r
+
 # Load dependency
 library(arrow)
 #> 

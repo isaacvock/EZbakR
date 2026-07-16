@@ -138,6 +138,7 @@ species.
 ## Examples
 
 ``` r
+
 # Simulate data to analyze
 simdata <- EZSimulate(30)
 
@@ -155,11 +156,11 @@ ezbdo <- EstimateFractions(ezbdo)
 # Correct for dropout
 ezbdo <- CorrectDropout(ezbdo)
 #> Estimated rates of dropout are:
-#>    sample        pdo
-#> 1 sample1 0.15062004
-#> 2 sample2 0.01000000
-#> 3 sample3 0.09230763
-#> 4 sample4 0.01000000
-#> 5 sample5 0.03995805
-#> 6 sample6 0.01000000
+#>    sample       pdo
+#> 1 sample1 0.1804916
+#> 2 sample2 0.0100000
+#> 3 sample3 0.0100000
+#> 4 sample4 0.0100000
+#> 5 sample5 0.1581118
+#> 6 sample6 0.1675614
 ```

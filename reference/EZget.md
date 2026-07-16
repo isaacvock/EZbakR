@@ -284,6 +284,7 @@ etc.).
 ## Examples
 
 ``` r
+
 # Simulate data to analyze
 simdata <- EZSimulate(30)
 

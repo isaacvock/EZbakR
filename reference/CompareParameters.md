@@ -207,6 +207,7 @@ Benjamini and Hochberg, implemented in R's
 ## Examples
 
 ``` r
+
 # Simulate data to analyze
 simdata <- EZSimulate(30)
 

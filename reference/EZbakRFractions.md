@@ -119,6 +119,7 @@ An EZbakRFractions object. This is simply a list of the provide
 ## Examples
 
 ``` r
+
 # Simulate data
 simdata <- EZSimulate(30)
 

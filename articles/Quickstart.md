@@ -32,6 +32,7 @@ data shown in this vignette. Finally, I will use a little bit of dplyr
 to showcase some key results:
 
 ``` r
+
 library(EZbakR)
 library(dplyr)
 #> 
@@ -59,6 +60,7 @@ means that you can call them as if you created them yourselves, with
 `example_cB` and `example_metadf`:
 
 ``` r
+
 # Check out examples:
 example_cB
 example_metadf
@@ -114,6 +116,7 @@ Once you have a cB and metadf table, you can create an EZbakRData
 object:
 
 ``` r
+
 ezbdo <- EZbakRData(example_cB, example_metadf)
 ```
 
@@ -121,6 +124,7 @@ Now, let’s generate some simulated data to be used in the remaining
 steps:
 
 ``` r
+
 # Simulate 500 "genes" worth of data
   # Simulates 2 replicates of 2 different experimental conditions
 simdata <- EZSimulate(nfeatures = 500, nreps = 2)
@@ -141,6 +145,7 @@ EZbakR:
 [`EZbakRFractions()`](https://isaacvock.github.io/EZbakR/reference/EZbakRFractions.md):
 
 ``` r
+
 ezbdo <- EstimateFractions(ezbdo, features = "feature")
 #> Estimating mutation rates
 #> Summarizing data for feature(s) of interest
@@ -161,6 +166,7 @@ simulated ground truth to assess estimate accuracy and confirm that the
 method is working:
 
 ``` r
+
 # Simulated ground truth
 truth <- simdata$PerRepTruth
 
@@ -190,6 +196,7 @@ with
 [`EstimateKinetics()`](https://isaacvock.github.io/EZbakR/reference/EstimateKinetics.md):
 
 ``` r
+
 ezbdo <- EstimateKinetics(ezbdo)
 ```
 
@@ -208,6 +215,7 @@ for details.
 Again, let’s compare to ground_truth:
 
 ``` r
+
 # Simulated ground truth
 truth <- simdata$PerRepTruth
 
@@ -238,6 +246,7 @@ experimental conditions. This averaging process is done with
 [`AverageAndRegularize()`](https://isaacvock.github.io/EZbakR/reference/AverageAndRegularize.md):
 
 ``` r
+
 ezbdo <- AverageAndRegularize(ezbdo,
                               parameter = "log_kdeg")
 #> Fitting linear model
@@ -260,6 +269,7 @@ again with a different parameter, a new table will be added to the
 `ezbdo$averages` list:
 
 ``` r
+
 ezbdo <- AverageAndRegularize(ezbdo,
                               parameter = "log_ksyn")
 #> Fitting linear model
@@ -270,6 +280,7 @@ ezbdo <- AverageAndRegularize(ezbdo,
 Let’s make sure the estimates are still accurate:
 
 ``` r
+
 truth <- simdata$AvgTruth
 
 est <- EZget(ezbdo, type = 'averages', parameter = 'log_kdeg')
@@ -293,6 +304,7 @@ differences. This is done with
 [`CompareParameters()`](https://isaacvock.github.io/EZbakR/reference/CompareParameters.md):
 
 ``` r
+
 ezbdo <- CompareParameters(ezbdo,
                            condition = 'treatment',
                            reference = 'treatment1',
@@ -326,6 +338,7 @@ output of
 Volcano plot:
 
 ``` r
+
 EZVolcanoPlot(ezbdo, parameter = "log_kdeg",
               condition = 'treatment',
               reference = 'treatment1',
@@ -337,6 +350,7 @@ EZVolcanoPlot(ezbdo, parameter = "log_kdeg",
 MA plot:
 
 ``` r
+
 EZMAPlot(ezbdo, parameter = "log_kdeg",
          condition = 'treatment',
          reference = 'treatment1',

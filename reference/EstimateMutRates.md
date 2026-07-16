@@ -115,6 +115,7 @@ high and low mutation rates for each mutation type modeled.
 ## Examples
 
 ``` r
+
 # Simulate data to analyze
 simdata <- SimulateOneRep(30)
 

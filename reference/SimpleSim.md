@@ -55,6 +55,7 @@ Tibble with 3 columns:
 ## Examples
 
 ``` r
+
 # Simulate 1 gene worth of data data
 simdata <- SimpleSim()
 ```

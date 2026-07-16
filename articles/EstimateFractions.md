@@ -14,6 +14,7 @@ the basics of using
 while also diving into some of its unique functionality.
 
 ``` r
+
 library(EZbakR)
 
 # Going to show one tidyr trick to help with cB filtering
@@ -38,6 +39,7 @@ First, let’s simulate some data to showcase how
 works:
 
 ``` r
+
 simdata <- EZSimulate(nfeatures = 300, nreps = 2)
 
 ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
@@ -48,6 +50,7 @@ Technically, all you need to do is run
 providing it your `EZbakRData` object, and all will be fine:
 
 ``` r
+
 ezbdo <- EstimateFractions(ezbdo,
                            features = "feature")
 #> Estimating mutation rates
@@ -89,6 +92,7 @@ like to analyze a subset of them, this subset can be specified using the
 `mutrate_populations` argument:
 
 ``` r
+
 ezbdo <- EstimateFractions(ezbdo, mutrate_populations = "TC")
 #> Estimating mutation rates
 #> Summarizing data for feature(s) of interest
@@ -110,6 +114,7 @@ loaded examples for you to check out.
 “Standard” TC-only fractions design matrix:
 
 ``` r
+
 # Observe contents of cB
 standard_fraction_design
 ```
@@ -144,6 +149,7 @@ However, you will NEVER expect a read with **both** high T-to-C and high
 G-to-A content, as there are no samples subjected to both labels:
 
 ``` r
+
 # Observe contents of cB
 tilac_fraction_design
 ```
@@ -163,6 +169,7 @@ present in this data. All other populations are present though, so their
 You can automatically generate a fraction design table as such:
 
 ``` r
+
 # Three populations for fun:
 fd_table <- create_fraction_design(c("TC", "GA", "CG"))
 fd_table
@@ -208,6 +215,7 @@ which features to use in a given analysis via setting the `features`
 argument:
 
 ``` r
+
 ezbdo <- EstimateFractions(ezbdo, features = 'feature')
 #> Estimating mutation rates
 #> Summarizing data for feature(s) of interest
@@ -231,6 +239,7 @@ this value. This is set by the `remove_features` argument, which is a
 vector of strings that should be considered ripe for filtering:
 
 ``` r
+
 ezbdo <- EstimateFractions(ezbdo, remove_features = c("__no_feature", "feature1"))
 #> Estimating mutation rates
 #> Summarizing data for feature(s) of interest
@@ -247,6 +256,7 @@ extreme, where only a single feature needs to fail this test for the
 entire row to get filtered out:
 
 ``` r
+
 ezbdo <- EstimateFractions(ezbdo, filter_condition = `|`)
 #> Estimating mutation rates
 #> Summarizing data for feature(s) of interest
@@ -264,6 +274,7 @@ convert NA’s in your cB file with
 to whatever string you please:
 
 ``` r
+
 example_df <- data.frame(feature = c('A', NA, 'C'), 
                          other_feature = c(NA, 'Y', 'Z'))
 
@@ -289,6 +300,7 @@ for each feature assignment. To do that, you can specify the
 `split_multi_features` and `multi_feature_cols` arguments:
 
 ``` r
+
 ezbdo <- EstimateFractions(ezbdo,
                            split_multi_features = TRUE,
                            multi_feature_cols = "feature")
@@ -350,6 +362,7 @@ specifying which metadf sample characteristic columns should be used to
 associate -label and +label samples:
 
 ``` r
+
 ezbdo <- CorrectDropout(ezbdo, 
                         grouping_factors = "treatment")
 #> Estimated rates of dropout are:
@@ -379,6 +392,7 @@ to the -label rate. To do this, you just need to set `pold_from_nolabel`
 to `TRUE`:
 
 ``` r
+
 ezbdo <- EstimateFractions(ezbdo,
                            pold_from_nolabel = TRUE)
 #> Estimating mutation rates
@@ -395,6 +409,7 @@ estimated per group of samples with the same value for the metadf
 columns specified in `grouping_factors`:
 
 ``` r
+
 ezbdo <- EstimateFractions(ezbdo,
                            pold_from_nolabel = TRUE,
                            grouping_factors = 'treatment')
@@ -446,6 +461,7 @@ sample-wide average. This strategy will take a bit longer to run and can
 be implemented as so:
 
 ``` r
+
 ezbdo <- EstimateFractions(ezbdo, 
                            strategy = 'hierarchical')
 #> Estimating mutation rates
@@ -463,6 +479,7 @@ will both be saved in the `ezbdo$mutation_rates` list.As usual, let’s
 check the results:
 
 ``` r
+
 est <- EZget(ezbdo, type = 'fractions')
 truth <- simdata$PerRepTruth
 
@@ -492,6 +509,7 @@ this, so check out its documentation for details. We can simulate such a
 cB ourselves for demonstration purposes:
 
 ``` r
+
 # Simulates a single sample worth of data
 simdata_iso <- SimulateIsoforms(nfeatures = 300)
 
@@ -514,6 +532,7 @@ isoform. Whether, we want to estimate fractions for each unique
 equivalence class:
 
 ``` r
+
 ezbdo <- EstimateFractions(ezbdo)
 #> Estimating mutation rates
 #> Summarizing data for feature(s) of interest
@@ -554,6 +573,7 @@ if you are having a tough time using
 but I wouldn’t recommend it:
 
 ``` r
+
 ### Hack in the true, simulated isoform levels
 reads <- simdata_iso$ground_truth %>%
   dplyr::select(transcript_id, true_count, true_TPM) %>%
@@ -573,6 +593,7 @@ ezbdo <- EstimateIsoformFractions(ezbdo)
 We can then see how it did by comparing to ground truth:
 
 ``` r
+
 est <- EZget(ezbdo, 
              type = 'fractions',
              features = "transcript_id")
@@ -621,6 +642,7 @@ to load your data in one sample at a time, so as to only hold a single
 sample of the cB in RAM at a time:
 
 ``` r
+
 library(arrow)
 
 ### Move into the directory with your cB file
@@ -671,6 +693,7 @@ You can then create an `EZbakRArrowData` object similarly to how you
 would create a standard `EZbakRData` object:
 
 ``` r
+
 ds <- arrow::open_dataset("Path/to/where/you/want/to/Arrow/Dataset/")
 
 
@@ -692,6 +715,7 @@ with all of the settings you would normally use if you were working with
 an `EZbakRData` object:
 
 ``` r
+
 ezbado <- EstimateFractions(ezbado,
                             features = c("GF", "XF",
                                          "junction_start", "junction_end"),
@@ -712,6 +736,7 @@ temporary arrow dataset with it, and run
 on an `EZbakRArrowData` object:
 
 ``` r
+
 library(arrow)
 #> 
 #> Attaching package: 'arrow'

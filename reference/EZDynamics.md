@@ -358,6 +358,7 @@ experimental conditions you have.
 ## Examples
 
 ``` r
+
 ##### MODELING CYTOPLASMIC TO NUCLEAR FLOW
 
 ### Simulate data and get replicate average fractions estimates

@@ -14,6 +14,7 @@ and touch on two alternative analysis strategies that
 also implements: non-steady-state and short-feed analyses.
 
 ``` r
+
 library(EZbakR)
 ```
 
@@ -25,6 +26,7 @@ Below I demonstrate how to estimate synthesis and degradation rate
 constants using the standard analysis workflow and simulated data:
 
 ``` r
+
 # Simulate data
 simdata <- EZSimulate(nfeatures = 300, nreps = 2)
 
@@ -55,6 +57,7 @@ check out the vignette on
 better understand how this works:
 
 ``` r
+
 # Create another fractions table
 ezbdo2 <- EstimateFractions(ezbdo, overwrite = FALSE)
 #> Estimating mutation rates
@@ -107,38 +110,51 @@ The standard strategy makes the following assumptions:
 If all of these assumptions are met, then the dynamics of a given RNA
 population are well described by the following differential equation:
 
-$$\begin{array}{r}
-{\frac{\text{dR}}{\text{dt}} = k_{\text{syn}} - k_{\text{deg}}*\text{R}}
-\end{array}$$ where $\text{R}$ represents the concentration of RNA over
-time and $k_{\text{syn}}$ and $k_{\text{deg}}$ are the synthesis and
+``` math
+\begin{align}
+\frac{\text{dR}}{\text{dt}} = k_{\text{syn}} - k_{\text{deg}}*\text{R} 
+\end{align}
+```
+where $`\text{R}`$ represents the concentration of RNA over time and
+$`k_{\text{syn}}`$ and $`k_{\text{deg}}`$ are the synthesis and
 degradation rate constants, respectively. The general solution to this
 differential equation is:
 
-$$\begin{array}{r}
-{\text{R(t)} = \frac{k_{\text{syn}}}{k_{\text{deg}}} + \left( \text{R}_{\text{o}} - \frac{k_{\text{syn}}}{k_{\text{deg}}} \right)*e^{- \text{tl}*k_{\text{deg}}}}
-\end{array}$$
+``` math
+\begin{align}
+\text{R(t)} = \frac{ k_{\text{syn}}}{k_{\text{deg}}} +  (\text{R}_\text{o} - \frac{ k_{\text{syn}}}{k_{\text{deg}}})* e^{-\text{tl}*k_{\text{deg}}}
+\end{align}
+```
 
-where $\text{R}_{\text{o}}$ is the initial concentration of the RNA and
-$\text{tl}$ is the label time. Thus the concentration of new RNA
-($\text{R}_{\text{o}} = 0$) as a function of time is:
+where $`\text{R}_\text{o}`$ is the initial concentration of the RNA and
+$`\text{tl}`$ is the label time. Thus the concentration of new RNA
+($`\text{R}_\text{o} = 0`$) as a function of time is:
 
-$$\begin{array}{r}
-{\text{R}_{\text{new}}\text{(t)} = \frac{k_{\text{syn}}}{k_{\text{deg}}}*\left( 1 - e^{- \text{tl}*k_{\text{deg}}} \right)}
-\end{array}$$ As we are assuming that the total RNA concentration is not
-changing during the labeling, and since the steady-state concentration
-of RNA (solve for R setting $\frac{\text{dR}}{\text{dt}} = 0$) is
-$\frac{k_{\text{syn}}}{k_{\text{deg}}}$, we get that the fraction of RNA
-that is new (denoted $\theta$) is:
+``` math
+\begin{align}
+\text{R}_{\text{new}}\text{(t)} = \frac{ k_{\text{syn}}}{k_{\text{deg}}}*(1 - e^{-\text{tl}*k_{\text{deg}}})
+\end{align}
+```
+As we are assuming that the total RNA concentration is not changing
+during the labeling, and since the steady-state concentration of RNA
+(solve for R setting $`\frac{\text{dR}}{\text{dt}} = 0`$) is
+$`\frac{ k_{\text{syn}}}{k_{\text{deg}}}`$, we get that the fraction of
+RNA that is new (denoted $`\theta`$) is:
 
-$$\begin{array}{r}
-{\theta = 1 - e^{- \text{tl}*k_{\text{deg}}}}
-\end{array}$$ We can thus solve for the degradation rate constant, and
-use the normalized read counts to infer the synthesis rate constant.
+``` math
+\begin{align}
+\theta = 1 - e^{-\text{tl}*k_{\text{deg}}}
+\end{align}
+```
+We can thus solve for the degradation rate constant, and use the
+normalized read counts to infer the synthesis rate constant.
 
-$$\begin{aligned}
-k_{\text{deg}} & {= - \frac{\text{log}(1 - \theta)}{\text{tl}}} \\
-k_{\text{syn}} & {= \left( \text{normalized read count} \right)*k_{\text{deg}}}
-\end{aligned}$$
+``` math
+\begin{align}
+k_{\text{deg}} &= -\frac{\text{log}(1 - \theta)}{\text{tl}} \\
+k_{\text{syn}} &= (\text{normalized read count})*k_{\text{deg}}
+\end{align}
+```
 
 **NOTE**: degradation rate constants estimated in this manner will be in
 absolute units (1/time), whereas synthesis rate constants will be in
@@ -167,6 +183,7 @@ Everything is the same as it was in the standard case, except now we set
 `strategy = "shortfeed"`:
 
 ``` r
+
 # Estimate synthesis and degradation rate constants
 ezbdo <- EstimateKinetics(ezbdo,
                           strategy = "shortfeed")
@@ -180,29 +197,36 @@ degradation newly synthesized RNA during the label time. Thus, the
 following differential equation and solution to said ODE describes the
 dynamics of the new RNA:
 
-$$\begin{aligned}
-\frac{\text{dR}}{\text{dt}} & {= k_{\text{syn}}} \\
-{\text{R}_{\text{new}}\text{(t)}} & {= k_{\text{syn}}*\text{t}}
-\end{aligned}$$ Assuming that the concentration of new RNA is
-proportional to the normalized number of new reads yields the following
-estimate for $k_{\text{syn}}$:
+``` math
+\begin{align}
+\frac{\text{dR}}{\text{dt}} &= k_{\text{syn}} \\
+\text{R}_{\text{new}}\text{(t)} &=  k_{\text{syn}}*\text{t}
+\end{align}
+```
+Assuming that the concentration of new RNA is proportional to the
+normalized number of new reads yields the following estimate for
+$`k_{\text{syn}}`$:
 
-$$k_{\text{syn}} = \frac{\theta*\left( \text{normalized read count} \right)}{\text{tl}}$$
+``` math
+k_{\text{syn}} =  \frac{\theta*(\text{normalized read count})}{\text{tl}}
+```
 Assuming the RNA levels are at steady-state (as in the standard
 analysis), yields the following estimate for the degradation rate
 constant:
 
-$$\begin{aligned}
-\text{normalized read count} & {= \frac{k_{\text{syn}}}{k_{\text{deg}}}} \\
-k_{\text{deg}} & {= \frac{k_{\text{syn}}}{\text{normalized read count}}} \\
-k_{\text{deg}} & {= \frac{\theta}{\text{tl}}}
-\end{aligned}$$
+``` math
+\begin{align}
+\text{normalized read count} &= \frac{k_{\text{syn}}}{k_{\text{deg}}} \\
+k_{\text{deg}} &= \frac{k_{\text{syn}}}{\text{normalized read count}} \\
+k_{\text{deg}} &= \frac{\theta}{\text{tl}}
+\end{align}
+```
 
 The calculus enthusiasts among you may recognize that this estimate for
-$k_{\text{deg}}$ is equivalent to a 1st order Taylor series
+$`k_{\text{deg}}`$ is equivalent to a 1st order Taylor series
 approximation of the “standard” estimate strategy. This is no
 coincidence, as the assumption of a short feed is equivalent to assuming
-that $\theta$ is close to 0 (most of the RNA is old). It may also seem
+that $`\theta`$ is close to 0 (most of the RNA is old). It may also seem
 odd that this estimate is bounded between 0 and 1/tl, but this just
 reflects the assumption made by this strategy that RNA half lives are
 much shorter than the label time.
@@ -256,6 +280,7 @@ the initial RNA concentrations for “sampleC”. Therefore, your metadf
 could look like:
 
 ``` r
+
 metadf <- data.frame(
   sample = c('sampleA',
              'sampleB',
@@ -287,6 +312,7 @@ The relevant parameters are:
     assay the RNA population that existed at the start of labeling?
 
 ``` r
+
 # new metadf
 metadf <- data.frame(sample = paste0('sample', 1:6),
                  tl = c(2, 2, 2, 2, 0, 0),
@@ -331,31 +357,41 @@ assume that a single, unchanging degradation rate constant describes
 their turnover, then the following ODE and solution describe its
 dynamics:
 
-$$\begin{aligned}
-\frac{\text{dR}}{\text{dt}} & {= - k_{\text{deg}}*\text{R}} \\
-{\text{R}_{\text{old}}\text{(t)}} & {= \text{R}_{\text{o}}*e^{- k_{\text{deg}}*\text{t}}}
-\end{aligned}$$ In the steady-state case, $\text{R}_{\text{o}}$ would be
-equivalent to the steady-state RNA level
-($\frac{k_{\text{syn}}}{k_{\text{deg}}}$). In the away from steady-state
-case though, this assumption is no longer valid. Despite this, assume
-for a second that we could estimate $\text{R}_{\text{o}}$. Under this
-assumption, we could then estimate $k_{\text{deg}}$ as follows:
+``` math
+\begin{align}
+\frac{\text{dR}}{\text{dt}} &= -k_{\text{deg}}*\text{R} \\
+\text{R}_{\text{old}}\text{(t)} &=  \text{R}_{\text{o}}*e^{-k_{\text{deg}}*\text{t}}
+\end{align}
+```
+In the steady-state case, $`\text{R}_{\text{o}}`$ would be equivalent to
+the steady-state RNA level ($`\frac{ k_{\text{syn}}}{k_{\text{deg}}}`$).
+In the away from steady-state case though, this assumption is no longer
+valid. Despite this, assume for a second that we could estimate
+$`\text{R}_{\text{o}}`$. Under this assumption, we could then estimate
+$`k_{\text{deg}}`$ as follows:
 
-$$k_{\text{deg}} = - \frac{\text{log}\left( \text{R}_{\text{old}}\text{(t)}/\text{R}_{\text{o}} \right)}{\text{tl}}$$
+``` math
+k_{\text{deg}} = -\frac{\text{log}(\text{R}_{\text{old}}\text{(t)}/\text{R}_{\text{o}})}{\text{tl}}
+```
 
 We can then return to the general solution of the differential equation
 described in the ‘standard’ analysis strategy section:
 
-$$\begin{aligned}
-\text{R(t)} & {= \frac{k_{\text{syn}}}{k_{\text{deg}}} + \left( \text{R}_{\text{o}} - \frac{k_{\text{syn}}}{k_{\text{deg}}} \right)*e^{- \text{tl}*k_{\text{deg}}}} \\
-{\text{R}_{\text{new}}\text{(t)}} & {= \frac{k_{\text{syn}}}{k_{\text{deg}}}*\left( 1 - e^{- \text{tl}*k_{\text{deg}}} \right)}
-\end{aligned}$$ where in the second line we set
-$\text{R}_{\text{o}} = 0$ as there was no new RNA at the start of
-labeling, and derive an estimator for $k_{\text{syn}}$:
+``` math
+\begin{align}
+\text{R(t)} &= \frac{ k_{\text{syn}}}{k_{\text{deg}}} +  (\text{R}_\text{o} - \frac{ k_{\text{syn}}}{k_{\text{deg}}})* e^{-\text{tl}*k_{\text{deg}}} \\
+\text{R}_{\text{new}}\text{(t)} &= \frac{ k_{\text{syn}}}{k_{\text{deg}}}*(1 - e^{-\text{tl}*k_{\text{deg}}})
+\end{align}
+```
+where in the second line we set $`\text{R}_\text{o} = 0`$ as there was
+no new RNA at the start of labeling, and derive an estimator for
+$`k_{\text{syn}}`$:
 
-$$k_{\text{syn}} = \frac{\theta*(\text{normalized read count)}*k_{\text{deg}}}{1 - e^{- k_{\text{deg}}*\text{tl}}}$$
+``` math
+k_{\text{syn}} = \frac{\theta*(\text{normalized read count)}*k_{\text{deg}}}{1 - e^{-k_{\text{deg}}*\text{tl}}}
+```
 This yields the same estimator as in the steady-state case when
-$\theta = 1 - e^{- k_{\text{deg}}*\text{tl}}$. To make this strategy
+$`\theta = 1 - e^{-k_{\text{deg}}*\text{tl}}`$. To make this strategy
 work, we just need to estimate the starting levels of old RNA. Thus, you
 need some sort of RNA-seq data from a timepoint equivalent to the start
 of labeling.

@@ -30,6 +30,7 @@ The input `EZbakRData` object, invisibly
 ## Examples
 
 ``` r
+
 # Simulate data to analyze
 simdata <- SimulateOneRep(30)
 

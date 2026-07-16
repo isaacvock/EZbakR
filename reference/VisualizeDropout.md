@@ -100,6 +100,7 @@ A list of `ggplot2` objects, one for each +label sample.
 ## Examples
 
 ``` r
+
 # Simulate data to analyze
 simdata <- EZSimulate(30)
 

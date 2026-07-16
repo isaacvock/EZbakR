@@ -113,6 +113,7 @@ setting `plotlog2` to `FALSE`.
 ## Examples
 
 ``` r
+
 # Simulate data to analyze
 simdata <- EZSimulate(30)
 

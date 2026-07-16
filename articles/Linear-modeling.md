@@ -14,6 +14,7 @@ supporting a wider arrange of comparative analyses than was possible in
 bakR.
 
 ``` r
+
 library(EZbakR)
 library(dplyr)
 #> 
@@ -57,6 +58,7 @@ Here, I simulate and then fit the relevant model for both the
 log(kdeg)’s as well as the log(ksyn)’s:
 
 ``` r
+
 metadf <- tibble(sample = c("sampleA", "sampleB", "sampleC",
                             "sampleD", "sampleE", "sampleF"),
                  tl = c(0, 2, 2,
@@ -146,6 +148,7 @@ You can visualize the comparative analysis results using MA plots or
 volcano plots like so:
 
 ``` r
+
 # Assess log(kdeg) differences
 EZVolcanoPlot(ezbdo,
               parameter = "log_kdeg")
@@ -154,6 +157,7 @@ EZVolcanoPlot(ezbdo,
 ![](Linear-modeling_files/figure-html/unnamed-chunk-5-1.png)
 
 ``` r
+
 EZMAPlot(ezbdo,
               parameter = "log_kdeg")
 ```
@@ -161,6 +165,7 @@ EZMAPlot(ezbdo,
 ![](Linear-modeling_files/figure-html/unnamed-chunk-5-2.png)
 
 ``` r
+
 # Assess log(ksyn) differences
 EZVolcanoPlot(ezbdo,
               parameter = "log_ksyn")
@@ -169,6 +174,7 @@ EZVolcanoPlot(ezbdo,
 ![](Linear-modeling_files/figure-html/unnamed-chunk-6-1.png)
 
 ``` r
+
 EZMAPlot(ezbdo,
               parameter = "log_ksyn")
 ```
@@ -202,6 +208,7 @@ values for each unique combination of your two (or more) factors. This
 can be done with a simple `formula_mean` of `~ genotype:treatment`:
 
 ``` r
+
 metadf <- tibble(
   sample = c("sampleA", "sampleB", "sampleC",
              "sampleD", "sampleE", "sampleF",
@@ -293,6 +300,7 @@ by looking at the metadata for the relevant `AverageAndRegularize`
 object:
 
 ``` r
+
 ezbdo$metadata$averages$logkdeg_feature$fit_params
 #> [1] "genotypeKO:treatmentdrug"   "genotypeKO:treatmentnodrug"
 #> [3] "genotypeWT:treatmentdrug"   "genotypeWT:treatmentnodrug"
@@ -305,6 +313,7 @@ parameter model with a factor with one level per unique combination of
 factors. So you could have defined a metadf that looks like:
 
 ``` r
+
 metadf$condition <- factor(paste0(metadf$genotype, metadf$treatment))
 metadf
 ```
@@ -338,6 +347,7 @@ parameters in such a model is a bit more complicated, but here’s how you
 would fit such a model:
 
 ``` r
+
 
 # factor() ensures that WT + nodrug is treated as the reference
 # which probably makes more intuitive sense
@@ -427,6 +437,7 @@ With this in mind, some things you can do with
 includes:
 
 ``` r
+
 # Assess significance of interaction term
 ezbdo <- CompareParameters(ezbdo,
                            parameter = "log_kdeg",
@@ -485,6 +496,7 @@ effect. This can be done by specifying `~genotype + batch` in the
 [`AverageAndRegularize()`](https://isaacvock.github.io/EZbakR/reference/AverageAndRegularize.md).:
 
 ``` r
+
 # factor() ensures that WT is treated as the reference
 # which probably makes more intuitive sense
 metadf <- tibble(sample = c("sampleA", 

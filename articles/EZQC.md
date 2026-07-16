@@ -14,6 +14,7 @@ design and analyze NR-seq experiments. Let’s start by loading EZbakR,
 which we will use throughout this vignette:
 
 ``` r
+
 library(EZbakR)
 ```
 
@@ -40,6 +41,7 @@ take two different inputs:
 An example of both of these are shown below:
 
 ``` r
+
 simdata <- EZSimulate(250)
 
 ezbdo <- EZbakRData(simdata$cB,
@@ -343,9 +345,9 @@ dataset:
       label times are typical and tend to work great in these systems.
     - In yeast this is much shorter, around 30 minutes.
 5.  An optimized concentration of metabolic label.
-    - Typical values range from 100 $\mu$M to 1 mM, but simple, low
-      throughput assays (e.g., dot blots) should be used to ensure
-      sufficient incorporation of metabolic label at a given
+    - Typical values range from 100 $`\mathrm{\mu}`$M to 1 mM, but
+      simple, low throughput assays (e.g., dot blots) should be used to
+      ensure sufficient incorporation of metabolic label at a given
       concentration. Different cell lines can exhibit wildly different
       levels of label uptake, and thus it would be best to assess this
       in each unique biological context you plan to do NR-seq in.

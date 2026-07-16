@@ -396,6 +396,7 @@ There are several flavors of mixture modeling that can be performed by
 ## Examples
 
 ``` r
+
 # Simulate data to analyze
 simdata <- SimulateOneRep(30)
 

@@ -276,6 +276,7 @@ NR-seq so c'est la vie.
 ## Examples
 
 ``` r
+
 # Simulate data to analyze
 simdata <- SimulateOneRep(30)
 

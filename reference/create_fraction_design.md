@@ -43,6 +43,7 @@ abundance of populations that don't exist.
 ## Examples
 
 ``` r
+
 # Standard, single-label NR-seq
 fd <- create_fraction_design(c("TC"))
 

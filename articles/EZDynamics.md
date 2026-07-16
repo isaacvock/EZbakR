@@ -1,6 +1,7 @@
 # Dynamical systems modeling in EZbakR: EZDynamics()
 
 ``` r
+
 library(EZbakR)
 library(dplyr)
 #> 
@@ -69,6 +70,7 @@ Pre-requisites:
 
 ``` r
 
+
 ### SIMULATE DATA
 
 simdata <- EZSimulate(nfeatures = 200,
@@ -118,6 +120,7 @@ Input to EZDynamics():
     modeling and their relationships to one another:
 
 ``` r
+
 ### Input #2: the graph
 graph <- matrix(c(0, 1, 0,
                   0, 0, 2,
@@ -141,6 +144,7 @@ rownames(graph) <- colnames(graph)
     related to the species you are modeling:
 
 ``` r
+
 modeled_to_measured <- list(
   nuclear = list(GF ~ N),
   cytoplasm = list(GF ~ C),
@@ -151,6 +155,7 @@ modeled_to_measured <- list(
 Running EZDynamics:
 
 ``` r
+
 # See documentation (?EZDynamics()) for descriptions of all parameters
 # specified. Bit of trickery here with an object loaded with EZbakR
 # called ode_models. More on this later
@@ -165,6 +170,7 @@ ezbdo <- EZDynamics(ezbdo,
 Assessing accuracy since this is simulated data with known ground truth:
 
 ``` r
+
 gt <- simdata$ground_truth$parameter_truth
 
 dynfit <- ezbdo$dynamics$dynamics1 
@@ -265,6 +271,7 @@ longer want to make that assumption? Just change the graph to specify
 that N can degrade to 0:
 
 ``` r
+
 ### Input #2: the graph
 graph <- matrix(c(0, 1, 0,
                   3, 0, 2,
@@ -287,6 +294,7 @@ rownames(graph) <- colnames(graph)
 Analyzing the data with this model is the same as before:
 
 ``` r
+
 
 ##### SIMULATE DATA
 
@@ -361,6 +369,7 @@ Pre-requisites:
 
 ``` r
 
+
 ### SIMULATE DATA
 
 simdata <- EZSimulate(nfeatures = 200,
@@ -398,6 +407,7 @@ Input to EZDynamics():
     modeling and their relationships to one another:
 
 ``` r
+
 ### Input #2: the graph
 graph <- matrix(c(0, 1,
                   2, 0),
@@ -412,6 +422,7 @@ rownames(graph) <- colnames(graph)
     related to the species you are modeling:
 
 ``` r
+
 modeled_to_measured <- list(
   feature ~ M
 )
@@ -420,6 +431,7 @@ modeled_to_measured <- list(
 Running EZDynamics:
 
 ``` r
+
 ezbdo <- EZDynamics(ezbdo,
                     graph = graph,
                     sub_features = "feature",
@@ -450,6 +462,7 @@ without nuclear degradation. In fact, it’s identical but with the column
 and row names changed for clarity:
 
 ``` r
+
 graph <- matrix(c(0, 1, 0,
                   0, 0, 2,
                   3, 0, 0),
@@ -463,6 +476,7 @@ rownames(graph) <- colnames(graph)
 A couple things change this time when running the model:
 
 ``` r
+
 
 
 ##### SIMULATE DATA
@@ -543,6 +557,7 @@ be exported to mature cytoplasmic RNA (CM), and CP can be processed to
 CM. The graph in this case looks like:
 
 ``` r
+
 graph <- matrix(c(0, 1, 0, 0, 0,
                   0, 0, 2, 3, 0,
                   0, 0, 0, 0, 4,
@@ -560,6 +575,7 @@ Fitting this model looks like a combination of the nuc2cyto and preRNA
 models:
 
 ``` r
+
 ##### SIMULATE DATA
 
 simdata <- EZSimulate(nfeatures = 50,
@@ -623,6 +639,7 @@ conditions and want to compare parameter estimates across these
 conditions? EZbakR can do that too! Here’s an example of how:
 
 ``` r
+
 
 ### SIMULATE DATA
 
@@ -754,6 +771,7 @@ For example, if we wanted to model the nuclear export of synthesized RNA
 define the following “graph”:
 
 ``` r
+
 graph <- matrix(
   c(0, 1, 0,
     0, 0, 2,
@@ -889,6 +907,7 @@ which specifies which samples represent which of these three fractions.
 For example, your `metadf` might look like:
 
 ``` r
+
 metadf <- tibble(
   sample = c("cyto_1", "cyto_2",
              "nuc_1", "nuc_2",
@@ -909,6 +928,7 @@ nuclear RNA (N in the graph) and cytoplasmic RNA (C in the graph).
 `modeled_to_measured` would then be:
 
 ``` r
+
 mtom <- list(
   total = list(XF ~ C + N),
   nuclear = list(XF ~ N),
@@ -937,6 +957,7 @@ a list with one element per feature. Here is what a reasonable
 `modeled_to_measured` list might look like in this case:
 
 ``` r
+
 mtom <- list(
   XF ~ M,
   GF ~ P
@@ -973,6 +994,7 @@ that don’t overlap splice junctions, and could thus come from either
 premature or mature RNA. The formula in this case would look like:
 
 ``` r
+
 mtom <- list(
   XF_sj ~ M,
   XF_nosj ~ P + M,
@@ -994,6 +1016,7 @@ columns are related to the modeled species. Let’s say you are fitting
 the following model (in “graph” form):
 
 ``` r
+
 graph <- matrix(c(0, 1, 0, 0, 0,
                   0, 0, 2, 3, 0,
                   0, 0, 0, 0, 4,
@@ -1013,6 +1036,7 @@ in Example 1 of this section, then `modeled_to_measured` might look
 like:
 
 ``` r
+
 mtom <- list(
   total = list(
     GF ~ NP + CP,

@@ -449,6 +449,7 @@ A list containing 5 elements:
 ## Examples
 
 ``` r
+
 # Simulate standard data
 simdata_standard <- EZSimulate(30)
 

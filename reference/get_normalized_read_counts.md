@@ -74,6 +74,7 @@ Data table of normalized read counts.
 ## Examples
 
 ``` r
+
 # Simulate data
 simdata <- EZSimulate(30)
 

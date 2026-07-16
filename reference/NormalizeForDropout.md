@@ -135,6 +135,7 @@ setting `normalize_across_tls` to `TRUE`, which will
 ## Examples
 
 ``` r
+
 # Simulate data to analyze
 simdata <- EZSimulate(30)
 

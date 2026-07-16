@@ -69,6 +69,7 @@ and each sample.
 ## Examples
 
 ``` r
+
 # Dependencies for example
 library(dplyr)
 library(data.table)
@@ -77,6 +78,9 @@ library(data.table)
 #> The following objects are masked from ‘package:dplyr’:
 #> 
 #>     between, first, last
+#> The following object is masked from ‘package:base’:
+#> 
+#>     %notin%
 
 # Simulate and analyze data
 simdata <- EZSimulate(30)

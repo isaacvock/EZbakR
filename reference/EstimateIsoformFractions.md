@@ -145,6 +145,7 @@ will not have their fraction news estimated.
 ## Examples
 
 ``` r
+
 # Load dependencies
 library(dplyr)
 

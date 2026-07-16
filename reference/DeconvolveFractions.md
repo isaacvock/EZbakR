@@ -156,6 +156,7 @@ news estimated.
 ## Examples
 
 ``` r
+
 # Load dependencies
 library(dplyr)
 #> 

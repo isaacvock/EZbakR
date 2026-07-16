@@ -104,6 +104,7 @@ also checks:
 ## Examples
 
 ``` r
+
 # Simulate data to analyze
 simdata <- EZSimulate(30)
 
@@ -131,18 +132,18 @@ QC <- EZQC(ezbdo)
 #> # A tibble: 12 × 3
 #>    sample_1 sample_2 correlation
 #>    <chr>    <chr>          <dbl>
-#>  1 sample1  sample2        0.980
-#>  2 sample1  sample3        0.979
-#>  3 sample1  sample7        0.988
-#>  4 sample2  sample3        0.975
-#>  5 sample2  sample7        0.974
-#>  6 sample3  sample7        0.974
-#>  7 sample4  sample5        0.977
-#>  8 sample4  sample6        0.986
-#>  9 sample4  sample8        0.981
-#> 10 sample5  sample6        0.978
-#> 11 sample5  sample8        0.975
-#> 12 sample6  sample8        0.983
+#>  1 sample1  sample2        0.984
+#>  2 sample1  sample3        0.984
+#>  3 sample1  sample7        0.991
+#>  4 sample2  sample3        0.983
+#>  5 sample2  sample7        0.984
+#>  6 sample3  sample7        0.987
+#>  7 sample4  sample5        0.987
+#>  8 sample4  sample6        0.982
+#>  9 sample4  sample8        0.984
+#> 10 sample5  sample6        0.983
+#> 11 sample5  sample8        0.977
+#> 12 sample6  sample8        0.982
 #> 
 #> log10(read counts) correlations are high, suggesting good reproducibility!
 #> 
@@ -151,12 +152,12 @@ QC <- EZQC(ezbdo)
 #> # A tibble: 6 × 3
 #>   sample  avg_fraction fraction_type  
 #>   <chr>          <dbl> <chr>          
-#> 1 sample1        0.263 fraction_highTC
-#> 2 sample2        0.269 fraction_highTC
-#> 3 sample3        0.266 fraction_highTC
-#> 4 sample4        0.273 fraction_highTC
-#> 5 sample5        0.270 fraction_highTC
-#> 6 sample6        0.269 fraction_highTC
+#> 1 sample1        0.325 fraction_highTC
+#> 2 sample2        0.310 fraction_highTC
+#> 3 sample3        0.323 fraction_highTC
+#> 4 sample4        0.322 fraction_highTC
+#> 5 sample5        0.328 fraction_highTC
+#> 6 sample6        0.327 fraction_highTC
 #> 
 #> Labeling rates (e.g., fraction labeled for single label experiments) look good!
 #> 
@@ -165,12 +166,12 @@ QC <- EZQC(ezbdo)
 #> # A tibble: 6 × 3
 #>   sample_1 sample_2 correlation
 #>   <chr>    <chr>          <dbl>
-#> 1 sample1  sample2        0.961
-#> 2 sample1  sample3        0.975
-#> 3 sample2  sample3        0.955
-#> 4 sample4  sample5        0.935
-#> 5 sample4  sample6        0.944
-#> 6 sample5  sample6        0.962
+#> 1 sample1  sample2        0.932
+#> 2 sample1  sample3        0.931
+#> 3 sample2  sample3        0.948
+#> 4 sample4  sample5        0.967
+#> 5 sample4  sample6        0.968
+#> 6 sample5  sample6        0.965
 #> 
 #> logit(fraction_highTC) correlations are high, suggesting good reproducibility!
 #> 

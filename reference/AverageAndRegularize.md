@@ -276,6 +276,7 @@ while still controlling false discovery rates.
 ## Examples
 
 ``` r
+
 # Simulate data to analyze
 simdata <- EZSimulate(30)
 

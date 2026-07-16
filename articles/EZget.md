@@ -10,6 +10,7 @@ facilitate extracting the table of interest. As a part of this vignette,
 I will also describe how an `EZbakRData` object is organized.
 
 ``` r
+
 library(EZbakR)
 ```
 
@@ -19,6 +20,7 @@ Let’s first analyze some simulated data to generate an `EZbakRData`
 object that we can explore the contents of:
 
 ``` r
+
 simdata <- EZSimulate(nfeatures = 300, nreps = 2)
 
 # Make initial EZbakRData object
@@ -76,6 +78,7 @@ As an `EZbakRData` object is a list, its elements can be accessed in a
 few ways:
 
 ``` r
+
 # `$` notation:
 ezbdo$fractions$feature
 #> # A tibble: 1,800 × 6
@@ -153,6 +156,7 @@ metadata slot. For example, we can extract the kinetics table generated
 from the standard analysis like so:
 
 ``` r
+
 kinetics <- EZget(ezbdo,
                   type = "kinetics",
                   kstrat = "standard")
@@ -179,6 +183,7 @@ of 1, and the analysis with the hierarchical mixture model has a
 `repeatID` of 2. We can thus access the latter as such:
 
 ``` r
+
 h_fxn <- EZget(ezbdo, 
                type = 'fractions',
                repeatID = 2)
