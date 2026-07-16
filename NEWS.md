@@ -1,6 +1,10 @@
 # EZbakR 0.2.1
 
+- Patch to address reverse compatibility notes from new arrow release (25.0.0)
+
 # EZbakR 0.2.0
+
+- Implemented multi-label time simulations and documented these
 
 # EZbakR 0.1.0
 

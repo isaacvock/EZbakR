@@ -221,7 +221,7 @@ half lives are much shorter than the label time.
 ## Non-steady-state (NSS) analyses
 
 **NOTE:** The strategy described here is a slight modification of that discussed
-in [Narain et al., 2021](https://www.sciencedirect.com/science/article/pii/S1097276521004962). If you use EZbakR's "NSS" strategy, please cite that
+in [Narain et al., 2021](https://doi.org/10.1016/j.molcel.2021.06.016). If you use EZbakR's "NSS" strategy, please cite that
 paper as well as EZbakR.
 
 One of the key assumptions made by the "standard" analysis strategy is the 
@@ -321,7 +321,7 @@ In this case, the only experimental details column of the metadf is called
 
 ### What is the "NSS" strategy?
 
-You can see [Narain et al.](https://www.sciencedirect.com/science/article/pii/S1097276521004962) for an alternative discussion of this strategy.
+You can see [Narain et al.](https://doi.org/10.1016/j.molcel.2021.06.016) for an alternative discussion of this strategy.
 
 We would like to relax the assumption that the total RNA levels are unchanging
 over the course of the labeling. We can do this by considering the dynamics

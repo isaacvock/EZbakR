@@ -10,3 +10,5 @@ src/*
 inst/doc
 vignettes/rsconnect
 docs
+/doc/
+/Meta/
