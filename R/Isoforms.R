@@ -402,8 +402,8 @@ EstimateIsoformFractions <- function(obj,
 }
 
 # Helper functions that I will use on multiple occasions
-logit <- function(x) log(x/(1-x))
-inv_logit <- function(x) exp(x)/(1+exp(x))
+logit <- function(x) stats::qlogis(x)
+inv_logit <- function(x) stats::plogis(x)
 
 
 # Likelihood calculation for beta regression

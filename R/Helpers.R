@@ -816,8 +816,8 @@ decide_output <- function(obj, proposed_name,
 
 
 # Logit and sigmoid functions that I use a lot
-logit <- function(x) log(x/(1-x))
-inv_logit <- function(x) exp(x)/(1+exp(x))
+logit <- function(x) stats::qlogis(x)
+inv_logit <- function(x) stats::plogis(x)
 
 
 

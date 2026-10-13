@@ -2800,6 +2800,9 @@ SimulateDynamics <- function(nfeatures, graph, metadf,
                                 size = dispersion)
 
     # Add some fn variance
+    fn_eps <- .Machine$double.eps
+    sample_sim$fn <- pmin(pmax(sample_sim$fn, fn_eps), 1 - fn_eps)
+
     sample_sim$fn_rep <- inv_logit(
       stats::rnorm(n = nrow(sample_sim),
             mean = logit(sample_sim$fn),
