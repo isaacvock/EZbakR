@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">EZbakR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -201,10 +201,10 @@ that it pertains to the population of reads with low T-to-C mutation
 content. This population is also expected to exist in a standard NR-seq
 dataset, so its <code>present</code> value is also `TRUE.</p>
 <p>For a more complicated example, consider the fractions design matirx
-for <a href="https://pubmed.ncbi.nlm.nih.gov/36018791/" class="external-link">TILAC</a>. TILAC
-is a method where an s<sup>4</sup>U labeled RNA population is mixed with
-an s<sup>6</sup>G labeled population. In this case, there are expected
-to be reads with either high T-to-C content (new reads from the
+for <a href="https://doi.org/10.1093/nar/gkac693" class="external-link">TILAC</a>. TILAC is a
+method where an s<sup>4</sup>U labeled RNA population is mixed with an
+s<sup>6</sup>G labeled population. In this case, there are expected to
+be reads with either high T-to-C content (new reads from the
 s<sup>4</sup>U labeled sample), high G-to-A content (new reads from the
 s<sup>6</sup>G labeled sample), and reads with low T-to-C and G-to-A
 mutational content (old reads from either sample). However, you will
@@ -458,9 +458,8 @@ address these two challenges.</p>
 <p>If you have -label data to compare to, EZbakR can use this data to
 quantify and correct for dropout. Currently, the default strategy used
 by EZbakR is similar to that implemented in <a href="https://www.nature.com/articles/s41467-023-39163-4" class="external-link">grandR</a> and
-originally described <a href="https://pubmed.ncbi.nlm.nih.gov/38381903/" class="external-link">here</a>.
-Alternatively, EZbakR also implements that previously implemented in
-bakR.</p>
+originally described <a href="https://doi.org/10.1093/nar/gkae120" class="external-link">here</a>. Alternatively,
+EZbakR also implements that previously implemented in bakR.</p>
 <p>Internal benchmarks suggest that that grandR strategy is a bit
 conservative (overestimates dropout) but more robust than the bakR
 strategy. The bakR strategy has the advantage of being explicitly
@@ -541,7 +540,7 @@ of metabolic label has an equal probability of incorporating said label.
 What if this is not true though?This may seem like a pedantic
 statistical question, but there is evidence that some RNA’s deviate
 strongly from this assumption. For example, it has been noted (paper
-from the Churchman lab <a href="https://pubmed.ncbi.nlm.nih.gov/38503286/" class="external-link">here</a>) that
+from the Churchman lab <a href="https://doi.org/10.1016/j.molcel.2024.02.028" class="external-link">here</a>) that
 mitochondrial RNA have much lower mutation rates in reads from new RNA
 than other RNA.</p>
 <p>To account for this heterogeneity, <code><a href="../reference/EstimateFractions.html">EstimateFractions()</a></code>

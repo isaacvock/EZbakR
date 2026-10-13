@@ -2,8 +2,8 @@
 
 Uses the strategy described
 [here](https://simonlabcode.github.io/bakR/articles/Dropout.html), and
-similar to that originally presented in [Berg et al.
-2024](https://pubmed.ncbi.nlm.nih.gov/38381903/).
+similar to that originally presented in Berg et al. 2024
+([doi:10.1093/nar/gkae120](https://doi.org/10.1093/nar/gkae120) ).
 
 ## Usage
 
@@ -35,7 +35,8 @@ CorrectDropout(
 
   Which dropout correction strategy to use. Options are:
 
-  - grandR: Described [here](https://pubmed.ncbi.nlm.nih.gov/38381903/).
+  - grandR: Described in
+    [doi:10.1093/nar/gkae120](https://doi.org/10.1093/nar/gkae120) .
     Cite that work and
     [grandR](https://www.nature.com/articles/s41467-023-39163-4) if
     using this strategy. Quasi-non-parametric strategy that finds an
@@ -119,21 +120,21 @@ with a dropout corrected table.
 ## Details
 
 Dropout is the disproportionate loss of labeled RNA/reads from said RNA
-described independently
-[here](https://pubmed.ncbi.nlm.nih.gov/38381903/) and
-[here](https://pubmed.ncbi.nlm.nih.gov/37292657/). It can originate from
-a combination of bioinformatic (loss of high mutation content reads due
-to alignment problems), technical (loss of labeled RNA during RNA
-extraction), and biological (transcriptional shutoff in rare cases
-caused by metabolic label toxicity) sources. `CorrectDropout()` compares
-label-fed and label-free controls from the same experimental conditions
-to estimate and correct for this dropout. It assumes that there is a
-single number (referred to as the dropout rate, or pdo) which describes
-the rate at which labeled RNA is lost (relative to unlabeled RNA). pdo
-ranges from 0 (no dropout) to 1 (complete loss of all labeled RNA), and
-is thus interpreted as the percentage of labeled RNA/reads from labeled
-RNA disproportionately lost, relative to the equivalent unlabeled
-species.
+described independently in
+[doi:10.1093/nar/gkae120](https://doi.org/10.1093/nar/gkae120) and
+[doi:10.1101/2023.05.24.542133](https://doi.org/10.1101/2023.05.24.542133)
+. It can originate from a combination of bioinformatic (loss of high
+mutation content reads due to alignment problems), technical (loss of
+labeled RNA during RNA extraction), and biological (transcriptional
+shutoff in rare cases caused by metabolic label toxicity) sources.
+`CorrectDropout()` compares label-fed and label-free controls from the
+same experimental conditions to estimate and correct for this dropout.
+It assumes that there is a single number (referred to as the dropout
+rate, or pdo) which describes the rate at which labeled RNA is lost
+(relative to unlabeled RNA). pdo ranges from 0 (no dropout) to 1
+(complete loss of all labeled RNA), and is thus interpreted as the
+percentage of labeled RNA/reads from labeled RNA disproportionately
+lost, relative to the equivalent unlabeled species.
 
 ## Examples
 
@@ -157,10 +158,10 @@ ezbdo <- EstimateFractions(ezbdo)
 ezbdo <- CorrectDropout(ezbdo)
 #> Estimated rates of dropout are:
 #>    sample       pdo
-#> 1 sample1 0.1804916
+#> 1 sample1 0.0100000
 #> 2 sample2 0.0100000
 #> 3 sample3 0.0100000
 #> 4 sample4 0.0100000
-#> 5 sample5 0.1581118
-#> 6 sample6 0.1675614
+#> 5 sample5 0.0100000
+#> 6 sample6 0.1190508
 ```

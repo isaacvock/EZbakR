@@ -154,7 +154,8 @@ An EZbakRKinetics object. This is simply a list of the provided
 
 ``` r
 # Simulate data
-simdata <- EZSimulate(30)
+simdata <- EZSimulate(30, nreps=2)
+data.table::setDTthreads(1)
 
 # Get kinetics table by estimating (for demonstration)
 ezbdo <- EZbakRData(simdata$cB, simdata$metadf)

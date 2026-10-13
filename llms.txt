@@ -4,7 +4,7 @@ EZbakR is a highly flexible tool for analyses of nucleotide recoding
 RNA-seq datasets (NR-seq; e.g.,
 [TimeLapse-seq](https://www.nature.com/articles/nmeth.4582),
 [SLAM-seq](https://www.nature.com/articles/nmeth.4435),
-[TUC-seq](https://pubmed.ncbi.nlm.nih.gov/31768978/), etc.). See [our
+[TUC-seq](https://doi.org/10.1007/978-1-4939-9822-7_10), etc.). See [our
 paper](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1013179)
 for a discussion of the motivation behind EZbakR and its companion
 pipeline [fastq2EZbakR](https://github.com/isaacvock/fastq2EZbakR), as
@@ -120,11 +120,10 @@ Other implemented functionality that may be of interest includes:
 ## Update (3/15/2025): Analyses of transcript isoforms
 
 We recently (3/14/2025) put out [a
-preprint](https://www.biorxiv.org/content/10.1101/2025.03.12.642874v1)
-describing a method by which to analyze the kinetics of individual
-transcript isoforms using short read NR-seq data from total RNA. While
-this strategy is touched on a little bit in one of the EZbakR vignettes
-([this
+preprint](https://doi.org/10.1101/2025.03.12.642874) describing a method
+by which to analyze the kinetics of individual transcript isoforms using
+short read NR-seq data from total RNA. While this strategy is touched on
+a little bit in one of the EZbakR vignettes ([this
 one](https://isaacvock.github.io/EZbakR/articles/EstimateFractions.html#isoform-deconvolution)),
 I have also developed a full fastq-to-volcano plot walkthrough using
 real downsampled fastq files from that preprint so you can see how every
@@ -180,8 +179,8 @@ in EZbakR include:
 10. Generalized linear dynamical systems modeling of NR-seq data.
     Supports analyses of subcellular fractionation NR-seq extensions,
     such as those described
-    [here](https://pubmed.ncbi.nlm.nih.gov/38964322/),
-    [here](https://pubmed.ncbi.nlm.nih.gov/39548324/), and
+    [here](https://doi.org/10.1016/j.molcel.2024.06.008),
+    [here](https://doi.org/10.1038/s44320-024-00073-2), and
     [here](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1012059).
     Also supports analyses of pre-mRNA processing dynamics.
 
@@ -206,18 +205,16 @@ of this [here](https://doi.org/10.1038/s41592-020-0935-4),
 [here](https://doi.org/10.1038/s41587-020-0480-9), and
 [here](https://doi.org/10.1016/j.cels.2024.04.004)),
 [Perturb-seq](https://doi.org/10.1038/s41587-023-01948-9), [long-read
-sequencing](https://www.biorxiv.org/content/10.1101/2020.05.01.073296v1),
-and [subcellular
+sequencing](https://doi.org/10.1101/2020.05.01.073296), and [subcellular
 fractionation](https://doi.org/10.1016/j.molcel.2024.06.008). In
 addition, while the original methods used 4-thiouridine (s⁴U), the same
 chemistry has been found to work with
-[6-thioguanosine](https://pubmed.ncbi.nlm.nih.gov/30353734/) (s⁶G),
-opening the door to dual-labeling experimental designs (e.g.,
-[TILAC](https://pubmed.ncbi.nlm.nih.gov/36018791/)). EZbakR and its
-companion pipeline
-[fastq2EZbakR](https://github.com/isaacvock/fastq2EZbakR) aim to provide
-an integrated and flexible framework to support this exciting class of
-methods.
+[6-thioguanosine](https://doi.org/10.1021/jacs.8b08554) (s⁶G), opening
+the door to dual-labeling experimental designs (e.g.,
+[TILAC](https://doi.org/10.1093/nar/gkac693)). EZbakR and its companion
+pipeline [fastq2EZbakR](https://github.com/isaacvock/fastq2EZbakR) aim
+to provide an integrated and flexible framework to support this exciting
+class of methods.
 
 # Package index
 

@@ -106,7 +106,7 @@ also checks:
 ``` r
 
 # Simulate data to analyze
-simdata <- EZSimulate(30)
+simdata <- EZSimulate(25, nreps = 2)
 
 # Create EZbakR input
 ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
@@ -129,49 +129,37 @@ QC <- EZQC(ezbdo)
 #>   Please report the issue at <https://github.com/isaacvock/EZbakR/issues>.
 #> CHECKING READ COUNT CORRELATIONS...
 #> log10(read counts) correlation for each pair of replicates are:
-#> # A tibble: 12 × 3
-#>    sample_1 sample_2 correlation
-#>    <chr>    <chr>          <dbl>
-#>  1 sample1  sample2        0.984
-#>  2 sample1  sample3        0.984
-#>  3 sample1  sample7        0.991
-#>  4 sample2  sample3        0.983
-#>  5 sample2  sample7        0.984
-#>  6 sample3  sample7        0.987
-#>  7 sample4  sample5        0.987
-#>  8 sample4  sample6        0.982
-#>  9 sample4  sample8        0.984
-#> 10 sample5  sample6        0.983
-#> 11 sample5  sample8        0.977
-#> 12 sample6  sample8        0.982
+#> # A tibble: 6 × 3
+#>   sample_1 sample_2 correlation
+#>   <chr>    <chr>          <dbl>
+#> 1 sample1  sample2        0.976
+#> 2 sample1  sample5        0.987
+#> 3 sample2  sample5        0.984
+#> 4 sample3  sample4        0.991
+#> 5 sample3  sample6        0.991
+#> 6 sample4  sample6        0.990
 #> 
 #> log10(read counts) correlations are high, suggesting good reproducibility!
 #> 
 #> CHECKING FRACTION LABELED DISTRIBUTIONS...
 #> Average fractions for each sample are:
-#> # A tibble: 6 × 3
+#> # A tibble: 4 × 3
 #>   sample  avg_fraction fraction_type  
 #>   <chr>          <dbl> <chr>          
-#> 1 sample1        0.325 fraction_highTC
-#> 2 sample2        0.310 fraction_highTC
-#> 3 sample3        0.323 fraction_highTC
-#> 4 sample4        0.322 fraction_highTC
-#> 5 sample5        0.328 fraction_highTC
-#> 6 sample6        0.327 fraction_highTC
+#> 1 sample1        0.296 fraction_highTC
+#> 2 sample2        0.295 fraction_highTC
+#> 3 sample3        0.293 fraction_highTC
+#> 4 sample4        0.283 fraction_highTC
 #> 
 #> Labeling rates (e.g., fraction labeled for single label experiments) look good!
 #> 
 #> CHECKING FRACTION LABELED CORRELATIONS...
 #> logit(fraction_highTC) correlation for each pair of replicates are:
-#> # A tibble: 6 × 3
+#> # A tibble: 2 × 3
 #>   sample_1 sample_2 correlation
 #>   <chr>    <chr>          <dbl>
-#> 1 sample1  sample2        0.932
-#> 2 sample1  sample3        0.931
-#> 3 sample2  sample3        0.948
-#> 4 sample4  sample5        0.967
-#> 5 sample4  sample6        0.968
-#> 6 sample5  sample6        0.965
+#> 1 sample1  sample2        0.971
+#> 2 sample3  sample4        0.980
 #> 
 #> logit(fraction_highTC) correlations are high, suggesting good reproducibility!
 #> 

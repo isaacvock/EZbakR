@@ -121,7 +121,8 @@ An EZbakRFractions object. This is simply a list of the provide
 ``` r
 
 # Simulate data
-simdata <- EZSimulate(30)
+simdata <- EZSimulate(30, nreps = 2)
+data.table::setDTthreads(1)
 
 # Get fractions table by estimating (for demonstration)
 ezbdo <- EZbakRData(simdata$cB, simdata$metadf)

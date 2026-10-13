@@ -139,14 +139,14 @@ mutation content. This population is also expected to exist in a
 standard NR-seq dataset, so its `present` value is also \`TRUE.
 
 For a more complicated example, consider the fractions design matirx for
-[TILAC](https://pubmed.ncbi.nlm.nih.gov/36018791/). TILAC is a method
-where an s⁴U labeled RNA population is mixed with an s⁶G labeled
-population. In this case, there are expected to be reads with either
-high T-to-C content (new reads from the s⁴U labeled sample), high G-to-A
-content (new reads from the s⁶G labeled sample), and reads with low
-T-to-C and G-to-A mutational content (old reads from either sample).
-However, you will NEVER expect a read with **both** high T-to-C and high
-G-to-A content, as there are no samples subjected to both labels:
+[TILAC](https://doi.org/10.1093/nar/gkac693). TILAC is a method where an
+s⁴U labeled RNA population is mixed with an s⁶G labeled population. In
+this case, there are expected to be reads with either high T-to-C
+content (new reads from the s⁴U labeled sample), high G-to-A content
+(new reads from the s⁶G labeled sample), and reads with low T-to-C and
+G-to-A mutational content (old reads from either sample). However, you
+will NEVER expect a read with **both** high T-to-C and high G-to-A
+content, as there are no samples subjected to both labels:
 
 ``` r
 
@@ -343,7 +343,7 @@ If you have -label data to compare to, EZbakR can use this data to
 quantify and correct for dropout. Currently, the default strategy used
 by EZbakR is similar to that implemented in
 [grandR](https://www.nature.com/articles/s41467-023-39163-4) and
-originally described [here](https://pubmed.ncbi.nlm.nih.gov/38381903/).
+originally described [here](https://doi.org/10.1093/nar/gkae120).
 Alternatively, EZbakR also implements that previously implemented in
 bakR.
 
@@ -441,7 +441,7 @@ What if this is not true though?This may seem like a pedantic
 statistical question, but there is evidence that some RNA’s deviate
 strongly from this assumption. For example, it has been noted (paper
 from the Churchman lab
-[here](https://pubmed.ncbi.nlm.nih.gov/38503286/)) that mitochondrial
+[here](https://doi.org/10.1016/j.molcel.2024.02.028)) that mitochondrial
 RNA have much lower mutation rates in reads from new RNA than other RNA.
 
 To account for this heterogeneity,

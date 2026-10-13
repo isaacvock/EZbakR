@@ -1075,7 +1075,7 @@ save you the suspense and tell you that it has 6 elements:
     degrade.
 5.  subtlseq: Subcellular TimeLapse-seq model, similar to that described
     in [Iestwaart et al.,
-    2024](https://pubmed.ncbi.nlm.nih.gov/38964322/). Simplest model
+    2024](https://doi.org/10.1016/j.molcel.2024.06.008). Simplest model
     discussed there, lacking nuclear degradation: 0 -\> CH -\> NP -\> CY
     -\> PL -\> 0, and CY can also degrade. CH = chromatin bound RNA. NP
     = nucleoplasmic RNA, not on chromatin. CY = cytoplasmic RNA, not on

@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">EZbakR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -351,13 +351,13 @@ good idea to ensure accurate labeled read mutation rate inference.</li>
 <p><strong>Potential problem #3</strong>: Poor correlation of read
 counts across replicates, especially between -label and +label, or
 different label time +label, samples.</p>
-<p>This may be a sign of dropout, described <a href="https://pubmed.ncbi.nlm.nih.gov/38381903/" class="external-link">here</a>, , <a href="https://pubmed.ncbi.nlm.nih.gov/37292657/" class="external-link">here</a>, and <a href="https://simonlabcode.github.io/bakR/articles/Dropout.html" class="external-link">here</a>.
+<p>This may be a sign of dropout, described <a href="https://doi.org/10.1093/nar/gkae120" class="external-link">here</a>, , <a href="https://doi.org/10.1101/2023.05.24.542133" class="external-link">here</a>, and <a href="https://simonlabcode.github.io/bakR/articles/Dropout.html" class="external-link">here</a>.
 This is when reads from highly labeled RNA are underrepresented in
 +label data. You can try:</p>
 <ol style="list-style-type: decimal">
 <li>Decreasing metabolic label concentration.</li>
 <li>Decreasing metabolic label feed time.</li>
-<li>Using the RNA handling protocol suggested <a href="https://pubmed.ncbi.nlm.nih.gov/37292657/" class="external-link">here</a>.</li>
+<li>Using the RNA handling protocol suggested <a href="https://doi.org/10.1101/2023.05.24.542133" class="external-link">here</a>.</li>
 <li>Better read alignment settings to avoid loss of high mutation
 content reads. See the potential solutions to problem #1 described above
 for details.</li>

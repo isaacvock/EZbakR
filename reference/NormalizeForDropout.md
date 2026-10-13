@@ -2,11 +2,11 @@
 
 Uses the strategy described
 [here](https://simonlabcode.github.io/bakR/articles/Dropout.html), and
-similar to that originally presented in [Berg et al.
-2024](https://pubmed.ncbi.nlm.nih.gov/38381903/), to normalize for
-dropout. Normalizing for dropout means identifying a reference sample
-with low dropout, and estimating dropout in each sample relative to that
-sample.
+similar to that originally presented in Berg et al. 2024
+([doi:10.1093/nar/gkae120](https://doi.org/10.1093/nar/gkae120) ), to
+normalize for dropout. Normalizing for dropout means identifying a
+reference sample with low dropout, and estimating dropout in each sample
+relative to that sample.
 
 ## Usage
 

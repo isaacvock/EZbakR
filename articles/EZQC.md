@@ -274,8 +274,8 @@ replicates, especially between -label and +label, or different label
 time +label, samples.
 
 This may be a sign of dropout, described
-[here](https://pubmed.ncbi.nlm.nih.gov/38381903/), ,
-[here](https://pubmed.ncbi.nlm.nih.gov/37292657/), and
+[here](https://doi.org/10.1093/nar/gkae120), ,
+[here](https://doi.org/10.1101/2023.05.24.542133), and
 [here](https://simonlabcode.github.io/bakR/articles/Dropout.html). This
 is when reads from highly labeled RNA are underrepresented in +label
 data. You can try:
@@ -283,7 +283,7 @@ data. You can try:
 1.  Decreasing metabolic label concentration.
 2.  Decreasing metabolic label feed time.
 3.  Using the RNA handling protocol suggested
-    [here](https://pubmed.ncbi.nlm.nih.gov/37292657/).
+    [here](https://doi.org/10.1101/2023.05.24.542133).
 4.  Better read alignment settings to avoid loss of high mutation
     content reads. See the potential solutions to problem \#1 described
     above for details.
