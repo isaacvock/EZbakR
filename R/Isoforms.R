@@ -31,7 +31,7 @@
 #' library(data.table)
 #'
 #' # Simulate and analyze data
-#' simdata <- EZSimulate(30)
+#' simdata <- EZSimulate(30, nreps = 1)
 #' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
 #' ezbdo <- EstimateFractions(ezbdo)
 #'
@@ -228,7 +228,7 @@ ImportIsoformQuant <- function(obj, files,
 #' library(dplyr)
 #'
 #' # Simulates a single sample worth of data
-#' simdata_iso <- SimulateIsoforms(nfeatures = 100)
+#' simdata_iso <- SimulateIsoforms(nfeatures = 25)
 #'
 #' # We have to manually create the metadf in this case
 #' metadf <- tibble(sample = 'sampleA',

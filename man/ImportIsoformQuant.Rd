@@ -53,7 +53,7 @@ library(dplyr)
 library(data.table)
 
 # Simulate and analyze data
-simdata <- EZSimulate(30)
+simdata <- EZSimulate(30, nreps = 1)
 ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
 ezbdo <- EstimateFractions(ezbdo)
 
