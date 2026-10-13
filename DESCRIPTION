@@ -1,6 +1,6 @@
 Package: EZbakR
 Title: Analyze and Integrate Any Type of Nucleotide Recoding RNA-Seq Data
-Version: 0.2.1
+Version: 0.2.2
 Authors@R:
     person(given = "Isaac",
            family = "Vock",
@@ -29,6 +29,8 @@ Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 biocViews:
+Additional_repositories:
+    https://bioconductor.org/packages/release/bioc
 Imports: 
     arrow,
     data.table,

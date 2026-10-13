@@ -1,3 +1,5 @@
+# EZbakR 0.2.2
+
 # EZbakR 0.2.1
 
 - Patch to address reverse compatibility notes from new arrow release (25.0.0)
