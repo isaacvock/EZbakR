@@ -31,7 +31,7 @@
 #' library(data.table)
 #'
 #' # Simulate and analyze data
-#' simdata <- EZSimulate(30, nreps = 1)
+#' simdata <- EZSimulate(30, nreps = 2)
 #' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
 #' ezbdo <- EstimateFractions(ezbdo)
 #'
