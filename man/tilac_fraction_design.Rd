@@ -20,7 +20,7 @@ tilac_fraction_design
 }
 \description{
 An example \code{fraction_design} table for a TILAC experiment. TILAC was originally
-described in \href{https://doi.org/10.1093/nar/gkac693}{Courvan et al., 2022}. In this
+described in Courvan et al., 2022 (\doi{10.1093/nar/gkac693}). In this
 method, two populations of RNA, one from s^4U fed cells and one from s^6G fed cells, are pooled
 and prepped for sequencing together. This allows for internally controlled comparisons of RNA
 abundance without spike-ins. s^4U is recoded to a cytosine analog by TimeLapse chemistry

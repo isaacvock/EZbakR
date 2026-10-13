@@ -24,7 +24,7 @@ you have run \code{EstimateFractions()}.}
 
 \item{strategy}{Which dropout correction strategy to use. Options are:
 \itemize{
-\item grandR: Described \href{https://doi.org/10.1093/nar/gkae120}{here}.
+\item grandR: Described in \doi{10.1093/nar/gkae120}.
 Cite that work and \href{https://www.nature.com/articles/s41467-023-39163-4}{grandR} if using this strategy. Quasi-non-parametric strategy
 that finds an estimate of the dropout rate that eliminates any linear correlation
 between the newness of a transcript and the difference in +s4U and -s4U normalized
@@ -80,12 +80,12 @@ with a dropout corrected table.
 }
 \description{
 Uses the strategy described \href{https://simonlabcode.github.io/bakR/articles/Dropout.html}{here}, and similar to that originally presented
-in \href{https://doi.org/10.1093/nar/gkae120}{Berg et al. 2024}.
+in Berg et al. 2024 (\doi{10.1093/nar/gkae120}).
 }
 \details{
 Dropout is the disproportionate loss of labeled RNA/reads from said RNA
-described independently \href{https://doi.org/10.1093/nar/gkae120}{here}
-and \href{https://doi.org/10.1101/2023.05.24.542133}{here}. It can originate from a combination of
+described independently in \doi{10.1093/nar/gkae120}
+and \doi{10.1101/2023.05.24.542133}. It can originate from a combination of
 bioinformatic (loss of high mutation content reads due to alignment problems),
 technical (loss of labeled RNA during RNA extraction), and biological (transcriptional
 shutoff in rare cases caused by metabolic label toxicity) sources.
