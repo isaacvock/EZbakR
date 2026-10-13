@@ -1,5 +1,8 @@
 # EZbakR 0.2.2
 
+- Patch to address CRAN comments as well as hierarchical fraction new modeling
+issue ([#33](https://github.com/isaacvock/EZbakR/issues/33))
+
 # EZbakR 0.2.1
 
 - Patch to address reverse compatibility notes from new arrow release (25.0.0)
