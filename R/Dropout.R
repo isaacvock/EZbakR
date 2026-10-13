@@ -1,11 +1,11 @@
 #' Correct for experimental/bioinformatic dropout of labeled RNA.
 #'
 #' Uses the strategy described [here](https://simonlabcode.github.io/bakR/articles/Dropout.html), and similar to that originally presented
-#' in [Berg et al. 2024](https://pubmed.ncbi.nlm.nih.gov/38381903/).
+#' in [Berg et al. 2024](https://doi.org/10.1093/nar/gkae120).
 #'
 #' Dropout is the disproportionate loss of labeled RNA/reads from said RNA
-#' described independently [here](https://pubmed.ncbi.nlm.nih.gov/38381903/)
-#' and [here](https://pubmed.ncbi.nlm.nih.gov/37292657/). It can originate from a combination of
+#' described independently [here](https://doi.org/10.1093/nar/gkae120)
+#' and [here](https://doi.org/10.1101/2023.05.24.542133). It can originate from a combination of
 #' bioinformatic (loss of high mutation content reads due to alignment problems),
 #' technical (loss of labeled RNA during RNA extraction), and biological (transcriptional
 #' shutoff in rare cases caused by metabolic label toxicity) sources.
@@ -21,7 +21,7 @@
 #' you have run `EstimateFractions()`.
 #' @param strategy Which dropout correction strategy to use. Options are:
 #' \itemize{
-#'  \item grandR: Described [here](https://pubmed.ncbi.nlm.nih.gov/38381903/).
+#'  \item grandR: Described [here](https://doi.org/10.1093/nar/gkae120).
 #'  Cite that work and [grandR](https://www.nature.com/articles/s41467-023-39163-4) if using this strategy. Quasi-non-parametric strategy
 #'  that finds an estimate of the dropout rate that eliminates any linear correlation
 #'  between the newness of a transcript and the difference in +s4U and -s4U normalized
@@ -554,7 +554,7 @@ calculate_dropout <- function(obj,
 #' Normalize for experimental/bioinformatic dropout of labeled RNA.
 #'
 #' Uses the strategy described [here](https://simonlabcode.github.io/bakR/articles/Dropout.html), and similar to that originally presented
-#' in [Berg et al. 2024](https://pubmed.ncbi.nlm.nih.gov/38381903/),
+#' in [Berg et al. 2024](https://doi.org/10.1093/nar/gkae120),
 #' to normalize for dropout. Normalizing for dropout means identifying a reference
 #' sample with low dropout, and estimating dropout in each sample relative to
 #' that sample.

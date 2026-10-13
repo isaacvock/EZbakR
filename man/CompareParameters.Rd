@@ -147,7 +147,8 @@ function.
 \examples{
 
 # Simulate data to analyze
-simdata <- EZSimulate(30)
+simdata <- EZSimulate(20, nreps = 2)
+data.table::setDTthreads(1)
 
 # Create EZbakR input
 ezbdo <- EZbakRData(simdata$cB, simdata$metadf)

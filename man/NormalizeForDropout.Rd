@@ -60,7 +60,7 @@ with a dropout corrected table.
 }
 \description{
 Uses the strategy described \href{https://simonlabcode.github.io/bakR/articles/Dropout.html}{here}, and similar to that originally presented
-in \href{https://pubmed.ncbi.nlm.nih.gov/38381903/}{Berg et al. 2024},
+in \href{https://doi.org/10.1093/nar/gkae120}{Berg et al. 2024},
 to normalize for dropout. Normalizing for dropout means identifying a reference
 sample with low dropout, and estimating dropout in each sample relative to
 that sample.

@@ -268,14 +268,17 @@ and experimental conditions you have.
 
 ### Simulate data and get replicate average fractions estimates
 simdata <- EZSimulate(
-  nfeatures = 30,
+  nfeatures = 20,
   ntreatments = 1,
+  nreps = 2,
+  seqdepth = 20 * 1000,
   mode = "dynamics",
   label_time = c(1, 3),
   dynamics_preset = "nuc2cyto"
 )
 
 ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
+data.table::setDTthreads(1)
 ezbdo <- EstimateFractions(ezbdo)
 ezbdo <- AverageAndRegularize(ezbdo,
                               formula_mean = ~tl:compartment - 1,
