@@ -65,7 +65,7 @@
 #' @examples
 #'
 #' # Simulate data to analyze
-#' simdata <- EZSimulate(30)
+#' simdata <- EZSimulate(25, nreps = 2)
 #'
 #' # Create EZbakR input
 #' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
