@@ -2,6 +2,8 @@
 
 ## EZbakR 0.2.2
 
+CRAN release: 2026-10-13
+
 - Patch to address CRAN comments as well as hierarchical fraction new
   modeling issue ([\#33](https://github.com/isaacvock/EZbakR/issues/33))
 

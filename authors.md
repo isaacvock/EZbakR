@@ -8,7 +8,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/isaacvock/EZbakR/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/isaacvock/EZbakR/blob/v0.2.2/DESCRIPTION)
 
 Vock I (2026). *EZbakR: Analyze and Integrate Any Type of Nucleotide
 Recoding RNA-Seq Data*. R package version 0.2.2,
