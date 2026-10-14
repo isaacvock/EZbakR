@@ -1,5 +1,7 @@
 # Changelog
 
+## EZbakR (development version)
+
 ## EZbakR 0.2.2
 
 CRAN release: 2026-10-13
