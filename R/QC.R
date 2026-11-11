@@ -129,7 +129,8 @@ EZQC.EZbakRFractions <- function(obj,
 
   mutrate_populations <- obj[["metadata"]][["fractions"]][[fname]][["populations"]]
 
-  has_cB <- ("cB" %in% components) || arrow
+  arrow_live <- if(arrow) !is.null(get_arrow_ds(obj, require_live = FALSE)) else FALSE
+  has_cB <- ("cB" %in% components) || (arrow && arrow_live)
   has_mutrates <- "mutation_rates" %in% components
 
   ### Check raw mutation rates
@@ -139,6 +140,9 @@ EZQC.EZbakRFractions <- function(obj,
                                      mutrate_populations = mutrate_populations,
                                      arrow = arrow)
   }else{
+    if(arrow && !arrow_live){
+      message("Arrow dataset is offline; skipping raw mutation rate scan (use ReconnectArrow() to include it).")
+    }
     graw <- list(plot = NULL, table = NULL)
   }
 
@@ -337,7 +341,7 @@ check_raw_mutation_rates <- function(obj,
   if(arrow){
 
     # cB columns
-    cB <- obj$cBds
+    cB <- get_arrow_ds(obj)
     cBschema <- arrow::schema(cB)
     cB_cols <- names(cBschema)
 
@@ -380,7 +384,7 @@ check_raw_mutation_rates <- function(obj,
 
 
     ### Compute raw mutation rates of each type
-    cB <- obj$cBds
+    cB <- get_arrow_ds(obj)
 
     all_samples <- obj$metadf$sample
 
@@ -685,7 +689,7 @@ check_read_count_corr_ezbd <- function(obj,
 
   if(arrow){
 
-    cBds <- obj$cBds
+    cBds <- get_arrow_ds(obj)
     metadf <- data.table::copy(obj$metadf)
 
     cBschema <- arrow::schema(cBds)
@@ -1294,25 +1298,17 @@ infer_replicates <- function(obj,
 
   if(arrow){
 
-    # cB columns
-    cB <- obj$cBds
-    cBschema <- arrow::schema(cB)
-    cB_cols <- names(cBschema)
-
-    ### Vectors of potential column names
-
-    # Mutation counts possible
-    mutcounts <- expand.grid(c("T", "C", "G", "A", "U", "N"),
-                             c("T", "C", "G", "A", "U", "N"))
-    mutcounts <- paste0(mutcounts[,1], mutcounts[,2])
-
-    illegal_mutcounts <- c("TT", "CC", "GG", "AA", "UU")
-
-    mutcounts <- mutcounts[!(mutcounts %in% illegal_mutcounts)]
-    mutcounts[mutcounts == "NA"] <- "NtoA"
-
-    # Which mutcounts are in the cB?
-    mutcounts_in_cB <- cB_cols[cB_cols %in% mutcounts]
+    ds_live <- get_arrow_ds(obj, require_live = FALSE)
+    if(!is.null(ds_live)){
+      cBschema <- arrow::schema(ds_live)
+      cB_cols <- names(cBschema)
+      mutcounts <- ezbakr_valid_mutcounts()
+      mutcounts_in_cB <- cB_cols[cB_cols %in% mutcounts]
+    }else if(!is.null(obj$metadata$arrow_spec$mutcounts)){
+      mutcounts_in_cB <- obj$metadata$arrow_spec$mutcounts
+    }else{
+      mutcounts_in_cB <- unique(unlist(lapply(obj$metadata$fractions, `[[`, "populations")))
+    }
 
   }else if(!is.null(obj$cB)){
 

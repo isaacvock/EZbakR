@@ -2,12 +2,14 @@
 % Please edit documentation in R/EZbakRArrowData.R
 \name{validate_EZbakRArrowData}
 \alias{validate_EZbakRArrowData}
-\title{\code{EZbakRArrowData} EZbakRArrowData validator}
+\title{\code{EZbakRArrowData} validator}
 \usage{
-validate_EZbakRArrowData(obj)
+validate_EZbakRArrowData(obj, resolved = NULL)
 }
 \arguments{
 \item{obj}{An object of class \code{EZbakRArrowData}}
+
+\item{resolved}{Optional resolved Arrow input metadata from \code{resolve_arrow_input()}.}
 }
 \description{
 \code{validate_EZbakRArrowData} ensures that input for \code{EZbakRArrowData} object construction

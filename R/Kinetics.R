@@ -208,7 +208,7 @@ EstimateKinetics <- function(obj,
   # EZbakRData object on which EstimateFractions() has been run?
   if(!methods::is(obj, "EZbakRFractions")){
 
-    if(methods::is(obj, "EZbakRData")){
+    if(methods::is(obj, "EZbakRData") || methods::is(obj, "EZbakRArrowData")){
 
       stop("obj is not an EZbakRFractions object! Run `obj <- EstimateFractions(obj, ...)`,
            where ... represents optional parameters, before running `EstimateKinetics`.")

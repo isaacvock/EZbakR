@@ -776,7 +776,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   ### its name to that output rather than using the proposed name
 
   # Are there any metadata or fractions objects at this point?
-  if(length(obj[['metadata']]) > 0){
+  if(length(obj[['metadata']][['fractions']]) > 0){
 
     fraction_vect <- decide_output(obj,
                                    proposed_name = fraction_vect,
@@ -1143,7 +1143,8 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
   ### Figure out which features will be analyzed
 
   # cB columns
-  cB <- obj$cBds
+  cB <- get_arrow_ds(obj)
+  obj$cBds <- cB
   cBschema <- arrow::schema(cB)
   cB_cols <- names(cBschema)
 
@@ -1650,7 +1651,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
   }
 
   # Are there any metadata or fractions objects at this point?
-  if(length(obj[['metadata']]) > 0){
+  if(length(obj[['metadata']][['fractions']]) > 0){
 
     fraction_vect <- decide_output(obj,
                                    proposed_name = fraction_vect,
@@ -1737,7 +1738,8 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
   ### Figure out which features will be analyzed
 
   # cB columns
-  cB <- obj$cBds
+  cB <- get_arrow_ds(obj)
+  obj$cBds <- cB
   cBschema <- arrow::schema(cB)
   cB_cols <- names(cBschema)
 

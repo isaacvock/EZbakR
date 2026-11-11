@@ -4,14 +4,16 @@
 \alias{new_EZbakRArrowData}
 \title{\code{EZbakRArrowData} object constructor for internal use}
 \usage{
-new_EZbakRArrowData(cBds, metadf)
+new_EZbakRArrowData(cBds, metadf, arrow_spec = NULL)
 }
 \arguments{
-\item{cBds}{Arrow dataset tracking the sample ID, mutational and nucleotide content,
-and feature assignment of sequencing reads.}
+\item{cBds}{Arrow dataset (or \code{arrow_dplyr_query}) tracking the sample ID,
+mutational and nucleotide content, and feature assignment of sequencing reads.}
 
 \item{metadf}{Data frame tracking features of each of the samples included
 in \code{cBds}.}
+
+\item{arrow_spec}{Optional internal list storing serializable Arrow dataset metadata.}
 }
 \description{
 \code{new_EZbakRArrowData} efficiently creates an object of class \code{EZbakRArrowData}.

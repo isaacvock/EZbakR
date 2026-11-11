@@ -2,134 +2,73 @@
 % Please edit documentation in R/EZbakRArrowData.R
 \name{EZbakRArrowData}
 \alias{EZbakRArrowData}
-\title{\code{EZbakRArrowData} object helper function for users}
+\title{\code{EZbakRArrowData} object constructor for on-disk Arrow datasets}
 \usage{
-EZbakRArrowData(cBds, metadf)
+EZbakRArrowData(
+  cBds,
+  metadf,
+  format = NULL,
+  partitioning = NULL,
+  hive_style = TRUE,
+  ...
+)
 }
 \arguments{
-\item{cBds}{ArrowDataset with the following fields:
+\item{cBds}{Either a character path (directory path or vector of file paths) OR an
+\code{arrow::Dataset} / \code{arrow_dplyr_query} with the following fields:
 \itemize{
 \item sample: Name given to particular sample from which data was collected.
 \item mutational counts: Integers corresponding to the number of a particular
-mutation seen in a sequencing read. The following column names are allowed:
-\itemize{
-\item TC: Number of Thymine-to-Cytosine mutations
-\item TA: Number of Thymine-to-Adenine mutations
-\item TG: Number of Thymine-to-Guanine mutations
-\item CT: Number of Cytosine-to-Thymine mutations
-\item CA: Number of Cytosine-to-Adenine mutations
-\item CG: Number of Cytosine-to-Guanine mutations
-\item CU: Number of Cytosine-to-Uridine mutations
-\item AT: Number of Adenine-to-Thymine mutations
-\item AC: Number of Adenine-to-Cytosine mutations
-\item AG: Number of Adenine-to-Guanine mutations
-\item AU: Number of Adenine-to-Uridine mutations
-\item GT: Number of Guanine-to-Thymine mutations
-\item GC: Number of Guanine-to-Cytosine mutations
-\item GA: Number of Guanine-to-Adenine mutations
-\item GU: Number of Guanine-to-Uridine mutations
-\item TN: Number of Thymine-to-Adenine/Cytosine/Guanine mutations
-\item CN: Number of Cytosine-to-Adenine/Thymine/Guanine/Uridine mutations
-\item AN: Number of Adenine-to-Thymine/Cytosine/Guanine/Uridine mutations
-\item GN: Number of Guanine-to-Adenine/Cytosine/Thymine/Uridine mutations
-\item UN: Number of Uridine-to-Adenine/Cytosine/Guanine mutations
-\item NT: Number of Adenine/Cytosine/Guanine-to-Thymine mutations
-\item NC: Number of Adenine/Thymine/Guanine/Uridine-to-Cytosine mutations
-\item NtoA: Number of Thymine/Cytosine/Guanine/Uridine-to-Adenine mutations. (Naming convention changed because NA taken)
-\item NU: Number of Cytosine/Guanine/Adenine-to-Uridine mutations.
-\item NN: Number of any kind of mutation
-}
+mutation seen in a sequencing read (\code{TC}, \code{GA}, \code{NtoA}, etc.).
 \item base nucleotide count: Integers corresponding to the number of instances of a
-particular type of nucleotide whose mutations are tracked in a corresponding
-mutation count column. The following column names are allowed:
-\itemize{
-\item nT: Number of Thymines
-\item nG: Number of Guanines
-\item nA: Number of Adenines
-\item nC: Number of Cytosines
-\item nU: Number of Uridines
-\item nN: number of any kind of nucleotide
-}
-\item features: Any columns that cannot be interpreted as a mutation count
-or base nucleotide count (and that aren't named \code{sample} or \code{n}) will be
-interpreted as an ID for a genomic "feature" from which a read originated.
-Common examples of features and typical column names for said features include:
-\itemize{
-\item Genes; common column names: gene, gene_id, gene_name, GF
-\item Genes-exonic; common column names: gene_exon, gene_id_exon, gene_name_exon, XF
-\item Transcripts; common column names: transcripts, TF
-\item Exonic bins; common column names: exonic_bins, EF, EB
-\item Exons; common column names: exons, exon_ids
-}
-In some cases, a read will often map to multiple features (e.g., exons). Many
-functions in bakR expect each of the feature IDs in these cases to be separated
-by \code{+}. For example, if a read overlaps with two exons, with IDs exon_1 and exon_2,
-then the corresponding entry in a  column of exonic assignments would be "exon_1+exon_2".
-The default expectation can be overwritten though and is thus not strictly enforced.
-\item n: Number of reads with identical values for all other columns.
+particular type of nucleotide (\code{nT}, \code{nG}, \code{nA}, \code{nC}, \code{nU}, \code{nN}).
+\item features: One or more genomic feature columns (\code{XF}, \code{GF}, \code{TEC}, etc.).
+\item n: Positive integer count of reads with identical values for all other columns.
 }}
 
 \item{metadf}{Data frame detailing various aspects of each of the samples included
-in the cBds. This includes:
-\itemize{
-\item \code{sample}: The sample ID, which should correspond to a sample ID in the provided cBds.
-\item \code{tl}: Metabolic label time. There are several edge cases to be aware of:
-\itemize{
-\item If more than one metabolic label was used in the set of samples described
-by the metadf (e.g., s4U and s6G were used), then the \code{tl} column should be
-replaced by \verb{tl_<muttype>}, where \verb{<muttype>} represents the corresponding mutation
-type count column in the cBds that the label whose incubation time will be listed
-in this column. For example, if feeding with s4U in some samples and s6G in others,
-then performing standard nucleotide recoding chemistry, you will include
-\code{tl_TC} and \code{tl_GA} columns corresponding to the s4U and s6G label times, respectively.
-\item If a pulse-chase experimental design was used (!!this is strongly discouraged
-unless you have a legitimate reason to prefer this design to a pulse-label
-design!!), then you should have columns named \code{tpulse} and \code{tchase}, corresponding
-to the pulse and chase times respectively. The same \verb{<muttype>} convention should
-be used in the case of multi-label pulse-chase designs.
-}
-\item sample characteristics: The remaining columns can be named whatever you like
-and should include distinguishing features of groups of samples. Common columns might
-include:
-\itemize{
-\item \code{treatment}: The experimental treatment applied to a set of samples.
-This could represent things like genetic knockouts or knockdowns, drug treatments, etc.
-\item \code{batch}: An ID for sets of samples that were collected and/or processed together.
-Useful for regressing out technical batch effects
-}
+in \code{cBds} (\code{sample}, \code{tl} / \verb{tl_<muttype>} / \code{tpulse} + \code{tchase}, and experimental
+covariates such as \code{treatment} or \code{batch}).}
 
-}}
+\item{format}{Optional file format string passed to \code{arrow::open_dataset()} when
+\code{cBds} is a character path (e.g., \code{"parquet"}, \code{"feather"}, \code{"csv"}, \code{"tsv"}).
+Inferred automatically from file extensions when \code{NULL} (default).}
+
+\item{partitioning}{Optional partitioning specification passed to
+\code{arrow::open_dataset()} when \code{cBds} is a character path. Leave \code{NULL} (default) to
+automatically detect Hive-style \code{sample=...} directory partitioning.}
+
+\item{hive_style}{Logical passed to \code{arrow::open_dataset()} when \code{cBds} is a
+character path (\code{TRUE} by default).}
+
+\item{...}{Additional arguments forwarded to \code{arrow::open_dataset()} when \code{cBds}
+is a character path.}
 }
 \value{
-An EZbakRArrowData object. This is simply a list of the provide \code{cBds} and
-\code{metadf} with class \code{EZbakRArrowData}
+An \code{EZbakRArrowData} object containing \code{cBds}, \code{metadf}, and serializable
+Arrow connection metadata under \code{metadata$arrow_spec}.
 }
 \description{
-\code{EZbakRArrowData} creates an object of class \code{EZbakRArrowData} and checks the validity
-of the provided input.
+\code{EZbakRArrowData} creates an object of class \code{EZbakRArrowData} backed by an
+on-disk Arrow dataset and validates the provided inputs. You may pass either an
+open \code{arrow::Dataset} (or \code{arrow_dplyr_query}) OR a character path directly to a
+Parquet/Feather/CSV/TSV dataset directory or vector of files.
+}
+\details{
+Objects created with \code{EZbakRArrowData()} record serializable dataset metadata in
+\code{obj$metadata$arrow_spec} so that saving with \code{saveRDS()} and reloading later with
+\code{readRDS()} automatically reconnects to the Arrow dataset when the files remain at
+the same path. If the dataset folder has moved, use \code{\link{ReconnectArrow}} to
+point the object at the new location without losing any downstream analyses.
 }
 \examples{
-
-# Load dependency
 library(arrow)
 simdata <- EZSimulate(30)
 
-# Create directory to write dataset to
-outdir <- tempdir()
-dataset_dir <- file.path(outdir, "arrow_dataset")
+dataset_dir <- file.path(tempdir(), "ezbakr_arrow_example")
+WriteCBArrow(simdata$cB, path = dataset_dir, overwrite = TRUE)
 
-# Create dataset
-write_dataset(
-  simdata$cB,
-  path = dataset_dir,
-  format = "parquet",
-  partitioning = "sample"
-)
-
-# Create EZbakRArrowData object
-ds <- open_dataset(dataset_dir)
-ezbdo <- EZbakRArrowData(ds,
-                         simdata$metadf)
-
+# Pass the directory path directly (or pass open_dataset(dataset_dir))
+ezbdo <- EZbakRArrowData(dataset_dir, simdata$metadf)
 
 }

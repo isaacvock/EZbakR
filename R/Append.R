@@ -96,6 +96,11 @@ EZconcat <- function(obj1, obj2,
     }else if(name == "cBds"){
 
       final_obj[[name]] <- l1
+      if(!is.null(obj1[['metadata']][['arrow_spec']])){
+        final_obj[['metadata']][['arrow_spec']] <- obj1[['metadata']][['arrow_spec']]
+      }else if(!is.null(obj2[['metadata']][['arrow_spec']])){
+        final_obj[['metadata']][['arrow_spec']] <- obj2[['metadata']][['arrow_spec']]
+      }
 
     }else{
 
@@ -139,6 +144,9 @@ EZconcat <- function(obj1, obj2,
   for(name in obj_unique_to_1){
 
     final_obj[[name]] <- obj1[[name]]
+    if(name == "cBds" && !is.null(obj1[['metadata']][['arrow_spec']])){
+      final_obj[['metadata']][['arrow_spec']] <- obj1[['metadata']][['arrow_spec']]
+    }
     if(!is.null(obj1[['metadata']][[name]])){
       final_obj[['metadata']][[name]] <- obj1[['metadata']][[name]]
     }
@@ -148,6 +156,9 @@ EZconcat <- function(obj1, obj2,
   for(name in obj_unique_to_2){
 
     final_obj[[name]] <- obj2[[name]]
+    if(name == "cBds" && !is.null(obj2[['metadata']][['arrow_spec']])){
+      final_obj[['metadata']][['arrow_spec']] <- obj2[['metadata']][['arrow_spec']]
+    }
     if(!is.null(obj2[['metadata']][[name]])){
       final_obj[['metadata']][[name]] <- obj2[['metadata']][[name]]
     }

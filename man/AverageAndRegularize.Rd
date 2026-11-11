@@ -141,7 +141,7 @@ from that feature combination needs to have over the read count threshold.}
 \item{scale_factor_df}{Data frame with columns "sample" and a second column of
 whatever name you please. The second column should denote scale factors by which
 read counts in that sample should be divided in order to normalize these
-read counts.}
+read counts (matching the DESeq2 and \code{EstimateKinetics()} convention).}
 
 \item{overwrite}{If TRUE, identical, existing output will be overwritten.}
 }

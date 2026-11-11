@@ -213,6 +213,20 @@ EZget <- function(obj,
 
   metadata <- obj[['metadata']][[type]]
 
+  if(length(metadata) == 0){
+
+    if(returnNameOnly){
+
+      return(NULL)
+
+    }else{
+
+      stop("No tables fit your search criterion!")
+
+    }
+
+  }
+
 
 
   # If only one table is present, that's the one you want
@@ -290,7 +304,7 @@ EZget <- function(obj,
     lm <- length(metadata)
     possible_tables_fd <- c()
 
-    for(m in 1:lm){
+    for(m in seq_len(lm)){
 
       fd_subject <- metadata[[m]][['fraction_design']]
 
@@ -831,7 +845,7 @@ inv_logit <- function(x) stats::plogis(x)
 #'
 #' Uses TMM normalization strategy, similar to that used by DESeq2 and edgeR.
 #'
-#' @param obj An `EZbakRData` or `EZbakRFractions` object.
+#' @param obj An `EZbakRData`, `EZbakRArrowData`, or `EZbakRFractions` object.
 #' @param features_to_analyze Features in relevant table
 #' @param fractions_name Name of fractions table to use
 #' @param feature_lengths Table of effective lengths for each feature combination in your
@@ -905,6 +919,46 @@ get_normalized_read_counts.EZbakRData <- function(obj,
 
 
   # Normalize
+  reads <- normalize_reads(reads, features_to_analyze, feature_lengths, scale_factors)
+
+  return(reads)
+
+}
+
+#' @describeIn get_normalized_read_counts Method for class **EZbakRArrowData**
+#' Get normalized read counts from an Arrow-backed cB dataset.
+#' @export
+get_normalized_read_counts.EZbakRArrowData <- function(obj,
+                                                       features_to_analyze,
+                                                       fractions_name = NULL,
+                                                       feature_lengths = NULL,
+                                                       scale_factors = NULL){
+
+  n <- sample <- NULL
+
+  cBds <- get_arrow_ds(obj)
+  cB_cols <- names(arrow::schema(cBds))
+
+  if(!all(features_to_analyze %in% cB_cols)){
+    missing_f <- setdiff(features_to_analyze, cB_cols)
+    stop(paste0("Features not found in Arrow dataset: ",
+                paste(missing_f, collapse = ", ")))
+  }
+
+  samps <- as.character(obj$metadf$sample)
+  group_cols <- c("sample", features_to_analyze)
+
+  reads <- cBds %>%
+    dplyr::filter(sample %in% samps) %>%
+    dplyr::select(dplyr::all_of(c(group_cols, "n"))) %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(group_cols))) %>%
+    dplyr::summarise(n = sum(n, na.rm = TRUE), .groups = "drop") %>%
+    dplyr::collect()
+
+  reads <- data.table::as.data.table(reads)
+  reads[, sample := as.character(sample)]
+  reads[, n := as.numeric(n)]
+
   reads <- normalize_reads(reads, features_to_analyze, feature_lengths, scale_factors)
 
   return(reads)
@@ -1285,7 +1339,11 @@ ezprint <- function(x, max_name_chars, arrow = FALSE){
 
     element <- elements[e]
 
-    names_e <- names(x[[element]])
+    if(element %in% c("cB", "cBds", "metadf")){
+      names_e <- character(0)
+    }else{
+      names_e <- names(x[[element]])
+    }
 
     if(element == "averages"){
       names_e <- names_e[!grepl("^fullfit_", names_e)]
@@ -1311,6 +1369,26 @@ ezprint <- function(x, max_name_chars, arrow = FALSE){
 
   if(arrow){
     cat(sprintf("EZbakRArrowData object with %d %s of %d samples\n", nrow(analyses_df), astring, nrow(x$metadf)))
+    ds_live <- get_arrow_ds(x, require_live = FALSE)
+    spec <- x[["metadata"]][["arrow_spec"]]
+    disp_path <- if(!is.null(spec) && !is.null(spec$display_path)) spec$display_path else "<untracked>"
+    if(nchar(disp_path) > max_name_chars){
+      disp_path <- paste0("...", substr(disp_path, nchar(disp_path) - max_name_chars + 4L, nchar(disp_path)))
+    }
+    if(!is.null(ds_live)){
+      fmt_str <- if(!is.null(spec) && !is.null(spec$format)) spec$format else "arrow"
+      part_str <- if(!is.null(spec) && isTRUE(spec$partitioned_by_sample)) "partitioned by sample" else "unpartitioned"
+      n_files <- if(!is.null(spec) && !is.null(spec$n_files)) spec$n_files else length(tryCatch(unwrap_arrow_dataset(ds_live)$files, error = function(e) character(0)))
+      cat(sprintf("  Arrow backend: connected (%s, %d %s, %s) [%s]\n",
+                  fmt_str,
+                  n_files,
+                  ifelse(n_files == 1L, "file", "files"),
+                  part_str,
+                  disp_path))
+    }else{
+      cat(sprintf("  Arrow backend: offline (dataset not found at '%s'; use ReconnectArrow())\n",
+                  disp_path))
+    }
   }else{
     cat(sprintf("EZbakRData object with %d %s of %d samples\n", nrow(analyses_df), astring, nrow(x$metadf)))
   }

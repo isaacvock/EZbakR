@@ -4,6 +4,7 @@
 \alias{get_normalized_read_counts}
 \alias{get_normalized_read_counts.EZbakRFractions}
 \alias{get_normalized_read_counts.EZbakRData}
+\alias{get_normalized_read_counts.EZbakRArrowData}
 \title{Get normalized read counts from either a cB table or \code{EZbakRFractions} object.}
 \usage{
 get_normalized_read_counts(
@@ -29,9 +30,17 @@ get_normalized_read_counts(
   feature_lengths = NULL,
   scale_factors = NULL
 )
+
+\method{get_normalized_read_counts}{EZbakRArrowData}(
+  obj,
+  features_to_analyze,
+  fractions_name = NULL,
+  feature_lengths = NULL,
+  scale_factors = NULL
+)
 }
 \arguments{
-\item{obj}{An \code{EZbakRData} or \code{EZbakRFractions} object.}
+\item{obj}{An \code{EZbakRData}, \code{EZbakRArrowData}, or \code{EZbakRFractions} object.}
 
 \item{features_to_analyze}{Features in relevant table}
 
@@ -57,6 +66,9 @@ Get normalized read counts from fractions table.
 
 \item \code{get_normalized_read_counts(EZbakRData)}: Method for class \strong{EZbakRData}
 Get normalized read counts from a cB table.
+
+\item \code{get_normalized_read_counts(EZbakRArrowData)}: Method for class \strong{EZbakRArrowData}
+Get normalized read counts from an Arrow-backed cB dataset.
 
 }}
 \examples{
