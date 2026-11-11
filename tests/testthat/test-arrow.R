@@ -390,3 +390,50 @@ test_that("EstimateKinetics error message and EZconcat handle EZbakRArrowData pr
   expect_s3_class(ez_cat, "EZbakRArrowData")
   expect_false(is.null(ez_cat$metadata$arrow_spec))
 })
+
+
+test_that("Legacy Parquet files with data.table externalptr R metadata produce zero warnings", {
+  sim <- make_arrow_sim(15, seed = 108)
+  pq_legacy <- file.path(tempdir(), paste0("ezbakr_legacy_extptr_", Sys.getpid()))
+  unlink(pq_legacy, recursive = TRUE)
+  on.exit(unlink(pq_legacy, recursive = TRUE), add = TRUE)
+
+  # Craft Hive-partitioned Parquet files whose schema$metadata$r embeds a data.table .internal.selfref externalptr
+  dt_full <- data.table::as.data.table(sim$cB)
+  legacy_r_raw <- rawToChar(serialize(
+    list(attributes = attributes(dt_full), columns = list()),
+    NULL,
+    ascii = TRUE
+  ))
+
+  for(s in unique(dt_full$sample)){
+    sub_df <- as.data.frame(dt_full[dt_full$sample == s, setdiff(colnames(dt_full), "sample"), with = FALSE])
+    tbl <- arrow::Table$create(sub_df)
+    tbl$metadata <- list(r = legacy_r_raw)
+    s_dir <- file.path(pq_legacy, paste0("sample=", s))
+    dir.create(s_dir, recursive = TRUE, showWarnings = FALSE)
+    arrow::write_parquet(tbl, file.path(s_dir, "part-0.parquet"))
+  }
+
+  # Sanity check: raw arrow collect() DOES emit the unsafe externalptr metadata warning
+  expect_warning(
+    dplyr::collect(arrow::open_dataset(pq_legacy)),
+    "externalptr"
+  )
+
+  # EZbakRArrowData (via path, open Dataset, arrow_dplyr_query, readRDS, EstimateFractions, and WriteCBArrow) emits ZERO warnings!
+  expect_no_warning(ez_path <- EZbakRArrowData(pq_legacy, sim$metadf))
+  expect_no_warning(ez_ds <- EZbakRArrowData(arrow::open_dataset(pq_legacy), sim$metadf))
+  expect_no_warning(ez_fn <- suppressMessages(EstimateFractions(ez_path)))
+
+  rds_path <- tempfile(fileext = ".rds")
+  on.exit(unlink(rds_path), add = TRUE)
+  saveRDS(ez_path, rds_path)
+  ez_reloaded <- readRDS(rds_path)
+  expect_no_warning(suppressMessages(EstimateMutRates(ez_reloaded)))
+
+  pq_clean <- file.path(tempdir(), paste0("ezbakr_reclean_", Sys.getpid()))
+  unlink(pq_clean, recursive = TRUE)
+  on.exit(unlink(pq_clean, recursive = TRUE), add = TRUE)
+  expect_no_warning(WriteCBArrow(pq_legacy, pq_clean))
+})

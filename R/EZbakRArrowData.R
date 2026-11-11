@@ -20,6 +20,26 @@ unwrap_arrow_dataset <- function(x){
 }
 
 
+# Internal helper: strip R-specific schema metadata (e.g., legacy data.table
+# `.internal.selfref` externalptr attributes in Parquet footers) via WithMetadata(NULL)
+# without deserializing `schema$metadata`, preventing Arrow unsafe-metadata warnings.
+strip_arrow_r_metadata <- function(x){
+  if(is.null(x)) return(x)
+  if(inherits(x, "arrow_dplyr_query")){
+    x$.data <- strip_arrow_r_metadata(x$.data)
+    return(x)
+  }
+  if(methods::is(x, "Dataset")){
+    x <- tryCatch(
+      x$WithSchema(x$schema$WithMetadata(NULL)),
+      error = function(e) x
+    )
+    return(x)
+  }
+  x
+}
+
+
 # Internal helper: check whether an Arrow Dataset / query has live C++ pointers
 arrow_is_live <- function(x){
   if(is.null(x)) return(FALSE)
@@ -97,6 +117,7 @@ resolve_arrow_input <- function(cBds,
                                     hive_style = hive_style,
                                     dots = dots)
     }
+    ds <- strip_arrow_r_metadata(ds)
     return(list(
       ds = ds,
       source_type = if(is_single_dir) "directory" else "files",
@@ -117,6 +138,7 @@ resolve_arrow_input <- function(cBds,
       )
     }
 
+    cBds <- strip_arrow_r_metadata(cBds)
     base_ds <- unwrap_arrow_dataset(cBds)
     raw_files <- tryCatch(base_ds$files, error = function(e) character(0))
     files <- if(length(raw_files) > 0L){
@@ -345,7 +367,7 @@ reopen_arrow_from_spec <- function(spec){
      !is.null(spec$root_path) &&
      dir.exists(spec$root_path)){
     ds <- open_with_sources(spec$root_path)
-    if(arrow_is_live(ds)) return(ds)
+    if(arrow_is_live(ds)) return(strip_arrow_r_metadata(ds))
   }
 
   if(!is.null(spec$files) && length(spec$files) > 0L && all(file.exists(spec$files))){
@@ -353,7 +375,7 @@ reopen_arrow_from_spec <- function(spec){
       cand_roots <- unique(sub("/[^/=]+=[^/]+/.*$", "", gsub("\\\\", "/", spec$files)))
       if(length(cand_roots) == 1L && dir.exists(cand_roots)){
         ds_root <- open_with_sources(cand_roots)
-        if(arrow_is_live(ds_root)) return(ds_root)
+        if(arrow_is_live(ds_root)) return(strip_arrow_r_metadata(ds_root))
       }
     }
     ds <- tryCatch(
@@ -364,7 +386,7 @@ reopen_arrow_from_spec <- function(spec){
                               dots = dots),
       error = function(e) NULL
     )
-    if(arrow_is_live(ds)) return(ds)
+    if(arrow_is_live(ds)) return(strip_arrow_r_metadata(ds))
   }
 
   NULL
@@ -374,7 +396,7 @@ reopen_arrow_from_spec <- function(spec){
 # Internal accessor: return live Arrow dataset, transparently auto-reopening after readRDS()
 get_arrow_ds <- function(obj, require_live = TRUE){
   if(arrow_is_live(obj$cBds)){
-    return(obj$cBds)
+    return(strip_arrow_r_metadata(obj$cBds))
   }
 
   spec <- obj[["metadata"]][["arrow_spec"]]
@@ -495,7 +517,8 @@ validate_EZbakRArrowData <- function(obj, resolved = NULL){
 
   ### Extract objects and info from objects
   vals <- unclass(obj)
-  cBds <- vals$cBds
+  cBds <- strip_arrow_r_metadata(vals$cBds)
+  obj$cBds <- cBds
   metadf <- dplyr::as_tibble(vals$metadf)
 
   if(is.null(resolved)){
@@ -1040,7 +1063,7 @@ WriteCBArrow <- function(cB,
     }
 
     arrow::write_dataset(
-      dataset = dt,
+      dataset = as.data.frame(dt),
       path = path,
       format = format,
       partitioning = partitioning,
