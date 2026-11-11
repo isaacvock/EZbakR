@@ -759,7 +759,7 @@ EZpcaPlot <- function(obj, data_type = c("fraction_labeled", "reads"),  features
   sample_lookup <- obj$metadf
 
 
-  if(metadf_cols_to_use == "all"){
+  if(length(metadf_cols_to_use) == 1 && metadf_cols_to_use == "all"){
     metadf_cols_to_use <- colnames(obj$metadf)[colnames(obj$metadf) != "sample"]
   }
 
