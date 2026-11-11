@@ -471,10 +471,12 @@ EZDynamics <- function(obj,
       return(results)
     }
 
-    extracted_values <- lapply(query_strings, extract_values, substrings = substrings)
+    u_queries <- unique(query_strings)
+    extracted_unique <- dplyr::bind_rows(lapply(u_queries, extract_values, substrings = substrings))
+    extracted_df <- extracted_unique[match(query_strings, u_queries), , drop = FALSE]
 
     # Annotate parameters with factor values
-    tidy_avgs <- dplyr::bind_cols(tidy_avgs, dplyr::bind_rows(extracted_values))
+    tidy_avgs <- dplyr::bind_cols(tidy_avgs, extracted_df)
 
 
 
@@ -530,22 +532,18 @@ EZDynamics <- function(obj,
     }
 
 
-    measured_species <- apply(feature_mat, 1, function(row) {
-
-
-      valid_cols <- sometimes_assigned[row[!(fm_cols %in% always_assigned)]]
-
-      if(length(valid_cols) > 0){
-
-        valid_cols[1]
-
-      }else{
-
-        always_assigned
-
+    sub_mat <- feature_mat[, !(fm_cols %in% always_assigned), drop = FALSE]
+    if(ncol(sub_mat) == 0L){
+      measured_species <- rep(always_assigned, nrow(feature_mat))
+    }else{
+      has_any <- rowSums(sub_mat) > 0L
+      first_col <- max.col(sub_mat, ties.method = "first")
+      measured_species <- character(nrow(feature_mat))
+      measured_species[has_any] <- sometimes_assigned[first_col[has_any]]
+      if(any(!has_any)){
+        measured_species[!has_any] <- always_assigned
       }
-
-    })
+    }
 
     tidy_avgs$measured_specie <- measured_species
 
@@ -689,82 +687,43 @@ EZDynamics <- function(obj,
     # Fit model
     if(is.null(scale_factors)){
 
-      dynfit <- tidy_avgs  %>%
-        dplyr::mutate(tl = as.numeric(!!dplyr::sym(label_time_name))) %>%
-        dplyr::inner_join(reps,
-                          by = meta_groups) %>%
-        dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group_by))) %>%
-        dplyr::summarise(fit = list(I(stats::optim(starting_values,
-                                                   fn = dynamics_likelihood,
-                                                   graph = graph,
-                                                   formula_list = modeled_to_measured,
-                                                   logit_fn = mean,
-                                                   logit_fn_sd = sd,
-                                                   coverage = coverage,
-                                                   nreps = nreps,
-                                                   tls = as.numeric(tl),
-                                                   sample_features = !!dplyr::sym(sample_feature),
-                                                   feature_types = measured_specie,
-                                                   lower = lower_bounds,
-                                                   upper = upper_bounds,
-                                                   scale_factor = 1,
-                                                   method = "L-BFGS-B",
-                                                   hessian = TRUE,
-                                                   use_coverage = use_coverage))))
+      prep_avgs <- tidy_avgs %>%
+        dplyr::mutate(tl = as.numeric(!!dplyr::sym(label_time_name)),
+                      .ez_scale_col = 1) %>%
+        dplyr::inner_join(reps, by = meta_groups)
 
     }else{
 
-      scale_column <- colnames(scale_factors)
-      scale_column <- "scale"
-
-      dynfit <- tidy_avgs  %>%
+      prep_avgs <- tidy_avgs %>%
         dplyr::inner_join(scale_factors, by = unique(c(sample_feature, design_factors))) %>%
-        dplyr::mutate(tl = as.numeric(!!dplyr::sym(label_time_name))) %>%
-        dplyr::inner_join(reps,
-                          by = meta_groups) %>%
-        dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group_by))) %>%
-        dplyr::summarise(fit = list(I(stats::optim(starting_values,
-                                                   fn = dynamics_likelihood,
-                                                   graph = graph,
-                                                   formula_list = modeled_to_measured,
-                                                   logit_fn = mean,
-                                                   logit_fn_sd = sd,
-                                                   coverage = coverage,
-                                                   nreps = nreps,
-                                                   tls = as.numeric(tl),
-                                                   scale_factor = !!dplyr::sym(scale_column),
-                                                   sample_features = !!dplyr::sym(sample_feature),
-                                                   feature_types = measured_specie,
-                                                   prior_means = prior_means,
-                                                   prior_sds = prior_sds,
-                                                   lower = lower_bounds,
-                                                   upper = upper_bounds,
-                                                   method = "L-BFGS-B",
-                                                   hessian = TRUE,
-                                                   use_coverage = use_coverage))))
+        dplyr::mutate(tl = as.numeric(!!dplyr::sym(label_time_name)),
+                      .ez_scale_col = scale) %>%
+        dplyr::inner_join(reps, by = meta_groups)
 
     }
 
-
-
-    # Get parameter estimates and uncertainties
-    for(n in 1:npars){
-
-      par_name <- parameter_names[n]
-      par_se_name <- paste0("se_", par_name)
-
-      dynfit <- dynfit %>% dplyr::mutate(
-        !!par_name := purrr::map_dbl(fit, ~ .x$par[n]),
-        !!par_se_name := tryCatch(
-          {
-          purrr::map_dbl(fit, ~ sqrt(abs(diag(solve(.x$hessian))))[n])
-          },
-          error = function(e) {
-            Inf
-          }
-          ),
-      )
-    }
+    dynfit <- fit_dynamics_table(
+      df = prep_avgs,
+      cols_to_group_by = cols_to_group_by,
+      starting_values = starting_values,
+      lower_bounds = lower_bounds,
+      upper_bounds = upper_bounds,
+      graph = graph,
+      formula_list = modeled_to_measured,
+      logit_fn_col = "mean",
+      logit_fn_sd_col = "sd",
+      coverage_col = "coverage",
+      nreps_col = "nreps",
+      tl_col = "tl",
+      sample_feature_col = sample_feature,
+      feature_type_col = "measured_specie",
+      scale_col = ".ez_scale_col",
+      prior_means = prior_means,
+      prior_sds = prior_sds,
+      use_coverage = use_coverage,
+      parameter_names = parameter_names,
+      include_mean_n = FALSE
+    )
 
 
   }else{
@@ -837,22 +796,18 @@ EZDynamics <- function(obj,
     }
 
 
-    measured_species <- apply(feature_mat, 1, function(row) {
-
-
-      valid_cols <- sometimes_assigned[row[!(fm_cols %in% always_assigned)]]
-
-      if(length(valid_cols) > 0){
-
-        valid_cols[1]
-
-      }else{
-
-        always_assigned
-
+    sub_mat <- feature_mat[, !(fm_cols %in% always_assigned), drop = FALSE]
+    if(ncol(sub_mat) == 0L){
+      measured_species <- rep(always_assigned, nrow(feature_mat))
+    }else{
+      has_any <- rowSums(sub_mat) > 0L
+      first_col <- max.col(sub_mat, ties.method = "first")
+      measured_species <- character(nrow(feature_mat))
+      measured_species[has_any] <- sometimes_assigned[first_col[has_any]]
+      if(any(!has_any)){
+        measured_species[!has_any] <- always_assigned
       }
-
-    })
+    }
     kinetics$measured_specie <- measured_species
 
 
@@ -886,50 +841,32 @@ EZDynamics <- function(obj,
 
     cols_to_group_by = c("sample", grouping_features)
 
-    dynfit <- kinetics %>%
-      dplyr::mutate(tl = as.numeric(tl)) %>%
-      dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group_by))) %>%
-      dplyr::summarise(fit = list(I(stats::optim(starting_values,
-                                                 fn = dynamics_likelihood,
-                                                 graph = graph,
-                                                 formula_list = modeled_to_measured,
-                                                 logit_fn = !!dplyr::sym(fraction_of_interest),
-                                                 logit_fn_sd = !!dplyr::sym(fraction_se),
-                                                 coverage = n,
-                                                 nreps = 1,
-                                                 tls = as.numeric(tl),
-                                                 sample_features = !!dplyr::sym(sample_feature),
-                                                 feature_types = measured_specie,
-                                                 prior_means = prior_means,
-                                                 prior_sds = prior_sds,
-                                                 lower = lower_bounds,
-                                                 upper = upper_bounds,
-                                                 method = "L-BFGS-B",
-                                                 hessian = TRUE,
-                                                 use_coverage = TRUE))),
-                       n = mean(n) # I'm not sure how to calculate read counts to be passed to AverageAndRegularize(). I think average should be fine though
-                       )
+    prep_kin <- kinetics %>%
+      dplyr::mutate(tl = as.numeric(tl),
+                    .ez_nreps_col = 1)
 
-
-
-    # Get parameter estimates and uncertainties
-    fits <- dynfit$fit
-    for(n in 1:npars){
-
-      par_name <- parameter_names[n]
-      par_se_name <- paste0("se_", par_name)
-
-      dynfit[[par_name]] <- purrr::map_dbl(fits, ~ .x$par[n])
-      dynfit[[par_se_name]] <- tryCatch(
-        {
-          purrr::map_dbl(fits, ~ sqrt(diag(solve(.x$hessian)))[n])
-        },
-        error = function(e) {
-          Inf
-        }
-      )
-
-    }
+    dynfit <- fit_dynamics_table(
+      df = prep_kin,
+      cols_to_group_by = cols_to_group_by,
+      starting_values = starting_values,
+      lower_bounds = lower_bounds,
+      upper_bounds = upper_bounds,
+      graph = graph,
+      formula_list = modeled_to_measured,
+      logit_fn_col = fraction_of_interest,
+      logit_fn_sd_col = fraction_se,
+      coverage_col = "n",
+      nreps_col = ".ez_nreps_col",
+      tl_col = "tl",
+      sample_feature_col = sample_feature,
+      feature_type_col = "measured_specie",
+      scale_col = NULL,
+      prior_means = prior_means,
+      prior_sds = prior_sds,
+      use_coverage = TRUE,
+      parameter_names = parameter_names,
+      include_mean_n = TRUE
+    )
 
 
   }
@@ -1054,6 +991,260 @@ spread_duplicates <- function(vec, digits = 4, spread = 0.01) {
 
 }
 
+# Dependency-free smooth matrix exponential for ODE transition matrices B = tl * A
+# Exact closed-form 1x1 and 2x2 (smooth across repeated/defective & complex eigenvalues,
+# overflow-safe for stiff compartmental matrices) + scaling-and-squaring [6/6] Pade for K >= 3
+expm_ode <- function(B){
+  K <- nrow(B)
+  if(K == 1L){
+    return(matrix(exp(B[1L, 1L]), 1L, 1L))
+  }
+  if(K == 2L){
+    b11 <- B[1L, 1L]; b21 <- B[2L, 1L]
+    b12 <- B[1L, 2L]; b22 <- B[2L, 2L]
+    m <- 0.5 * (b11 + b22)
+    h <- 0.5 * (b11 - b22)
+    d2 <- h * h + b12 * b21
+
+    if(!is.finite(d2)){
+      return(matrix(NA_real_, 2L, 2L))
+    }
+
+    if(abs(d2) < 1e-8){
+      em <- exp(m)
+      c0 <- 1 + d2 * (0.5 + d2 * (1 / 24 + d2 / 720))
+      c1 <- 1 + d2 * (1 / 6 + d2 * (1 / 120 + d2 / 5040))
+      return(matrix(c(em * (c0 + c1 * h),
+                      em * (c1 * b21),
+                      em * (c1 * b12),
+                      em * (c0 - c1 * h)), nrow = 2L, ncol = 2L))
+    }else if(d2 > 0){
+      d <- sqrt(d2)
+      ep <- exp(m + d)
+      en <- exp(m - d)
+      s0 <- 0.5 * (ep + en)
+      s1 <- 0.5 * (ep - en) / d
+      return(matrix(c(s0 + s1 * h,
+                      s1 * b21,
+                      s1 * b12,
+                      s0 - s1 * h), nrow = 2L, ncol = 2L))
+    }else{
+      w <- sqrt(-d2)
+      em <- exp(m)
+      c0 <- em * cos(w)
+      c1 <- em * (sin(w) / w)
+      return(matrix(c(c0 + c1 * h,
+                      c1 * b21,
+                      c1 * b12,
+                      c0 - c1 * h), nrow = 2L, ncol = 2L))
+    }
+  }
+
+  # General K >= 3: scaling-and-squaring [6/6] Pade approximant
+  normB <- max(colSums(abs(B)))
+  if(!is.finite(normB)){
+    return(matrix(NA_real_, K, K))
+  }
+  s <- if(normB > 0.5) max(0L, as.integer(ceiling(log2(normB / 0.5)))) else 0L
+  Bs <- if(s > 0L) B * (0.5^s) else B
+
+  B2 <- Bs %*% Bs
+  B4 <- B2 %*% B2
+  B6 <- B4 %*% B2
+  I_K <- diag(K)
+
+  V <- B6 + 840 * B4 + 75600 * B2 + 665280 * I_K
+  U <- Bs %*% (42 * B4 + 10080 * B2 + 332640 * I_K)
+
+  R_mat <- solve(V - U, V + U)
+  if(s > 0L){
+    for(i in seq_len(s)){
+      R_mat <- R_mat %*% R_mat
+    }
+  }
+  R_mat
+}
+
+
+# Precompile graph structure and measurement formulas once outside optim()
+compile_dynamics_spec <- function(graph, formula_list, tls, sample_features,
+                                  feature_types, use_coverage = TRUE){
+  n_g <- nrow(graph)
+  zero_index <- which(colnames(graph) == "0")
+  non_zero_idx <- seq_len(n_g)[-zero_index]
+  species_names <- rownames(graph)[non_zero_idx]
+  K <- length(species_names)
+
+  ksyn_index <- unique(graph["0", ])
+  ksyn_index <- ksyn_index[ksyn_index != 0]
+
+  # Precompute integer lookup into c(0, 1, exp(parameter_ests)):
+  # index 1 -> 0; index 2 -> 1 (dummy ksyn when !use_coverage); index >= 3 -> exp(parameter_ests)
+  max_par <- max(graph)
+  if(!use_coverage){
+    full_slot_to_vec <- integer(max_par + 1L)
+    full_slot_to_vec[1L] <- 1L
+    rem_slots <- setdiff(seq_len(max_par), ksyn_index)
+    full_slot_to_vec[ksyn_index + 1L] <- 2L
+    full_slot_to_vec[rem_slots + 1L] <- seq_along(rem_slots) + 2L
+  }else{
+    full_slot_to_vec <- c(1L, seq_len(max_par) + 2L)
+  }
+  graph_map <- full_slot_to_vec[as.integer(graph) + 1L]
+
+  n_obs <- length(tls)
+  keep_mask <- logical(n_obs)
+  C_rows <- vector("list", n_obs)
+
+  for(n in seq_len(n_obs)){
+    sf <- sample_features[n]
+    ft <- feature_types[n]
+    sample_formula <- formula_list[[sf]][[ft]]
+    if(!is.null(sample_formula)){
+      keep_mask[n] <- TRUE
+      sp_sum <- all.vars(sample_formula[[3L]])
+      row_vec <- numeric(K)
+      m_idx <- match(sp_sum, species_names)
+      m_idx <- m_idx[!is.na(m_idx)]
+      if(length(m_idx) > 0L){
+        for(id in m_idx) row_vec[id] <- row_vec[id] + 1
+      }
+      C_rows[[n]] <- row_vec
+    }
+  }
+
+  keep_idx <- which(keep_mask)
+  kept_tls <- as.numeric(tls[keep_idx])
+  unique_tls <- unique(kept_tls)
+  tl_map <- match(kept_tls, unique_tls)
+
+  C_mat <- if(length(keep_idx) > 0L){
+    do.call(rbind, C_rows[keep_idx])
+  }else{
+    matrix(0, nrow = 0L, ncol = K)
+  }
+
+  list(
+    n_g = n_g,
+    K = K,
+    zero_index = zero_index,
+    non_zero_idx = non_zero_idx,
+    graph_map = graph_map,
+    n_obs = n_obs,
+    keep_idx = keep_idx,
+    all_kept = (length(keep_idx) == n_obs),
+    unique_tls = unique_tls,
+    tl_map = tl_map,
+    C_mat = C_mat
+  )
+}
+
+
+# Fast table-level fitter for EZDynamics avoiding tidyverse group summarise & repeated solve(hessian)
+fit_dynamics_table <- function(df, cols_to_group_by,
+                               starting_values, lower_bounds, upper_bounds,
+                               graph, formula_list,
+                               logit_fn_col, logit_fn_sd_col,
+                               coverage_col, nreps_col, tl_col,
+                               sample_feature_col, feature_type_col,
+                               scale_col = NULL,
+                               prior_means, prior_sds,
+                               use_coverage = TRUE,
+                               parameter_names,
+                               include_mean_n = FALSE){
+
+  grouped_df <- dplyr::group_by(df, dplyr::across(dplyr::all_of(cols_to_group_by)))
+  g_keys <- dplyr::group_keys(grouped_df)
+  g_rows <- dplyr::group_rows(grouped_df)
+  G <- nrow(g_keys)
+  npars <- length(parameter_names)
+
+  lfn_all <- as.numeric(df[[logit_fn_col]])
+  lfnsd_all <- as.numeric(df[[logit_fn_sd_col]])
+  cov_all <- as.numeric(df[[coverage_col]])
+  nreps_all <- as.numeric(df[[nreps_col]])
+  tl_all <- as.numeric(df[[tl_col]])
+  sf_all <- as.character(df[[sample_feature_col]])
+  ft_all <- as.character(df[[feature_type_col]])
+  sc_all <- if(!is.null(scale_col)) as.numeric(df[[scale_col]]) else NULL
+
+  spec_cache <- new.env(hash = TRUE, parent = emptyenv())
+  fits_list <- vector("list", G)
+  par_mat <- matrix(NA_real_, nrow = G, ncol = npars)
+  se_mat <- matrix(Inf, nrow = G, ncol = npars)
+  mean_n_vec <- if(include_mean_n) numeric(G) else NULL
+
+  for(g in seq_len(G)){
+    idx <- g_rows[[g]]
+    tls_g <- tl_all[idx]
+    sf_g <- sf_all[idx]
+    ft_g <- ft_all[idx]
+
+    key_str <- paste(c(tls_g, sf_g, ft_g), collapse = "\r")
+    spec_g <- get0(key_str, envir = spec_cache, inherits = FALSE)
+    if(is.null(spec_g)){
+      spec_g <- compile_dynamics_spec(
+        graph = graph,
+        formula_list = formula_list,
+        tls = tls_g,
+        sample_features = sf_g,
+        feature_types = ft_g,
+        use_coverage = use_coverage
+      )
+      assign(key_str, spec_g, envir = spec_cache)
+    }
+
+    sc_g <- if(!is.null(sc_all)) sc_all[idx] else NULL
+    fit_g <- stats::optim(
+      starting_values,
+      fn = dynamics_likelihood,
+      graph = graph,
+      formula_list = formula_list,
+      logit_fn = lfn_all[idx],
+      logit_fn_sd = lfnsd_all[idx],
+      coverage = cov_all[idx],
+      nreps = nreps_all[idx],
+      tls = tls_g,
+      sample_features = sf_g,
+      feature_types = ft_g,
+      prior_means = prior_means,
+      prior_sds = prior_sds,
+      use_coverage = use_coverage,
+      scale_factor = sc_g,
+      compiled_spec = spec_g,
+      lower = lower_bounds,
+      upper = upper_bounds,
+      method = "L-BFGS-B",
+      hessian = TRUE
+    )
+
+    fits_list[[g]] <- fit_g
+    par_mat[g, ] <- fit_g$par
+    se_g <- tryCatch(
+      sqrt(abs(diag(solve(fit_g$hessian)))),
+      error = function(e) rep(Inf, npars)
+    )
+    if(any(is.nan(se_g))) se_g[is.nan(se_g)] <- Inf
+    se_mat[g, ] <- se_g
+
+    if(include_mean_n){
+      mean_n_vec[g] <- mean(cov_all[idx])
+    }
+  }
+
+  out_tbl <- g_keys
+  out_tbl$fit <- I(fits_list)
+  if(include_mean_n){
+    out_tbl$n <- mean_n_vec
+  }
+  for(n in seq_len(npars)){
+    out_tbl[[parameter_names[n]]] <- par_mat[, n]
+    out_tbl[[paste0("se_", parameter_names[n])]] <- se_mat[, n]
+  }
+  out_tbl
+}
+
+
 # Likelihood function for generalized dynamical systems modeling
 # with averages tables
 dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
@@ -1063,223 +1254,99 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
                                 prior_means = rep(-3, times = max(graph)),
                                 prior_sds = c(3, rep(1, times = max(graph)-1)),
                                 use_coverage = TRUE, alt_coverage = FALSE,
-                                coverage_sd = NULL, scale_factor = NULL){
+                                coverage_sd = NULL, scale_factor = NULL,
+                                compiled_spec = NULL){
 
+  single_replicate <- all(nreps == 1)
 
-  ### Step 0, check to see if single replicate of data is being passed
-  if(all(nreps == 1)){
-    single_replicate <- TRUE
-  }else{
-    single_replicate <- FALSE
+  if(is.null(compiled_spec)){
+    compiled_spec <- compile_dynamics_spec(
+      graph = graph,
+      formula_list = formula_list,
+      tls = tls,
+      sample_features = sample_features,
+      feature_types = feature_types,
+      use_coverage = use_coverage
+    )
   }
 
+  ### Step 1: construct transition matrix A and synthesis vector b
+  param_vec <- c(0, 1, exp(parameter_ests))
+  param_graph <- matrix(param_vec[compiled_spec$graph_map],
+                        nrow = compiled_spec$n_g,
+                        ncol = compiled_spec$n_g)
 
-  ### Step 1, construct A
+  nz <- compiled_spec$non_zero_idx
+  zi <- compiled_spec$zero_index
+  sub_pg <- param_graph[nz, , drop = FALSE]
+  A <- t(sub_pg[, nz, drop = FALSE])
+  diag(A) <- diag(A) - rowSums(sub_pg)
+  b_vec <- -param_graph[zi, nz]
 
-  # Make sure parameters are all different values
-  count <- 1
-  s <- 0.01
-  while(length(unique(round(parameter_ests, digits = 4))) != length(parameter_ests)){
-    # parameter_ests <- stats::rnorm(length(parameter_ests),
-    #                         mean = parameter_ests,
-    #                         sd = 0.01)
-
-    parameter_ests <- spread_duplicates(parameter_ests,
-                                        spread = s)
-
-
-
-    count <- count + 1
-    s <- s + 0.01
-    if(count > 5){
-      stop("Infinite while loop!!")
-    }
-  }
-
-
-
-
-  # Parameters are on log-scale for ease of optimization
-  param_extend <- c(0, exp(parameter_ests))
-
-  # Add back ksyn as dummy value if not modeling it
-  if(!use_coverage){
-    ksyn_index <- unique(graph["0",])
-    ksyn_index <- ksyn_index[ksyn_index != 0]
-
-    param_extend <- append(param_extend, 1, after = ksyn_index)
-  }
-
-  param_graph <- matrix(param_extend[graph + 1],
-                        nrow = nrow(graph),
-                        ncol = ncol(graph),
-                        byrow = FALSE)
-
-  # A is same size as graph minus the "0" row and column
-  A <- matrix(0,
-              nrow = nrow(graph) - 1,
-              ncol = ncol(graph) - 1)
-
-  rownames(A) <- rownames(graph[-1,,drop=FALSE])
-  colnames(A) <- rownames(graph[-1,,drop=FALSE])
-
-
-
-  zero_index <- which(colnames(graph) == "0")
-
-  # Left as an exercise to the reader
-  # Just kidding, I'll document this somewhere.
-  # TO-DO: Should really compile documentation for all
-  # non-obvious mathematical results
-  diag(A) <- -rowSums(param_graph[-zero_index,,drop=FALSE])
-  A <- A + t(param_graph[-zero_index,-zero_index,drop=FALSE])
-
-
-  ### Step 2: infer general solution
-
-  ode_solved <- tryCatch(
-    {
-      Rss <- solve(a = A,
-                   b = -param_graph[zero_index,-zero_index])
-
-      names(Rss) <- rownames(A)
-
-
-      ev <- eigen(A)
-
-      lambda <- ev$values
-      V <- ev$vectors
-
-
-      cs <- solve(V, -Rss)
-      TRUE
-
-    },
-    error = function(x){
-      # Fallback for defective / nearly repeated eigenvalues during optimization
-      tryCatch(
-        {
-          A_pert <- A
-          if(nrow(A_pert) > 1){
-            diag(A_pert) <- diag(A_pert) * (1 + seq(from = -1e-6, to = 1e-6, length.out = nrow(A_pert)))
-          }
-          Rss <<- solve(a = A_pert,
-                        b = -param_graph[zero_index,-zero_index])
-          names(Rss) <<- rownames(A_pert)
-          ev <<- eigen(A_pert)
-          lambda <<- ev$values
-          V <<- ev$vectors
-          cs <<- solve(V, -Rss)
-          TRUE
-        },
-        error = function(e2) FALSE
-      )
-    }
-
-  )
-
-  if(!ode_solved){
+  ### Step 2: solve steady state Rss and evaluate matrix exponential once per unique tl
+  Rss <- tryCatch(solve(A, b_vec), error = function(e) NULL)
+  if(is.null(Rss) || any(!is.finite(Rss)) || any(Rss <= 0)){
     return(1e10)
   }
 
+  u_tls <- compiled_spec$unique_tls
+  n_u_tl <- length(u_tls)
+  K <- compiled_spec$K
+  R_State_mat <- matrix(0, nrow = K, ncol = n_u_tl)
 
-
-
-  ### Step 3: Infer data for actual measured species
-  all_ss <- c()
-  all_fns <- c()
-  indices_to_remove <- c()
-
-  for(n in seq_along(tls)){
-
-    tl <- tls[n]
-    sample_feature <- sample_features[n]
-    feature_type <- feature_types[n]
-
-
-    exp_lambda <- exp(lambda*tl)
-
-    scaled_eigenvectors <- V %*% diag(exp_lambda*cs, nrow = length(exp_lambda))
-
-    result_vector <- Re(rowSums(scaled_eigenvectors)) + Rss
-
-    names(result_vector) <- rownames(A)
-
-    # Evaluate the formulas
-    sample_formula <- formula_list[[sample_feature]][[feature_type]]
-
-    # If feature is not in model, throw it out and data for it
-    if(is.null(sample_formula)){
-
-      indices_to_remove <- c(indices_to_remove, n)
-
-    }else{
-
-
-
-      ### Generalized even to modeling contamination
-      # measured_levels <- evaluate_formulas2(result_vector, sample_formula)
-      #
-      # measured_ss <- evaluate_formulas2(Rss, sample_formula)
-      species_to_sum <- all.vars(sample_formula[[3]])
-
-      measured_levels <- sum(result_vector[species_to_sum])
-      measured_ss <- sum(Rss[species_to_sum])
-
-      all_fns <- c(all_fns, measured_levels/measured_ss)
-      all_ss <- c(all_ss, measured_ss)
-
+  for(u in seq_len(n_u_tl)){
+    E_u <- tryCatch(expm_ode(u_tls[u] * A), error = function(e) NULL)
+    if(is.null(E_u) || any(!is.finite(E_u))){
+      return(1e10)
     }
-
-
+    R_State_mat[, u] <- Rss - as.vector(E_u %*% Rss)
   }
 
-
-  all_fns <- pmax(0.0001, pmin(0.9999, all_fns))
-
-
-  # Remove data for unmodeled features
-  if(length(indices_to_remove) > 0){
-    logit_fn <- logit_fn[-indices_to_remove]
-    logit_fn_sd <- logit_fn_sd[-indices_to_remove]
+  ### Step 3: project onto measured species via precompiled C_mat
+  C_mat <- compiled_spec$C_mat
+  all_ss <- as.vector(C_mat %*% Rss)
+  if(K == 1L){
+    measured_levels <- C_mat[, 1L] * R_State_mat[1L, compiled_spec$tl_map]
+  }else{
+    measured_levels <- rowSums(C_mat * t(R_State_mat[, compiled_spec$tl_map, drop = FALSE]))
   }
 
+  all_fns <- pmax(0.0001, pmin(0.9999, measured_levels / all_ss))
 
+  if(!compiled_spec$all_kept){
+    keep_idx <- compiled_spec$keep_idx
+    n_orig <- compiled_spec$n_obs
+    logit_fn <- logit_fn[keep_idx]
+    logit_fn_sd <- logit_fn_sd[keep_idx]
+    if(use_coverage){
+      coverage <- coverage[keep_idx]
+      if(!is.null(scale_factor) && length(scale_factor) == n_orig){
+        scale_factor <- scale_factor[keep_idx]
+      }
+      if(length(nreps) == n_orig){
+        nreps <- nreps[keep_idx]
+      }
+      if(alt_coverage && !is.null(coverage_sd) && length(coverage_sd) == n_orig){
+        coverage_sd <- coverage_sd[keep_idx]
+      }
+    }
+  }
 
-  ### Step 4 calculate likelihood
+  ### Step 4: calculate log-posterior
   ll <- stats::dnorm(logit_fn,
-              logit(all_fns),
-              logit_fn_sd,
-              log = TRUE)
+                     logit(all_fns),
+                     logit_fn_sd,
+                     log = TRUE)
 
   if(use_coverage){
 
-    if(length(indices_to_remove) > 0){
-      coverage <- coverage[-indices_to_remove]
-      scale_factor <- scale_factor[-indices_to_remove]
-      nreps <- nreps[-indices_to_remove]
-    }
-
-
     if(alt_coverage){
-
-      if(length(indices_to_remove) > 0){
-        coverage_sd <- coverage_sd[-indices_to_remove]
-      }
-
-      # all_reads <- all_ss*scale_factor
 
       ll <- ll +
         stats::dnorm(coverage + log10(scale_factor),
                      log10(all_ss),
                      sd = coverage_sd,
                      log = TRUE)
-      # ll <- ll +
-      #   stats::dnorm(coverage,
-      #                log10(all_reads),
-      #                (1/((10^coverage)*(log(10)^2)))/sqrt(nreps),
-      #                log = TRUE)
-
 
     }else if(single_replicate){
 
@@ -1288,15 +1355,13 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
                      all_ss,
                      log = TRUE)
 
-
-    } else{
-
+    }else{
 
       # Simple, conservative dispersion parameter estimate of 50
       ll <- ll +
         stats::dnorm(coverage + log10(scale_factor),
                      log10(all_ss),
-                     (log(10) * sqrt((1/10^coverage) + 1/100))/sqrt(nreps),
+                     (log(10) * sqrt((1 / 10^coverage) + 1 / 100)) / sqrt(nreps),
                      log = TRUE)
 
     }
@@ -1305,13 +1370,11 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
   # Add prior
   ll <- sum(ll) + sum(stats::dnorm(parameter_ests,
-                          mean = prior_means,
-                          sd = prior_sds,
-                          log = TRUE))
+                                   mean = prior_means,
+                                   sd = prior_sds,
+                                   log = TRUE))
 
   return(-ll)
-
-
 
 }
 

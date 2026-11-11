@@ -580,18 +580,16 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
       parameter_se_col <- paste0("se_", parameter)
 
-      model_fit <- kinetics %>%
-        dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
-        dplyr::do(dplyr::tibble(parameters = list(
-          fit_ezbakR_linear_model(.,
-                                  parameter = parameter,
-                                  formula_mean = formula_mean,
-                                  sd_groups = sd_grouping_factors,
-                                  coverage_col = "normalized_reads",
-                                  uncertainties_col = parameter_se_col,
-                                  error_if_singular = error_if_singular)
-        ))) %>%
-        tidyr::unnest_wider(parameters)
+      model_fit <- fit_ezbakR_linear_model_batch(
+        kinetics = kinetics,
+        features_to_analyze = features_to_analyze,
+        parameter = parameter,
+        formula_mean = formula_mean,
+        sd_groups = sd_grouping_factors,
+        coverage_col = "normalized_reads",
+        uncertainties_col = parameter_se_col,
+        error_if_singular = error_if_singular
+      )
 
       # Add carriage return so next message is separate from progress bar
       message("")
@@ -1533,5 +1531,218 @@ interaction_only <- function(formula) {
   }))
 
   return(all_interactions_or_no_intercept)
+}
+
+
+# Vectorized batch OLS + heteroskedastic sandwich variance solver across all features
+fit_ezbakR_linear_model_batch <- function(kinetics,
+                                          features_to_analyze,
+                                          parameter,
+                                          formula_mean,
+                                          sd_groups,
+                                          coverage_col,
+                                          uncertainties_col,
+                                          error_if_singular = TRUE){
+
+  # Preserve exact dplyr::group_by feature ordering
+  grouped_kin <- dplyr::group_by(kinetics, dplyr::across(dplyr::all_of(features_to_analyze)))
+  feat_keys <- dplyr::group_keys(grouped_kin)
+  grp_rows <- dplyr::group_rows(grouped_kin)
+  G <- nrow(feat_keys)
+
+  if(G == 0L){
+    return(dplyr::as_tibble(feat_keys))
+  }
+
+  u_samples <- unique(kinetics$sample)
+  n_u_samps <- length(u_samples)
+  samp_idx_all <- match(kinetics$sample, u_samples)
+  y_all <- as.numeric(kinetics[[parameter]])
+  u_all <- as.numeric(kinetics[[uncertainties_col]])
+  c_all <- as.numeric(kinetics[[coverage_col]])
+  finite_row <- is.finite(y_all) & is.finite(u_all) & is.finite(c_all)
+
+  # Classify each feature into a sample-presence pattern (fast path when rectangular)
+  lens <- lengths(grp_rows)
+  all_complete <- all(lens == n_u_samps) && all(finite_row)
+
+  solve_block <- function(feat_indices, ordered_row_mat){
+    S_p <- nrow(ordered_row_mat)
+    G_p <- ncol(ordered_row_mat)
+
+    df1 <- kinetics[ordered_row_mat[, 1L], , drop = FALSE]
+    df1[[parameter]] <- y_all[ordered_row_mat[, 1L]]
+
+    fit1 <- stats::lm(formula_mean, df1, singular.ok = !error_if_singular)
+    coefs1 <- stats::coef(fit1)
+    non_aliased <- !is.na(coefs1)
+    X_full <- stats::model.matrix(fit1)
+    X <- X_full[, non_aliased, drop = FALSE]
+    P <- ncol(X)
+    cnames <- colnames(X)
+
+    xtx_inv <- solve(crossprod(X))
+    proj <- tcrossprod(xtx_inv, X)        # P x S_p
+    M_sq <- (X %*% xtx_inv)^2             # S_p x P
+
+    flat_idx <- as.vector(ordered_row_mat)
+    Y <- matrix(y_all[flat_idx], nrow = S_p, ncol = G_p)
+    U <- matrix(u_all[flat_idx], nrow = S_p, ncol = G_p)
+    C_mat <- matrix(c_all[flat_idx], nrow = S_p, ncol = G_p)
+
+    B_hat <- proj %*% Y                   # P x G_p
+    means_mat <- t(B_hat)                 # G_p x P
+
+    if(is.null(sd_groups)){
+      df_r <- S_p - P
+      if(df_r > 0L){
+        E <- Y - X %*% B_hat
+        sig2 <- colSums(E * E) / df_r
+        sig2[!is.finite(sig2)] <- 0
+      }else{
+        sig2 <- rep(0, G_p)
+      }
+
+      S2 <- matrix(rep(sig2, each = S_p), nrow = S_p, ncol = G_p) +
+        U * U + (0.05^2) / (S_p / P)
+      vce_diag <- crossprod(M_sq, S2)     # P x G_p
+      ses_mat <- log(sqrt(pmax(t(vce_diag), 1e-16)))
+
+      df_res <- max(S_p - P, 0.5)
+      eff_reps <- colSums(X != 0)
+      eff_df <- ifelse(colSums(X < 0) == 0 & eff_reps > 1,
+                       pmax(eff_reps - 1, 0.5),
+                       df_res)
+      se_logses <- 1 / sqrt(2 * eff_df)
+      se_logse_mat <- matrix(rep(se_logses, each = G_p), nrow = G_p, ncol = P)
+
+      cov_vec <- log10(colMeans(C_mat))
+      cov_mat <- matrix(rep(cov_vec, times = P), nrow = G_p, ncol = P)
+
+    }else{
+      sd_df <- df1[, sd_groups, drop = FALSE]
+      sd_key_df <- dplyr::group_by(sd_df, dplyr::across(dplyr::all_of(sd_groups)))
+      sd_rows <- dplyr::group_rows(sd_key_df)
+      K_sd <- length(sd_rows)
+      sd_grp_id <- integer(S_p)
+      for(k in seq_len(K_sd)) sd_grp_id[sd_rows[[k]]] <- k
+      n_sd <- lengths(sd_rows)
+
+      mean_Y_sd <- rowsum(Y, sd_grp_id, reorder = FALSE) / n_sd
+      diff_Y <- Y - mean_Y_sd[sd_grp_id, , drop = FALSE]
+      var_Y_sd <- rowsum(diff_Y * diff_Y, sd_grp_id, reorder = FALSE) / pmax(n_sd - 1L, 1L)
+      if(any(n_sd <= 1L)){
+        var_Y_sd[n_sd <= 1L, ] <- 0
+      }
+      grp_sd2 <- var_Y_sd[sd_grp_id, , drop = FALSE]
+
+      S2 <- grp_sd2 + U * U + (0.025^2) / (S_p / P)
+      vce_diag <- crossprod(M_sq, S2)
+      ses_mat <- log(sqrt(pmax(t(vce_diag), 1e-16)))
+
+      eff_reps <- colSums(X != 0)
+      se_logses <- 1 / sqrt(2 * pmax(eff_reps - 1, 0.5))
+      se_logse_mat <- matrix(rep(se_logses, each = G_p), nrow = G_p, ncol = P)
+
+      mean_C_sd <- rowsum(C_mat, sd_grp_id, reorder = FALSE) / n_sd
+      grp_cov <- log10(mean_C_sd)[sd_grp_id, , drop = FALSE]
+      weights_abs <- abs(X)
+      denom_cov <- colSums(weights_abs)
+      denom_cov[denom_cov == 0] <- 1
+      cov_mat <- t(crossprod(weights_abs, grp_cov) / denom_cov)
+    }
+
+    colnames(means_mat) <- paste0("mean_", cnames)
+    colnames(ses_mat) <- paste0("logse_", cnames)
+    colnames(cov_mat) <- paste0("coverage_", cnames)
+    colnames(se_logse_mat) <- paste0("se_logse_", cnames)
+
+    dplyr::bind_cols(
+      feat_keys[feat_indices, , drop = FALSE],
+      dplyr::as_tibble(means_mat),
+      dplyr::as_tibble(ses_mat),
+      dplyr::as_tibble(cov_mat),
+      dplyr::as_tibble(se_logse_mat)
+    )
+  }
+
+  if(all_complete){
+    flat_rows <- unlist(grp_rows, use.names = FALSE)
+    s_mat <- matrix(samp_idx_all[flat_rows], nrow = n_u_samps, ncol = G)
+    r_mat <- matrix(flat_rows, nrow = n_u_samps, ncol = G)
+    # Check if every column already has samples 1..n_u_samps without duplicates
+    if(identical(s_mat[, 1L], seq_len(n_u_samps)) &&
+       all(s_mat == seq_len(n_u_samps))){
+      return(solve_block(seq_len(G), r_mat))
+    }
+    # Sort each column by sample_idx if unique
+    no_dups <- all(apply(s_mat, 2L, anyDuplicated) == 0L)
+    if(no_dups){
+      # Vectorized bucket sort across all G columns: row = sample_idx, col = feature_id
+      ordered_r <- matrix(0L, nrow = n_u_samps, ncol = G)
+      ordered_r[cbind(as.vector(s_mat), rep(seq_len(G), each = n_u_samps))] <- flat_rows
+      return(solve_block(seq_len(G), ordered_r))
+    }
+  }
+
+  # General path: group features by sorted unique sample_idx signature; fallback on weird groups
+  sigs <- character(G)
+  ordered_rows_list <- vector("list", G)
+  fallback_feats <- integer(0)
+
+  for(g in seq_len(G)){
+    r_g <- grp_rows[[g]]
+    if(!all(finite_row[r_g])){
+      fallback_feats <- c(fallback_feats, g)
+      next
+    }
+    s_g <- samp_idx_all[r_g]
+    if(anyDuplicated(s_g) > 0L){
+      fallback_feats <- c(fallback_feats, g)
+      next
+    }
+    ord <- order(s_g)
+    r_ord <- r_g[ord]
+    s_ord <- s_g[ord]
+    ordered_rows_list[[g]] <- r_ord
+    sigs[g] <- paste(s_ord, collapse = ",")
+  }
+
+  valid_feats <- setdiff(seq_len(G), fallback_feats)
+  out_blocks <- list()
+
+  if(length(valid_feats) > 0L){
+    pat_groups <- split(valid_feats, sigs[valid_feats])
+    for(fg in pat_groups){
+      r_mat <- do.call(cbind, ordered_rows_list[fg])
+      out_blocks[[length(out_blocks) + 1L]] <- solve_block(fg, r_mat)
+    }
+  }
+
+  if(length(fallback_feats) > 0L){
+    fb_list <- lapply(fallback_feats, function(g){
+      sub_df <- kinetics[grp_rows[[g]], , drop = FALSE]
+      ests <- fit_ezbakR_linear_model(
+        data = sub_df,
+        parameter = parameter,
+        formula_mean = formula_mean,
+        sd_groups = sd_groups,
+        coverage_col = coverage_col,
+        uncertainties_col = uncertainties_col,
+        error_if_singular = error_if_singular
+      )
+      dplyr::bind_cols(feat_keys[g, , drop = FALSE], dplyr::as_tibble(ests))
+    })
+    out_blocks <- c(out_blocks, fb_list)
+  }
+
+  combined <- dplyr::bind_rows(out_blocks)
+  # Restore exact feat_keys row order
+  combined_order <- c(unlist(if(length(valid_feats) > 0L) split(valid_feats, sigs[valid_feats]) else list(),
+                             use.names = FALSE),
+                      fallback_feats)
+  inv_perm <- integer(G)
+  inv_perm[combined_order] <- seq_len(G)
+  combined[inv_perm, , drop = FALSE]
 }
 

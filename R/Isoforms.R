@@ -428,77 +428,158 @@ beta_r_likelihood <- function(data, design_matrix, v, par,
 # Infer mixture of isoform fractions using beta regression
 fit_beta_regression <- function(data){
 
-  ### Hack to deal with devtools::check() NOTEs
-  n <- fn <- group <- transcript_id <- p <- nreads <- NULL
-
-
-  # if("AIG1" %in% data$gene_id){
-  #   browser()
-  # }
-
-
   cols <- colnames(data)
-  deconvolved_feature <- ifelse(
-    "transcript_id" %in% cols,
-    "transcript_id",
-    "gene_id"
-  )
+  deconvolved_feature <- if("transcript_id" %in% cols) "transcript_id" else "gene_id"
 
+  grp_vals <- data$group
+  u_grp <- unique(grp_vals)
+  feat_vals <- as.character(data[[deconvolved_feature]])
+  u_feat <- unique(feat_vals)
+  n_g <- length(u_grp)
+  n_f <- length(u_feat)
 
-  Fns_onegene <- data %>%
-    dplyr::mutate(nreads = n) %>%
-    dplyr::select(fn, group, !!deconvolved_feature, p, nreads) %>%
-    tidyr::pivot_wider(names_from = dplyr::sym(deconvolved_feature),
-                       values_from = p,
-                       values_fill = 0)
+  design_matrix <- matrix(0, nrow = n_g, ncol = n_f, dimnames = list(NULL, u_feat))
+  r_idx <- match(grp_vals, u_grp)
+  c_idx <- match(feat_vals, u_feat)
+  design_matrix[cbind(r_idx, c_idx)] <- as.numeric(data$p)
 
-  design_matrix <- as.matrix(Fns_onegene %>% dplyr::ungroup() %>%
-                               dplyr::select(-group, -fn, -nreads))
+  first_row <- match(u_grp, grp_vals)
+  fns <- as.numeric(data$fn[first_row])
+  v <- as.numeric(data$n[first_row])
 
+  prior_a <- 0
+  prior_b <- 1.25
+  inv_pb2 <- 1 / (prior_b * prior_b)
+  prior_const <- -0.5 * n_f * log(2 * pi) - n_f * log(prior_b)
 
-  fns <- Fns_onegene$fn
-  v <- Fns_onegene$nreads
+  y <- pmin(pmax(fns, inv_logit(-9)), inv_logit(9))
+  log_y <- log(y)
+  log_1my <- log1p(-y)
+  logit_y <- log_y - log_1my
+  lgamma_v <- lgamma(v)
+
+  fn_beta <- function(par){
+    theta <- stats::plogis(par)
+    mus_raw <- as.vector(design_matrix %*% theta)
+    mus <- pmin(pmax(mus_raw, 1e-12), 1 - 1e-12)
+    alphas <- mus * v
+    betas <- v - alphas
+    ll_data <- sum(lgamma_v - lgamma(alphas) - lgamma(betas) +
+                     (alphas - 1) * log_y + (betas - 1) * log_1my)
+    ll_prior <- prior_const - 0.5 * sum((par - prior_a)^2) * inv_pb2
+    -(ll_data + ll_prior)
+  }
+
+  gr_beta <- function(par){
+    theta <- stats::plogis(par)
+    mus_raw <- as.vector(design_matrix %*% theta)
+    unclamped <- (mus_raw > 1e-12) & (mus_raw < (1 - 1e-12))
+    mus <- pmin(pmax(mus_raw, 1e-12), 1 - 1e-12)
+    alphas <- mus * v
+    betas <- v - alphas
+    d_mu <- ifelse(unclamped,
+                   v * (logit_y - digamma(alphas) + digamma(betas)),
+                   0)
+    xt_dmu <- as.vector(crossprod(design_matrix, d_mu))
+    -theta * (1 - theta) * xt_dmu + (par - prior_a) * inv_pb2
+  }
 
   tryCatch(
     {
-      fit <- stats::optim(par = rep(0, times = ncol(design_matrix)),
-                          beta_r_likelihood,
-                          data = fns,
-                          design_matrix = design_matrix,
-                          v = v,
+      fit <- stats::optim(par = rep(0, times = n_f),
+                          fn = fn_beta,
+                          gr = gr_beta,
                           method = "L-BFGS-B",
                           upper = 9,
                           lower = -9,
-                          prior_a = 0,
-                          prior_b = 1.25,
-                          hessian = TRUE)
-
+                          hessian = FALSE)
     },
     error = function(e){
       message(paste0("Estimation of isoform fraction news failed for
                      features: [",
-                     paste0(data$transcript_id, collapse = ", "), "]"))
+                     paste0(data[[deconvolved_feature]], collapse = ", "), "]"))
       stop("Error from optim: ", e)
     }
   )
 
+  # Exact analytical Hessian at converged par (fallback to numerical if non-invertible)
+  par_hat <- fit$par
+  theta <- stats::plogis(par_hat)
+  s_vec <- theta * (1 - theta)
+  mus_raw <- as.vector(design_matrix %*% theta)
+  unclamped <- (mus_raw > 1e-12) & (mus_raw < (1 - 1e-12))
+  mus <- pmin(pmax(mus_raw, 1e-12), 1 - 1e-12)
+  alphas <- mus * v
+  betas <- v - alphas
+  d_mu <- ifelse(unclamped,
+                 v * (logit_y - digamma(alphas) + digamma(betas)),
+                 0)
+  w_mu <- ifelse(unclamped,
+                 (v * v) * (trigamma(alphas) + trigamma(betas)),
+                 0)
+  xt_dmu <- as.vector(crossprod(design_matrix, d_mu))
+  xtwx <- crossprod(design_matrix, w_mu * design_matrix)
+  H_mat <- (s_vec %o% s_vec) * xtwx
+  diag(H_mat) <- diag(H_mat) - s_vec * (1 - 2 * theta) * xt_dmu + inv_pb2
 
-  uncertainty <- sqrt(diag(solve(fit$hessian)))
-
+  uncertainty <- tryCatch(
+    sqrt(abs(diag(solve(H_mat)))),
+    error = function(e){
+      fit_num <- stats::optim(par = par_hat,
+                              fn = beta_r_likelihood,
+                              data = fns,
+                              design_matrix = design_matrix,
+                              v = v,
+                              method = "L-BFGS-B",
+                              upper = 9,
+                              lower = -9,
+                              prior_a = prior_a,
+                              prior_b = prior_b,
+                              hessian = TRUE)
+      sqrt(abs(diag(solve(fit_num$hessian))))
+    }
+  )
 
   if(deconvolved_feature == "transcript_id"){
-    return(data.table::data.table(transcript_id = colnames(design_matrix),
-                                  logit_fn = fit$par,
+    return(data.table::data.table(transcript_id = u_feat,
+                                  logit_fn = par_hat,
                                   se_logit_fn = uncertainty))
   }else{
-    return(data.table::data.table(gene_id = colnames(design_matrix),
-                                  logit_fn = fit$par,
+    return(data.table::data.table(gene_id = u_feat,
+                                  logit_fn = par_hat,
                                   se_logit_fn = uncertainty))
   }
 
+}
 
 
+# Fast batch wrapper avoiding tidyr::nest() + tidyr::unnest() overhead across thousands of genes
+fit_beta_regression_batch <- function(df_multi, group_cols, keep_cols, deconvolved_feature){
+  if(nrow(df_multi) == 0L){
+    empty_out <- df_multi[0L, keep_cols, drop = FALSE]
+    empty_out[[deconvolved_feature]] <- character(0)
+    empty_out$logit_fn <- numeric(0)
+    empty_out$se_logit_fn <- numeric(0)
+    return(dplyr::as_tibble(empty_out))
+  }
+  grouped <- dplyr::group_by(df_multi, dplyr::across(dplyr::all_of(group_cols)))
+  g_keys <- dplyr::group_keys(grouped)
+  g_rows <- dplyr::group_rows(grouped)
+  G <- nrow(g_keys)
 
+  res_list <- vector("list", G)
+  n_per_g <- integer(G)
+  for(g in seq_len(G)){
+    sub_df <- df_multi[g_rows[[g]], , drop = FALSE]
+    fit_dt <- fit_beta_regression(sub_df)
+    res_list[[g]] <- fit_dt
+    n_per_g[g] <- nrow(fit_dt)
+  }
+
+  bound_fits <- data.table::rbindlist(res_list)
+  rep_idx <- rep.int(seq_len(G), n_per_g)
+  keys_expanded <- g_keys[rep_idx, keep_cols, drop = FALSE]
+  dplyr::bind_cols(keys_expanded, dplyr::as_tibble(bound_fits))
 }
 
 
@@ -628,12 +709,13 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
   logit_fraction_of_interest <- paste0("logit_", fraction_of_interest)
 
   Fns_multi <- Fns_multi %>%
+    dplyr::ungroup() %>%
     dplyr::mutate(fn = !!sym(fraction_of_interest)) %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(gene_colnames))) %>%
-    tidyr::nest() %>%
-    dplyr::mutate(fnest = lapply(data, fit_beta_regression)) %>%
-    dplyr::select(!!gene_colnames, fnest) %>%
-    tidyr::unnest(cols = c(fnest)) %>%
+    fit_beta_regression_batch(
+      group_cols = gene_colnames,
+      keep_cols = gene_colnames,
+      deconvolved_feature = "transcript_id"
+    ) %>%
     dplyr::mutate(!!logit_fraction_of_interest := logit_fn,
                   !!logit_fraction_se := se_logit_fn,
                   !!fraction_of_interest := inv_logit(logit_fn)) %>%
@@ -1117,13 +1199,13 @@ General_Fraction_Disambiguation <- function(obj, sample_name,
   logit_fraction_of_interest <- paste0("logit_", fraction_of_interest)
 
   Fns_multi <- Fns_multi %>%
-    dplyr::mutate(fn = !!sym(fraction_of_interest)) %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(grouping_cols))) %>%
-    tidyr::nest() %>%
-    dplyr::mutate(fnest = lapply(data, fit_beta_regression)) %>%
     dplyr::ungroup() %>%
-    dplyr::select(!!other_features, fnest) %>%
-    tidyr::unnest(cols = c(fnest)) %>%
+    dplyr::mutate(fn = !!sym(fraction_of_interest)) %>%
+    fit_beta_regression_batch(
+      group_cols = grouping_cols,
+      keep_cols = other_features,
+      deconvolved_feature = quant_feature
+    ) %>%
     dplyr::mutate(!!logit_fraction_of_interest := logit_fn,
                   !!logit_fraction_se := se_logit_fn,
                   !!fraction_of_interest := inv_logit(logit_fn)) %>%
@@ -1154,39 +1236,51 @@ General_Fraction_Disambiguation <- function(obj, sample_name,
 }
 
 
-# qf = quant_feature
+# qf = quant_feature; linear-time Disjoint Set Union (Union-Find) for connected components
 identify_groups <- function(df, qf){
 
-  # Should only have 1 column, the convolved feature
-  convolved_col <- colnames(df)
+  convolved_col <- colnames(df)[1L]
+  vals <- unique(as.character(df[[convolved_col]]))
+  if(length(vals) == 0L){
+    return(dplyr::tibble(
+      !!qf := character(0),
+      feature_group_id = integer(0)
+    ))
+  }
 
-  # Each element is a vector of connected features
-  groups <- list()
+  subs_list <- strsplit(vals, "\\+")
+  all_nodes <- unique(unlist(subs_list, use.names = FALSE))
+  n_nodes <- length(all_nodes)
+  parent <- seq_len(n_nodes)
 
-  for (row_val in df[[convolved_col]]) {
+  find_root <- function(x){
+    r <- x
+    while(parent[r] != r) r <- parent[r]
+    while(x != r){
+      nxt <- parent[x]
+      parent[x] <<- r
+      x <- nxt
+    }
+    r
+  }
 
-    # Get the features for this row
-    subs <- strsplit(row_val, "\\+")[[1]]
-
-    # Find which existing feature groups overlap
-    overlaps <- sapply(groups, function(grp) length(intersect(grp, subs)) > 0)
-
-    if (!any(overlaps)) {
-      # No overlap => new group
-      groups <- c(groups, list(subs))
-    } else {
-      # Merge all overlapping feature groups plus the current features
-      merged <- unique(unlist(c(groups[overlaps], list(subs))))
-      # Keep non-overlapping groups, plus the merged one
-      groups <- c(groups[!overlaps], list(merged))
+  for(subs in subs_list){
+    if(length(subs) > 1L){
+      ids <- match(subs, all_nodes)
+      r1 <- find_root(ids[1L])
+      for(k in 2L:length(ids)){
+        rk <- find_root(ids[k])
+        if(rk != r1) parent[rk] <- r1
+      }
     }
   }
 
-  # Now 'groups' is a list of disjoint sets of connected features
-  # Turn that into a final data frame, labeling each group with an ID
-  df_result <- dplyr::tibble(
-    !!qf := unlist(groups),
-    feature_group_id  = rep(seq_along(groups), sapply(groups, length))
+  roots <- vapply(seq_len(n_nodes), find_root, integer(1))
+  comp_id <- match(roots, unique(roots))
+
+  dplyr::tibble(
+    !!qf := all_nodes,
+    feature_group_id = comp_id
   )
 
 }

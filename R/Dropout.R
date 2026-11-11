@@ -832,18 +832,31 @@ NormalizeForDropout <- function(obj,
 
     comb_sig <- pmax(sqrt(fxn_subset$se_do^2 + fxn_subset$se_ref^2), 1e-3)
 
-    pdos$pdo[i] <- inv_logit(
-      stats::optim(
-        par = c(-2),
-        fn = do_norm_ll,
-        reffn = fxn_subset$reffn,
-        fndo = fxn_subset$fndo,
-        sig = comb_sig,
-        method = "L-BFGS-B",
-        upper = 6,
-        lower = -6
-      )$par[1]
-    )
+    # Exact closed-form MLE under logit(E[fn]) = logit(fndo) - log(1 - pdo),
+    # equivalent to minimizing do_norm_ll(par) over par = logit(pdo) in [-6, 6]
+    logit_diff <- logit(fxn_subset$reffn) - logit(fxn_subset$fndo)
+    valid_do <- is.finite(logit_diff) & is.finite(comb_sig)
+    if(any(valid_do)){
+      w_do <- 1 / (comb_sig[valid_do] * comb_sig[valid_do])
+      delta_hat <- sum(w_do * logit_diff[valid_do]) / sum(w_do)
+      delta_min <- log1p(exp(-6))
+      delta_max <- 6 + log1p(exp(-6))
+      delta_clamped <- min(max(delta_hat, delta_min), delta_max)
+      pdos$pdo[i] <- -expm1(-delta_clamped)
+    }else{
+      pdos$pdo[i] <- inv_logit(
+        stats::optim(
+          par = c(-2),
+          fn = do_norm_ll,
+          reffn = fxn_subset$reffn,
+          fndo = fxn_subset$fndo,
+          sig = comb_sig,
+          method = "L-BFGS-B",
+          upper = 6,
+          lower = -6
+        )$par[1]
+      )
+    }
 
 
   }

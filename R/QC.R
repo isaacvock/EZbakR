@@ -390,33 +390,35 @@ check_raw_mutation_rates <- function(obj,
     )
 
     cols_needed <- unique(c("sample", muts_analyze, nucs_analyze, "n"))
+    unique_nucs <- unique(nucs_analyze)
 
-    for(s in seq_along(all_samples)){
+    num_exprs <- stats::setNames(
+      lapply(muts_analyze, function(m) rlang::expr(sum(as.numeric(!!rlang::sym(m)) * as.numeric(n)))),
+      paste0(".num_", muts_analyze)
+    )
+    den_exprs <- stats::setNames(
+      lapply(unique_nucs, function(b) rlang::expr(sum(as.numeric(!!rlang::sym(b)) * as.numeric(n)))),
+      paste0(".den_", unique_nucs)
+    )
 
+    agg_df <- cB %>%
+      dplyr::filter(sample %in% all_samples) %>%
+      dplyr::select(dplyr::all_of(cols_needed)) %>%
+      dplyr::group_by(sample) %>%
+      dplyr::summarise(!!!num_exprs, !!!den_exprs) %>%
+      dplyr::collect() %>%
+      dplyr::ungroup()
 
-      cBsamp <- cB %>%
-        dplyr::filter(sample == all_samples[s]) %>%
-        dplyr::select(dplyr::all_of(cols_needed)) %>%
-        dplyr::collect()
+    present_samps <- all_samples[all_samples %in% agg_df$sample]
+    agg_df <- agg_df[match(present_samps, agg_df$sample), , drop = FALSE]
 
-      setDT(cBsamp)
+    rate_cols <- lapply(seq_along(muts_analyze), function(i){
+      as.numeric(agg_df[[paste0(".num_", muts_analyze[i])]]) /
+        as.numeric(agg_df[[paste0(".den_", nucs_analyze[i])]])
+    })
+    names(rate_cols) <- muts_analyze
 
-
-      mutrates[[s]] <- cBsamp[, {
-        rates <- sapply(seq_along(muts_analyze), function(i) {
-          numerator <- sum(get(muts_analyze[i]) * n)
-          denominator <- sum(get(nucs_analyze[i]) * n)
-          rate <- numerator / denominator
-          return(rate)
-        })
-        names(rates) <- paste0(muts_analyze)
-        as.list(rates)
-      }, by = sample]
-
-
-    }
-
-    mutrates <- dplyr::bind_rows(mutrates)
+    mutrates <- data.table::as.data.table(c(list(sample = agg_df$sample), rate_cols))
 
 
   }else{
