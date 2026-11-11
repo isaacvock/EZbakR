@@ -834,6 +834,81 @@ logit <- function(x) stats::qlogis(x)
 inv_logit <- function(x) stats::plogis(x)
 
 
+# Smooth posterior standard error from asymmetric 95% Wilks profile CIs + prior SD.
+# Combines each directional likelihood precision (s_lo^-2, s_hi^-2) with prior
+# precision (prior_sd^-2) without piecewise jumps at boundary cutoffs.
+posterior_se_from_ci <- function(est,
+                                 ci_lo,
+                                 ci_hi,
+                                 prior_sd,
+                                 se_min = 0,
+                                 se_min_lo = se_min,
+                                 se_min_hi = se_min,
+                                 z = stats::qnorm(0.975)){
+  n_el <- length(est)
+  if(n_el == 0L) return(numeric(0))
+  prior_sd <- rep_len(as.numeric(prior_sd), n_el)
+  se_min_lo <- pmax(rep_len(as.numeric(se_min_lo), n_el), 0)
+  se_min_hi <- pmax(rep_len(as.numeric(se_min_hi), n_el), 0)
+
+  s_lo <- ifelse(is.finite(ci_lo) & is.finite(est),
+                 pmax((est - ci_lo) / z, se_min_lo),
+                 Inf)
+  s_hi <- ifelse(is.finite(ci_hi) & is.finite(est),
+                 pmax((ci_hi - est) / z, se_min_hi),
+                 Inf)
+
+  r_lo <- ifelse(is.infinite(s_lo), 0, prior_sd / pmax(s_lo, 1e-15))
+  r_hi <- ifelse(is.infinite(s_hi), 0, prior_sd / pmax(s_hi, 1e-15))
+
+  s_lo_post <- prior_sd / sqrt(1 + r_lo * r_lo)
+  s_hi_post <- prior_sd / sqrt(1 + r_hi * r_hi)
+
+  0.5 * (s_lo_post + s_hi_post)
+}
+
+
+# Per-sample Empirical Bayes prior SD calibration on a log-kinetic parameter scale
+# (e.g. log_kdeg or log_TILAC_ratio) from well-measured interior features.
+calibrate_logk_prior_sd <- function(sample_vec,
+                                    est,
+                                    ci_lo,
+                                    ci_hi,
+                                    default_sd = 1.2,
+                                    sd_min = 1.0,
+                                    sd_max = 2.0,
+                                    z = stats::qnorm(0.975)){
+  n_el <- length(est)
+  if(n_el == 0L) return(numeric(0))
+  out <- rep(default_sd, n_el)
+  u_samps <- unique(sample_vec)
+
+  for(s in u_samps){
+    idx <- which(sample_vec == s)
+    fin <- is.finite(est[idx]) & is.finite(ci_lo[idx]) & is.finite(ci_hi[idx])
+    if(sum(fin) >= 5L){
+      est_f <- est[idx][fin]
+      se_w <- pmax((ci_hi[idx][fin] - ci_lo[idx][fin]) / (2 * z), 0)
+      ok1 <- se_w < 1.0
+      ok2 <- se_w < 2.0
+      use <- if(sum(ok1) >= 10L){
+        ok1
+      }else if(sum(ok2) >= 5L){
+        ok2
+      }else{
+        rep(TRUE, length(est_f))
+      }
+      tot_mad <- stats::mad(est_f[use])
+      meas_var <- stats::median(se_w[use]^2)
+      sd_s <- sqrt(max(tot_mad^2 - meas_var, 0))
+      out[idx] <- min(max(sd_s, sd_min), sd_max)
+    }
+  }
+
+  out
+}
+
+
 
 
 ############################

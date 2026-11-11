@@ -434,27 +434,38 @@ Standard_kinetic_estimation <- function(obj,
                              se_lfn = kinetics[[se_of_interest]])
 
     if(has_prof_ci){
-      lo_pos <- fn_lo_v > 0
-      hi_lt1 <- fn_hi_v < 1
-      both_in <- lo_pos & hi_lt1
-      if(any(both_in)){
-        se_pr <- (log(kinetics$ci_upper_kdeg[both_in]) - log(kinetics$ci_lower_kdeg[both_in])) / (2 * z95)
-        se_delta[both_in] <- pmax(se_delta[both_in], se_pr)
-      }
-      lo_zero <- !lo_pos & hi_lt1
-      if(any(lo_zero)){
-        hw_u <- pmax(log(kinetics$ci_upper_kdeg[lo_zero]) - kinetics$log_kdeg[lo_zero], 0) / z95
-        se_delta[lo_zero] <- pmax(se_delta[lo_zero], hw_u, 0.8)
-      }
-      hi_one <- lo_pos & !hi_lt1
-      if(any(hi_one)){
-        hw_l <- pmax(kinetics$log_kdeg[hi_one] - log(kinetics$ci_lower_kdeg[hi_one]), 0) / z95
-        se_delta[hi_one] <- pmax(se_delta[hi_one], hw_l, 0.8)
-      }
-      both_bd <- !lo_pos & !hi_lt1
-      if(any(both_bd)){
-        se_delta[both_bd] <- pmax(se_delta[both_bd], 1.5)
-      }
+      log_ci_lo <- ifelse(fn_lo_v > 0, log(kinetics$ci_lower_kdeg), -Inf)
+      log_ci_hi <- ifelse(fn_hi_v < 1, log(kinetics$ci_upper_kdeg), Inf)
+      prior_sd_lk <- calibrate_logk_prior_sd(
+        sample_vec = kinetics$sample,
+        est = kinetics$log_kdeg,
+        ci_lo = log_ci_lo,
+        ci_hi = log_ci_hi,
+        z = z95
+      )
+      # Concavity of h(eta) = log(-log(1 - inv_logit(eta))) compresses the upper
+      # secant log(ci_upper_kdeg) - log(kdeg) logarithmically as fn_hi -> 1;
+      # flooring the upper scale with the tangent projection h'(eta_hat) * (eta_hi - eta_hat)
+      # agrees to second order in the interior and diverges smoothly as fn_hi -> 1.
+      n_safe <- pmax(kinetics$n, 1)
+      se_cr_lo <- 1 / sqrt(0.64761 * n_safe)
+      fn_v <- pmin(pmax(as.numeric(kinetics[[fraction_of_interest]]), 1e-15), 1 - 1e-15)
+      deriv_abs <- abs(fn_v / log1p(-fn_v))
+      se_tan_hi <- ifelse(
+        fn_hi_v < 1,
+        pmax(se_cr_lo, deriv_abs * pmax(stats::qlogis(fn_hi_v) - stats::qlogis(fn_v), 0) / z95),
+        Inf
+      )
+
+      se_delta <- posterior_se_from_ci(
+        est = kinetics$log_kdeg,
+        ci_lo = log_ci_lo,
+        ci_hi = log_ci_hi,
+        prior_sd = prior_sd_lk,
+        se_min_lo = se_cr_lo,
+        se_min_hi = se_tan_hi,
+        z = z95
+      )
     }
 
     kinetics[, se_log_kdeg := se_delta]
@@ -733,16 +744,26 @@ Standard_kinetic_estimation <- function(obj,
     se_sf <- lkdeg_uncert_sf(fn = kinetics[[fraction_of_interest]],
                              se_lfn = kinetics[[se_of_interest]])
     if(has_prof_ci){
-      pos_sf <- fn_ci_sf$lo > 0 & fn_ci_sf$hi > fn_ci_sf$lo
-      if(any(pos_sf)){
-        se_sf[pos_sf] <- pmax(se_sf[pos_sf],
-                              (log(kinetics$ci_upper_kdeg[pos_sf]) - log(kinetics$ci_lower_kdeg[pos_sf])) / (2 * z95))
-      }
-      z_sf <- fn_ci_sf$lo <= 0 & fn_ci_sf$hi > 0
-      if(any(z_sf)){
-        hw_sf <- pmax(log(kinetics$ci_upper_kdeg[z_sf]) - kinetics$log_kdeg[z_sf], 0) / z95
-        se_sf[z_sf] <- pmax(se_sf[z_sf], hw_sf, 0.8)
-      }
+      log_ci_lo_sf <- ifelse(fn_ci_sf$lo > 0, log(kinetics$ci_lower_kdeg), -Inf)
+      log_ci_hi_sf <- ifelse(fn_ci_sf$hi < 1 & kinetics$ci_upper_kdeg > 0, log(kinetics$ci_upper_kdeg), Inf)
+      prior_sd_sf <- calibrate_logk_prior_sd(
+        sample_vec = kinetics$sample,
+        est = kinetics$log_kdeg,
+        ci_lo = log_ci_lo_sf,
+        ci_hi = log_ci_hi_sf,
+        z = z95
+      )
+      se_sf <- posterior_se_from_ci(
+        est = kinetics$log_kdeg,
+        ci_lo = log_ci_lo_sf,
+        ci_hi = log_ci_hi_sf,
+        prior_sd = prior_sd_sf,
+        se_min_lo = 0.5 / sqrt(pmax(kinetics$n, 1)),
+        se_min_hi = ifelse(fn_ci_sf$hi < 1,
+                           0.5 / sqrt(pmax(kinetics$n * (1 - fn_ci_sf$hi), 1e-30)),
+                           Inf),
+        z = z95
+      )
     }
     kinetics[, se_log_kdeg := se_sf]
 
@@ -1140,15 +1161,23 @@ tilac_ratio_estimation <- function(obj,
     kinetics[, ci_lower_TILAC_ratio := ifelse(!is.finite(hw_tot_lo), 0, exp(log_TILAC_ratio - hw_tot_lo))]
     kinetics[, ci_upper_TILAC_ratio := ifelse(!is.finite(hw_tot_hi), Inf, exp(log_TILAC_ratio + hw_tot_hi))]
 
-    se_tilac_fl <- kinetics$se_log_TILAC_ratio
-    fin_both <- is.finite(hw_tot_lo) & is.finite(hw_tot_hi)
-    if(any(fin_both)){
-      se_tilac_fl[fin_both] <- pmax(se_tilac_fl[fin_both],
-                                    (hw_tot_lo[fin_both] + hw_tot_hi[fin_both]) / (2 * z95_tilac))
-    }
-    if(any(!fin_both)){
-      se_tilac_fl[!fin_both] <- pmax(se_tilac_fl[!fin_both], 0.8)
-    }
+    log_ci_lo_t <- ifelse(is.finite(hw_tot_lo), kinetics$log_TILAC_ratio - hw_tot_lo, -Inf)
+    log_ci_hi_t <- ifelse(is.finite(hw_tot_hi), kinetics$log_TILAC_ratio + hw_tot_hi, Inf)
+    prior_sd_tilac <- calibrate_logk_prior_sd(
+      sample_vec = kinetics$sample,
+      est = kinetics$log_TILAC_ratio,
+      ci_lo = log_ci_lo_t,
+      ci_hi = log_ci_hi_t,
+      z = z95_tilac
+    )
+    se_tilac_fl <- posterior_se_from_ci(
+      est = kinetics$log_TILAC_ratio,
+      ci_lo = log_ci_lo_t,
+      ci_hi = log_ci_hi_t,
+      prior_sd = prior_sd_tilac,
+      se_min = 0.5 / sqrt(pmax(kinetics$n, 1)),
+      z = z95_tilac
+    )
     kinetics[, se_log_TILAC_ratio := se_tilac_fl]
   }else{
     kinetics[, ci_lower_TILAC_ratio := exp(log_TILAC_ratio - z95_tilac * se_log_TILAC_ratio)]

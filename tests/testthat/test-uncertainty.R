@@ -393,3 +393,130 @@ test_that("AverageAndRegularize enforces measurement SE floor across all LM path
   expect_true(all(avg_batch$sd_conditionKO_posterior + 1e-12 >= exp(avg_batch$meas_logse_conditionKO)))
   expect_true(all(avg_batch$sd_batchB2_posterior + 1e-12 >= exp(avg_batch$meas_logse_batchB2)))
 })
+
+
+test_that("Posterior precision SE reconciliation eliminates 0.8 boundary shelf, near-boundary spikes, and scales smoothly with depth", {
+  set.seed(1505)
+  tl <- 2.0
+  pnew <- 0.06
+  pold <- 0.002
+
+  # Realistic background transcriptome (~400 interior genes with SD(log_kdeg) ~ 1.1)
+  G_bg <- 400
+  true_lk <- rnorm(G_bg, mean = -1.2, sd = 1.1)
+  true_fn <- 1 - exp(-exp(true_lk) * tl)
+  cB_bg <- dplyr::bind_rows(lapply(seq_len(G_bg), function(g) {
+    nr <- 200L
+    is_new <- rbinom(nr, 1, true_fn[g])
+    nT <- rep(28L, nr)
+    tc <- rbinom(nr, nT, ifelse(is_new == 1L, pnew, pold))
+    dplyr::tibble(sample = "s1", feature = paste0("BG_", g), TC = tc, nT = nT, n = 1L)
+  }))
+
+  # 1. Boundary genes at increasing read depths (TC = 0 and TC = nT)
+  depths <- c(15L, 60L, 250L, 1000L)
+  cB_depths <- dplyr::bind_rows(
+    lapply(seq_along(depths), function(i) {
+      dplyr::tibble(
+        sample = "s1",
+        feature = c(paste0("zero_d", i), paste0("one_d", i)),
+        TC = c(0L, 28L),
+        nT = c(28L, 28L),
+        n = c(depths[i], depths[i])
+      )
+    })
+  )
+
+  # 2. Single-read sweeps right across the 95% Wilks boundary cutoffs (crit = 1.920729):
+  # Lower sweep: 3 reads of (TC = 2, nT = 28) + M reads of (TC = 0, nT = 28) (crosses around M = 163)
+  # Upper sweep: 25 reads of (TC = 0, nT = 28) + M reads of (TC = 4, nT = 28) (crosses around M = 64)
+  M_grid_lo <- 150:175
+  cB_sweep_lo <- dplyr::bind_rows(lapply(seq_along(M_grid_lo), function(i) {
+    dplyr::tibble(
+      sample = "s1",
+      feature = paste0("sweep_lo_", sprintf("%03d", i)),
+      TC = c(2L, 0L),
+      nT = c(28L, 28L),
+      n = c(3L, M_grid_lo[i])
+    )
+  }))
+  M_grid_hi <- 52:77
+  cB_sweep_hi <- dplyr::bind_rows(lapply(seq_along(M_grid_hi), function(i) {
+    dplyr::tibble(
+      sample = "s1",
+      feature = paste0("sweep_hi_", sprintf("%03d", i)),
+      TC = c(0L, 4L),
+      nT = c(28L, 28L),
+      n = c(25L, M_grid_hi[i])
+    )
+  }))
+
+  meta <- dplyr::tibble(sample = "s1", tl = tl, condition = "A")
+  ez <- suppressMessages(
+    EZbakRData(dplyr::bind_rows(cB_bg, cB_depths, cB_sweep_lo, cB_sweep_hi), meta) %>%
+      EstimateFractions(
+        pold_est = pold,
+        pnew_prior_mean = stats::qlogis(pnew),
+        pnew_prior_sd = 1e-4,
+        EBayes = TRUE
+      ) %>%
+      EstimateKinetics()
+  )
+
+  fn <- EZget(ez, type = "fractions")
+  kin <- EZget(ez, type = "kinetics")
+
+  # Check 1: Boundary CIs remain exact (0 and Inf), no flat 0.8 shelf, and SE strictly decreases with depth
+  kin_z <- kin[match(paste0("zero_d", seq_along(depths)), kin$feature), ]
+  kin_o <- kin[match(paste0("one_d", seq_along(depths)), kin$feature), ]
+
+  expect_true(all(kin_z$ci_lower_kdeg == 0))
+  expect_true(all(is.infinite(kin_o$ci_upper_kdeg)))
+  expect_false(any(abs(kin_z$se_log_kdeg - 0.8) < 1e-12))
+  expect_false(any(abs(kin_o$se_log_kdeg - 0.8) < 1e-12))
+  expect_true(all(diff(kin_z$se_log_kdeg) < 0))
+  expect_true(all(diff(kin_o$se_log_kdeg) < 0))
+  expect_true(all(kin_z$se_log_kdeg >= 0.5))
+  expect_true(all(kin_o$se_log_kdeg >= 0.5))
+
+  # Check 2: Zero extreme near-boundary spikes across entire dataset
+  expect_true(all(is.finite(fn$se_logit_fraction_highTC)))
+  expect_true(all(is.finite(kin$se_log_kdeg)))
+  expect_lte(max(fn$se_logit_fraction_highTC), 2.5)
+  expect_lte(max(kin$se_log_kdeg), 2.0)
+
+  # Check 3: Exact mathematical continuity of posterior_se_from_ci across +/-Inf
+  ci_lo_cont <- c(seq(-3.5, -28, length.out = 1000), -Inf)
+  se_lo_cont <- EZbakR:::posterior_se_from_ci(
+    est = rep(-3.0, length(ci_lo_cont)),
+    ci_lo = ci_lo_cont,
+    ci_hi = rep(-2.2, length(ci_lo_cont)),
+    prior_sd = 1.2
+  )
+  expect_lt(max(abs(diff(se_lo_cont))), 0.01)
+
+  ci_hi_cont <- c(seq(1.5, 28, length.out = 1000), Inf)
+  se_hi_cont <- EZbakR:::posterior_se_from_ci(
+    est = rep(1.0, length(ci_hi_cont)),
+    ci_lo = rep(0.4, length(ci_hi_cont)),
+    ci_hi = ci_hi_cont,
+    prior_sd = 1.2
+  )
+  expect_lt(max(abs(diff(se_hi_cont))), 0.01)
+
+  # Check 4: End-to-end single-read sweeps across Wilks cutoffs glide monotonically
+  # into the boundary without spikes or overshoot-and-snap reversals
+  sw_lo_kin <- kin[grep("^sweep_lo_", kin$feature), ]
+  sw_lo_kin <- sw_lo_kin[order(sw_lo_kin$feature), ]
+  expect_true(any(sw_lo_kin$ci_lower_kdeg > 0) && any(sw_lo_kin$ci_lower_kdeg == 0))
+  idx_cross_lo <- which(sw_lo_kin$ci_lower_kdeg == 0)[1]
+  expect_true(all(diff(sw_lo_kin$se_log_kdeg[seq_len(idx_cross_lo)]) > 0))
+  expect_lt(max(abs(diff(sw_lo_kin$se_log_kdeg))), 0.06)
+
+  sw_hi_kin <- kin[grep("^sweep_hi_", kin$feature), ]
+  sw_hi_kin <- sw_hi_kin[order(sw_hi_kin$feature), ]
+  expect_true(any(is.finite(sw_hi_kin$ci_upper_kdeg)) && any(is.infinite(sw_hi_kin$ci_upper_kdeg)))
+  idx_cross_hi <- which(is.infinite(sw_hi_kin$ci_upper_kdeg))[1]
+  expect_true(all(diff(sw_hi_kin$se_log_kdeg[seq_len(idx_cross_hi)]) > 0))
+  expect_lt(max(abs(diff(sw_hi_kin$se_log_kdeg))), 0.20)
+})

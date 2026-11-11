@@ -3391,7 +3391,7 @@ fit_tcmm_known_vec <- function(grp_id, grp_end, muts, nucs, n, pnew, pold,
     }
     g <- sub_N * theta - sum_nw + g_pr
     h <- sub_N * theta * (1 - theta) - sum_nww + h_pr
-    list(g = g, h = h, h_data = sub_N * theta * (1 - theta) - sum_nww)
+    list(g = g, h = h)
   }
 
   lo <- rep(lower, ngroups)
@@ -3408,11 +3408,8 @@ fit_tcmm_known_vec <- function(grp_id, grp_end, muts, nucs, n, pnew, pold,
   eta[at_lo] <- lower
   eta[at_hi] <- upper
   h_final <- numeric(ngroups)
-  h_data_final <- numeric(ngroups)
   h_final[at_lo] <- gh_lo$h[at_lo]
   h_final[at_hi] <- gh_hi$h[at_hi]
-  h_data_final[at_lo] <- gh_lo$h_data[at_lo]
-  h_data_final[at_hi] <- gh_hi$h_data[at_hi]
 
   interior <- which(!(at_lo | at_hi))
   if(length(interior) > 0L){
@@ -3481,43 +3478,31 @@ fit_tcmm_known_vec <- function(grp_id, grp_end, muts, nucs, n, pnew, pold,
       }
     }
 
-    act_map <- integer(ngroups)
-    act_map[interior] <- seq_along(interior)
-    rk <- act_map[grp_id] > 0L
-    int_sizes <- diff(c(0L, grp_end))[interior]
-    gh_fin <- eval_gh(eta[interior], act_map[grp_id[rk]], cumsum(int_sizes),
-                      n[rk], delta[rk], N_grp[interior],
-                      pm_all[interior], is2_all[interior])
-    h_final[interior] <- gh_fin$h
-    h_data_final[interior] <- gh_fin$h_data
+    if(!EBayes){
+      act_map <- integer(ngroups)
+      act_map[interior] <- seq_along(interior)
+      rk <- act_map[grp_id] > 0L
+      int_sizes <- diff(c(0L, grp_end))[interior]
+      gh_fin <- eval_gh(eta[interior], act_map[grp_id[rk]], cumsum(int_sizes),
+                        n[rk], delta[rk], N_grp[interior],
+                        pm_all[interior], is2_all[interior])
+      h_final[interior] <- gh_fin$h
+    }
   }
 
-  se_out <- sqrt(1 / pmax(h_final, 1e-12))
   if(EBayes){
-    z95 <- stats::qnorm(0.975)
-    lo_fin <- is.finite(prof$ci_lower_logit)
-    hi_fin <- is.finite(prof$ci_upper_logit)
-    both_fin <- lo_fin & hi_fin
-    if(any(both_fin)){
-      se_prof <- (prof$ci_upper_logit[both_fin] - prof$ci_lower_logit[both_fin]) / (2 * z95)
-      se_out[both_fin] <- pmax(se_out[both_fin], se_prof)
-    }
-    lo_inf <- !lo_fin & hi_fin
-    if(any(lo_inf)){
-      hw_hi <- pmax(prof$ci_upper_logit[lo_inf] - eta[lo_inf], 0) / z95
-      se_data <- 1 / sqrt(pmax(h_data_final[lo_inf], 0.25))
-      se_out[lo_inf] <- pmax(se_out[lo_inf], hw_hi, se_data)
-    }
-    hi_inf <- lo_fin & !hi_fin
-    if(any(hi_inf)){
-      hw_lo <- pmax(eta[hi_inf] - prof$ci_lower_logit[hi_inf], 0) / z95
-      se_data <- 1 / sqrt(pmax(h_data_final[hi_inf], 0.25))
-      se_out[hi_inf] <- pmax(se_out[hi_inf], hw_lo, se_data)
-    }
-    neither_fin <- !lo_fin & !hi_fin
-    if(any(neither_fin)){
-      se_out[neither_fin] <- pmax(se_out[neither_fin], 2.5)
-    }
+    se_out <- posterior_se_from_ci(
+      est = eta,
+      ci_lo = prof$ci_lower_logit,
+      ci_hi = prof$ci_upper_logit,
+      prior_sd = eb$prior_sd,
+      se_min = 1 / sqrt(pmax(N_grp, 1))
+    )
+  }else{
+    theta_fin <- stats::plogis(eta)
+    w_fin <- stats::plogis(eta[grp_id] + delta)
+    h_fisher_final <- grp_sum_contig(n * (w_fin - theta_fin[grp_id])^2, grp_end)
+    se_out <- sqrt(1 / pmax(h_final, h_fisher_final + is2_all, 1e-12))
   }
 
   list(
@@ -4015,17 +4000,13 @@ solve_tcmm_hier_dt <- function(dt, features_to_analyze, pop_col, base_col,
       }
 
       if(EBayes){
-        z95 <- stats::qnorm(0.975)
-        lo_f <- is.finite(ci_lo_logit_h)
-        hi_f <- is.finite(ci_hi_logit_h)
-        bf <- lo_f & hi_f
-        if(any(bf)) p1_u[bf] <- pmax(p1_u[bf], (ci_hi_logit_h[bf] - ci_lo_logit_h[bf]) / (2 * z95))
-        li <- !lo_f & hi_f
-        if(any(li)) p1_u[li] <- pmax(p1_u[li], pmax(ci_hi_logit_h[li] - e1_all[li], 0) / z95, 2.0)
-        hi_i <- lo_f & !hi_f
-        if(any(hi_i)) p1_u[hi_i] <- pmax(p1_u[hi_i], pmax(e1_all[hi_i] - ci_lo_logit_h[hi_i], 0) / z95, 2.0)
-        nf <- !lo_f & !hi_f
-        if(any(nf)) p1_u[nf] <- pmax(p1_u[nf], 2.5)
+        p1_u <- posterior_se_from_ci(
+          est = e1_all,
+          ci_lo = ci_lo_logit_h,
+          ci_hi = ci_hi_logit_h,
+          prior_sd = s1_all,
+          se_min = 1 / sqrt(pmax(N_grp, 1))
+        )
       }
     }
 
