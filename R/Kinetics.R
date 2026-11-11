@@ -310,6 +310,8 @@ Standard_kinetic_estimation <- function(obj,
   rm(..cols_to_keep)
   rm(..kinetics_cols_to_keep)
 
+  ci_lower_kdeg <- ci_upper_kdeg <- thalf <- ci_lower_thalf <- ci_upper_thalf <- NULL
+  ci_lower_ksyn <- ci_upper_ksyn <- fn_lo_tmp <- fn_hi_tmp <- NULL
 
   `.` <- list
 
@@ -342,7 +344,31 @@ Standard_kinetic_estimation <- function(obj,
 
   fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
 
+  logit_of_interest <- paste0("logit_", fraction_of_interest)
   se_of_interest <- paste0("se_logit_", fraction_of_interest)
+  ci_lo_col <- paste0("ci_lower_", fraction_of_interest)
+  ci_hi_col <- paste0("ci_upper_", fraction_of_interest)
+  has_prof_ci <- all(c(ci_lo_col, ci_hi_col) %in% fraction_cols)
+  z95 <- stats::qnorm(0.975)
+
+  extract_fn_ci <- function(df_in){
+    if(has_prof_ci){
+      lo <- pmin(pmax(as.numeric(df_in[[ci_lo_col]]), 0), 1)
+      hi <- pmin(pmax(as.numeric(df_in[[ci_hi_col]]), 0), 1)
+    }else{
+      fn_v <- as.numeric(df_in[[fraction_of_interest]])
+      lfn <- if(logit_of_interest %in% colnames(df_in)){
+        as.numeric(df_in[[logit_of_interest]])
+      }else{
+        logit(fn_v)
+      }
+      se_v <- as.numeric(df_in[[se_of_interest]])
+      se_v <- ifelse(is.finite(se_v), se_v, 1.5)
+      lo <- ifelse(!is.finite(lfn) & lfn < 0, 0, inv_logit(lfn - z95 * se_v))
+      hi <- ifelse(!is.finite(lfn) & lfn > 0, 1, inv_logit(lfn + z95 * se_v))
+    }
+    list(lo = lo, hi = hi)
+  }
 
   ### Normalize read counts
 
@@ -375,19 +401,28 @@ Standard_kinetic_estimation <- function(obj,
     kinetics <- kinetics[tl > 0]
 
 
-    kinetics[, kdeg := -log(1 - get(fraction_of_interest))/tl]
+    kinetics[, kdeg := -log1p(-get(fraction_of_interest))/tl]
     kinetics[, log_kdeg := log(kdeg)]
+
+    fn_ci <- extract_fn_ci(kinetics)
+    fn_lo_v <- fn_ci$lo
+    fn_hi_v <- fn_ci$hi
+    kinetics[, ci_lower_kdeg := ifelse(fn_lo_v <= 0, 0, -log1p(-pmin(fn_lo_v, 1)) / tl)]
+    kinetics[, ci_upper_kdeg := ifelse(fn_hi_v >= 1, Inf, -log1p(-pmax(fn_hi_v, 0)) / tl)]
+    kinetics[, thalf := log(2) / kdeg]
+    kinetics[, ci_lower_thalf := log(2) / ci_upper_kdeg]
+    kinetics[, ci_upper_thalf := ifelse(ci_lower_kdeg <= 0, Inf, log(2) / ci_lower_kdeg)]
 
 
     ### Estimate uncertainty in log(kdeg)
 
     lkdeg_uncert <- function(fn, se_lfn){
 
-      se_lfn <- ifelse(is.nan(se_lfn),
+      se_lfn <- ifelse(is.nan(se_lfn) | !is.finite(se_lfn),
              1.5,
              se_lfn)
 
-      deriv <- (1/log(1 - fn)) * (1 / (1 - fn)) * (fn*(1 - fn))
+      deriv <- (1/log1p(-fn)) * (1 / (1 - fn)) * (fn*(1 - fn))
 
       uncert <- abs(deriv)*se_lfn
 
@@ -395,8 +430,34 @@ Standard_kinetic_estimation <- function(obj,
 
     }
 
-    kinetics[, se_log_kdeg := lkdeg_uncert(fn = get(fraction_of_interest),
-                                           se_lfn = get(se_of_interest))]
+    se_delta <- lkdeg_uncert(fn = kinetics[[fraction_of_interest]],
+                             se_lfn = kinetics[[se_of_interest]])
+
+    if(has_prof_ci){
+      lo_pos <- fn_lo_v > 0
+      hi_lt1 <- fn_hi_v < 1
+      both_in <- lo_pos & hi_lt1
+      if(any(both_in)){
+        se_pr <- (log(kinetics$ci_upper_kdeg[both_in]) - log(kinetics$ci_lower_kdeg[both_in])) / (2 * z95)
+        se_delta[both_in] <- pmax(se_delta[both_in], se_pr)
+      }
+      lo_zero <- !lo_pos & hi_lt1
+      if(any(lo_zero)){
+        hw_u <- pmax(log(kinetics$ci_upper_kdeg[lo_zero]) - kinetics$log_kdeg[lo_zero], 0) / z95
+        se_delta[lo_zero] <- pmax(se_delta[lo_zero], hw_u, 0.8)
+      }
+      hi_one <- lo_pos & !hi_lt1
+      if(any(hi_one)){
+        hw_l <- pmax(kinetics$log_kdeg[hi_one] - log(kinetics$ci_lower_kdeg[hi_one]), 0) / z95
+        se_delta[hi_one] <- pmax(se_delta[hi_one], hw_l, 0.8)
+      }
+      both_bd <- !lo_pos & !hi_lt1
+      if(any(both_bd)){
+        se_delta[both_bd] <- pmax(se_delta[both_bd], 1.5)
+      }
+    }
+
+    kinetics[, se_log_kdeg := se_delta]
 
 
     ### Estimate ksyn
@@ -406,7 +467,9 @@ Standard_kinetic_estimation <- function(obj,
     setkeyv(kinetics, c("sample", features_to_analyze))
 
     cols_to_keep <- c("sample", features_to_analyze, "normalized_reads", "scale_factor")
-    kinetics_cols_to_keep <- c(cols_to_keep, "kdeg", "log_kdeg", "se_log_kdeg", "n")
+    kinetics_cols_to_keep <- c(cols_to_keep, "kdeg", "log_kdeg", "se_log_kdeg",
+                               "ci_lower_kdeg", "ci_upper_kdeg",
+                               "thalf", "ci_lower_thalf", "ci_upper_thalf", "n")
 
     kinetics <- kinetics[reads_norm[,..cols_to_keep], ..kinetics_cols_to_keep, nomatch = NULL]
 
@@ -416,6 +479,19 @@ Standard_kinetic_estimation <- function(obj,
 
     # Estimate uncertainty (assuming raw count n ~ Poisson(n))
     kinetics[, se_log_ksyn := sqrt( (1/n) + se_log_kdeg^2)]
+
+    # MOVER 95% CIs for ksyn = normalized_reads * kdeg
+    hw_r_std <- z95 / sqrt(pmax(kinetics$n, 1))
+    kinetics[, ci_lower_ksyn := ifelse(
+      ci_lower_kdeg <= 0,
+      0,
+      ksyn * exp(-sqrt(pmax(log_kdeg - log(ci_lower_kdeg), 0)^2 + hw_r_std^2))
+    )]
+    kinetics[, ci_upper_ksyn := ifelse(
+      !is.finite(ci_upper_kdeg),
+      Inf,
+      ksyn * exp(sqrt(pmax(log(ci_upper_kdeg) - log_kdeg, 0)^2 + hw_r_std^2))
+    )]
 
 
 
@@ -578,6 +654,23 @@ Standard_kinetic_estimation <- function(obj,
                                                kdeg = kdeg,
                                                reference_reps = reference_reps)]
 
+    fn_ci_nss <- extract_fn_ci(kinetics)
+    kinetics[, ci_lower_kdeg := ifelse(
+      fn_ci_nss$lo <= 0 & old_rpm >= reference_rpm,
+      0,
+      exp(log_kdeg - z95 * se_log_kdeg)
+    )]
+    kinetics[, ci_upper_kdeg := ifelse(
+      fn_ci_nss$hi >= 1,
+      Inf,
+      exp(log_kdeg + z95 * se_log_kdeg)
+    )]
+    kinetics[, thalf := log(2) / kdeg]
+    kinetics[, ci_lower_thalf := log(2) / ci_upper_kdeg]
+    kinetics[, ci_upper_thalf := ifelse(ci_lower_kdeg <= 0, Inf, log(2) / ci_lower_kdeg)]
+    kinetics[, ci_lower_ksyn := ifelse(fn_ci_nss$lo <= 0, 0, exp(log_ksyn - z95 * se_log_ksyn))]
+    kinetics[, ci_upper_ksyn := ifelse(fn_ci_nss$hi >= 1, Inf, exp(log_ksyn + z95 * se_log_ksyn))]
+
 
 
   }else if(strategy == "shortfeed"){
@@ -613,6 +706,13 @@ Standard_kinetic_estimation <- function(obj,
     kinetics[, kdeg := get(fraction_of_interest)/tl]
     kinetics[, log_kdeg := log(kdeg)]
 
+    fn_ci_sf <- extract_fn_ci(kinetics)
+    kinetics[, ci_lower_kdeg := fn_ci_sf$lo / tl]
+    kinetics[, ci_upper_kdeg := fn_ci_sf$hi / tl]
+    kinetics[, thalf := log(2) / kdeg]
+    kinetics[, ci_lower_thalf := ifelse(ci_upper_kdeg <= 0, Inf, log(2) / ci_upper_kdeg)]
+    kinetics[, ci_upper_thalf := ifelse(ci_lower_kdeg <= 0, Inf, log(2) / ci_lower_kdeg)]
+
 
 
 
@@ -630,8 +730,21 @@ Standard_kinetic_estimation <- function(obj,
     }
 
 
-    kinetics[, se_log_kdeg := lkdeg_uncert_sf(fn = get(fraction_of_interest),
-                                              se_lfn = get(se_of_interest))]
+    se_sf <- lkdeg_uncert_sf(fn = kinetics[[fraction_of_interest]],
+                             se_lfn = kinetics[[se_of_interest]])
+    if(has_prof_ci){
+      pos_sf <- fn_ci_sf$lo > 0 & fn_ci_sf$hi > fn_ci_sf$lo
+      if(any(pos_sf)){
+        se_sf[pos_sf] <- pmax(se_sf[pos_sf],
+                              (log(kinetics$ci_upper_kdeg[pos_sf]) - log(kinetics$ci_lower_kdeg[pos_sf])) / (2 * z95))
+      }
+      z_sf <- fn_ci_sf$lo <= 0 & fn_ci_sf$hi > 0
+      if(any(z_sf)){
+        hw_sf <- pmax(log(kinetics$ci_upper_kdeg[z_sf]) - kinetics$log_kdeg[z_sf], 0) / z95
+        se_sf[z_sf] <- pmax(se_sf[z_sf], hw_sf, 0.8)
+      }
+    }
+    kinetics[, se_log_kdeg := se_sf]
 
 
     ### Estimate ksyn
@@ -641,7 +754,9 @@ Standard_kinetic_estimation <- function(obj,
     setkeyv(kinetics, c("sample", features_to_analyze))
 
     cols_to_keep <- c("sample", features_to_analyze, "normalized_reads", "scale_factor")
-    kinetics_cols_to_keep <- c(cols_to_keep, "kdeg", "log_kdeg", "se_log_kdeg", "n")
+    kinetics_cols_to_keep <- c(cols_to_keep, "kdeg", "log_kdeg", "se_log_kdeg",
+                               "ci_lower_kdeg", "ci_upper_kdeg",
+                               "thalf", "ci_lower_thalf", "ci_upper_thalf", "n")
 
     kinetics <- kinetics[reads_norm[,..cols_to_keep], ..kinetics_cols_to_keep, nomatch = NULL]
 
@@ -651,6 +766,14 @@ Standard_kinetic_estimation <- function(obj,
 
     # Estimate uncertainty (assuming raw count n ~ Poisson(n))
     kinetics[, se_log_ksyn := sqrt( (1/n) + se_log_kdeg^2)]
+
+    hw_r_sf <- z95 / sqrt(pmax(kinetics$n, 1))
+    kinetics[, ci_lower_ksyn := ifelse(
+      ci_lower_kdeg <= 0,
+      0,
+      ksyn * exp(-sqrt(pmax(log_kdeg - log(ci_lower_kdeg), 0)^2 + hw_r_sf^2))
+    )]
+    kinetics[, ci_upper_ksyn := ksyn * exp(sqrt(pmax(log(ci_upper_kdeg) - log_kdeg, 0)^2 + hw_r_sf^2))]
 
 
   }else if(strategy == "pulse-chase"){
@@ -669,9 +792,12 @@ Standard_kinetic_estimation <- function(obj,
     }
 
     cols_to_keep <- c("sample", features_to_analyze, "normalized_reads", "scale_factor")
-    kinetics_cols_to_keep <- c(cols_to_keep, "kdeg", "log_kdeg", "se_log_kdeg", "n")
+    kinetics_cols_to_keep <- c(cols_to_keep, "kdeg", "log_kdeg", "se_log_kdeg",
+                               "fn_lo_tmp", "fn_hi_tmp", "n")
 
-
+    fn_ci_pc <- extract_fn_ci(kinetics)
+    kinetics$fn_lo_tmp <- fn_ci_pc$lo
+    kinetics$fn_hi_tmp <- fn_ci_pc$hi
 
     kinetics <- kinetics %>%
       dplyr::inner_join(
@@ -726,10 +852,19 @@ Standard_kinetic_estimation <- function(obj,
       ) %>%
       dplyr::select(!!c(kinetics_cols_to_keep, "tpulse", "tchase")) %>%
       dplyr::mutate(
+        ci_lower_kdeg = ifelse(fn_lo_tmp <= 0 & tchase == 0, 0, exp(log_kdeg - z95 * se_log_kdeg)),
+        ci_upper_kdeg = ifelse((fn_hi_tmp >= 1 & tchase == 0) | (fn_lo_tmp <= 0 & tchase > 0),
+                               Inf, exp(log_kdeg + z95 * se_log_kdeg)),
+        thalf = log(2) / kdeg,
+        ci_lower_thalf = log(2) / ci_upper_kdeg,
+        ci_upper_thalf = ifelse(ci_lower_kdeg <= 0, Inf, log(2) / ci_lower_kdeg),
         ksyn = normalized_reads * kdeg,
         log_ksyn = log(ksyn),
-        se_log_ksyn = sqrt( (1/n) + se_log_kdeg^2)
-      )
+        se_log_ksyn = sqrt( (1/n) + se_log_kdeg^2),
+        ci_lower_ksyn = ifelse(ci_lower_kdeg <= 0, 0, exp(log_ksyn - z95 * se_log_ksyn)),
+        ci_upper_ksyn = ifelse(!is.finite(ci_upper_kdeg), Inf, exp(log_ksyn + z95 * se_log_ksyn))
+      ) %>%
+      dplyr::select(-fn_lo_tmp, -fn_hi_tmp)
 
 
     if(exclude_pulse_estimates){
@@ -840,7 +975,11 @@ Standard_kinetic_estimation <- function(obj,
   }
 
   obj[["kinetics"]][[kinetics_vect]] <- dplyr::as_tibble(kinetics) %>%
-    dplyr::select(sample, !!features_to_analyze, kdeg, log_kdeg, se_log_kdeg, ksyn, log_ksyn, se_log_ksyn, normalized_reads, n)
+    dplyr::select(sample, !!features_to_analyze,
+                  kdeg, log_kdeg, se_log_kdeg, ci_lower_kdeg, ci_upper_kdeg,
+                  thalf, ci_lower_thalf, ci_upper_thalf,
+                  ksyn, log_ksyn, se_log_ksyn, ci_lower_ksyn, ci_upper_ksyn,
+                  normalized_reads, n)
 
   # Eventually want to add count matrix output
   obj[["readcounts"]][[readcount_vect]] <- dplyr::as_tibble(reads_norm) %>%
@@ -882,6 +1021,7 @@ tilac_ratio_estimation <- function(obj,
 
   ### Hack to deal with devtools::check() NOTEs
   ..cols_to_keep <- TILAC_ratio <- log_TILAC_ratio <- se_log_TILAC_ratio <- ..cols_keep <- NULL
+  ci_lower_TILAC_ratio <- ci_upper_TILAC_ratio <- NULL
   n <- normalized_reads <- scale_factor <- NULL
 
   rm(..cols_to_keep)
@@ -975,6 +1115,46 @@ tilac_ratio_estimation <- function(obj,
 
   kinetics[, se_log_TILAC_ratio := sqrt(var_log_ratio)]
 
+  z95_tilac <- stats::qnorm(0.975)
+  ci_lo_foi <- paste0("ci_lower_", foi_suffixes)
+  ci_hi_foi <- paste0("ci_upper_", foi_suffixes)
+  # Check both ci_lower_fraction_<pop> and ci_lower_<foi>
+  ci_lo_cols_t <- paste0("ci_lower_", fraction_of_interest)
+  ci_hi_cols_t <- paste0("ci_upper_", fraction_of_interest)
+  if(all(c(ci_lo_cols_t, ci_hi_cols_t) %in% colnames(kinetics))){
+    f1 <- as.numeric(kinetics[[fraction_of_interest[1L]]])
+    f2 <- as.numeric(kinetics[[fraction_of_interest[2L]]])
+    f1_lo <- as.numeric(kinetics[[ci_lo_cols_t[1L]]])
+    f1_hi <- as.numeric(kinetics[[ci_hi_cols_t[1L]]])
+    f2_lo <- as.numeric(kinetics[[ci_lo_cols_t[2L]]])
+    f2_hi <- as.numeric(kinetics[[ci_hi_cols_t[2L]]])
+
+    hw1_lo <- ifelse(f1_lo > 0, pmax(log(f1 / f1_lo), 0), Inf)
+    hw1_hi <- ifelse(f1_hi > 0, pmax(log(f1_hi / f1), 0), 0)
+    hw2_lo <- ifelse(f2_lo > 0, pmax(log(f2 / f2_lo), 0), Inf)
+    hw2_hi <- ifelse(f2_hi > 0, pmax(log(f2_hi / f2), 0), 0)
+
+    hw_tot_lo <- pmax(z95_tilac * kinetics$se_log_TILAC_ratio, sqrt(hw1_lo^2 + hw2_hi^2))
+    hw_tot_hi <- pmax(z95_tilac * kinetics$se_log_TILAC_ratio, sqrt(hw1_hi^2 + hw2_lo^2))
+
+    kinetics[, ci_lower_TILAC_ratio := ifelse(!is.finite(hw_tot_lo), 0, exp(log_TILAC_ratio - hw_tot_lo))]
+    kinetics[, ci_upper_TILAC_ratio := ifelse(!is.finite(hw_tot_hi), Inf, exp(log_TILAC_ratio + hw_tot_hi))]
+
+    se_tilac_fl <- kinetics$se_log_TILAC_ratio
+    fin_both <- is.finite(hw_tot_lo) & is.finite(hw_tot_hi)
+    if(any(fin_both)){
+      se_tilac_fl[fin_both] <- pmax(se_tilac_fl[fin_both],
+                                    (hw_tot_lo[fin_both] + hw_tot_hi[fin_both]) / (2 * z95_tilac))
+    }
+    if(any(!fin_both)){
+      se_tilac_fl[!fin_both] <- pmax(se_tilac_fl[!fin_both], 0.8)
+    }
+    kinetics[, se_log_TILAC_ratio := se_tilac_fl]
+  }else{
+    kinetics[, ci_lower_TILAC_ratio := exp(log_TILAC_ratio - z95_tilac * se_log_TILAC_ratio)]
+    kinetics[, ci_upper_TILAC_ratio := exp(log_TILAC_ratio + z95_tilac * se_log_TILAC_ratio)]
+  }
+
 
   ### Get normalized read counts
 
@@ -1056,7 +1236,8 @@ tilac_ratio_estimation <- function(obj,
 
   obj[['kinetics']][[kinetics_vect]] <- dplyr::as_tibble(kinetics) %>%
     dplyr::select(sample, !!features_to_analyze, TILAC_ratio, log_TILAC_ratio,
-                  se_log_TILAC_ratio, normalized_reads, n)
+                  se_log_TILAC_ratio, ci_lower_TILAC_ratio, ci_upper_TILAC_ratio,
+                  normalized_reads, n)
 
   obj[['readcounts']][[readcount_vect]] <- dplyr::as_tibble(reads_norm) %>%
     dplyr::select(sample, !!features_to_analyze, n, normalized_reads, dplyr::any_of("geom_mean"), scale_factor)

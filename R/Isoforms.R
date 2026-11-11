@@ -611,6 +611,10 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
   fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
   logit_fraction_of_interest <- paste0("logit_", fraction_of_interest)
   logit_fraction_se <- paste0("se_logit_", fraction_of_interest)
+  ci_lower_col <- paste0("ci_lower_", fraction_of_interest)
+  ci_upper_col <- paste0("ci_upper_", fraction_of_interest)
+  has_ci_cols <- all(c(ci_lower_col, ci_upper_col) %in% fraction_cols)
+  z95 <- stats::qnorm(0.975)
 
   if(length(fraction_of_interest) > 1){
     stop("There is more than one non-redundant fraction estimate. Isoform
@@ -686,15 +690,33 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
     dplyr::count() %>%
     dplyr::filter(n == 1)
 
-  Fns_single <- Fns %>%
-    dplyr::inner_join(single_isoforms %>% dplyr::select(-n),
-                      by = gene_colnames) %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", gene_colnames, "transcript_id")))) %>%
-    dplyr::summarise(!!fraction_of_interest := sum(n*(!!sym(fraction_of_interest)))/sum(n),
-                     effective_length = mean(effective_length),
-                     expected_count = mean(expected_count),
-                     !!logit_fraction_se := mean(!!sym(logit_fraction_se))) %>%
-    dplyr::mutate(!!logit_fraction_of_interest := logit(!!sym(fraction_of_interest)))
+  if(has_ci_cols){
+    Fns_single <- Fns %>%
+      dplyr::inner_join(single_isoforms %>% dplyr::select(-n),
+                        by = gene_colnames) %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", gene_colnames, "transcript_id")))) %>%
+      dplyr::summarise(!!fraction_of_interest := sum(n*(!!sym(fraction_of_interest)))/sum(n),
+                       !!ci_lower_col := sum(n*(!!sym(ci_lower_col)))/sum(n),
+                       !!ci_upper_col := sum(n*(!!sym(ci_upper_col)))/sum(n),
+                       effective_length = mean(effective_length),
+                       expected_count = mean(expected_count),
+                       !!logit_fraction_se := mean(!!sym(logit_fraction_se))) %>%
+      dplyr::mutate(!!logit_fraction_of_interest := logit(!!sym(fraction_of_interest)))
+  }else{
+    Fns_single <- Fns %>%
+      dplyr::inner_join(single_isoforms %>% dplyr::select(-n),
+                        by = gene_colnames) %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", gene_colnames, "transcript_id")))) %>%
+      dplyr::summarise(!!fraction_of_interest := sum(n*(!!sym(fraction_of_interest)))/sum(n),
+                       effective_length = mean(effective_length),
+                       expected_count = mean(expected_count),
+                       !!logit_fraction_se := mean(!!sym(logit_fraction_se))) %>%
+      dplyr::mutate(!!logit_fraction_of_interest := logit(!!sym(fraction_of_interest)),
+                    !!ci_lower_col := ifelse(!!sym(logit_fraction_of_interest) <= -8.99, 0,
+                                             inv_logit(!!sym(logit_fraction_of_interest) - z95 * !!sym(logit_fraction_se))),
+                    !!ci_upper_col := ifelse(!!sym(logit_fraction_of_interest) >= 8.99, 1,
+                                             inv_logit(!!sym(logit_fraction_of_interest) + z95 * !!sym(logit_fraction_se))))
+  }
 
 
   Fns_multi <- Fns %>%
@@ -718,7 +740,9 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
     ) %>%
     dplyr::mutate(!!logit_fraction_of_interest := logit_fn,
                   !!logit_fraction_se := se_logit_fn,
-                  !!fraction_of_interest := inv_logit(logit_fn)) %>%
+                  !!fraction_of_interest := inv_logit(logit_fn),
+                  !!ci_lower_col := ifelse(logit_fn <= -8.99, 0, inv_logit(logit_fn - z95 * se_logit_fn)),
+                  !!ci_upper_col := ifelse(logit_fn >= 8.99, 1, inv_logit(logit_fn + z95 * se_logit_fn))) %>%
     dplyr::select(-logit_fn, -se_logit_fn) %>%
     dplyr::inner_join(quant,
                       by = c("transcript_id")) %>%
@@ -730,13 +754,15 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
   output <- Fns_single %>%
     dplyr::ungroup() %>%
     dplyr::select(sample, !!gene_colnames, transcript_id, !!fraction_of_interest, !!logit_fraction_of_interest,
-                  !!logit_fraction_se, expected_count, effective_length) %>%
+                  !!logit_fraction_se, !!ci_lower_col, !!ci_upper_col, expected_count, effective_length) %>%
     dplyr::bind_rows(Fns_multi %>% dplyr::ungroup()) %>%
     dplyr::select(sample, !!gene_colnames, transcript_id, everything()) %>%
     dplyr::mutate(n = expected_count,
                   RPK = expected_count/(effective_length/1000),
                   !!logit_fraction_of_interest := pmin(pmax(!!sym(logit_fraction_of_interest), -9), 9),
-                  !!fraction_of_interest := inv_logit(!!sym(logit_fraction_of_interest))) %>%
+                  !!fraction_of_interest := inv_logit(!!sym(logit_fraction_of_interest)),
+                  !!ci_lower_col := pmin(!!sym(ci_lower_col), !!sym(fraction_of_interest)),
+                  !!ci_upper_col := pmax(!!sym(ci_upper_col), !!sym(fraction_of_interest))) %>%
     dplyr::select(-expected_count, -effective_length)
 
   return(output)
@@ -1063,6 +1089,10 @@ General_Fraction_Disambiguation <- function(obj, sample_name,
   fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
   logit_fraction_of_interest <- paste0("logit_", fraction_of_interest)
   logit_fraction_se <- paste0("se_logit_", fraction_of_interest)
+  ci_lower_col <- paste0("ci_lower_", fraction_of_interest)
+  ci_upper_col <- paste0("ci_upper_", fraction_of_interest)
+  has_ci_cols <- all(c(ci_lower_col, ci_upper_col) %in% fraction_cols)
+  z95 <- stats::qnorm(0.975)
 
   if(length(fraction_of_interest) > 1){
     stop("There is more than one non-redundant fraction estimate. Isoform
@@ -1174,17 +1204,37 @@ General_Fraction_Disambiguation <- function(obj, sample_name,
     dplyr::count() %>%
     dplyr::filter(n == 1)
 
-  Fns_single <- Fns %>%
-    dplyr::inner_join(single_isoforms %>% dplyr::select(-n),
-                      by = grouping_cols) %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", grouping_cols, quant_feature)))) %>%
-    dplyr::summarise(!!fraction_of_interest := sum(n*(!!sym(fraction_of_interest)))/sum(n),
-                     effective_length = mean(effective_length),
-                     expected_count = mean(expected_count),
-                     !!logit_fraction_se := mean(!!sym(logit_fraction_se))) %>%
-    dplyr::mutate(!!logit_fraction_of_interest := logit(!!sym(fraction_of_interest))) %>%
-    dplyr::ungroup() %>%
-    dplyr::select(-feature_group_id)
+  if(has_ci_cols){
+    Fns_single <- Fns %>%
+      dplyr::inner_join(single_isoforms %>% dplyr::select(-n),
+                        by = grouping_cols) %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", grouping_cols, quant_feature)))) %>%
+      dplyr::summarise(!!fraction_of_interest := sum(n*(!!sym(fraction_of_interest)))/sum(n),
+                       !!ci_lower_col := sum(n*(!!sym(ci_lower_col)))/sum(n),
+                       !!ci_upper_col := sum(n*(!!sym(ci_upper_col)))/sum(n),
+                       effective_length = mean(effective_length),
+                       expected_count = mean(expected_count),
+                       !!logit_fraction_se := mean(!!sym(logit_fraction_se))) %>%
+      dplyr::mutate(!!logit_fraction_of_interest := logit(!!sym(fraction_of_interest))) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(-feature_group_id)
+  }else{
+    Fns_single <- Fns %>%
+      dplyr::inner_join(single_isoforms %>% dplyr::select(-n),
+                        by = grouping_cols) %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(c("sample", grouping_cols, quant_feature)))) %>%
+      dplyr::summarise(!!fraction_of_interest := sum(n*(!!sym(fraction_of_interest)))/sum(n),
+                       effective_length = mean(effective_length),
+                       expected_count = mean(expected_count),
+                       !!logit_fraction_se := mean(!!sym(logit_fraction_se))) %>%
+      dplyr::mutate(!!logit_fraction_of_interest := logit(!!sym(fraction_of_interest)),
+                    !!ci_lower_col := ifelse(!!sym(logit_fraction_of_interest) <= -8.99, 0,
+                                             inv_logit(!!sym(logit_fraction_of_interest) - z95 * !!sym(logit_fraction_se))),
+                    !!ci_upper_col := ifelse(!!sym(logit_fraction_of_interest) >= 8.99, 1,
+                                             inv_logit(!!sym(logit_fraction_of_interest) + z95 * !!sym(logit_fraction_se)))) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(-feature_group_id)
+  }
 
 
   Fns_multi <- Fns %>%
@@ -1208,7 +1258,9 @@ General_Fraction_Disambiguation <- function(obj, sample_name,
     ) %>%
     dplyr::mutate(!!logit_fraction_of_interest := logit_fn,
                   !!logit_fraction_se := se_logit_fn,
-                  !!fraction_of_interest := inv_logit(logit_fn)) %>%
+                  !!fraction_of_interest := inv_logit(logit_fn),
+                  !!ci_lower_col := ifelse(logit_fn <= -8.99, 0, inv_logit(logit_fn - z95 * se_logit_fn)),
+                  !!ci_upper_col := ifelse(logit_fn >= 8.99, 1, inv_logit(logit_fn + z95 * se_logit_fn))) %>%
     dplyr::select(-logit_fn, -se_logit_fn) %>%
     dplyr::inner_join(quant,
                       by = quant_feature) %>%
@@ -1221,13 +1273,15 @@ General_Fraction_Disambiguation <- function(obj, sample_name,
   output <- Fns_single %>%
     dplyr::ungroup() %>%
     dplyr::select(sample, !!other_features, !!quant_feature, !!fraction_of_interest, !!logit_fraction_of_interest,
-                  !!logit_fraction_se, expected_count, effective_length) %>%
+                  !!logit_fraction_se, !!ci_lower_col, !!ci_upper_col, expected_count, effective_length) %>%
     dplyr::bind_rows(Fns_multi %>% dplyr::ungroup()) %>%
     dplyr::select(sample, !!other_features, !!quant_feature, everything()) %>%
     dplyr::mutate(n = expected_count,
                   RPK = expected_count/(effective_length/1000),
                   !!logit_fraction_of_interest := pmin(pmax(!!sym(logit_fraction_of_interest), -9), 9),
-                  !!fraction_of_interest := inv_logit(!!sym(logit_fraction_of_interest))) %>%
+                  !!fraction_of_interest := inv_logit(!!sym(logit_fraction_of_interest)),
+                  !!ci_lower_col := pmin(!!sym(ci_lower_col), !!sym(fraction_of_interest)),
+                  !!ci_upper_col := pmax(!!sym(ci_upper_col), !!sym(fraction_of_interest))) %>%
     dplyr::select(-expected_count, -effective_length)
 
   return(output)

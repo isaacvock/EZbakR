@@ -102,7 +102,14 @@ validate_EZbakRKinetics <- function(obj, features){
   ### Are there uncertainties for each kinetic parameter?
 
   se_cols <- param_cols[grepl("^se_", param_cols)]
-  est_cols <- param_cols[!(param_cols %in% se_cols)]
+  ci_cols <- param_cols[grepl("^ci_lower_", param_cols) |
+                          grepl("^ci_upper_", param_cols)]
+  aux_cols <- character(0)
+  if("thalf" %in% param_cols && "log_kdeg" %in% param_cols &&
+     !("se_thalf" %in% se_cols)){
+    aux_cols <- c(aux_cols, "thalf")
+  }
+  est_cols <- param_cols[!(param_cols %in% c(se_cols, ci_cols, aux_cols))]
 
   expected_ests <- gsub("^se_", "", se_cols)
 

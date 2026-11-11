@@ -1037,7 +1037,7 @@ get_features <- function(obj, objtype = "cB"){
 
     fraction_cols <- colnames(fractions)
 
-    substrings <- fraction_cols[grepl("fraction_", fraction_cols)]
+    substrings <- fraction_cols[grepl("fraction_|^invsoftmax_|^se_invsoftmax_|^ci_lower_|^ci_upper_", fraction_cols)]
 
     features <- fraction_cols[!(fraction_cols %in% c(substrings, "n", "sample",
                                                      "expected_count", "effective_length",

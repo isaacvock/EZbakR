@@ -30,6 +30,7 @@ EstimateFractions(
   pold_est = NULL,
   pold_from_nolabel = FALSE,
   grouping_factors = NULL,
+  EBayes = TRUE,
   character_limit = 20,
   overwrite = TRUE
 )
@@ -58,6 +59,7 @@ EstimateFractions(
   pold_est = NULL,
   pold_from_nolabel = FALSE,
   grouping_factors = NULL,
+  EBayes = TRUE,
   character_limit = 20,
   overwrite = TRUE
 )
@@ -86,6 +88,7 @@ EstimateFractions(
   pold_est = NULL,
   pold_from_nolabel = FALSE,
   grouping_factors = NULL,
+  EBayes = TRUE,
   character_limit = 20,
   overwrite = TRUE
 )
@@ -230,6 +233,12 @@ to infer background mutation rates for certain sets of +label samples.}
 sample-detail columns in the metadf that should be used to group -label samples by. Average mutation
 rates in each group of -label samples will be used as the background mutation rate estimate in
 +label samples with the same values for the relevant metadf columns.}
+
+\item{EBayes}{Logical; if \code{TRUE} (the default), calibrate the sample-specific
+\code{logit(fraction)} prior location and scale empirically from the pure-data
+maximum likelihood estimates of interior features in each labeled sample
+(with heavy-tailed Pseudo-Huber regularization and profile-likelihood SE
+flooring). If \code{FALSE}, use the legacy fixed \code{Normal(0, 1.7)} prior.}
 
 \item{character_limit}{Maximum number of characters for naming out fractions output. EZbakR
 will try to name this as a "_" separated character vector of all of the features analyzed.

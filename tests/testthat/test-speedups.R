@@ -15,7 +15,7 @@ test_that("Vectorized standard EstimateFractions matches per-feature optim (Bino
   for (pois_mode in c(FALSE, TRUE)) {
     ez <- suppressMessages(
       EZbakRData(edge_cB, edge_meta) %>%
-        EstimateFractions(Poisson = pois_mode)
+        EstimateFractions(Poisson = pois_mode, EBayes = FALSE)
     )
     fns <- EZget(ez, type = "fractions")
 
@@ -89,7 +89,8 @@ test_that("Vectorized hierarchical EstimateFractions matches reference tcmml 2D 
       Poisson = FALSE,
       pnew_prior_mean_col = "pnew_prior",
       pnew_prior_sd_arg = "pnew_prior_sd",
-      fraction_prior_sd = 1.7
+      fraction_prior_sd = 1.7,
+      EBayes = FALSE
     )
 
     for (k in 1:10) {

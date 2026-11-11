@@ -182,7 +182,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
   ### Hack to deal with devtools::check() NOTEs
   n <- log_normalized_reads <- logse <- logse_from_uncert <- replicates <- NULL
   coverage <- se_mean <- se_logse <- coverages <- parameters <- normalized_reads <- NULL
-  logsd_from_uncert <- logsd <- nsamps <- NULL
+  logsd_from_uncert <- logsd <- nsamps <- v_meas <- meas_logse <- NULL
 
   `.` <- list
 
@@ -498,6 +498,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
         mean = mean(!!dplyr::sym(parameter)),
         logsd = log(ifelse(dplyr::n() > 1, stats::sd(!!dplyr::sym(parameter)), 0)),
         logsd_from_uncert = log(mean(!!dplyr::sym(parameter_se))),
+        v_meas = mean((!!dplyr::sym(parameter_se))^2) / dplyr::n(),
         coverage = mean(log_normalized_reads),
         replicates = dplyr::n(),
         .groups = "drop"
@@ -506,7 +507,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
         logsd = log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(replicates)),
         se_mean = exp(logsd)/sqrt(replicates),
         se_logse = 1/sqrt(2*pmax(replicates - 1, 0.5)),
-        logse = log(exp(logsd)/sqrt(replicates))
+        logse = log(exp(logsd)/sqrt(replicates)),
+        meas_logse = ifelse(v_meas > 0, 0.5 * log(v_meas), -Inf)
       ) %>%
       dplyr::select(
         dplyr::all_of(features_to_analyze),
@@ -514,7 +516,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
         !!paste0("logse_", sl_name) := logse,
         !!paste0("coverage_", sl_name) := coverage,
         !!paste0("se_mean_", sl_name) := se_mean,
-        !!paste0("se_logse_", sl_name) := se_logse
+        !!paste0("se_logse_", sl_name) := se_logse,
+        !!paste0("meas_logse_", sl_name) := meas_logse
       )
 
   }else{
@@ -535,16 +538,18 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
         dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
                          logsd = log(ifelse(dplyr::n() > 1, stats::sd(!!dplyr::sym(parameter)), 0)),
                          logsd_from_uncert = log(mean(!!dplyr::sym(parameter_se))),
+                         v_meas = mean((!!dplyr::sym(parameter_se))^2) / dplyr::n(),
                          coverage = mean(log_normalized_reads),
                          replicates = dplyr::n()) %>%
         # Helps to be conservative set a floor on what you could expect the sd to be
         # That's what the `0.025/sqrt(replicates)` does
-        dplyr::mutate(logsd = log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(replicates))) %>%
+        dplyr::mutate(logsd = log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(replicates)),
+                      meas_logse = ifelse(v_meas > 0, 0.5 * log(v_meas), -Inf)) %>%
         # dplyr::mutate(logsd = dplyr::case_when(
         #   logsd < logsd_from_uncert & logsd_from_uncert < median_uncert ~ log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(replicates)),
         #   .default = log(exp(logsd) + 0.025/sqrt(replicates))
         # )) %>%
-        dplyr::select(-logsd_from_uncert) %>%
+        dplyr::select(-logsd_from_uncert, -v_meas) %>%
         dplyr::mutate(se_mean = exp(logsd)/sqrt(replicates),
                       se_logse = 1/sqrt(2*pmax(replicates - 1, 0.5)),
                       logse = log(exp(logsd)/sqrt(replicates)))
@@ -556,7 +561,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
         model_fit <- model_fit %>%
           dplyr::select(-replicates, -logsd) %>%
           tidyr::pivot_wider(names_from = !!mean_vars[2],
-                             values_from = c(mean, logse, coverage, se_mean, se_logse),
+                             values_from = c(mean, logse, coverage, se_mean, se_logse, meas_logse),
                              names_sep = paste0("_", mean_vars[2]))
 
 
@@ -566,7 +571,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
         model_fit <- model_fit %>%
           dplyr::select(-logsd, -replicates) %>%
           tidyr::pivot_wider(names_from = !!mean_vars[2:length(mean_vars)],
-                             values_from = c(mean, logse, coverage, se_mean, se_logse),
+                             values_from = c(mean, logse, coverage, se_mean, se_logse, meas_logse),
                              names_glue = paste0("{.value}_", paste(paste0(mean_vars[2:length(mean_vars)],
                                                                            "{", mean_vars[2:length(mean_vars)],"}"),
                                                                     collapse = ":") ))
@@ -612,76 +617,53 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
   coverage_columns <- names(model_fit)[grepl("^coverage_", names(model_fit))]
   relevant_columns <- union(sd_columns, coverage_columns)
 
-  # Step 2: Iterate and perform regression
-  regression_results <- purrr::map(covariate_names, ~ {
+  # Step 2: Fit flexible natural cubic spline + known-measurement-SE variance trend
+  model_fit <- dplyr::ungroup(model_fit)
+  use_mean_in_trend <- (type == "fractions") || (parameter == "log_kdeg")
 
+  regression_results <- lapply(covariate_names, function(cov_nm){
+    y_col <- paste0("logse_", cov_nm)
+    cov_col_nm <- paste0("coverage_", cov_nm)
+    mean_col_nm <- paste0("mean_", cov_nm)
+    meas_col_nm <- paste0("meas_logse_", cov_nm)
 
-    # If modeling fraction news, then mean absolute value of fraction new should
-    # be included in the regression. In general, this is something I would like
-    # to include, but that is difficult to include if the fraction new information
-    # is not present in the object being modeled. I could go back and get it, but
-    # that is likely a large refactor
-    if(type == "fractions"){
-
-      if(regress_se_with_abs){
-
-        formula_str <- paste("`logse_", .x, "`", " ~ `coverage_", .x, "`",
-                             " + abs(`mean_", .x, "`)", sep = "")
-
-      }else{
-
-        formula_str <- paste("`logse_", .x, "`", " ~ `coverage_", .x, "`",
-                             " + `mean_", .x, "`", sep = "")
-
-      }
-
-
-    }else if(parameter == "log_kdeg"){
-
-      formula_str <- paste("`logse_", .x, "`", " ~ `coverage_", .x, "`",
-                           " + `mean_", .x, "`", sep = "")
-
+    y_all_c <- as.numeric(model_fit[[y_col]])
+    cov_all_c <- as.numeric(model_fit[[cov_col_nm]])
+    mean_all_c <- as.numeric(model_fit[[mean_col_nm]])
+    if(type == "fractions" && regress_se_with_abs){
+      mean_all_c <- abs(mean_all_c)
+    }
+    meas_all_c <- if(meas_col_nm %in% names(model_fit)){
+      as.numeric(model_fit[[meas_col_nm]])
     }else{
-
-      formula_str <- paste("`logse_", .x, "`", " ~ `coverage_", .x, "`", sep = "")
-
+      NULL
     }
 
-    formula <- stats::as.formula(formula_str)
+    valid_idx <- which(!is.na(model_fit[[mean_col_nm]]) &
+                         is.finite(y_all_c) &
+                         is.finite(cov_all_c) &
+                         (!use_mean_in_trend | is.finite(mean_all_c)))
 
-    # Perform linear regression
-    lm_result <- stats::lm(formula, data = model_fit %>%
-                             dplyr::filter(!is.na(!!dplyr::sym(paste0("mean_", covariate_names[1])))))
+    trend_fit <- fit_ezbakR_se_trend(
+      y_logse = y_all_c[valid_idx],
+      cov_x = cov_all_c[valid_idx],
+      mean_x = if(use_mean_in_trend) mean_all_c[valid_idx] else NULL
+    )
 
-    # Return result
-    return(list(covariate = .x, lm_result = lm_result))
+    imputed_vect <- rep(NA_real_, nrow(model_fit))
+    imputed_vect[valid_idx] <- trend_fit$fitted_values
+
+    list(
+      covariate = cov_nm,
+      fitted_col = imputed_vect,
+      fit_var = trend_fit$fit_var
+    )
   })
-
   names(regression_results) <- covariate_names
 
-
-  # Iterate over the regression results to add predicted values to the dataframe
-  for(result in regression_results) {
-    # Extract the covariate name
-    covariate <- result$covariate
-
-    # Generate the fitted values using the predict function
-    fitted_values <- stats::predict(result$lm_result)
-
-    # Create the new column name
-    new_column_name <- paste("logse_", covariate, "_fit", sep = "")
-
-
-    # Need to impute NAs for those for which the covariate is not estimated
-    # for a given feature
-    notna_index <- which(!is.na(model_fit %>% dplyr::ungroup() %>% dplyr::select(!!paste0("mean_", covariate)) %>%
-                              unlist() %>% unname()))
-
-    imputed_vect <- rep(NA, times = nrow(model_fit))
-    imputed_vect[notna_index] <- fitted_values
-
-    # Add the fitted values to the dataframe as a new column
-    model_fit[[new_column_name]] <- imputed_vect
+  for(result in regression_results){
+    new_column_name <- paste0("logse_", result$covariate, "_fit")
+    model_fit[[new_column_name]] <- result$fitted_col
   }
 
 
@@ -701,19 +683,39 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     sd_est_name <- paste0("logse_", c)
     sd_var_name <- paste0("se_logse_", c)
     fit_mean_name <- paste0("logse_", c, "_fit")
-    sd_mean_name <- paste0("se_mean_", c)
+    meas_col_name <- paste0("meas_logse_", c)
 
+    fit_mean_eff <- as.numeric(model_fit[[fit_mean_name]])
+    # Physical measurement floor on the prior target: since sd_est > meas_logse by construction,
+    # flooring fit_mean at meas_logse guarantees post_logse >= meas_logse everywhere while keeping
+    # Empirical Bayes shrinkage smooth and strictly monotone in sd_reg_factor.
+    if(meas_col_name %in% names(model_fit)){
+      meas_v <- as.numeric(model_fit[[meas_col_name]])
+      ok_floor <- is.finite(meas_v) & !is.na(fit_mean_eff)
+      if(any(ok_floor)){
+        fit_mean_eff[ok_floor] <- pmax(fit_mean_eff[ok_floor], meas_v[ok_floor])
+      }
+    }
 
-    # Regularize
-    model_fit <- model_fit %>%
-      dplyr::ungroup() %>%
-      dplyr::mutate(!!col_name := get_sd_posterior(n = sd_reg_factor,
-                                                   sd_est = !!dplyr::sym(sd_est_name),
-                                                   sd_var = (!!dplyr::sym(sd_var_name)) ^ 2,
-                                                   fit_var = stats::var(regression_results[[c]]$lm_result$residuals),
-                                                   fit_mean = !!dplyr::sym(fit_mean_name),
-                                                   conservative = conservative)) %>%
-      dplyr::mutate(!!natural_col_name := exp((!!dplyr::sym(col_name))))
+    post_logse <- get_sd_posterior(
+      n = sd_reg_factor,
+      sd_est = model_fit[[sd_est_name]],
+      sd_var = (model_fit[[sd_var_name]]) ^ 2,
+      fit_var = regression_results[[c]]$fit_var,
+      fit_mean = fit_mean_eff,
+      conservative = conservative
+    )
+
+    if(meas_col_name %in% names(model_fit)){
+      meas_v <- as.numeric(model_fit[[meas_col_name]])
+      ok_floor2 <- is.finite(meas_v) & !is.na(post_logse)
+      if(any(ok_floor2)){
+        post_logse[ok_floor2] <- pmax(post_logse[ok_floor2], meas_v[ok_floor2])
+      }
+    }
+
+    model_fit[[col_name]] <- post_logse
+    model_fit[[natural_col_name]] <- exp(post_logse)
 
     mean_est <- paste0("mean_", c)
     coverage_est <- paste0("coverage_", c)
@@ -1439,6 +1441,11 @@ fit_ezbakR_linear_model <- function(data, parameter, formula_mean, sd_groups,
   X_full <- stats::model.matrix(fit)
   X <- X_full[, non_aliased, drop = FALSE]
   xtx_inv <- solve(t(X) %*% X)
+  u_vec <- as.numeric(data[[uncertainties_col]])
+  M_sq_1 <- (X %*% xtx_inv)^2
+  vce_meas_1 <- as.vector(crossprod(M_sq_1, u_vec * u_vec))
+  meas_ses <- ifelse(vce_meas_1 > 0, 0.5 * log(vce_meas_1), -Inf)
+  names(meas_ses) <- paste0("meas_logse_", colnames(X))
 
   if(is.null(sd_groups)){
 
@@ -1472,7 +1479,7 @@ fit_ezbakR_linear_model <- function(data, parameter, formula_mean, sd_groups,
     names(ses) <- paste0("logse_", colnames(X))
 
     estimates <- c(means,
-                   ses, coverage, se_logses)
+                   ses, coverage, se_logses, meas_ses)
 
   }else{
 
@@ -1507,7 +1514,8 @@ fit_ezbakR_linear_model <- function(data, parameter, formula_mean, sd_groups,
 
     estimates <- c(means, ses,
                    coverages,
-                   se_logses)
+                   se_logses,
+                   meas_ses)
 
   }
 
@@ -1652,17 +1660,23 @@ fit_ezbakR_linear_model_batch <- function(kinetics,
       cov_mat <- t(crossprod(weights_abs, grp_cov) / denom_cov)
     }
 
+    vce_meas_diag <- crossprod(M_sq, U * U) # P x G_p
+    tv_meas <- t(vce_meas_diag)             # G_p x P
+    meas_ses_mat <- ifelse(tv_meas > 0, 0.5 * log(tv_meas), -Inf)
+
     colnames(means_mat) <- paste0("mean_", cnames)
     colnames(ses_mat) <- paste0("logse_", cnames)
     colnames(cov_mat) <- paste0("coverage_", cnames)
     colnames(se_logse_mat) <- paste0("se_logse_", cnames)
+    colnames(meas_ses_mat) <- paste0("meas_logse_", cnames)
 
     dplyr::bind_cols(
       feat_keys[feat_indices, , drop = FALSE],
       dplyr::as_tibble(means_mat),
       dplyr::as_tibble(ses_mat),
       dplyr::as_tibble(cov_mat),
-      dplyr::as_tibble(se_logse_mat)
+      dplyr::as_tibble(se_logse_mat),
+      dplyr::as_tibble(meas_ses_mat)
     )
   }
 
@@ -1744,5 +1758,116 @@ fit_ezbakR_linear_model_batch <- function(kinetics,
   inv_perm <- integer(G)
   inv_perm[combined_order] <- seq_len(G)
   combined[inv_perm, , drop = FALSE]
+}
+
+
+# Pure base-R natural cubic regression spline basis (Hastie et al. ESL Eq. 5.4-5.5; zero deps)
+ns_basis_ez <- function(x, df = 4L){
+  n <- length(x)
+  if(n == 0L || df <= 0L) return(matrix(0, nrow = n, ncol = 0L))
+  sd_x <- stats::sd(x)
+  if(!is.finite(sd_x) || sd_x <= 1e-12){
+    return(matrix(0, nrow = n, ncol = 0L))
+  }
+  xs <- (x - mean(x)) / sd_x
+  n_uniq <- length(unique(xs))
+  df_eff <- min(as.integer(df), max(1L, n_uniq - 1L))
+  if(df_eff <= 1L){
+    return(matrix(xs, nrow = n, ncol = 1L))
+  }
+
+  probs <- seq(0.02, 0.98, length.out = df_eff + 1L)
+  knots <- sort(unique(as.numeric(stats::quantile(xs, probs = probs, names = FALSE))))
+  if(length(knots) < 3L){
+    knots <- sort(unique(as.numeric(stats::quantile(xs,
+                                                    probs = seq(0, 1, length.out = df_eff + 1L),
+                                                    names = FALSE))))
+  }
+  K <- length(knots)
+  if(K < 3L){
+    return(matrix(xs, nrow = n, ncol = 1L))
+  }
+
+  k_K <- knots[K]
+  k_Km1 <- knots[K - 1L]
+  tp_K <- pmax(xs - k_K, 0)^3
+  d_Km1 <- (pmax(xs - k_Km1, 0)^3 - tp_K) / (k_K - k_Km1)
+
+  B <- matrix(0, nrow = n, ncol = K - 1L)
+  B[, 1L] <- xs
+  for(m in seq_len(K - 2L)){
+    d_m <- (pmax(xs - knots[m], 0)^3 - tp_K) / (k_K - knots[m])
+    B[, m + 1L] <- d_m - d_Km1
+  }
+  B
+}
+
+
+# Fast QR-based flexible natural cubic spline variance-trend regression on (coverage, mean)
+fit_ezbakR_se_trend <- function(y_logse, cov_x, mean_x = NULL){
+  n_obs <- length(y_logse)
+  if(n_obs == 0L){
+    return(list(fitted_values = numeric(0), fit_var = 0))
+  }
+  if(n_obs == 1L){
+    return(list(fitted_values = y_logse, fit_var = 0))
+  }
+
+  has_mean <- !is.null(mean_x) && length(mean_x) == n_obs &&
+    is.finite(stats::sd(mean_x)) && stats::sd(mean_x) > 1e-12
+
+  blocks <- list(matrix(1, nrow = n_obs, ncol = 1L))
+
+  if(n_obs < 40L){
+    # Small-sample regime: linear in coverage + 2-df spline in mean for U-shaped dynamic range
+    blocks[[length(blocks) + 1L]] <- ns_basis_ez(cov_x, df = 1L)
+    if(has_mean && n_obs >= 15L){
+      blocks[[length(blocks) + 1L]] <- ns_basis_ez(mean_x, df = 2L)
+    }else if(has_mean){
+      blocks[[length(blocks) + 1L]] <- ns_basis_ez(mean_x, df = 1L)
+    }
+  }else if(n_obs < 150L){
+    blocks[[length(blocks) + 1L]] <- ns_basis_ez(cov_x, df = 2L)
+    if(has_mean) blocks[[length(blocks) + 1L]] <- ns_basis_ez(mean_x, df = 2L)
+  }else if(n_obs < 500L){
+    blocks[[length(blocks) + 1L]] <- ns_basis_ez(cov_x, df = 3L)
+    if(has_mean){
+      blocks[[length(blocks) + 1L]] <- ns_basis_ez(mean_x, df = 3L)
+      bc2 <- ns_basis_ez(cov_x, df = 2L)
+      bm2 <- ns_basis_ez(mean_x, df = 2L)
+      if(ncol(bc2) > 0L && ncol(bm2) > 0L){
+        for(i in seq_len(ncol(bc2))){
+          for(j in seq_len(ncol(bm2))){
+            blocks[[length(blocks) + 1L]] <- matrix(bc2[, i] * bm2[, j], ncol = 1L)
+          }
+        }
+      }
+    }
+  }else{
+    blocks[[length(blocks) + 1L]] <- ns_basis_ez(cov_x, df = 4L)
+    if(has_mean){
+      blocks[[length(blocks) + 1L]] <- ns_basis_ez(mean_x, df = 4L)
+      bc2 <- ns_basis_ez(cov_x, df = 2L)
+      bm2 <- ns_basis_ez(mean_x, df = 2L)
+      if(ncol(bc2) > 0L && ncol(bm2) > 0L){
+        for(i in seq_len(ncol(bc2))){
+          for(j in seq_len(ncol(bm2))){
+            blocks[[length(blocks) + 1L]] <- matrix(bc2[, i] * bm2[, j], ncol = 1L)
+          }
+        }
+      }
+    }
+  }
+
+  X_des <- do.call(cbind, blocks)
+  qr_fit <- stats::lm.fit(x = X_des, y = y_logse)
+  resid_v <- qr_fit$residuals
+  df_res <- max(n_obs - qr_fit$rank, 1L)
+  fit_var <- sum(resid_v * resid_v) / df_res
+
+  list(
+    fitted_values = as.numeric(qr_fit$fitted.values),
+    fit_var = fit_var
+  )
 }
 

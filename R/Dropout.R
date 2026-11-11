@@ -133,6 +133,9 @@ CorrectDropout <- function(obj,
   # Other columns I will have to reference
   logit_fraction <- paste0("logit_", fraction_of_interest)
   logit_se <- paste0("se_", logit_fraction)
+  ci_lower_col <- paste0("ci_lower_", fraction_of_interest)
+  ci_upper_col <- paste0("ci_upper_", fraction_of_interest)
+  has_ci_cols <- all(c(ci_lower_col, ci_upper_col) %in% fraction_cols)
 
 
   ### Quantify and correct for dropout
@@ -211,9 +214,13 @@ CorrectDropout <- function(obj,
     ) %>%
     dplyr::mutate(!!fraction_of_interest := corrected_fraction,
                   n = corrected_n,
-                  !!logit_fraction := logit(corrected_fraction)) %>%
+                  !!logit_fraction := logit(corrected_fraction),
+                  dplyr::across(dplyr::any_of(c(ci_lower_col, ci_upper_col)),
+                                ~ .x / ((1 - pdo) + .x * pdo))) %>%
     dplyr::select(sample, !!features_to_analyze, !!fraction_of_interest,
-                  !!logit_fraction, !!logit_se, n, pdo, scale)
+                  !!logit_fraction, !!logit_se,
+                  dplyr::any_of(c(ci_lower_col, ci_upper_col)),
+                  n, pdo, scale)
 
 
   ### Get dropout parameters
@@ -358,6 +365,9 @@ VisualizeDropout <- function(obj,
   # Other columns I will have to reference
   logit_fraction <- paste0("logit_", fraction_of_interest)
   logit_se <- paste0("se_", logit_fraction)
+  ci_lower_col <- paste0("ci_lower_", fraction_of_interest)
+  ci_upper_col <- paste0("ci_upper_", fraction_of_interest)
+  has_ci_cols <- all(c(ci_lower_col, ci_upper_col) %in% fraction_cols)
 
 
   ### Calculate dropout
@@ -511,6 +521,9 @@ calculate_dropout <- function(obj,
   # Other columns I will have to reference
   logit_fraction <- paste0("logit_", fraction_of_interest)
   logit_se <- paste0("se_", logit_fraction)
+  ci_lower_col <- paste0("ci_lower_", fraction_of_interest)
+  ci_upper_col <- paste0("ci_upper_", fraction_of_interest)
+  has_ci_cols <- all(c(ci_lower_col, ci_upper_col) %in% fraction_cols)
 
 
   ### Which columns should -s4U samples be grouped by?
@@ -718,6 +731,9 @@ NormalizeForDropout <- function(obj,
   # Other columns I will have to reference
   logit_fraction <- paste0("logit_", fraction_of_interest)
   logit_se <- paste0("se_", logit_fraction)
+  ci_lower_col <- paste0("ci_lower_", fraction_of_interest)
+  ci_upper_col <- paste0("ci_upper_", fraction_of_interest)
+  has_ci_cols <- all(c(ci_lower_col, ci_upper_col) %in% fraction_cols)
 
 
   ### Which columns should -s4U samples be grouped by?
@@ -881,6 +897,8 @@ NormalizeForDropout <- function(obj,
     dplyr::ungroup() %>%
     dplyr::mutate(
       !!fraction_of_interest := (!!dplyr::sym(fraction_of_interest))/((1 - pdo) + !!dplyr::sym(fraction_of_interest) * pdo),
+      dplyr::across(dplyr::any_of(paste0(c("ci_lower_", "ci_upper_"), fraction_of_interest)),
+                    ~ .x / ((1 - pdo) + .x * pdo))
     ) %>%
     dplyr::mutate(
       !!logit_fraction := logit(!!dplyr::sym(fraction_of_interest))

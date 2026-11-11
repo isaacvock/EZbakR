@@ -105,7 +105,12 @@ validate_EZbakRFractions <- function(obj){
   fraction_features <- fraction_cols[!grepl("^fraction_", fraction_cols) &
                                        !grepl("^logit_fraction_", fraction_cols) &
                                        !grepl("^invsoftmax_", fraction_cols) &
-                                       !(fraction_cols %in% c("sample", "n")) &
+                                       !grepl("^ci_lower_", fraction_cols) &
+                                       !grepl("^ci_upper_", fraction_cols) &
+                                       !(fraction_cols %in% c("sample", "n",
+                                                              "expected_count",
+                                                              "effective_length",
+                                                              "RPK")) &
                                        !grepl("^se_logit_fraction_", fraction_cols) &
                                        !grepl("^se_invsoftmax_", fraction_cols)]
 

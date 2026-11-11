@@ -221,6 +221,11 @@ create_fraction_design <- function(mutrate_populations){
 #' sample-detail columns in the metadf that should be used to group -label samples by. Average mutation
 #' rates in each group of -label samples will be used as the background mutation rate estimate in
 #' +label samples with the same values for the relevant metadf columns.
+#' @param EBayes Logical; if `TRUE` (the default), calibrate the sample-specific
+#' `logit(fraction)` prior location and scale empirically from the pure-data
+#' maximum likelihood estimates of interior features in each labeled sample
+#' (with heavy-tailed Pseudo-Huber regularization and profile-likelihood SE
+#' flooring). If `FALSE`, use the legacy fixed `Normal(0, 1.7)` prior.
 #' @param character_limit Maximum number of characters for naming out fractions output. EZbakR
 #' will try to name this as a "_" separated character vector of all of the features analyzed.
 #' If this name is greater than `character_limit`, then it will default to "fraction#", where
@@ -272,6 +277,7 @@ EstimateFractions <- function(obj, features = "all",
                               pold_est = NULL,
                               pold_from_nolabel = FALSE,
                               grouping_factors = NULL,
+                              EBayes = TRUE,
                               character_limit = 20,
                               overwrite = TRUE){
 
@@ -375,12 +381,13 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                                          pold_est = NULL,
                                          pold_from_nolabel = FALSE,
                                          grouping_factors = NULL,
+                                         EBayes = TRUE,
                                          character_limit = 20,
                                          overwrite = TRUE){
 
   ### Hack to deal with devtools::check() NOTEs
   n <- params <- coverage <- pold <- pnew <- lpnew_uncert <- pnew_prior <- ..colvect <- NULL
-  fit <- mixture_fit <- present <- NULL
+  fit <- mixture_fit <- present <- ci_lower_fn <- ci_upper_fn <- NULL
 
   rm(..colvect)
 
@@ -600,6 +607,8 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
     col_name <- paste0("logit_fraction_high", pops_to_analyze)
     uncertainty_col <- paste0("se_logit_fraction_high", pops_to_analyze)
     natural_col_name <- paste0("fraction_high", pops_to_analyze)
+    ci_lower_col <- paste0("ci_lower_fraction_high", pops_to_analyze)
+    ci_upper_col <- paste0("ci_upper_fraction_high", pops_to_analyze)
 
     if(strategy == "hierarchical"){
 
@@ -665,7 +674,9 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
         Poisson = Poisson,
         pnew_prior_mean_col = "pnew_prior",
         pnew_prior_sd_arg = "pnew_prior_sd",
-        fraction_prior_sd = 1.7
+        fraction_prior_sd = 1.7,
+        EBayes = EBayes,
+        compute_ci = TRUE
       )
 
       feature_specific[, c(col_name, "pnew",
@@ -675,9 +686,11 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
 
       fns <- dplyr::as_tibble(feature_specific) %>%
-        dplyr::mutate(!!natural_col_name := inv_logit(!!dplyr::sym(col_name))) %>%
+        dplyr::mutate(!!natural_col_name := inv_logit(!!dplyr::sym(col_name)),
+                      !!ci_lower_col := ci_lower_fn,
+                      !!ci_upper_col := ci_upper_fn) %>%
         dplyr::select(sample, !!features_to_analyze, !!natural_col_name,
-                      !!col_name, !!uncertainty_col, n)
+                      !!col_name, !!uncertainty_col, !!ci_lower_col, !!ci_upper_col, n)
 
 
       ### Save feature-specific pnews
@@ -706,7 +719,8 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
         Poisson = Poisson,
         col_name = col_name,
         uncertainty_col = uncertainty_col,
-        natural_col_name = natural_col_name
+        natural_col_name = natural_col_name,
+        EBayes = EBayes
       )
 
     }
@@ -1087,6 +1101,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                               pold_est = NULL,
                                               pold_from_nolabel = FALSE,
                                               grouping_factors = NULL,
+                                              EBayes = TRUE,
                                               character_limit = 20,
                                               overwrite = TRUE){
 
@@ -1094,7 +1109,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
   #browser()
   ### Hack to deal with devtools::check() NOTEs
   present <- n <- reads <- params <- coverage <- pold <- pnew <- sd <- lpnew_uncert <- pnew_prior <- ..colvect <- NULL
-  fit <- mixture_fit <- NULL
+  fit <- mixture_fit <- ci_lower_fn <- ci_upper_fn <- NULL
 
   rm(..colvect)
 
@@ -1289,6 +1304,8 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
   col_name <- paste0("logit_fraction_high", pops_to_analyze)
   uncertainty_col <- paste0("se_logit_fraction_high", pops_to_analyze)
   natural_col_name <- paste0("fraction_high", pops_to_analyze)
+  ci_lower_col <- paste0("ci_lower_fraction_high", pops_to_analyze)
+  ci_upper_col <- paste0("ci_upper_fraction_high", pops_to_analyze)
 
 
   if(filter_cols[1] == "all" & length(filter_cols) == 1){
@@ -1346,7 +1363,9 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
         sample_fns <- dplyr::as_tibble(sample_fns) %>%
           dplyr::mutate(!!natural_col_name := 0,
                         !!col_name := -Inf,
-                        !!uncertainty_col := 0)
+                        !!uncertainty_col := 0,
+                        !!ci_lower_col := 0,
+                        !!ci_upper_col := 0)
       }else{
         nolabel_mix <- fit_general_mixture(
           dataset = NULL,
@@ -1519,7 +1538,9 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
             Poisson = Poisson,
             pnew_prior_mean_col = "pnew_prior",
             pnew_prior_sd_arg = "pnew_prior_sd",
-            fraction_prior_sd = 1.7
+            fraction_prior_sd = 1.7,
+            EBayes = EBayes,
+            compute_ci = TRUE
           )
 
           feature_specific[, c(col_name, "pnew",
@@ -1530,9 +1551,11 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
 
           sample_fns <- dplyr::as_tibble(feature_specific) %>%
-            dplyr::mutate(!!natural_col_name := inv_logit(!!dplyr::sym(col_name))) %>%
+            dplyr::mutate(!!natural_col_name := inv_logit(!!dplyr::sym(col_name)),
+                          !!ci_lower_col := ci_lower_fn,
+                          !!ci_upper_col := ci_upper_fn) %>%
             dplyr::select(sample, !!features_to_analyze, !!natural_col_name,
-                          !!col_name, !!uncertainty_col, n)
+                          !!col_name, !!uncertainty_col, !!ci_lower_col, !!ci_upper_col, n)
 
 
           ### Save feature-specific pnews
@@ -1568,7 +1591,8 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
             Poisson = Poisson,
             col_name = col_name,
             uncertainty_col = uncertainty_col,
-            natural_col_name = natural_col_name
+            natural_col_name = natural_col_name,
+            EBayes = EBayes
           )
 
 
@@ -2677,13 +2701,17 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
 
     listnames <- paste0(rep(c("invsoftmax_",
                               "fraction_",
-                              "se_invsoftmax_"),
+                              "se_invsoftmax_",
+                              "ci_lower_fraction_",
+                              "ci_upper_fraction_"),
                             each = nrow(mutrate_design)),
                         listnames)
 
     outlist <- c(as.list(ismvector),
                  as.list(fvector),
-                 as.list(rep(0, times = nrow(mutrate_design))) )
+                 as.list(rep(0, times = nrow(mutrate_design))),
+                 as.list(fvector),
+                 as.list(fvector))
 
 
 
@@ -2797,7 +2825,9 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
 
       listnames <- paste0(rep(c("invsoftmax_",
                                 "fraction_",
-                                "se_invsoftmax_"),
+                                "se_invsoftmax_",
+                                "ci_lower_fraction_",
+                                "ci_upper_fraction_"),
                               each = K),
                           listnames)
 
@@ -2809,6 +2839,7 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
       # softmax(clr_par) == softmax(full_alr), and every population gets a
       # reference-invariant SE from the nonsingular (K-1)x(K-1) ALR Hessian.
       clr_par <- full_alr - mean(full_alr)
+      frac_est <- softmax(clr_par)
 
       uncertainties <- tryCatch(
         {
@@ -2824,9 +2855,52 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
         }
       )
 
+      # Profile-likelihood 95% CIs along relative-complement simplex rays
+      n_obs <- nrow(dataset)
+      E_1g <- matrix(0, nrow = n_obs, ncol = K)
+      for(j in seq_len(ncol(mutrate_design))){
+        mj <- as.numeric(dataset[[mutcols[j]]])
+        bj <- as.numeric(dataset[[basecols[j]]])
+        if(Poisson){
+          ll_hi <- stats::dpois(mj, lambda = pnew[j] * bj, log = TRUE)
+          ll_lo <- stats::dpois(mj, lambda = pold[j] * bj, log = TRUE)
+        }else{
+          ll_hi <- stats::dbinom(mj, bj, prob = pnew[j], log = TRUE)
+          ll_lo <- stats::dbinom(mj, bj, prob = pold[j], log = TRUE)
+        }
+        for(k_i in seq_len(K)){
+          E_1g[, k_i] <- E_1g[, k_i] + if(as.logical(mutrate_design[k_i, j])) ll_hi else ll_lo
+        }
+      }
+      n_1g <- as.numeric(dataset[["n"]])
+      N_1g <- sum(n_1g)
+      ci_lo_vec <- numeric(K)
+      ci_hi_vec <- numeric(K)
+      for(k_i in seq_len(K)){
+        other_idx <- setdiff(seq_len(K), k_i)
+        rem_m <- sum(frac_est[other_idx])
+        q_v <- if(rem_m > 1e-12) frac_est[other_idx] / rem_m else rep(1 / length(other_idx), length(other_idx))
+        W_oth <- sweep(E_1g[, other_idx, drop = FALSE], 2L, log(pmax(q_v, 1e-300)), "+")
+        w_mx <- apply(W_oth, 1L, max)
+        w_mx_s <- ifelse(is.finite(w_mx), w_mx, 0)
+        E_mk <- w_mx_s + log(rowSums(exp(W_oth - w_mx_s)))
+        E_mk[!is.finite(w_mx)] <- -Inf
+        pr_k <- profile_2comp_delta_vec(
+          grp_id = rep(1L, n_obs),
+          grp_end = n_obs,
+          n = n_1g,
+          delta = E_1g[, k_i] - E_mk,
+          N_grp = N_1g
+        )
+        ci_lo_vec[k_i] <- pr_k$ci_lower_fn[1L]
+        ci_hi_vec[k_i] <- pr_k$ci_upper_fn[1L]
+      }
+
       outlist <- c(as.list(clr_par),
-                   as.list(softmax(clr_par)),
-                   as.list(uncertainties) )
+                   as.list(frac_est),
+                   as.list(uncertainties),
+                   as.list(ci_lo_vec),
+                   as.list(ci_hi_vec))
 
 
       names(outlist) <- listnames
@@ -2858,6 +2932,15 @@ check_EstimateFractions_input <- function(args){
   if(!is.logical(args$Poisson)){
 
     stop("Poisson must be logical (TRUE or FALSE)!")
+
+  }
+
+  ### EBayes
+
+  if(!is.null(args$EBayes) &&
+     (!is.logical(args$EBayes) || length(args$EBayes) != 1L || is.na(args$EBayes))){
+
+    stop("EBayes must be a single logical (TRUE or FALSE)!")
 
   }
 
@@ -2898,15 +2981,352 @@ grp_sum_contig <- function(x, grp_end, block_groups = 2048L){
 }
 
 
+# Numerically stable softplus log(1 + exp(z))
+softplus_vec <- function(z){
+  pmax(z, 0) + log1p(exp(-abs(z)))
+}
+
+
+# Exact contiguous groupwise log-sum-exp (zero overflow/underflow)
+grp_logsumexp <- function(log_w, grp_id, grp_end){
+  ng <- length(grp_end)
+  if(ng == 0L) return(numeric(0))
+  grp_start <- c(1L, grp_end[-ng] + 1L)
+  m_g <- numeric(ng)
+  sizes <- grp_end - grp_start + 1L
+  max_sz <- max(sizes)
+  if(max_sz <= 64L){
+    m_g <- log_w[grp_start]
+    if(max_sz > 1L){
+      for(offset in 1L:(max_sz - 1L)){
+        active <- which(sizes > offset)
+        if(length(active) == 0L) break
+        m_g[active] <- pmax(m_g[active], log_w[grp_start[active] + offset])
+      }
+    }
+  }else{
+    small <- which(sizes <= 64L)
+    if(length(small) > 0L){
+      m_s <- log_w[grp_start[small]]
+      ms_sz <- max(sizes[small])
+      if(ms_sz > 1L){
+        for(offset in 1L:(ms_sz - 1L)){
+          act <- small[sizes[small] > offset]
+          if(length(act) == 0L) break
+          idx_s <- match(act, small)
+          m_s[idx_s] <- pmax(m_s[idx_s], log_w[grp_start[act] + offset])
+        }
+      }
+      m_g[small] <- m_s
+    }
+    big <- which(sizes > 64L)
+    for(g in big){
+      m_g[g] <- max(log_w[grp_start[g]:grp_end[g]])
+    }
+  }
+  m_safe <- ifelse(is.finite(m_g), m_g, 0)
+  s_exp <- grp_sum_contig(exp(log_w - m_safe[grp_id]), grp_end)
+  res <- m_safe + log(s_exp)
+  res[m_g == -Inf] <- -Inf
+  res
+}
+
+
+# Vectorized pure-data MLE and exact 95% Wilks profile-likelihood CI for 2-comp mixture
+profile_2comp_delta_vec <- function(grp_id, grp_end, n, delta, N_grp = NULL,
+                                    crit = 0.5 * stats::qchisq(0.95, df = 1),
+                                    eta_min = -25, eta_max = 25){
+  ngroups <- length(grp_end)
+  if(ngroups == 0L){
+    return(list(
+      eta_mle = numeric(0), info_mle = numeric(0),
+      at_0 = logical(0), at_1 = logical(0),
+      ci_lower_fn = numeric(0), ci_upper_fn = numeric(0),
+      ci_lower_logit = numeric(0), ci_upper_logit = numeric(0)
+    ))
+  }
+  if(is.null(N_grp)) N_grp <- grp_sum_contig(n, grp_end)
+  delta_clean <- delta
+  delta_clean[is.nan(delta_clean)] <- 0
+  delta_clean <- pmin(pmax(delta_clean, -300), 300)
+
+  log_n <- log(pmax(n, 1e-300))
+  log_N <- log(pmax(N_grp, 1e-300))
+
+  # Exact overflow-free simplex boundary score checks at theta = 0 and theta = 1
+  lse0 <- grp_logsumexp(log_n + delta_clean, grp_id, grp_end)
+  lse1 <- grp_logsumexp(log_n - delta_clean, grp_id, grp_end)
+
+  at_0 <- lse0 <= log_N + 1e-13
+  at_1 <- !at_0 & (lse1 <= log_N + 1e-13)
+
+  eta_mle <- numeric(ngroups)
+  eta_mle[at_0] <- -Inf
+  eta_mle[at_1] <- Inf
+  info_mle <- numeric(ngroups)
+
+  # Relative log-likelihood l_rel(eta) = l(eta) - l(theta=0)
+  ll_at_1 <- grp_sum_contig(n * delta_clean, grp_end)
+
+  eval_rel <- function(eta_v, sg, se, sn, sdel, sN, want_ll = TRUE){
+    theta <- stats::plogis(eta_v)
+    z <- eta_v[sg] + sdel
+    w <- stats::plogis(z)
+    nw <- sn * w
+    sum_nw <- grp_sum_contig(nw, se)
+    g1 <- sum_nw - sN * theta
+    info <- sN * theta * (1 - theta) - grp_sum_contig(nw * (1 - w), se)
+    if(!want_ll) return(list(g1 = g1, info = info))
+    ll_r <- grp_sum_contig(sn * (softplus_vec(z) - softplus_vec(eta_v[sg])), se)
+    list(ll = ll_r, g1 = g1, info = info)
+  }
+
+  interior <- which(!(at_0 | at_1))
+  if(length(interior) > 0L){
+    active <- interior
+    act_map <- integer(ngroups)
+    act_map[active] <- seq_along(active)
+    rk0 <- act_map[grp_id] > 0L
+    sg <- act_map[grp_id[rk0]]
+    gsz <- diff(c(0L, grp_end))[active]
+    se <- cumsum(gsz)
+    sn <- n[rk0]
+    sdel <- delta_clean[rk0]
+    sN <- N_grp[active]
+
+    lo_a <- rep(eta_min, length(active))
+    hi_a <- rep(eta_max, length(active))
+    eta_a <- rep(0, length(active))
+
+    g_lo <- eval_rel(lo_a, sg, se, sn, sdel, sN, want_ll = FALSE)$g1
+    g_hi <- eval_rel(hi_a, sg, se, sn, sdel, sN, want_ll = FALSE)$g1
+    pin_lo <- g_lo <= 0
+    pin_hi <- !pin_lo & (g_hi >= 0)
+    if(any(pin_lo | pin_hi)){
+      if(any(pin_lo)) eta_mle[active[pin_lo]] <- eta_min
+      if(any(pin_hi)) eta_mle[active[pin_hi]] <- eta_max
+      keep <- which(!(pin_lo | pin_hi))
+      if(length(keep) > 0L){
+        remap <- integer(length(active))
+        remap[keep] <- seq_along(keep)
+        rk <- remap[sg] > 0L
+        sg <- remap[sg[rk]]
+        gsz <- gsz[keep]
+        se <- cumsum(gsz)
+        sn <- sn[rk]; sdel <- sdel[rk]; sN <- sN[keep]
+        active <- active[keep]
+        lo_a <- lo_a[keep]; hi_a <- hi_a[keep]; eta_a <- eta_a[keep]
+      }else{
+        active <- integer(0)
+      }
+    }
+
+    if(length(active) > 0L){
+      for(iter in seq_len(30L)){
+        ev <- eval_rel(eta_a, sg, se, sn, sdel, sN, want_ll = FALSE)
+        pos <- ev$g1 > 0
+        lo_a[pos] <- pmax(lo_a[pos], eta_a[pos])
+        hi_a[!pos] <- pmin(hi_a[!pos], eta_a[!pos])
+
+        step <- ifelse(ev$info > 1e-12, ev$g1 / ev$info, NA_real_)
+        cand <- eta_a + step
+        bad <- is.na(cand) | cand <= lo_a | cand >= hi_a
+        cand[bad] <- 0.5 * (lo_a[bad] + hi_a[bad])
+
+        d_eta <- abs(cand - eta_a)
+        eta_a <- cand
+        conv <- (d_eta < 1e-9 & abs(ev$g1) < 1e-7) | ((hi_a - lo_a) < 1e-9)
+        if(all(conv)){
+          eta_mle[active] <- eta_a
+          break
+        }
+        if(iter %% 3L == 0L && sum(conv) > 0.25 * length(conv)){
+          done <- which(conv)
+          eta_mle[active[done]] <- eta_a[done]
+          rem <- which(!conv)
+          active <- active[rem]
+          eta_a <- eta_a[rem]; lo_a <- lo_a[rem]; hi_a <- hi_a[rem]
+          sN <- sN[rem]; gsz <- gsz[rem]
+          remap <- integer(length(conv))
+          remap[rem] <- seq_along(rem)
+          rk <- remap[sg] > 0L
+          sg <- remap[sg[rk]]; se <- cumsum(gsz)
+          sn <- sn[rk]; sdel <- sdel[rk]
+        }
+        if(iter == 30L) eta_mle[active] <- eta_a
+      }
+    }
+  }
+
+  ll_max <- numeric(ngroups)
+  ll_max[at_0] <- 0
+  ll_max[at_1] <- ll_at_1[at_1]
+  if(length(interior) > 0L){
+    act_map <- integer(ngroups)
+    act_map[interior] <- seq_along(interior)
+    rk0 <- act_map[grp_id] > 0L
+    int_sz <- diff(c(0L, grp_end))[interior]
+    ev_m <- eval_rel(eta_mle[interior], act_map[grp_id[rk0]], cumsum(int_sz),
+                     n[rk0], delta_clean[rk0], N_grp[interior], want_ll = TRUE)
+    ll_max[interior] <- pmax(ev_m$ll, 0, ll_at_1[interior])
+    info_mle[interior] <- pmax(ev_m$info, 0)
+  }
+
+  ll_target <- ll_max - crit
+
+  solve_prof_side <- function(idx_set, lo_init, hi_init, start_eta, increasing = TRUE){
+    if(length(idx_set) == 0L) return(numeric(0))
+    out_eta <- numeric(length(idx_set))
+    active_loc <- seq_along(idx_set)
+    act_map <- integer(ngroups)
+    act_map[idx_set] <- active_loc
+    rk0 <- act_map[grp_id] > 0L
+    sg <- act_map[grp_id[rk0]]
+    gsz <- diff(c(0L, grp_end))[idx_set]
+    se <- cumsum(gsz)
+    sn <- n[rk0]; sdel <- delta_clean[rk0]; sN <- N_grp[idx_set]
+    targ <- ll_target[idx_set]
+
+    lo_a <- lo_init
+    hi_a <- hi_init
+    eta_a <- pmin(pmax(start_eta, lo_a + 1e-6 * (hi_a - lo_a)), hi_a - 1e-6 * (hi_a - lo_a))
+
+    for(iter in seq_len(45L)){
+      ev <- eval_rel(eta_a, sg, se, sn, sdel, sN, want_ll = TRUE)
+      f_val <- ev$ll - targ
+      if(increasing){
+        neg <- f_val < 0
+        lo_a[neg] <- pmax(lo_a[neg], eta_a[neg])
+        hi_a[!neg] <- pmin(hi_a[!neg], eta_a[!neg])
+      }else{
+        pos <- f_val > 0
+        lo_a[pos] <- pmax(lo_a[pos], eta_a[pos])
+        hi_a[!pos] <- pmin(hi_a[!pos], eta_a[!pos])
+      }
+
+      step <- ifelse(abs(ev$g1) > 1e-12, f_val / ev$g1, NA_real_)
+      cand <- eta_a - step
+      bad <- is.na(cand) | cand <= lo_a | cand >= hi_a
+      cand[bad] <- 0.5 * (lo_a[bad] + hi_a[bad])
+
+      d_eta <- abs(cand - eta_a)
+      eta_a <- cand
+      conv <- (abs(f_val) < 1e-9 & d_eta < 1e-8) | ((hi_a - lo_a) < 1e-9)
+      if(all(conv)){
+        out_eta[active_loc] <- eta_a
+        break
+      }
+      if(iter %% 3L == 0L && sum(conv) > 0.25 * length(conv)){
+        done <- which(conv)
+        out_eta[active_loc[done]] <- eta_a[done]
+        rem <- which(!conv)
+        active_loc <- active_loc[rem]
+        eta_a <- eta_a[rem]; lo_a <- lo_a[rem]; hi_a <- hi_a[rem]
+        sN <- sN[rem]; targ <- targ[rem]; gsz <- gsz[rem]
+        remap <- integer(length(conv))
+        remap[rem] <- seq_along(rem)
+        rk <- remap[sg] > 0L
+        sg <- remap[sg[rk]]; se <- cumsum(gsz)
+        sn <- sn[rk]; sdel <- sdel[rk]
+      }
+      if(iter == 45L) out_eta[active_loc] <- eta_a
+    }
+    out_eta
+  }
+
+  ci_lo_logit <- rep(-Inf, ngroups)
+  ci_lo_fn <- numeric(ngroups)
+  need_lo <- which(!at_0 & (ll_target > 0))
+  if(length(need_lo) > 0L){
+    hi_b <- ifelse(at_1[need_lo], 28, eta_mle[need_lo])
+    lo_b <- rep(-28, length(need_lo))
+    se_g <- ifelse(info_mle[need_lo] > 1e-6, 1 / sqrt(info_mle[need_lo]), 2.0)
+    init_lo <- ifelse(at_1[need_lo], 3.0, eta_mle[need_lo] - 1.96 * se_g)
+    eta_lo_res <- solve_prof_side(need_lo, lo_b, hi_b, init_lo, increasing = TRUE)
+    ci_lo_logit[need_lo] <- eta_lo_res
+    ci_lo_fn[need_lo] <- stats::plogis(eta_lo_res)
+  }
+
+  ci_hi_logit <- rep(Inf, ngroups)
+  ci_hi_fn <- rep(1, ngroups)
+  need_hi <- which(!at_1 & (ll_at_1 < ll_target))
+  if(length(need_hi) > 0L){
+    lo_b <- ifelse(at_0[need_hi], -28, eta_mle[need_hi])
+    hi_b <- rep(28, length(need_hi))
+    se_g <- ifelse(info_mle[need_hi] > 1e-6, 1 / sqrt(info_mle[need_hi]), 2.0)
+    init_hi <- ifelse(at_0[need_hi], -3.0, eta_mle[need_hi] + 1.96 * se_g)
+    eta_hi_res <- solve_prof_side(need_hi, lo_b, hi_b, init_hi, increasing = FALSE)
+    ci_hi_logit[need_hi] <- eta_hi_res
+    ci_hi_fn[need_hi] <- stats::plogis(eta_hi_res)
+  }
+
+  list(
+    eta_mle = eta_mle,
+    info_mle = info_mle,
+    at_0 = at_0,
+    at_1 = at_1,
+    ci_lower_fn = ci_lo_fn,
+    ci_upper_fn = ci_hi_fn,
+    ci_lower_logit = ci_lo_logit,
+    ci_upper_logit = ci_hi_logit
+  )
+}
+
+
+# Per-sample Empirical Bayes calibration of logit(fraction) prior location and scale
+calibrate_ebayes_logit_prior <- function(sample_grp, eta_mle, info_mle, at_0, at_1,
+                                         default_mean = 0, default_sd = 1.7,
+                                         sd_min = 0.8, sd_max = 2.5){
+  ng <- length(eta_mle)
+  if(ng == 0L){
+    return(list(prior_mean = numeric(0), prior_sd = numeric(0)))
+  }
+  prior_mean <- rep(default_mean, ng)
+  prior_sd <- rep(default_sd, ng)
+  u_samps <- unique(sample_grp)
+
+  for(s in u_samps){
+    idx_s <- which(sample_grp == s)
+    ok_base <- !at_0[idx_s] & !at_1[idx_s] & is.finite(eta_mle[idx_s])
+    ok1 <- idx_s[ok_base & abs(eta_mle[idx_s]) < 7 & info_mle[idx_s] > 1]
+    ok <- if(length(ok1) >= 10L){
+      ok1
+    }else{
+      ok2 <- idx_s[ok_base & abs(eta_mle[idx_s]) < 8 & info_mle[idx_s] > 0.1]
+      if(length(ok2) >= 5L) ok2 else integer(0)
+    }
+    if(length(ok) > 0L){
+      eta_ok <- eta_mle[ok]
+      info_ok <- info_mle[ok]
+      mu_s <- pmin(pmax(stats::median(eta_ok), -5), 5)
+      raw_var <- stats::var(eta_ok) - mean(1 / info_ok)
+      sd_s <- if(is.na(raw_var) || raw_var <= 0){
+        sd_min
+      }else{
+        pmin(pmax(sqrt(raw_var), sd_min), sd_max)
+      }
+      prior_mean[idx_s] <- mu_s
+      prior_sd[idx_s] <- sd_s
+    }
+  }
+  list(prior_mean = prior_mean, prior_sd = prior_sd)
+}
+
+
 # Globally convergent safeguarded Newton-bisection for 1D two-component mixture
 fit_tcmm_known_vec <- function(grp_id, grp_end, muts, nucs, n, pnew, pold,
                                Poisson = TRUE,
                                prior_mean = 0, prior_sd = 1.7,
-                               lower = -9, upper = 9,
+                               EBayes = FALSE, sample_grp = NULL,
+                               lower = if(EBayes) -16 else -9,
+                               upper = if(EBayes) 16 else 9,
                                tol = 1e-10, max_iter = 50L){
   ngroups <- length(grp_end)
   if(ngroups == 0L){
-    return(list(logit_fn = numeric(0), se = numeric(0), n = numeric(0)))
+    return(list(
+      logit_fn = numeric(0), se = numeric(0), n = numeric(0),
+      ci_lower_fn = numeric(0), ci_upper_fn = numeric(0)
+    ))
   }
 
   muts <- as.numeric(muts)
@@ -2922,36 +3342,75 @@ fit_tcmm_known_vec <- function(grp_id, grp_end, muts, nucs, n, pnew, pold,
   }
   delta <- ll_new - ll_old
   delta[is.nan(delta)] <- 0
+  delta <- pmin(pmax(delta, -300), 300)
 
   N_grp <- grp_sum_contig(n, grp_end)
-  inv_sig2 <- 1 / (prior_sd * prior_sd)
 
-  eval_gh <- function(eta_vec, sub_grp, sub_end, sub_n, sub_delta, sub_N){
+  # Exact pure-data MLEs and 95% Wilks profile-likelihood CIs
+  prof <- profile_2comp_delta_vec(grp_id, grp_end, n, delta, N_grp = N_grp)
+
+  if(EBayes){
+    if(is.null(sample_grp)) sample_grp <- rep(1L, ngroups)
+    eb <- calibrate_ebayes_logit_prior(
+      sample_grp = sample_grp,
+      eta_mle = prof$eta_mle,
+      info_mle = prof$info_mle,
+      at_0 = prof$at_0,
+      at_1 = prof$at_1,
+      default_mean = prior_mean[1L],
+      default_sd = prior_sd[1L]
+    )
+    pm_all <- eb$prior_mean
+    is2_all <- 1 / (eb$prior_sd * eb$prior_sd)
+  }else{
+    pm_all <- rep_len(as.numeric(prior_mean), ngroups)
+    ps_all <- rep_len(as.numeric(prior_sd), ngroups)
+    is2_all <- 1 / (ps_all * ps_all)
+  }
+
+  M_ph <- 1.25
+
+  eval_gh <- function(eta_vec, sub_grp, sub_end, sub_n, sub_delta, sub_N, sub_pm, sub_is2){
     theta <- stats::plogis(eta_vec)
     w <- stats::plogis(eta_vec[sub_grp] + sub_delta)
     nw <- sub_n * w
     nww <- nw * (1 - w)
     sum_nw <- grp_sum_contig(nw, sub_end)
     sum_nww <- grp_sum_contig(nww, sub_end)
-    g <- sub_N * theta - sum_nw + (eta_vec - prior_mean) * inv_sig2
-    h <- sub_N * theta * (1 - theta) - sum_nww + inv_sig2
-    list(g = g, h = h)
+    diff_e <- eta_vec - sub_pm
+    if(EBayes){
+      z_ph <- (diff_e * sub_is2) / M_ph
+      rz_ph <- sqrt(1 + z_ph * z_ph)
+      g_pr <- (diff_e * sub_is2) / rz_ph
+      h_pr <- sub_is2 / (rz_ph * (1 + z_ph * z_ph))
+    }else{
+      g_pr <- diff_e * sub_is2
+      h_pr <- sub_is2
+    }
+    g <- sub_N * theta - sum_nw + g_pr
+    h <- sub_N * theta * (1 - theta) - sum_nww + h_pr
+    list(g = g, h = h, h_data = sub_N * theta * (1 - theta) - sum_nww)
   }
 
   lo <- rep(lower, ngroups)
   hi <- rep(upper, ngroups)
-  eta <- rep(0, ngroups)
+  eta <- ifelse(prof$at_0, lower + 1,
+                ifelse(prof$at_1, upper - 1,
+                       pmin(pmax(prof$eta_mle, lower + 1e-4), upper - 1e-4)))
 
-  gh_lo <- eval_gh(lo, grp_id, grp_end, n, delta, N_grp)
-  gh_hi <- eval_gh(hi, grp_id, grp_end, n, delta, N_grp)
+  gh_lo <- eval_gh(lo, grp_id, grp_end, n, delta, N_grp, pm_all, is2_all)
+  gh_hi <- eval_gh(hi, grp_id, grp_end, n, delta, N_grp, pm_all, is2_all)
 
   at_lo <- gh_lo$g >= 0
   at_hi <- !at_lo & (gh_hi$g <= 0)
   eta[at_lo] <- lower
   eta[at_hi] <- upper
   h_final <- numeric(ngroups)
+  h_data_final <- numeric(ngroups)
   h_final[at_lo] <- gh_lo$h[at_lo]
   h_final[at_hi] <- gh_hi$h[at_hi]
+  h_data_final[at_lo] <- gh_lo$h_data[at_lo]
+  h_data_final[at_hi] <- gh_hi$h_data[at_hi]
 
   interior <- which(!(at_lo | at_hi))
   if(length(interior) > 0L){
@@ -2965,12 +3424,14 @@ fit_tcmm_known_vec <- function(grp_id, grp_end, muts, nucs, n, pnew, pold,
     sub_n <- n[row_keep]
     sub_delta <- delta[row_keep]
     sub_N <- N_grp[active]
+    sub_pm <- pm_all[active]
+    sub_is2 <- is2_all[active]
     eta_a <- eta[active]
     lo_a <- lo[active]
     hi_a <- hi[active]
 
     for(iter in seq_len(max_iter)){
-      gh <- eval_gh(eta_a, sub_grp, sub_end, sub_n, sub_delta, sub_N)
+      gh <- eval_gh(eta_a, sub_grp, sub_end, sub_n, sub_delta, sub_N, sub_pm, sub_is2)
       g <- gh$g
       h <- gh$h
 
@@ -3001,6 +3462,8 @@ fit_tcmm_known_vec <- function(grp_id, grp_end, muts, nucs, n, pnew, pold,
         lo_a <- lo_a[rem_local]
         hi_a <- hi_a[rem_local]
         sub_N <- sub_N[rem_local]
+        sub_pm <- sub_pm[rem_local]
+        sub_is2 <- sub_is2[rem_local]
         grp_sizes <- grp_sizes[rem_local]
 
         remap <- integer(length(conv))
@@ -3021,20 +3484,60 @@ fit_tcmm_known_vec <- function(grp_id, grp_end, muts, nucs, n, pnew, pold,
     rk <- act_map[grp_id] > 0L
     int_sizes <- diff(c(0L, grp_end))[interior]
     gh_fin <- eval_gh(eta[interior], act_map[grp_id[rk]], cumsum(int_sizes),
-                      n[rk], delta[rk], N_grp[interior])
+                      n[rk], delta[rk], N_grp[interior],
+                      pm_all[interior], is2_all[interior])
     h_final[interior] <- gh_fin$h
+    h_data_final[interior] <- gh_fin$h_data
   }
 
-  list(logit_fn = eta, se = sqrt(1 / pmax(h_final, 1e-12)), n = N_grp)
+  se_out <- sqrt(1 / pmax(h_final, 1e-12))
+  if(EBayes){
+    z95 <- stats::qnorm(0.975)
+    lo_fin <- is.finite(prof$ci_lower_logit)
+    hi_fin <- is.finite(prof$ci_upper_logit)
+    both_fin <- lo_fin & hi_fin
+    if(any(both_fin)){
+      se_prof <- (prof$ci_upper_logit[both_fin] - prof$ci_lower_logit[both_fin]) / (2 * z95)
+      se_out[both_fin] <- pmax(se_out[both_fin], se_prof)
+    }
+    lo_inf <- !lo_fin & hi_fin
+    if(any(lo_inf)){
+      hw_hi <- pmax(prof$ci_upper_logit[lo_inf] - eta[lo_inf], 0) / z95
+      se_data <- 1 / sqrt(pmax(h_data_final[lo_inf], 0.25))
+      se_out[lo_inf] <- pmax(se_out[lo_inf], hw_hi, se_data)
+    }
+    hi_inf <- lo_fin & !hi_fin
+    if(any(hi_inf)){
+      hw_lo <- pmax(eta[hi_inf] - prof$ci_lower_logit[hi_inf], 0) / z95
+      se_data <- 1 / sqrt(pmax(h_data_final[hi_inf], 0.25))
+      se_out[hi_inf] <- pmax(se_out[hi_inf], hw_lo, se_data)
+    }
+    neither_fin <- !lo_fin & !hi_fin
+    if(any(neither_fin)){
+      se_out[neither_fin] <- pmax(se_out[neither_fin], 2.5)
+    }
+  }
+
+  list(
+    logit_fn = eta,
+    se = se_out,
+    n = N_grp,
+    ci_lower_fn = prof$ci_lower_fn,
+    ci_upper_fn = prof$ci_upper_fn
+  )
 }
 
 
 # Table-level wrapper for standard 2-component fraction estimation
 solve_tcmm_standard_dt <- function(dt, features_to_analyze, pop_col, base_col,
                                    samples_with_no_label, Poisson,
-                                   col_name, uncertainty_col, natural_col_name){
+                                   col_name, uncertainty_col, natural_col_name,
+                                   EBayes = TRUE){
   sample <- n <- NULL
   `.` <- list
+
+  ci_lower_col <- paste0("ci_lower_", natural_col_name)
+  ci_upper_col <- paste0("ci_upper_", natural_col_name)
 
   grp_cols <- c("sample", features_to_analyze)
   dt_work <- data.table::as.data.table(dt)
@@ -3044,6 +3547,8 @@ solve_tcmm_standard_dt <- function(dt, features_to_analyze, pop_col, base_col,
     empty_dt[[natural_col_name]] <- numeric(0)
     empty_dt[[col_name]] <- numeric(0)
     empty_dt[[uncertainty_col]] <- numeric(0)
+    empty_dt[[ci_lower_col]] <- numeric(0)
+    empty_dt[[ci_upper_col]] <- numeric(0)
     empty_dt[["n"]] <- numeric(0)
     return(dplyr::as_tibble(empty_dt))
   }
@@ -3056,7 +3561,10 @@ solve_tcmm_standard_dt <- function(dt, features_to_analyze, pop_col, base_col,
     nl_dt[[natural_col_name]] <- 0
     nl_dt[[col_name]] <- -Inf
     nl_dt[[uncertainty_col]] <- 0
-    out_cols <- c("sample", features_to_analyze, natural_col_name, col_name, uncertainty_col, "n")
+    nl_dt[[ci_lower_col]] <- 0
+    nl_dt[[ci_upper_col]] <- 0
+    out_cols <- c("sample", features_to_analyze, natural_col_name, col_name,
+                  uncertainty_col, ci_lower_col, ci_upper_col, "n")
     out_parts[[length(out_parts) + 1L]] <- nl_dt[, ..out_cols]
   }
 
@@ -3079,13 +3587,17 @@ solve_tcmm_standard_dt <- function(dt, features_to_analyze, pop_col, base_col,
       n = lb_dt[["n"]],
       pnew = lb_dt[["pnew"]],
       pold = lb_dt[["pold"]],
-      Poisson = Poisson
+      Poisson = Poisson,
+      EBayes = EBayes,
+      sample_grp = lb_dt[["sample"]][grp_end]
     )
 
     lb_out <- lb_dt[grp_end, ..grp_cols]
     lb_out[[natural_col_name]] <- inv_logit(fit_res$logit_fn)
     lb_out[[col_name]] <- fit_res$logit_fn
     lb_out[[uncertainty_col]] <- fit_res$se
+    lb_out[[ci_lower_col]] <- fit_res$ci_lower_fn
+    lb_out[[ci_upper_col]] <- fit_res$ci_upper_fn
     lb_out[["n"]] <- fit_res$n
     out_parts[[length(out_parts) + 1L]] <- lb_out
   }
@@ -3100,7 +3612,9 @@ solve_tcmm_standard_dt <- function(dt, features_to_analyze, pop_col, base_col,
 solve_tcmm_hier_dt <- function(dt, features_to_analyze, pop_col, base_col,
                                samples_with_no_label, Poisson,
                                pnew_prior_mean_col, pnew_prior_sd_arg,
-                               fraction_prior_sd = 1.7){
+                               fraction_prior_sd = 1.7,
+                               EBayes = FALSE,
+                               compute_ci = FALSE){
   sample <- n <- pold <- NULL
   `.` <- list
 
@@ -3111,6 +3625,9 @@ solve_tcmm_hier_dt <- function(dt, features_to_analyze, pop_col, base_col,
     empty_dt <- dt_work[, ..grp_cols]
     empty_dt[, c("p1", "p2", "p1_u", "p2_u", "pold", "n") :=
                .(numeric(0), numeric(0), numeric(0), numeric(0), numeric(0), numeric(0))]
+    if(compute_ci){
+      empty_dt[, c("ci_lower_fn", "ci_upper_fn") := .(numeric(0), numeric(0))]
+    }
     return(empty_dt)
   }
 
@@ -3126,6 +3643,9 @@ solve_tcmm_hier_dt <- function(dt, features_to_analyze, pop_col, base_col,
       pold = as.numeric(pold[1L]),
       n = as.numeric(sum(n))
     ), by = grp_cols]
+    if(compute_ci){
+      nl_dt[, c("ci_lower_fn", "ci_upper_fn") := .(0, 0)]
+    }
     out_parts[[length(out_parts) + 1L]] <- nl_dt
   }
 
@@ -3154,7 +3674,6 @@ solve_tcmm_hier_dt <- function(dt, features_to_analyze, pop_col, base_col,
       rep(as.numeric(pnew_prior_sd_arg), ngroups)
     }
 
-    inv_s1 <- 1 / (fraction_prior_sd * fraction_prior_sd)
     inv_s2_all <- 1 / (s2_all * s2_all)
 
     if(Poisson){
@@ -3166,7 +3685,40 @@ solve_tcmm_hier_dt <- function(dt, features_to_analyze, pop_col, base_col,
       c_const <- lchoose(nucs, muts)
     }
 
-    eval_fgh_2d <- function(e1, e2, sg, se, sn, smuts, snucs, sc, sllo, sN, sm2, is2){
+    if(EBayes){
+      pnew_init_r <- stats::plogis(m2_all[grp_id])
+      ll_new_init <- if(Poisson){
+        stats::dpois(muts, nucs * pnew_init_r, log = TRUE)
+      }else{
+        stats::dbinom(muts, nucs, pnew_init_r, log = TRUE)
+      }
+      prof_eb <- profile_2comp_delta_vec(grp_id, grp_end, n_vec, ll_new_init - ll_old, N_grp = N_grp)
+      eb_cal <- calibrate_ebayes_logit_prior(
+        sample_grp = lb_dt[["sample"]][grp_end],
+        eta_mle = prof_eb$eta_mle,
+        info_mle = prof_eb$info_mle,
+        at_0 = prof_eb$at_0,
+        at_1 = prof_eb$at_1,
+        default_mean = 0,
+        default_sd = fraction_prior_sd
+      )
+      m1_all <- eb_cal$prior_mean
+      s1_all <- eb_cal$prior_sd
+      inv_s1_all <- 1 / (s1_all * s1_all)
+      e1_lo_bound <- -16
+      e1_hi_bound <- 16
+    }else{
+      m1_all <- rep(0, ngroups)
+      s1_all <- rep(fraction_prior_sd, ngroups)
+      inv_s1_all <- rep(1 / (fraction_prior_sd * fraction_prior_sd), ngroups)
+      e1_lo_bound <- -9
+      e1_hi_bound <- 9
+    }
+
+    M_ph <- 1.25
+
+    eval_fgh_2d <- function(e1, e2, sg, se, sn, smuts, snucs, sc, sllo, sN,
+                            sm1, is1, sm2, is2, use_ph = EBayes){
       theta <- stats::plogis(e1)
       pnew_g <- stats::plogis(e2)
       e1_r <- e1[sg]
@@ -3194,23 +3746,36 @@ solve_tcmm_hier_dt <- function(dt, features_to_analyze, pop_col, base_col,
       w <- stats::plogis(e1_r + delta)
       ww <- w * (1 - w)
 
+      diff1 <- e1 - sm1
+      if(use_ph){
+        z1 <- (diff1 * is1) / M_ph
+        rz1 <- sqrt(1 + z1 * z1)
+        pen1 <- ifelse(is1 > 0, (M_ph * M_ph / is1) * (rz1 - 1), 0)
+        g1_pr <- (diff1 * is1) / rz1
+        h11_pr <- is1 / (rz1 * (1 + z1 * z1))
+      }else{
+        pen1 <- 0.5 * diff1 * diff1 * is1
+        g1_pr <- diff1 * is1
+        h11_pr <- is1
+      }
+
       f_val <- -grp_sum_contig(sn * ll_obs, se) +
-        0.5 * e1 * e1 * inv_s1 + 0.5 * (e2 - sm2)^2 * is2
+        pen1 + 0.5 * (e2 - sm2)^2 * is2
 
       nw <- sn * w
       nww <- sn * ww
-      g1 <- sN * theta - grp_sum_contig(nw, se) + e1 * inv_s1
+      g1 <- sN * theta - grp_sum_contig(nw, se) + g1_pr
       g2 <- -grp_sum_contig(nw * d1, se) + (e2 - sm2) * is2
 
-      h11 <- sN * theta * (1 - theta) - grp_sum_contig(nww, se) + inv_s1
+      h11 <- sN * theta * (1 - theta) - grp_sum_contig(nww, se) + h11_pr
       h12 <- -grp_sum_contig(nww * d1, se)
       h22 <- -grp_sum_contig(nww * d1 * d1 + nw * d2, se) + is2
 
       list(f = f_val, g1 = g1, g2 = g2, h11 = h11, h12 = h12, h22 = h22)
     }
 
-    e1_all <- rep(0, ngroups)
-    e2_all <- rep(-2, ngroups)
+    e1_all <- if(EBayes) pmin(pmax(m1_all, -6), 6) else rep(0, ngroups)
+    e2_all <- pmin(pmax(m2_all, -8.5), -0.1)
 
     active <- seq_len(ngroups)
     sub_grp <- grp_id
@@ -3218,13 +3783,15 @@ solve_tcmm_hier_dt <- function(dt, features_to_analyze, pop_col, base_col,
     sub_end <- grp_end
     sub_n <- n_vec; sub_muts <- muts; sub_nucs <- nucs
     sub_c <- c_const; sub_llo <- ll_old
-    sub_N <- N_grp; sub_m2 <- m2_all; sub_is2 <- inv_s2_all
+    sub_N <- N_grp
+    sub_m1 <- m1_all; sub_is1 <- inv_s1_all
+    sub_m2 <- m2_all; sub_is2 <- inv_s2_all
     e1_a <- e1_all; e2_a <- e2_all
 
     for(iter in seq_len(35L)){
       res <- eval_fgh_2d(e1_a, e2_a, sub_grp, sub_end, sub_n, sub_muts, sub_nucs,
-                         sub_c, sub_llo, sub_N, sub_m2, sub_is2)
-      pin1 <- (e1_a <= -9 & res$g1 > 0) | (e1_a >= 9 & res$g1 < 0)
+                         sub_c, sub_llo, sub_N, sub_m1, sub_is1, sub_m2, sub_is2)
+      pin1 <- (e1_a <= e1_lo_bound & res$g1 > 0) | (e1_a >= e1_hi_bound & res$g1 < 0)
       pin2 <- (e2_a <= -9 & res$g2 > 0) | (e2_a >= 0 & res$g2 < 0)
       pg1 <- ifelse(pin1, 0, res$g1)
       pg2 <- ifelse(pin2, 0, res$g2)
@@ -3244,7 +3811,9 @@ solve_tcmm_hier_dt <- function(dt, features_to_analyze, pop_col, base_col,
         rem_loc <- which(!conv)
         active <- active[rem_loc]
         e1_a <- e1_a[rem_loc]; e2_a <- e2_a[rem_loc]
-        sub_N <- sub_N[rem_loc]; sub_m2 <- sub_m2[rem_loc]; sub_is2 <- sub_is2[rem_loc]
+        sub_N <- sub_N[rem_loc]
+        sub_m1 <- sub_m1[rem_loc]; sub_is1 <- sub_is1[rem_loc]
+        sub_m2 <- sub_m2[rem_loc]; sub_is2 <- sub_is2[rem_loc]
         grp_sizes <- grp_sizes[rem_loc]
 
         remap <- integer(length(conv))
@@ -3277,23 +3846,22 @@ solve_tcmm_hier_dt <- function(dt, features_to_analyze, pop_col, base_col,
       sc_s <- ifelse(max_s > 2.5, 2.5 / max_s, 1)
       d1_s <- d1_s * sc_s; d2_s <- d2_s * sc_s
 
-      c1 <- pmin(pmax(e1_a + d1_s, -9), 9)
+      c1 <- pmin(pmax(e1_a + d1_s, e1_lo_bound), e1_hi_bound)
       c2 <- pmin(pmax(e2_a + d2_s, -9), 0)
       alpha <- rep(1, length(active))
 
       for(bt in seq_len(8L)){
-        # Check objective decrease only on active groups; subset to bad if small
         f_new <- eval_fgh_2d(c1, c2, sub_grp, sub_end, sub_n, sub_muts, sub_nucs,
-                             sub_c, sub_llo, sub_N, sub_m2, sub_is2)$f
+                             sub_c, sub_llo, sub_N, sub_m1, sub_is1, sub_m2, sub_is2)$f
         bad <- is.na(f_new) | (f_new > res$f + 1e-10)
         if(!any(bad)) break
         alpha[bad] <- alpha[bad] * 0.5
         if(bt >= 5L){
           gn <- pmax(sqrt(pg1[bad]^2 + pg2[bad]^2), 1e-8)
-          c1[bad] <- pmin(pmax(e1_a[bad] - alpha[bad] * pg1[bad] / gn, -9), 9)
+          c1[bad] <- pmin(pmax(e1_a[bad] - alpha[bad] * pg1[bad] / gn, e1_lo_bound), e1_hi_bound)
           c2[bad] <- pmin(pmax(e2_a[bad] - alpha[bad] * pg2[bad] / gn, -9), 0)
         }else{
-          c1[bad] <- pmin(pmax(e1_a[bad] + alpha[bad] * d1_s[bad], -9), 9)
+          c1[bad] <- pmin(pmax(e1_a[bad] + alpha[bad] * d1_s[bad], e1_lo_bound), e1_hi_bound)
           c2[bad] <- pmin(pmax(e2_a[bad] + alpha[bad] * d2_s[bad], -9), 0)
         }
       }
@@ -3305,8 +3873,8 @@ solve_tcmm_hier_dt <- function(dt, features_to_analyze, pop_col, base_col,
     }
 
     fin <- eval_fgh_2d(e1_all, e2_all, grp_id, grp_end, n_vec, muts, nucs,
-                       c_const, ll_old, N_grp, m2_all, inv_s2_all)
-    pin1_f <- (e1_all <= -9 & fin$g1 > 0) | (e1_all >= 9 & fin$g1 < 0)
+                       c_const, ll_old, N_grp, m1_all, inv_s1_all, m2_all, inv_s2_all)
+    pin1_f <- (e1_all <= e1_lo_bound & fin$g1 > 0) | (e1_all >= e1_hi_bound & fin$g1 < 0)
     pin2_f <- (e2_all <= -9 & fin$g2 > 0) | (e2_all >= 0 & fin$g2 < 0)
     pg_max <- pmax(abs(ifelse(pin1_f, 0, fin$g1)), abs(ifelse(pin2_f, 0, fin$g2)))
     det_fin <- fin$h11 * fin$h22 - fin$h12 * fin$h12
@@ -3324,16 +3892,147 @@ solve_tcmm_hier_dt <- function(dt, features_to_analyze, pop_col, base_col,
           muts = muts[idx], nucs = nucs[idx], n = n_vec[idx],
           Poisson = Poisson, pold = pold_vec[idx[1L]],
           pnew_prior_mean = m2_all[g], pnew_prior_sd = s2_all[g],
-          fraction_prior_sd = fraction_prior_sd
+          fraction_prior_mean = m1_all[g], fraction_prior_sd = s1_all[g]
         )
         e1_all[g] <- fb$p1; e2_all[g] <- fb$p2
         p1_u[g] <- fb$p1_u; p2_u[g] <- fb$p2_u
       }
     }
 
+    if(compute_ci){
+      # 2D profile-likelihood 95% CIs profiling over feature-specific logit(pnew)
+      pn_hat_r <- stats::plogis(e2_all[grp_id])
+      ll_new_hat <- if(Poisson){
+        stats::dpois(muts, nucs * pn_hat_r, log = TRUE)
+      }else{
+        stats::dbinom(muts, nucs, pn_hat_r, log = TRUE)
+      }
+      prof_init <- profile_2comp_delta_vec(grp_id, grp_end, n_vec, ll_new_hat - ll_old, N_grp = N_grp)
+
+      eval_prof_e1 <- function(e1_v, e2_start, sg, se, sn, smuts, snucs, sc, sllo, sN, sm2, is2){
+        z0 <- numeric(length(e1_v))
+        e2_cur <- e2_start
+        for(st_i in seq_len(3L)){
+          ev_p <- eval_fgh_2d(e1_v, e2_cur, sg, se, sn, smuts, snucs, sc, sllo, sN,
+                              z0, z0, sm2, is2, use_ph = FALSE)
+          step2 <- ev_p$g2 / pmax(ev_p$h22, 1e-4)
+          step2 <- pmin(pmax(step2, -1.5), 1.5)
+          e2_cur <- pmin(pmax(e2_cur - step2, -9), 0)
+        }
+        ev_p <- eval_fgh_2d(e1_v, e2_cur, sg, se, sn, smuts, snucs, sc, sllo, sN,
+                            z0, z0, sm2, is2, use_ph = FALSE)
+        list(ll = -ev_p$f, d_ll = -ev_p$g1, e2 = e2_cur)
+      }
+
+      crit_h <- 0.5 * stats::qchisq(0.95, df = 1)
+      ll_prof_0 <- grp_sum_contig(n_vec * ll_old, grp_end)
+      pr_1 <- eval_prof_e1(rep(28, ngroups), e2_all, grp_id, grp_end, n_vec, muts, nucs,
+                           c_const, ll_old, N_grp, m2_all, inv_s2_all)
+      ll_prof_1 <- pr_1$ll
+
+      e1_mle_init <- ifelse(prof_init$at_0, -25,
+                            ifelse(prof_init$at_1, 25,
+                                   pmin(pmax(prof_init$eta_mle, -25), 25)))
+      pr_m <- eval_prof_e1(e1_mle_init, e2_all, grp_id, grp_end, n_vec, muts, nucs,
+                           c_const, ll_old, N_grp, m2_all, inv_s2_all)
+      pr_hat <- eval_prof_e1(e1_all, e2_all, grp_id, grp_end, n_vec, muts, nucs,
+                             c_const, ll_old, N_grp, m2_all, inv_s2_all)
+      use_hat <- pr_hat$ll > pr_m$ll
+      e1_best <- ifelse(use_hat, e1_all, e1_mle_init)
+      ll_int_best <- pmax(pr_m$ll, pr_hat$ll)
+      best_is_0 <- (ll_prof_0 >= ll_int_best - 1e-10) & (ll_prof_0 >= ll_prof_1)
+      best_is_1 <- !best_is_0 & (ll_prof_1 >= ll_int_best - 1e-10)
+      e1_best[best_is_0] <- -28
+      e1_best[best_is_1] <- 28
+      ll_max_h <- pmax(ll_int_best, ll_prof_0, ll_prof_1)
+      ll_targ_h <- ll_max_h - crit_h
+
+      solve_hier_side <- function(idx_set, lo_b, hi_b, init_e1, increasing = TRUE){
+        if(length(idx_set) == 0L) return(numeric(0))
+        act_map <- integer(ngroups)
+        act_map[idx_set] <- seq_along(idx_set)
+        rk <- act_map[grp_id] > 0L
+        sg <- act_map[grp_id[rk]]
+        se <- cumsum(diff(c(0L, grp_end))[idx_set])
+        sn <- n_vec[rk]; smuts <- muts[rk]; snucs <- nucs[rk]
+        sc <- c_const[rk]; sllo <- ll_old[rk]
+        sN <- N_grp[idx_set]; sm2 <- m2_all[idx_set]; is2 <- inv_s2_all[idx_set]
+        targ <- ll_targ_h[idx_set]
+        e2_st <- e2_all[idx_set]
+        lo_a <- lo_b; hi_a <- hi_b
+        eta_a <- pmin(pmax(init_e1, lo_a + 1e-5 * (hi_a - lo_a)), hi_a - 1e-5 * (hi_a - lo_a))
+
+        for(it_h in seq_len(14L)){
+          ev_s <- eval_prof_e1(eta_a, e2_st, sg, se, sn, smuts, snucs, sc, sllo, sN, sm2, is2)
+          e2_st <- ev_s$e2
+          fv <- ev_s$ll - targ
+          if(increasing){
+            neg <- fv < 0
+            lo_a[neg] <- pmax(lo_a[neg], eta_a[neg])
+            hi_a[!neg] <- pmin(hi_a[!neg], eta_a[!neg])
+          }else{
+            pos <- fv > 0
+            lo_a[pos] <- pmax(lo_a[pos], eta_a[pos])
+            hi_a[!pos] <- pmin(hi_a[!pos], eta_a[!pos])
+          }
+          stp <- ifelse(abs(ev_s$d_ll) > 1e-10, fv / ev_s$d_ll, NA_real_)
+          cand <- eta_a - stp
+          bad <- is.na(cand) | cand <= lo_a | cand >= hi_a
+          cand[bad] <- 0.5 * (lo_a[bad] + hi_a[bad])
+          d_e <- abs(cand - eta_a)
+          eta_a <- cand
+          if(all((abs(fv) < 1e-5 & d_e < 1e-5) | ((hi_a - lo_a) < 1e-6))) break
+        }
+        eta_a
+      }
+
+      ci_lo_logit_h <- rep(-Inf, ngroups)
+      ci_lo_fn_h <- numeric(ngroups)
+      need_lo_h <- which(!best_is_0 & (ll_prof_0 < ll_targ_h))
+      if(length(need_lo_h) > 0L){
+        init_lo_h <- ifelse(is.finite(prof_init$ci_lower_logit[need_lo_h]),
+                            prof_init$ci_lower_logit[need_lo_h],
+                            e1_best[need_lo_h] - 2.0)
+        res_lo_h <- solve_hier_side(need_lo_h, rep(-28, length(need_lo_h)),
+                                    e1_best[need_lo_h], init_lo_h, increasing = TRUE)
+        ci_lo_logit_h[need_lo_h] <- res_lo_h
+        ci_lo_fn_h[need_lo_h] <- stats::plogis(res_lo_h)
+      }
+
+      ci_hi_logit_h <- rep(Inf, ngroups)
+      ci_hi_fn_h <- rep(1, ngroups)
+      need_hi_h <- which(!best_is_1 & (ll_prof_1 < ll_targ_h))
+      if(length(need_hi_h) > 0L){
+        init_hi_h <- ifelse(is.finite(prof_init$ci_upper_logit[need_hi_h]),
+                            prof_init$ci_upper_logit[need_hi_h],
+                            e1_best[need_hi_h] + 2.0)
+        res_hi_h <- solve_hier_side(need_hi_h, e1_best[need_hi_h],
+                                    rep(28, length(need_hi_h)), init_hi_h, increasing = FALSE)
+        ci_hi_logit_h[need_hi_h] <- res_hi_h
+        ci_hi_fn_h[need_hi_h] <- stats::plogis(res_hi_h)
+      }
+
+      if(EBayes){
+        z95 <- stats::qnorm(0.975)
+        lo_f <- is.finite(ci_lo_logit_h)
+        hi_f <- is.finite(ci_hi_logit_h)
+        bf <- lo_f & hi_f
+        if(any(bf)) p1_u[bf] <- pmax(p1_u[bf], (ci_hi_logit_h[bf] - ci_lo_logit_h[bf]) / (2 * z95))
+        li <- !lo_f & hi_f
+        if(any(li)) p1_u[li] <- pmax(p1_u[li], pmax(ci_hi_logit_h[li] - e1_all[li], 0) / z95, 2.0)
+        hi_i <- lo_f & !hi_f
+        if(any(hi_i)) p1_u[hi_i] <- pmax(p1_u[hi_i], pmax(e1_all[hi_i] - ci_lo_logit_h[hi_i], 0) / z95, 2.0)
+        nf <- !lo_f & !hi_f
+        if(any(nf)) p1_u[nf] <- pmax(p1_u[nf], 2.5)
+      }
+    }
+
     lb_out <- lb_dt[grp_end, ..grp_cols]
     lb_out[, c("p1", "p2", "p1_u", "p2_u", "pold", "n") :=
              .(e1_all, e2_all, p1_u, p2_u, pold_vec[grp_end], N_grp)]
+    if(compute_ci){
+      lb_out[, c("ci_lower_fn", "ci_upper_fn") := .(ci_lo_fn_h, ci_hi_fn_h)]
+    }
     out_parts[[length(out_parts) + 1L]] <- lb_out
   }
 
@@ -3366,7 +4065,9 @@ solve_general_mixture_dt <- function(dt, features_to_analyze, mutrate_design,
   ism_cols <- paste0("invsoftmax_", pop_labels)
   frac_cols <- paste0("fraction_", pop_labels)
   se_cols <- paste0("se_invsoftmax_", pop_labels)
-  listnames <- c(ism_cols, frac_cols, se_cols)
+  ci_lo_cols <- paste0("ci_lower_fraction_", pop_labels)
+  ci_hi_cols <- paste0("ci_upper_fraction_", pop_labels)
+  listnames <- c(ism_cols, frac_cols, se_cols, ci_lo_cols, ci_hi_cols)
 
   if(nrow(dt_work) == 0L){
     empty_dt <- dt_work[, ..grp_cols]
@@ -3400,6 +4101,12 @@ solve_general_mixture_dt <- function(dt, features_to_analyze, mutrate_design,
       }
       for(k in seq_len(K)){
         nl_dt[[se_cols[k]]] <- rep(0, n_nl)
+      }
+      for(k in seq_len(K)){
+        nl_dt[[ci_lo_cols[k]]] <- rep(if(is_all_low[k]) 1 else 0, n_nl)
+      }
+      for(k in seq_len(K)){
+        nl_dt[[ci_hi_cols[k]]] <- rep(if(is_all_low[k]) 1 else 0, n_nl)
       }
       col_ord <- c("sample", features_to_analyze, listnames, "n")
       out_parts[[s_idx]] <- nl_dt[, ..col_ord]
@@ -3641,10 +4348,33 @@ solve_general_mixture_dt <- function(dt, features_to_analyze, mutrate_design,
       se_mat[g, ] <- se_g
     }
 
+    # Vectorized 95% Wilks profile-likelihood CIs for each population along complement simplex rays
+    ci_lo_mat <- matrix(0, nrow = ngroups, ncol = K)
+    ci_hi_mat <- matrix(1, nrow = ngroups, ncol = K)
+    for(k in seq_len(K)){
+      other_idx <- setdiff(seq_len(K), k)
+      rem_mass <- rowSums(frac_mat[, other_idx, drop = FALSE])
+      q_mat <- frac_mat[, other_idx, drop = FALSE] / ifelse(rem_mass > 1e-12, rem_mass, 1)
+      if(any(rem_mass <= 1e-12)){
+        q_mat[rem_mass <= 1e-12, ] <- 1 / length(other_idx)
+      }
+      log_q <- log(pmax(q_mat, 1e-300))
+      W_oth <- log_q[grp_id, , drop = FALSE] + E_mat[, other_idx, drop = FALSE]
+      w_mx <- do.call(pmax, unname(split(W_oth, col(W_oth))))
+      w_mx_s <- ifelse(is.finite(w_mx), w_mx, 0)
+      E_mk <- w_mx_s + log(rowSums(exp(W_oth - w_mx_s)))
+      E_mk[!is.finite(w_mx)] <- -Inf
+      pr_k <- profile_2comp_delta_vec(grp_id, grp_end, n_vec, E_mat[, k] - E_mk, N_grp = N_grp)
+      ci_lo_mat[, k] <- pr_k$ci_lower_fn
+      ci_hi_mat[, k] <- pr_k$ci_upper_fn
+    }
+
     s_out <- s_dt[grp_end, ..grp_cols]
     for(k in seq_len(K)) s_out[[ism_cols[k]]] <- clr_mat[, k]
     for(k in seq_len(K)) s_out[[frac_cols[k]]] <- frac_mat[, k]
     for(k in seq_len(K)) s_out[[se_cols[k]]] <- se_mat[, k]
+    for(k in seq_len(K)) s_out[[ci_lo_cols[k]]] <- ci_lo_mat[, k]
+    for(k in seq_len(K)) s_out[[ci_hi_cols[k]]] <- ci_hi_mat[, k]
     s_out[["n"]] <- N_grp
     out_parts[[s_idx]] <- s_out
   }
