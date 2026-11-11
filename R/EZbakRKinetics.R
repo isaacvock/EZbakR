@@ -221,7 +221,7 @@ validate_EZbakRKinetics <- function(obj, features){
 
   ### Infer and check label time columns
 
-  tl_cols <- metadf_cols[grepl("^tl$", metadf_cols) |
+  tl_cols <- metadf_cols[grepl("^tl($|_)", metadf_cols) |
                            grepl("^tpulse", metadf_cols) |
                            grepl("^tchase", metadf_cols)]
 

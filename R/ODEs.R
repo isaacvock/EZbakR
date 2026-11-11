@@ -493,16 +493,11 @@ EZDynamics <- function(obj,
     npars <- max(graph)
 
 
-    # Have to add a bit of noise because equal parameters means general solution
-    # breaks down as their aren't N eigenvalues. Could generalize to case
-    # of equal parameters, but thinking of parameter estimates as continuous
-    # random variables that thus have probability of 0 of being equal.
-    lower_bounds <- stats::rnorm(npars,
-                          -10,
-                          0.01)
-    upper_bounds <- stats::rnorm(npars,
-                          10,
-                          0.01)
+    # Use small deterministic distinct offsets on box bounds to avoid exact
+    # repeated-eigenvalue degeneracies without mutating .Random.seed
+    bound_offsets <- if(npars > 1) seq(from = -0.01, to = 0.01, length.out = npars) else 0
+    lower_bounds <- -10 + bound_offsets
+    upper_bounds <- 10 + bound_offsets
     starting_values <- seq(from = -5, to = -2,
                            length.out = npars)
 
@@ -882,18 +877,12 @@ EZDynamics <- function(obj,
     # Determine initial vector of parameters and their upper and lower bounds
     npars <- max(graph)
 
-    # Have to add a bit of noise because equal parameters means general solution
-    # breaks down as their aren't N eigenvalues. Could generalize to case
-    # of equal parameters, but thinking of parameter estimates as continuous
-    # random variables that thus have probability of 0 of being equal.
-    lower_bounds <- stats::rnorm(npars,
-                          -10,
-                          0.01)
-    upper_bounds <- stats::rnorm(npars,
-                          10,
-                          0.01)
-    starting_values <- stats::rnorm(npars,
-                             0, 0.01)
+    # Use small deterministic distinct offsets on box bounds and starting values
+    # to avoid exact repeated-eigenvalue degeneracies without mutating .Random.seed
+    bound_offsets <- if(npars > 1) seq(from = -0.01, to = 0.01, length.out = npars) else 0
+    lower_bounds <- -10 + bound_offsets
+    upper_bounds <- 10 + bound_offsets
+    starting_values <- bound_offsets
 
     cols_to_group_by = c("sample", grouping_features)
 
@@ -1148,7 +1137,7 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
   ### Step 2: infer general solution
 
-  tryCatch(
+  ode_solved <- tryCatch(
     {
       Rss <- solve(a = A,
                    b = -param_graph[zero_index,-zero_index])
@@ -1159,17 +1148,39 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
       ev <- eigen(A)
 
       lambda <- ev$values
-      V<- ev$vectors
+      V <- ev$vectors
 
 
       cs <- solve(V, -Rss)
+      TRUE
 
     },
     error = function(x){
-      browser()
+      # Fallback for defective / nearly repeated eigenvalues during optimization
+      tryCatch(
+        {
+          A_pert <- A
+          if(nrow(A_pert) > 1){
+            diag(A_pert) <- diag(A_pert) * (1 + seq(from = -1e-6, to = 1e-6, length.out = nrow(A_pert)))
+          }
+          Rss <<- solve(a = A_pert,
+                        b = -param_graph[zero_index,-zero_index])
+          names(Rss) <<- rownames(A_pert)
+          ev <<- eigen(A_pert)
+          lambda <<- ev$values
+          V <<- ev$vectors
+          cs <<- solve(V, -Rss)
+          TRUE
+        },
+        error = function(e2) FALSE
+      )
     }
 
   )
+
+  if(!ode_solved){
+    return(1e10)
+  }
 
 
 
@@ -1190,7 +1201,7 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
 
     scaled_eigenvectors <- V %*% diag(exp_lambda*cs, nrow = length(exp_lambda))
 
-    result_vector <- rowSums(scaled_eigenvectors) + Rss
+    result_vector <- Re(rowSums(scaled_eigenvectors)) + Rss
 
     names(result_vector) <- rownames(A)
 
@@ -1611,7 +1622,7 @@ infer_eqns <- function(norm_df_t,
           # that it provided the same result
           if(length(species_to_sf[[names(actual_mtom)[f]]]) > 0){
 
-            if(!identical(newrow[newrow != 0], species_to_sf[[names(actual_mtom)[f]]])){
+            if(!identical(names(newrow[newrow != 0]), species_to_sf[[names(actual_mtom)[f]]])){
               stop("Inferred species groups contradicted one another! Try specifying
                    species_to_sf parameter manually.")
             }

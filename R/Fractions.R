@@ -266,7 +266,7 @@ EstimateFractions <- function(obj, features = "all",
                               pold_prior_mean = -6.5,
                               pold_prior_sd = 0.5,
                               hier_readcutoff = 300,
-                              init_pnew_prior_sd = 0.8,
+                              init_pnew_prior_sd = 0.3,
                               pnew_prior_sd_min = 0.01,
                               pnew_prior_sd_max = 0.15,
                               pold_est = NULL,
@@ -453,7 +453,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
   ### Figure out which mutational populations to analyze
 
-  if(mutrate_populations == "all"){
+  if(length(mutrate_populations) == 1 && mutrate_populations == "all"){
 
     pops_to_analyze <- mutcounts_in_cB
 
@@ -517,7 +517,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   ### Estimate fraction new for each feature in each sample
   message("Summarizing data for feature(s) of interest")
 
-  cB <- setDT(cB)
+  cB <- data.table::as.data.table(cB)
 
   # Keep only feature of interest
   cols_to_group <- c(necessary_basecounts, pops_to_analyze, "sample", features_to_analyze)
@@ -646,22 +646,12 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
       message("Estimating fractions with feature-specific pnews")
 
       ## Mean should really be the estimated sample wide value
-      pnew_prior_df <- mutrates %>%
-        dplyr::rename(pnew_prior = pnew) %>%
-        dplyr::select(sample, pnew_prior)
-      global_est <- feature_specific[pnew_prior_df][pnew < 0.3 & pnew > max(cB$pold, na.rm = TRUE)][,.(pnew_prior = mean(logit(pnew_prior)),
-                                    pnew_prior_sd = stats::sd(logit(pnew)) - mean(lpnew_uncert),
-                                    pold = mean(pold)),
-                                 by = sample]
-
-      global_est[, pnew_prior_sd := ifelse(pnew_prior_sd < 0,
-                                           pnew_prior_sd_min,
-                                           ifelse(pnew_prior_sd > pnew_prior_sd_max,
-                                                  pnew_prior_sd_max,
-                                                  pnew_prior_sd))
-      ]
-
-      global_est[, pnew_prior_sd := min(pnew_prior_sd)]
+      global_est <- estimate_hier_pnew_prior(
+        feature_specific = feature_specific,
+        mutrates = mutrates,
+        pnew_prior_sd_min = pnew_prior_sd_min,
+        pnew_prior_sd_max = pnew_prior_sd_max
+      )
 
       setkey(global_est, sample)
       setkey(cB, sample)
@@ -898,7 +888,7 @@ EstimateMutRates.EZbakRData <- function(obj,
 
   cB <- obj$cB
   metadf <- obj$metadf
-  cB <- data.table::setDT(cB)
+  cB <- data.table::as.data.table(cB)
 
 
   # Figure out which mutation counts are in the cB
@@ -907,7 +897,7 @@ EstimateMutRates.EZbakRData <- function(obj,
   basecounts_in_cB <- paste0("n", substr(mutcounts_in_cB, start = 1, stop = 1))
 
   # Which populations to analyze?
-  if(populations == "all"){
+  if(length(populations) == 1 && populations == "all"){
 
     muts_analyze <- mutcounts_in_cB
 
@@ -915,7 +905,7 @@ EstimateMutRates.EZbakRData <- function(obj,
 
     muts_analyze <- populations
 
-    if(!(mutcounts_in_cB %in% muts_analyze)){
+    if(!all(muts_analyze %in% mutcounts_in_cB)){
       stop("You specified mutrate_populations not present in your cB!")
     }
 
@@ -1133,7 +1123,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                               pold_prior_mean = -6.5,
                                               pold_prior_sd = 0.5,
                                               hier_readcutoff = 300,
-                                              init_pnew_prior_sd = 0.8,
+                                              init_pnew_prior_sd = 0.3,
                                               pnew_prior_sd_min = 0.01,
                                               pnew_prior_sd_max = 0.15,
                                               pold_est = NULL,
@@ -1194,6 +1184,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
   illegal_mutcounts <- c("TT", "CC", "GG", "AA", "UU")
 
   mutcounts <- mutcounts[!(mutcounts %in% illegal_mutcounts)]
+  mutcounts[mutcounts == "NA"] <- "NtoA"
 
   # Which mutcounts are in the cB?
   mutcounts_in_cB <- cB_cols[cB_cols %in% mutcounts]
@@ -1232,7 +1223,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
   ### Figure out which mutational populations to analyze
 
-  if(mutrate_populations == "all"){
+  if(length(mutrate_populations) == 1 && mutrate_populations == "all"){
 
     pops_to_analyze <- mutcounts_in_cB
 
@@ -1391,10 +1382,24 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
       }
 
 
-      sample_fns <- dplyr::as_tibble(sample_fns) %>%
-        dplyr::mutate(!!natural_col_name := 0,
-                      !!col_name := -Inf,
-                      !!uncertainty_col := 0)
+      if(ncol(mutrate_design) == 1){
+        sample_fns <- dplyr::as_tibble(sample_fns) %>%
+          dplyr::mutate(!!natural_col_name := 0,
+                        !!col_name := -Inf,
+                        !!uncertainty_col := 0)
+      }else{
+        nolabel_mix <- fit_general_mixture(
+          dataset = NULL,
+          mutrate_design = mutrate_design,
+          twocomp = FALSE,
+          sample = all_samples[s],
+          samples_with_no_label = samples_without_label
+        )
+        sample_fns <- dplyr::bind_cols(
+          dplyr::as_tibble(sample_fns),
+          dplyr::as_tibble(nolabel_mix)
+        )
+      }
 
 
 
@@ -1411,7 +1416,8 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
           dplyr::filter(sample == all_samples[s]) %>%
           dplyr::group_by(dplyr::across(dplyr::all_of(cols_to_group))) %>%
           dplyr::summarise(reads = sum(n),
-                           !!necessary_basecounts := sum(!!dplyr::sym(necessary_basecounts)*n)/sum(n)) %>%
+                           dplyr::across(dplyr::all_of(necessary_basecounts),
+                                         ~ sum(.x * n) / sum(n))) %>%
           dplyr::collect() %>%
           dplyr::ungroup() %>%
           dplyr::rename(n = reads)
@@ -1513,6 +1519,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                      Poisson = Poisson,
                                      pold = unique(pold),
                                      pnew_prior_mean = logit(unique(pnew)),
+                                     fraction_prior_sd = 1,
                                      pnew_prior_sd = init_pnew_prior_sd)),
               pold = unique(pold)),
             by = c("sample", features_to_analyze)
@@ -1527,19 +1534,12 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
           message("Estimating fractions with feature-specific pnews")
 
-          global_est <- feature_specific[,.(pnew_prior = mean(logit(pnew)),
-                                            pnew_prior_sd = stats::sd(logit(pnew)) - mean(lpnew_uncert),
-                                            pold = mean(pold)),
-                                         by = sample]
-
-          global_est[, pnew_prior_sd := ifelse(pnew_prior_sd < 0,
-                                               pnew_prior_sd_min,
-                                               ifelse(pnew_prior_sd > pnew_prior_sd_max,
-                                                      pnew_prior_sd_max,
-                                                      pnew_prior_sd))
-          ]
-
-          global_est[, pnew_prior_sd := min(pnew_prior_sd)]
+          global_est <- estimate_hier_pnew_prior(
+            feature_specific = feature_specific,
+            mutrates = mutrates[sample == all_samples[s]],
+            pnew_prior_sd_min = pnew_prior_sd_min,
+            pnew_prior_sd_max = pnew_prior_sd_max
+          )
 
           setkey(global_est, sample)
           setkey(sample_cB, sample)
@@ -1646,8 +1646,8 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
       }else{
 
-        Poisson <- FALSE
-
+        pops_to_analyze <- colnames(mutrate_design)
+        necessary_basecounts <- paste0("n", substr(pops_to_analyze, start = 1, stop = 1))
 
         sample_fns <- sample_cB[,.(mixture_fit = list(fit_general_mixture(dataset = .SD,
                                                                           mutrate_design = mutrate_design,
@@ -1655,6 +1655,8 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                                                           basecols = necessary_basecounts,
                                                                           Poisson = Poisson,
                                                                           twocomp = FALSE,
+                                                                          sample = unique(sample),
+                                                                          samples_with_no_label = samples_without_label,
                                                                           pnew = sapply(pops_to_analyze,
                                                                                         function(name) mutation_rates[[name]]$pnew[mutation_rates[[name]]$sample == sample ]),
                                                                           pold = sapply(pops_to_analyze,
@@ -1803,6 +1805,7 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
   illegal_mutcounts <- c("TT", "CC", "GG", "AA", "UU")
 
   mutcounts <- mutcounts[!(mutcounts %in% illegal_mutcounts)]
+  mutcounts[mutcounts == "NA"] <- "NtoA"
 
   # Which mutcounts are in the cB?
   mutcounts_in_cB <- cB_cols[cB_cols %in% mutcounts]
@@ -1812,7 +1815,7 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
 
 
   # Which populations to analyze?
-  if(populations == "all"){
+  if(length(populations) == 1 && populations == "all"){
 
     muts_analyze <- mutcounts_in_cB
 
@@ -1820,7 +1823,7 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
 
     muts_analyze <- populations
 
-    if(!(muts_analyze %in% mutcounts_in_cB)){
+    if(!all(muts_analyze %in% mutcounts_in_cB)){
       stop("You specified mutrate_populations not present in your cB!")
     }
 
@@ -2108,9 +2111,6 @@ find_mutcounts <- function(obj){
 
   `.` <- list
 
-  cB <- obj$cB
-  cB <- data.table::setDT(cB)
-
   # Mutation count column names
   mutcounts <- expand.grid(c("T", "C", "G", "A", "U", "N"),
                            c("T", "C", "G", "A", "U", "N"))
@@ -2119,11 +2119,12 @@ find_mutcounts <- function(obj){
   illegal_mutcounts <- c("TT", "CC", "GG", "AA", "UU")
 
   mutcounts <- mutcounts[!(mutcounts %in% illegal_mutcounts)]
+  mutcounts[mutcounts == "NA"] <- "NtoA"
 
 
 
   # Which mutcounts are in the cB?
-  cB_cols <- colnames(cB)
+  cB_cols <- colnames(obj$cB)
 
 
   mutcounts_in_cB <- cB_cols[cB_cols %in% mutcounts]
@@ -2405,128 +2406,159 @@ two_comp_likelihood <- function(param, muts, nucs, Poisson = TRUE,
 
 }
 
+# Empirical Bayes estimation of sample-specific logit(pnew) prior mean and SD
+estimate_hier_pnew_prior <- function(feature_specific,
+                                     mutrates,
+                                     pnew_prior_sd_min,
+                                     pnew_prior_sd_max){
+
+  pnew <- pold <- lpnew_uncert <- pnew_prior <- pnew_prior_sd <- NULL
+  `.` <- list
+
+  prior_base <- data.table::as.data.table(mutrates)[, .(
+    sample = sample,
+    pnew_prior = logit(pnew),
+    pold = pold
+  )]
+
+  if(nrow(feature_specific) == 0){
+    prior_base[, pnew_prior_sd := pnew_prior_sd_min]
+    return(prior_base)
+  }
+
+  fs_dt <- data.table::as.data.table(feature_specific)
+  data.table::setkey(fs_dt, sample)
+  data.table::setkey(prior_base, sample)
+
+  fs_joined <- prior_base[fs_dt, nomatch = NULL]
+  fs_filt <- fs_joined[is.finite(logit(pnew)) & pnew < 0.3 & pnew > pold]
+
+  if(nrow(fs_filt) > 0){
+    sd_dt <- fs_filt[, .(
+      pnew_prior_sd = {
+        if(.N >= 2){
+          emp_var <- stats::var(logit(pnew), na.rm = TRUE) - mean(lpnew_uncert^2, na.rm = TRUE)
+          if(is.na(emp_var) || emp_var <= 0) pnew_prior_sd_min else sqrt(emp_var)
+        }else{
+          pnew_prior_sd_min
+        }
+      }
+    ), by = sample]
+
+    data.table::setkey(sd_dt, sample)
+    global_est <- sd_dt[prior_base]
+  }else{
+    global_est <- data.table::copy(prior_base)
+    global_est[, pnew_prior_sd := pnew_prior_sd_min]
+  }
+
+  global_est[is.na(pnew_prior_sd), pnew_prior_sd := pnew_prior_sd_min]
+  global_est[, pnew_prior_sd := pmin(pmax(pnew_prior_sd, pnew_prior_sd_min), pnew_prior_sd_max)]
+
+  return(global_est[, .(sample, pnew_prior, pnew_prior_sd, pold)])
+}
+
+
 # Abstract the concept of an NR-seq mixture model to oblivion
 generalized_likelihood <- function(param, dataset, Poisson = TRUE,
                                    mutrate_design, pnew, pold, highpop,
-                                   mutcols, basecols, twocomp = TRUE){
+                                   mutcols, basecols, twocomp = TRUE,
+                                   ref_idx = NULL){
 
+  K <- nrow(mutrate_design)
+  n_obs <- length(dataset[[1]])
 
-  # # # POTENTIAL VECTORIZATION
-  # # # Assuming `rates` is KxN, `dataset` is a dataframe, `basecols` and `mutcols` are vectors of column names
-  # # # Precompute rates for each population and mutation
-  # rates_new <- sweep(mutrate_design, 2, pnew, `*`)
-  # rates_old <- sweep(1 - mutrate_design, 2, pold, `*`)
-  # rates <- rates_new + rates_old
-  #
-  # # Assuming `rates` is KxN, `dataset` is a dataframe, `basecols` and `mutcols` are vectors of column names
-  #
-  # # Step 1: Generate lambda matrix for a single data point (extendable to all points)
-  # generate_lambda <- function(dataset_row) {
-  #   sapply(1:length(basecols), function(j) rates[, j] * dataset_row[basecols[j]])
-  # }
-  #
-  # # For all dataset points (assuming dataset is a dataframe and iterating over its rows)
-  # lambda_matrix_list <- apply(dataset, 1, generate_lambda)
-  #
-  # # Step 2: Calculate Poisson likelihoods for each lambda
-  # calculate_poisson_likelihoods <- function(lambda_matrix, dataset_row) {
-  #   sapply(1:nrow(lambda_matrix), function(i) {
-  #     dpois(dataset_row[mutcols], lambda_matrix[i, ])
-  #   })
-  # }
-  #
-  # # For all dataset points
-  # poisson_likelihoods_list <- mapply(calculate_poisson_likelihoods, lambda_matrix_list,
-  #                                    MoreArgs = list(dataset_row = dataset))
-  #
-  # # Step 3: Calculate total likelihood for each data point
-  # calculate_total_likelihood <- function(poisson_likelihoods) {
-  #   colSums(apply(poisson_likelihoods, 2, prod))
-  # }
-  #
-  # total_likelihoods <- lapply(poisson_likelihoods_list, calculate_total_likelihood)
-  #
-  # # Assuming you need to sum these total likelihoods for a final value (depends on your model)
-  # final_likelihood <- sum(unlist(total_likelihoods))
+  if(twocomp){
 
+    likelihoods <- rep(0, times = n_obs)
 
+    for(i in 1:K){
 
-  likelihoods <- rep(0, times = length(dataset[[1]]))
-
-  # Fractions of populations
-  fractions <- softmax(param)
-
-
-  # Get full likelihood for generalized mutational models
-  for(i in 1:nrow(mutrate_design)){
-
-    L <- 1
-
-    for(j in 1:ncol(mutrate_design)){
-
-
-      if(Poisson){
-
-        # data.table syntax is an act of violence
-        L <- L*stats::dpois(dataset[[mutcols[j]]],
-                      lambda = (as.numeric(mutrate_design[i, j])*pnew[j] +
-                        pold[j]*(1 - as.numeric(mutrate_design[i, j])))*dataset[[basecols[j]]] )
-
-
-      }else{
-
-        # data.table syntax is an act of violence
-        L <- L*stats::dbinom(dataset[[mutcols[j]]],
-                      dataset[[basecols[j]]],
-                      prob = as.numeric(mutrate_design[i, j])*pnew[j] +
-                        pold[j]*(1 - as.numeric(mutrate_design[i, j])))
-
+      L <- 1
+      for(j in 1:ncol(mutrate_design)){
+        rate_ij <- as.numeric(mutrate_design[i, j])*pnew[j] +
+          pold[j]*(1 - as.numeric(mutrate_design[i, j]))
+        if(Poisson){
+          L <- L*stats::dpois(dataset[[mutcols[j]]],
+                              lambda = rate_ij*dataset[[basecols[j]]])
+        }else{
+          L <- L*stats::dbinom(dataset[[mutcols[j]]],
+                               dataset[[basecols[j]]],
+                               prob = rate_ij)
+        }
       }
-
-
-
-    }
-
-    if(twocomp){
 
       if(i == highpop){
-
         likelihoods <- likelihoods + L*inv_logit(param[1])
-
       }else{
-
         likelihoods <- likelihoods + L*(1 - inv_logit(param[1]))
-
       }
 
-
-    }else{
-
-      likelihoods <- likelihoods + L*fractions[i]
-
-
     }
-
-
-  }
-
-  # Prior regularize
-  if(twocomp){
 
     return(-sum(dataset[["n"]]*log(likelihoods)) - stats::dnorm(param[1], log = TRUE))
 
   }else{
 
-    return(-sum(dataset[["n"]]*log(likelihoods)))
+    if(length(param) == K - 1){
+      if(is.null(ref_idx)){
+        ref_idx <- K
+      }
+      full_param <- numeric(K)
+      full_param[-ref_idx] <- param
+      full_param[ref_idx] <- 0
+    }else{
+      full_param <- param
+    }
+
+    m_par <- max(full_param)
+    log_denom <- m_par + log(sum(exp(full_param - m_par)))
+    log_fractions <- full_param - log_denom
+
+    # Matrix of log component likelihoods (n_obs x K) for log-sum-exp stability
+    comp_logL <- matrix(0, nrow = n_obs, ncol = K)
+
+    for(i in 1:K){
+      logL_i <- rep(log_fractions[i], times = n_obs)
+      for(j in 1:ncol(mutrate_design)){
+        rate_ij <- as.numeric(mutrate_design[i, j])*pnew[j] +
+          pold[j]*(1 - as.numeric(mutrate_design[i, j]))
+        if(Poisson){
+          logL_i <- logL_i + stats::dpois(dataset[[mutcols[j]]],
+                                          lambda = rate_ij*dataset[[basecols[j]]],
+                                          log = TRUE)
+        }else{
+          logL_i <- logL_i + stats::dbinom(dataset[[mutcols[j]]],
+                                           dataset[[basecols[j]]],
+                                           prob = rate_ij,
+                                           log = TRUE)
+        }
+      }
+      comp_logL[, i] <- logL_i
+    }
+
+    row_max <- apply(comp_logL, 1, max)
+    log_lik_obs <- row_max + log(rowSums(exp(comp_logL - row_max)))
+
+    # Symmetric Dirichlet(0.5, ..., 0.5) prior in ALR space prevents boundary runaway
+    # while remaining invariant to choice of reference component
+    prior_ll <- 0.5 * sum(log_fractions)
+
+    return(-sum(dataset[["n"]]*log_lik_obs) - prior_ll)
 
   }
 
 }
 
-# Softmax function
+# Softmax function (log-sum-exp stabilized)
 softmax <- function(vect){
 
-  return(exp(vect)/sum(exp(vect)))
+  m <- max(vect)
+  if(!is.finite(m)){
+    return(rep(1 / length(vect), times = length(vect)))
+  }
+  ev <- exp(vect - m)
+  return(ev / sum(ev))
 
 }
 
@@ -2536,11 +2568,7 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
                                 samples_with_no_label = NULL,
                                 sample = NULL){
 
-  # Hack to deal with devtools::check()
-  fsvector <- NULL
-
-
-  if(sample %in% samples_with_no_label){
+  if(!is.null(sample) && (sample %in% samples_with_no_label)){
 
     # Figure out what to call each of the fractions
     # Probably "p""muttype""old/new"_"muttype""old/new"
@@ -2550,7 +2578,7 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
     # Get vector of population statuses (new and old) for naming the output list
     population_list <- vector(mode = "list", length = nrow(mutrate_design))
     fvector <- rep(0, times = nrow(mutrate_design))
-    ismvector <- fsvector
+    ismvector <- rep(0, times = nrow(mutrate_design))
     for(i in 1:nrow(mutrate_design)){
 
       population_vector <- rep("", times = ncol(mutrate_design))
@@ -2643,9 +2671,13 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
 
     }else{
 
+      K <- nrow(mutrate_design)
+      low_rows <- which(rowSums(as.matrix(mutrate_design)) == 0)
+      ref_idx <- if(length(low_rows) > 0) low_rows[1] else K
+
       tryCatch(
         {
-          fit <- stats::optim(par = rep(0, times = nrow(mutrate_design)),
+          fit <- stats::optim(par = rep(0, times = K - 1),
                               fn = generalized_likelihood,
                               dataset = dataset,
                               Poisson = Poisson,
@@ -2655,6 +2687,9 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
                               twocomp = twocomp,
                               mutcols = mutcols,
                               basecols = basecols,
+                              ref_idx = ref_idx,
+                              lower = rep(-9, times = K - 1),
+                              upper = rep(9, times = K - 1),
                               method = "L-BFGS-B",
                               hessian = TRUE)
 
@@ -2671,8 +2706,8 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
 
 
       # Get vector of population statuses (new and old) for naming the output list
-      population_list <- vector(mode = "list", length = nrow(mutrate_design))
-      for(i in 1:nrow(mutrate_design)){
+      population_list <- vector(mode = "list", length = K)
+      for(i in 1:K){
 
         population_vector <- rep("", times = ncol(mutrate_design))
         count <- 1
@@ -2706,21 +2741,34 @@ fit_general_mixture <- function(dataset, Poisson = TRUE, mutrate_design, twocomp
       listnames <- paste0(rep(c("invsoftmax_",
                                 "fraction_",
                                 "se_invsoftmax_"),
-                              each = length(fit$par)),
+                              each = K),
                           listnames)
 
+      full_alr <- numeric(K)
+      full_alr[-ref_idx] <- fit$par
+      full_alr[ref_idx] <- 0
+
+      # Transform to centered log-ratio (CLR) coordinates so sum(clr_par) == 0,
+      # softmax(clr_par) == softmax(full_alr), and every population gets a
+      # reference-invariant SE from the nonsingular (K-1)x(K-1) ALR Hessian.
+      clr_par <- full_alr - mean(full_alr)
 
       uncertainties <- tryCatch(
         {
-          sqrt(abs(diag(solve(fit$hessian))))
+          cov_alr <- solve(fit$hessian)
+          cov_full <- matrix(0, nrow = K, ncol = K)
+          cov_full[-ref_idx, -ref_idx] <- cov_alr
+          C_mat <- diag(K) - matrix(1 / K, nrow = K, ncol = K)
+          cov_clr <- C_mat %*% cov_full %*% t(C_mat)
+          sqrt(pmax(0, diag(cov_clr)))
         },
         error = function(e) {
-          rep(Inf, times = length(fit$par))
+          rep(Inf, times = K)
         }
       )
 
-      outlist <- c(as.list(fit$par),
-                   as.list(softmax(fit$par)),
+      outlist <- c(as.list(clr_par),
+                   as.list(softmax(clr_par)),
                    as.list(uncertainties) )
 
 

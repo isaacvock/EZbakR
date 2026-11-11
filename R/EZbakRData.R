@@ -30,6 +30,7 @@ validate_EZbakRData <- function(obj){
   illegal_mutcounts <- c("TT", "CC", "GG", "AA", "UU")
 
   mutcounts <- mutcounts[!(mutcounts %in% illegal_mutcounts)]
+  mutcounts[mutcounts == "NA"] <- "NtoA"
 
 
   ### Extract objects and info from objects
@@ -211,11 +212,22 @@ validate_EZbakRData <- function(obj){
 
   ### Check that base counts can be coerced to positive integers
 
-  if(!all(sapply(cB[,basecounts_expected], is_pos_whole))){
+  if(!all(sapply(cB[,unique(basecounts_expected)], is_pos_whole))){
 
     rlang::abort("Not all columns tracking counts of nucleotides are positive whole numbers!",
                  class = "basecounts_not_pos_whole")
 
+  }
+
+  ### Check that mutation counts never exceed corresponding base counts
+  for(idx in seq_along(mutcounts_in_cB)){
+    if(any(cB[[mutcounts_in_cB[idx]]] > cB[[basecounts_expected[idx]]])){
+      rlang::abort(
+        paste0("Mutation counts in column ", mutcounts_in_cB[idx],
+               " exceed nucleotide counts in column ", basecounts_expected[idx], "!"),
+        class = "mut_exceeds_basecount"
+      )
+    }
   }
 
   ### Check that label times are numeric and >= 0
@@ -399,8 +411,8 @@ validate_EZbakRData <- function(obj){
 #' @export
 EZbakRData <- function(cB, metadf){
 
-  cB <- setDT(cB)
-  metadf <- setDT(metadf)
+  cB <- data.table::as.data.table(cB)
+  metadf <- data.table::as.data.table(metadf)
 
   validate_EZbakRData(new_EZbakRData(cB, metadf))
 

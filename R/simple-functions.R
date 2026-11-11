@@ -104,11 +104,11 @@ check_SimpleSim_input <- function(args){
 
 
   ### pold
-  if(!is.numeric(args$pnew)){
-    stop("pnew must be numeric!")
+  if(!is.numeric(args$pold)){
+    stop("pold must be numeric!")
   }
 
-  if(args$pnew < 0){
+  if(args$pold < 0){
     stop("pold must be >= 0!")
   }
 
@@ -188,7 +188,6 @@ SimpleMultiPopSim <- function(nreads = 1000, populations = c("TC"),
   datalist[["sample"]] <- "Simulation"
   datalist[["gene"]] <- rep(1:ngenes, times = nreads_per_gene)
 
-  browser()
   # Populate nucleotide counts
   for(n in seq_along(nucleotide_cnts))
 

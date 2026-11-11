@@ -433,7 +433,7 @@ EZget <- function(obj,
   if(!is.null(feature_lengths)){
 
     possible_tables_f <- exact_ezsearch(metadata,
-                                        query = scale_factors,
+                                        query = feature_lengths,
                                         object = "feature_lengths")
 
 
@@ -913,46 +913,80 @@ get_normalized_read_counts.EZbakRData <- function(obj,
 
 normalize_reads <- function(reads, features_to_analyze, feature_lengths, scale_factors){
 
+  ### Hack to deal with devtools::check() NOTEs
+  geom_mean <- n <- normalized_reads <- scale_factor <- n_present <- NULL
+
+  `.` <- list
+
+  reads <- data.table::as.data.table(reads)
+  nsamps_total <- length(unique(reads$sample))
+
+  # Compute feature geometric means across positive counts (avoiding log(0) = -Inf)
+  pos_reads <- reads[n > 0]
+  if(nrow(pos_reads) > 0){
+    gm_dt <- pos_reads[, .(geom_mean = exp(mean(log(n))),
+                           n_present = .N),
+                       by = features_to_analyze]
+  }else{
+    gm_dt <- unique(reads[, features_to_analyze, with = FALSE])
+    gm_dt[, `:=`(geom_mean = 0, n_present = 0L)]
+  }
 
   if(is.null(scale_factors)){
 
-    ### Hack to deal with devtools::check() NOTEs
-    geom_mean <- n <- normalized_reads <- scale_factor <- NULL
+    # DESeq2 median-of-ratios normalization using features detected (n > 0) in all samples
+    ref_gm <- gm_dt[n_present == nsamps_total]
+    if(nrow(ref_gm) == 0){
+      ref_gm <- gm_dt[geom_mean > 0]
+    }
 
-    `.` <- list
-
-    # Median of ratios normalization
-    reads[, geom_mean := exp(mean(log(n))), by = features_to_analyze]
-    scales <- reads[, .(scale_factor =  stats::median(n/geom_mean)), by = .(sample)]
-
-    setkey(scales, sample)
-    setkey(reads, sample)
-
-    # Normalize read counts
-    reads_norm <- reads[scales, nomatch = NULL]
-    reads_norm[,normalized_reads := n/scale_factor]
-
+    all_samps <- unique(reads[, .(sample)])
+    if(nrow(ref_gm) > 0){
+      pos_with_gm <- merge(pos_reads,
+                           ref_gm[, c(features_to_analyze, "geom_mean"), with = FALSE],
+                           by = features_to_analyze)
+      scales <- pos_with_gm[, .(scale_factor = stats::median(n / geom_mean, na.rm = TRUE)),
+                            by = .(sample)]
+      scales <- merge(all_samps, scales, by = "sample", all.x = TRUE)
+    }else{
+      scales <- data.table::copy(all_samps)
+      scales[, scale_factor := 1]
+    }
+    scales[is.na(scale_factor) | scale_factor <= 0, scale_factor := 1]
 
   }else{
 
-    ### Hack to deal with devtools::check() NOTEs
-    geom_mean <- n <- normalized_reads <- scale_factor <- NULL
-
-    `.` <- list
-
-    # Median of ratios normalization
-    scales <- scale_factors
-    setDT(scales)
-
-    setkey(scales, sample)
-    setkey(reads, sample)
-
-    # Normalize read counts
-    reads_norm <- reads[scales, nomatch = NULL]
-    reads_norm[,normalized_reads := n/scale_factor]
-
+    # Copy user input without mutating by reference; accept "scale_factor" or any 2nd column
+    scales <- data.table::as.data.table(scale_factors)
+    if(!("sample" %in% colnames(scales))){
+      stop("scale_factors must contain a column named 'sample'!")
+    }
+    if(!("scale_factor" %in% colnames(scales))){
+      other_cols <- setdiff(colnames(scales), "sample")
+      if(length(other_cols) != 1){
+        stop("scale_factors must have two columns: 'sample' and 'scale_factor' (or a single second scale column)!")
+      }
+      data.table::setnames(scales, other_cols, "scale_factor")
+    }
+    scales <- scales[, .(sample, scale_factor)]
 
   }
+
+  # Attach geom_mean and normalize read counts
+  if("geom_mean" %in% colnames(reads)){
+    reads[, geom_mean := NULL]
+  }
+  reads_with_gm <- merge(reads,
+                         gm_dt[, c(features_to_analyze, "geom_mean"), with = FALSE],
+                         by = features_to_analyze,
+                         all.x = TRUE)
+  reads_with_gm[is.na(geom_mean), geom_mean := 0]
+
+  setkey(scales, sample)
+  setkey(reads_with_gm, sample)
+
+  reads_norm <- reads_with_gm[scales, nomatch = NULL]
+  reads_norm[, normalized_reads := n / scale_factor]
 
   # Length normalize if lengths provided
   if (!is.null(feature_lengths)){

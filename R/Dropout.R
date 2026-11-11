@@ -151,20 +151,43 @@ CorrectDropout <- function(obj,
     ### ESTIMATE DROPOUT PARAMETERS:
     dplyr::group_by(sample) %>%
     dplyr::summarise(
-      fit = I(list(stats::optim(
-        par = c(0.2, 2),
-        dropout_likelihood,
-        theta = !!dplyr::sym(fraction_of_interest),
-        dropout = dropout,
-        n = n,
-        nolabel_rpm = nolabel_rpm,
-        sig = sig,
-        ranks = rank(!!dplyr::sym(fraction_of_interest)),
-        strategy = strategy,
-        method = "L-BFGS-B",
-        upper = c(0.99, 100),
-        lower = c(0.01, 1) # Scale factor can't be < 1 because -s4U molecule count > +s4U molecule count
-      )))
+      fit = I(list(
+        if(strategy == "grandR"){
+          ranks_vec <- rank(!!dplyr::sym(fraction_of_interest))
+          r_lo <- dropout_rank_cor(0, !!dplyr::sym(fraction_of_interest), nolabel_rpm, n, ranks_vec)
+          r_hi <- dropout_rank_cor(0.99, !!dplyr::sym(fraction_of_interest), nolabel_rpm, n, ranks_vec)
+          pdo_est <- if(is.na(r_lo) || is.na(r_hi) || r_lo >= 0){
+            0
+          }else if(r_hi <= 0){
+            0.99
+          }else{
+            stats::uniroot(
+              f = dropout_rank_cor,
+              interval = c(0, 0.99),
+              theta = !!dplyr::sym(fraction_of_interest),
+              nolabel_rpm = nolabel_rpm,
+              n = n,
+              ranks = ranks_vec
+            )$root
+          }
+          list(par = c(pdo_est, NA_real_))
+        }else{
+          stats::optim(
+            par = c(0.2, 2),
+            dropout_likelihood,
+            theta = !!dplyr::sym(fraction_of_interest),
+            dropout = dropout,
+            n = n,
+            nolabel_rpm = nolabel_rpm,
+            sig = sig,
+            ranks = rank(!!dplyr::sym(fraction_of_interest)),
+            strategy = strategy,
+            method = "L-BFGS-B",
+            upper = c(0.99, 100),
+            lower = c(0.01, 1) # Scale factor can't be < 1 because -s4U molecule count > +s4U molecule count
+          )
+        }
+      ))
     ) %>%
     dplyr::mutate(
       pdo := purrr::map_dbl(fit, ~ .x$par[1]),
@@ -183,7 +206,7 @@ CorrectDropout <- function(obj,
     dplyr::mutate(global_fraction = sum(!!dplyr::sym(fraction_of_interest)*n)/sum(n)) %>%
     dplyr::ungroup() %>%
     dplyr::mutate(corrected_gf = global_fraction/((1 - pdo) + global_fraction * pdo)) %>%
-    dplyr::mutate(corrected_n = ceiling(n * (corrected_gf*(1 - pdo) + (1 - corrected_gf) /
+    dplyr::mutate(corrected_n = ceiling(n * ((corrected_gf*(1 - pdo) + (1 - corrected_gf)) /
                     (corrected_fraction*(1 - pdo) + (1 - corrected_fraction))))
     ) %>%
     dplyr::mutate(!!fraction_of_interest := corrected_fraction,
@@ -710,6 +733,14 @@ NormalizeForDropout <- function(obj,
     grouping_factors <- unique(c(grouping_factors, tl_col))
   }
 
+  check_donorm_validity(
+    fractions = fractions,
+    metadf = metadf,
+    features_to_analyze = features_to_analyze,
+    logit_fraction = logit_fraction,
+    logit_se = logit_se,
+    grouping_factors = grouping_factors
+  )
 
 
   ### Figure out which sample likely has lowest dropout in each group
@@ -734,11 +765,8 @@ NormalizeForDropout <- function(obj,
     dplyr::ungroup() %>%
     {if (length(grouping_factors) > 0) dplyr::group_by(., dplyr::across(dplyr::all_of(grouping_factors))) else .} %>%
     dplyr::mutate(
-      normalization_reference = dplyr::case_when(
-        med_fn == max(med_fn) ~ TRUE,
-        .default = FALSE
-      ),
-      reference_samp = sample[med_fn == max(med_fn)],
+      reference_samp = sample[which.max(med_fn)],
+      normalization_reference = (sample == reference_samp),
       nsamps_in_group = dplyr::n()
     ) %>%
     dplyr::ungroup() %>%
@@ -749,14 +777,9 @@ NormalizeForDropout <- function(obj,
 
   ### Quantify dropout with respect to reference in each group
 
-
-  fxn_wide <- fractions %>%
-    dplyr::filter(n > read_cutoff & !!dplyr::sym(logit_fraction) > -Inf) %>%
-    dplyr::select(sample, !!features_to_analyze, !!fraction_of_interest) %>%
-    tidyr::pivot_wider(
-      names_from = "sample",
-      values_from = fraction_of_interest
-    )
+  fxn_filtered <- fractions %>%
+    dplyr::filter(n > read_cutoff & is.finite(!!dplyr::sym(logit_fraction))) %>%
+    dplyr::select(sample, !!features_to_analyze, !!fraction_of_interest, !!logit_se)
 
   pdos <- metadf %>%
     dplyr::filter(tl > 0) %>%
@@ -772,13 +795,26 @@ NormalizeForDropout <- function(obj,
 
     reference <- reference_sample_info$reference_samp[reference_sample_info$sample == samp]
 
-
-    fxn_subset <- fxn_wide %>%
+    samp_df <- fxn_filtered %>%
+      dplyr::filter(sample == samp) %>%
       dplyr::select(
         !!features_to_analyze,
-        !!samp,
-        !!reference
+        fndo = !!dplyr::sym(fraction_of_interest),
+        se_do = !!dplyr::sym(logit_se)
       )
+
+    ref_df <- fxn_filtered %>%
+      dplyr::filter(sample == reference) %>%
+      dplyr::select(
+        !!features_to_analyze,
+        reffn = !!dplyr::sym(fraction_of_interest),
+        se_ref = !!dplyr::sym(logit_se)
+      )
+
+    fxn_subset <- dplyr::inner_join(samp_df, ref_df, by = features_to_analyze) %>%
+      stats::na.omit()
+
+    if(nrow(fxn_subset) == 0) next
 
     if(normalize_across_tls){
 
@@ -786,34 +822,28 @@ NormalizeForDropout <- function(obj,
       samp_tl <- metadf[[tl_col]][metadf$sample == samp]
 
       # Infer reference fraction new assuming exponential decay kinetics
-      fxn_subset <- fxn_subset %>%
-        dplyr::mutate(
-          # kdeg = -log(1 - fn)/tl
-          # fn = 1 - exp(-kdeg*tl)
-          !!reference := 1 - exp((log(1 - !!dplyr::sym(reference))/ref_tl) * samp_tl)
-        )
+      # kdeg = -log(1 - fn)/tl; fn_adj = 1 - exp(-kdeg*samp_tl)
+      ref_orig <- fxn_subset$reffn
+      ref_adj <- 1 - exp((log(1 - ref_orig)/ref_tl) * samp_tl)
+      fxn_subset$se_ref <- (samp_tl / ref_tl) * (ref_orig / ref_adj) * fxn_subset$se_ref
+      fxn_subset$reffn <- ref_adj
 
     }
 
-    pdos$pdo[i] <- fxn_subset %>%
-      stats::na.omit() %>%
-      dplyr::summarise(
-        pdo = stats::optim(
-          par = c(-2),
-          fn = do_norm_ll,
-          reffn = !!dplyr::sym(reference),
-          fndo = !!dplyr::sym(samp),
-          sig = 0.2, # Should be some function of the uncertainties
-          method = "L-BFGS-B",
-          upper = 6,
-          lower = -6
-        )$par[1]
-      ) %>%
-      dplyr::ungroup() %>%
-      dplyr::select(pdo) %>%
-      unlist() %>%
-      unname() %>%
-      inv_logit()
+    comb_sig <- pmax(sqrt(fxn_subset$se_do^2 + fxn_subset$se_ref^2), 1e-3)
+
+    pdos$pdo[i] <- inv_logit(
+      stats::optim(
+        par = c(-2),
+        fn = do_norm_ll,
+        reffn = fxn_subset$reffn,
+        fndo = fxn_subset$fndo,
+        sig = comb_sig,
+        method = "L-BFGS-B",
+        upper = 6,
+        lower = -6
+      )$par[1]
+    )
 
 
   }
@@ -828,22 +858,27 @@ NormalizeForDropout <- function(obj,
     dplyr::mutate(
       pdo = ifelse(is.na(pdo), 0, pdo)
     ) %>%
+    dplyr::group_by(
+      sample
+    ) %>%
+    dplyr::mutate(
+      global_fraction = sum((!!dplyr::sym(fraction_of_interest)) * n) / sum(n),
+      corrected_gf = global_fraction / ((1 - pdo) + global_fraction * pdo)
+    ) %>%
+    dplyr::ungroup() %>%
     dplyr::mutate(
       !!fraction_of_interest := (!!dplyr::sym(fraction_of_interest))/((1 - pdo) + !!dplyr::sym(fraction_of_interest) * pdo),
     ) %>%
     dplyr::mutate(
       !!logit_fraction := logit(!!dplyr::sym(fraction_of_interest))
     ) %>%
-    dplyr::group_by(
-      sample
-    ) %>%
     dplyr::mutate(
-      num = mean(!!dplyr::sym(fraction_of_interest))*(1-pdo) + (1-mean(!!dplyr::sym(fraction_of_interest))),
+      num = corrected_gf*(1-pdo) + (1 - corrected_gf),
       den = !!dplyr::sym(fraction_of_interest)*(1-pdo) + (1 - !!dplyr::sym(fraction_of_interest)),
       n = ceiling(n*(num/den))
     ) %>%
     dplyr::select(
-      -num, -den, -pdo
+      -global_fraction, -corrected_gf, -num, -den, -pdo
     )
 
   obj[["fractions"]][[fractions_name]] <- fractions_normalized
@@ -896,25 +931,32 @@ dropout_likelihood <- function(param, dropout, theta, sig, nolabel_rpm, n, ranks
 
   }else{
 
-    # Minmize correlation between dropout metric and fraction new rank
-
-    pdo <- param[1]
-
-    corrected_fraction <- (theta)/((1 - pdo) + theta * pdo)
-    global_fraction <- sum(theta*n)/sum(n)
-
-    corrected_gf <- global_fraction/((1 - pdo) + global_fraction * pdo)
-    corrected_n <- ceiling(n * (corrected_gf*(1 - pdo) + (1 - corrected_gf) /
-                                  (corrected_fraction*(1 - pdo) + (1 - corrected_fraction))))
-
-    new_label_rpm <- corrected_n / (sum(corrected_n)/1000000)
-
-    new_dropout <- log(new_label_rpm) - log(nolabel_rpm)
-
-    return(abs(stats::cor(ranks, new_dropout)))
+    # Minimize correlation between dropout metric and fraction new rank
+    r <- abs(dropout_rank_cor(param[1], theta, nolabel_rpm, n, ranks))
+    if(is.na(r)) return(1)
+    return(r)
 
   }
 
+
+}
+
+
+# Signed correlation between NTR rank and dropout-corrected log2 fold-change
+dropout_rank_cor <- function(pdo, theta, nolabel_rpm, n, ranks){
+
+  corrected_fraction <- (theta)/((1 - pdo) + theta * pdo)
+  global_fraction <- sum(theta*n)/sum(n)
+
+  corrected_gf <- global_fraction/((1 - pdo) + global_fraction * pdo)
+  corrected_n <- n * ((corrected_gf*(1 - pdo) + (1 - corrected_gf)) /
+                        (corrected_fraction*(1 - pdo) + (1 - corrected_fraction)))
+
+  new_label_rpm <- corrected_n / (sum(corrected_n)/1000000)
+
+  new_dropout <- log(new_label_rpm) - log(nolabel_rpm)
+
+  stats::cor(ranks, new_dropout)
 
 }
 
@@ -923,26 +965,6 @@ dropout_likelihood <- function(param, dropout, theta, sig, nolabel_rpm, n, ranks
 read_sig <- function(reads, reps){
 
   return(sqrt(1/reads)/sqrt(reps))
-
-}
-
-
-# Likelihood function for dropout normalization
-do_norm_ll <- function(param,
-                       reffn,
-                       fndo,
-                       sig){
-
-  pdo <- inv_logit(param[1])
-
-  Efn <- fndo / ((1 - pdo) + (fndo*pdo))
-
-  ll <- stats::dnorm(logit(reffn),
-                     logit(Efn),
-                     sig,
-                     log = TRUE)
-
-  return(-sum(ll))
 
 }
 
@@ -959,8 +981,23 @@ check_donorm_validity <- function(
 
   ### Checklist:
   # 1) Need 2 or more replicates of each grouping factor
+  if(!("tl" %in% colnames(metadf))){
+    stop("NormalizeForDropout currently requires a 'tl' column in metadf!")
+  }
 
+  labeled_metadf <- metadf[metadf$tl > 0, , drop = FALSE]
+  if(nrow(labeled_metadf) < 2){
+    stop("NormalizeForDropout requires at least 2 labeled (tl > 0) samples!")
+  }
 
+  if(length(grouping_factors) > 0){
+    grp_counts <- labeled_metadf %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(grouping_factors))) %>%
+      dplyr::summarise(n_samps = dplyr::n(), .groups = "drop")
 
+    if(all(grp_counts$n_samps < 2)){
+      warning("All normalization groups have fewer than 2 labeled samples; dropout normalization will set pdo = 0 for all samples.")
+    }
+  }
 
 }

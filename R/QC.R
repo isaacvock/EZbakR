@@ -129,21 +129,35 @@ EZQC.EZbakRFractions <- function(obj,
 
   mutrate_populations <- obj[["metadata"]][["fractions"]][[fname]][["populations"]]
 
+  has_cB <- ("cB" %in% components) || arrow
+  has_mutrates <- "mutation_rates" %in% components
 
   ### Check raw mutation rates
-  message("CHECKING RAW MUTATION RATES...")
-  graw <- check_raw_mutation_rates(obj,
-                                   mutrate_populations = mutrate_populations,
-                                   arrow = arrow)
+  if(has_cB){
+    message("CHECKING RAW MUTATION RATES...")
+    graw <- check_raw_mutation_rates(obj,
+                                     mutrate_populations = mutrate_populations,
+                                     arrow = arrow)
+  }else{
+    graw <- list(plot = NULL, table = NULL)
+  }
 
 
   ### Check labeled and unlabeled mutation rates
-  message("CHECKING INFERRED MUTATION RATES...")
-  glabel <- check_plabeled(obj)
+  if(has_mutrates){
+    message("CHECKING INFERRED MUTATION RATES...")
+    glabel <- check_plabeled(obj)
 
-  if(length(glabel$plot) == 1){
-    glabel_plot <- glabel$plot[[1]]
-    glabel_table <- glabel$table[[1]]
+    if(length(glabel$plot) == 1){
+      glabel_plot <- glabel$plot[[1]]
+      glabel_table <- glabel$table[[1]]
+    }else{
+      glabel_plot <- glabel$plot
+      glabel_table <- glabel$table
+    }
+  }else{
+    glabel_plot <- NULL
+    glabel_table <- NULL
   }
 
 
@@ -248,6 +262,9 @@ EZQC.EZbakRData <- function(obj,
   if(length(glabel$plot) == 1){
     glabel_plot <- glabel$plot[[1]]
     glabel_table <- glabel$table[[1]]
+  }else{
+    glabel_plot <- glabel$plot
+    glabel_table <- glabel$table
   }
 
 
@@ -266,9 +283,9 @@ EZQC.EZbakRData <- function(obj,
 
   return(
     list(
-      Raw_mutrates = graw,
+      Raw_mutrates = graw$plot,
       Inferred_mutrates = glabel_plot,
-      Readcount_corr = gread,
+      Readcount_corr = gread$plot,
       Tables = list(
         Raw_mutrates = graw$table,
         Inferred_mutrates = glabel_table,
@@ -334,6 +351,7 @@ check_raw_mutation_rates <- function(obj,
     illegal_mutcounts <- c("TT", "CC", "GG", "AA", "UU")
 
     mutcounts <- mutcounts[!(mutcounts %in% illegal_mutcounts)]
+    mutcounts[mutcounts == "NA"] <- "NtoA"
 
     # Which mutcounts are in the cB?
     mutcounts_in_cB <- cB_cols[cB_cols %in% mutcounts]
@@ -344,7 +362,7 @@ check_raw_mutation_rates <- function(obj,
 
 
     # Which populations to analyze?
-    if(mutrate_populations == "all"){
+    if(length(mutrate_populations) == 1 && mutrate_populations == "all"){
 
       muts_analyze <- mutcounts_in_cB
 
@@ -352,7 +370,7 @@ check_raw_mutation_rates <- function(obj,
 
       muts_analyze <- mutrate_populations
 
-      if(!(muts_analyze %in% mutcounts_in_cB)){
+      if(!all(muts_analyze %in% mutcounts_in_cB)){
         stop("You specified mutrate_populations not present in your cB!")
       }
 
@@ -371,11 +389,14 @@ check_raw_mutation_rates <- function(obj,
       length = length(all_samples)
     )
 
+    cols_needed <- unique(c("sample", muts_analyze, nucs_analyze, "n"))
+
     for(s in seq_along(all_samples)){
 
 
       cBsamp <- cB %>%
         dplyr::filter(sample == all_samples[s]) %>%
+        dplyr::select(dplyr::all_of(cols_needed)) %>%
         dplyr::collect()
 
       setDT(cBsamp)
@@ -406,7 +427,7 @@ check_raw_mutation_rates <- function(obj,
     basecounts_in_cB <- paste0("n", substr(mutcounts_in_cB, start = 1, stop = 1))
 
     # Which populations to analyze?
-    if(mutrate_populations == "all"){
+    if(length(mutrate_populations) == 1 && mutrate_populations == "all"){
 
       muts_analyze <- mutcounts_in_cB
 
@@ -414,7 +435,7 @@ check_raw_mutation_rates <- function(obj,
 
       muts_analyze <- mutrate_populations
 
-      if(!(muts_analyze %in% mutcounts_in_cB)){
+      if(!all(muts_analyze %in% mutcounts_in_cB)){
         stop("You specified mutrate_populations not present in your cB!")
       }
 
@@ -424,7 +445,7 @@ check_raw_mutation_rates <- function(obj,
 
 
     ### Compute raw mutation rates of each type
-    cB <- obj$cB
+    cB <- data.table::as.data.table(obj$cB)
 
     mutrates <- cB[, {
       rates <- sapply(seq_along(muts_analyze), function(i) {
@@ -552,11 +573,11 @@ check_plabeled <- function(obj,
       ggplot2::theme(legend.position = "none") +
       ggplot2::geom_hline(yintercept = 0.01,
                           linetype = "dotted",
-                          size = 1.5,
+                          linewidth = 1.5,
                           color = "deepskyblue4") +
       ggplot2::geom_hline(yintercept = 0.004,
                           linetype = "dotted",
-                          size = 1.5,
+                          linewidth = 1.5,
                           color = "black")
 
 
@@ -700,6 +721,7 @@ check_read_count_corr_ezbd <- function(obj,
     illegal_mutcounts <- c("TT", "CC", "GG", "AA", "UU")
 
     mutcounts <- mutcounts[!(mutcounts %in% illegal_mutcounts)]
+    mutcounts[mutcounts == "NA"] <- "NtoA"
 
     # Which mutcounts are in the cB?
     mutcounts_in_cB <- cB_cols[cB_cols %in% mutcounts]
@@ -744,34 +766,37 @@ check_read_count_corr_ezbd <- function(obj,
 
     }
 
-    all_samps <- obj$metadf$sample
+    rep_samps <- unique(rep_meta$sample)
+    arrow_group_cols <- unique(c("sample", features_to_analyze, filter_cols))
+    arrow_select_cols <- unique(c(arrow_group_cols, "n"))
 
-    cB_list <- vector(
+    readcnts_list <- vector(
       mode = "list",
-      length = length(all_samps)
+      length = length(rep_samps)
     )
 
-    for(s in seq_along(all_samps)){
+    for(s in seq_along(rep_samps)){
 
       cBsamp <- cBds %>%
-        dplyr::filter(sample == all_samps[s]) %>%
+        dplyr::filter(sample == rep_samps[s]) %>%
+        dplyr::select(dplyr::all_of(arrow_select_cols)) %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(arrow_group_cols))) %>%
+        dplyr::summarise(n = sum(n, na.rm = TRUE), .groups = "drop") %>%
         dplyr::collect()
 
       setDT(cBsamp)
 
-      cB_list[[s]] <- cBsamp[cBsamp[, !Reduce(filter_condition, lapply(.SD, `%in%`, remove_features)),.SDcols = filter_cols], ]
-
+      cBsamp <- cBsamp[cBsamp[, !Reduce(filter_condition, lapply(.SD, `%in%`, remove_features)),.SDcols = filter_cols], ]
+      readcnts_list[[s]] <- cBsamp[,.(reads = sum(n)), by = group_cols]
 
     }
 
-    cB <- dplyr::bind_rows(cB_list)
-
-    setDT(cB)
+    readcnts <- data.table::rbindlist(readcnts_list)
 
 
   }else{
 
-    cB <- data.table::copy(obj$cB)
+    cB <- data.table::as.data.table(obj$cB)
     metadf <- data.table::copy(obj$metadf)
 
     rep_meta <- infer_replicates(obj,
@@ -840,14 +865,11 @@ check_read_count_corr_ezbd <- function(obj,
 
     cB <- cB[cB[, !Reduce(filter_condition, lapply(.SD, `%in%`, remove_features)),.SDcols = filter_cols], ]
 
+    ### Get read counts
+    readcnts <- cB[sample %in% rep_meta$sample][,.(reads = sum(n)),
+                                                by = group_cols]
 
   }
-
-
-  ### Get read counts
-
-  readcnts <- cB[sample %in% rep_meta$sample][,.(reads = sum(n)),
-                                              by = group_cols]
 
 
 
@@ -909,7 +931,7 @@ make_corr_plots <- function(table,
     nreps <- nrow(sub_meta)
 
     subglist <- vector(mode = "list",
-                       length = nreps)
+                       length = nreps * (nreps - 1) / 2)
 
     subplot_names <- c()
     count <- 1
@@ -948,17 +970,30 @@ make_corr_plots <- function(table,
 
         }
 
+        plot_df <- corr_df %>%
+          stats::na.omit() %>%
+          dplyr::filter(
+            is.finite(.data[[samps[1]]]) & is.finite(.data[[samps[2]]])
+          )
 
-        subglist[[count]] <- corr_df %>%
-          stats::na.omit() %>%
-          dplyr::mutate(
-            density = get_density(
-              x = !!dplyr::sym(samps[1]),
-              y = !!dplyr::sym(samps[2]),
+        if(nrow(plot_df) >= 2){
+          dens_vals <- tryCatch(
+            get_density(
+              x = plot_df[[samps[1]]],
+              y = plot_df[[samps[2]]],
               n = 200
-            )
-          ) %>%
-          stats::na.omit() %>%
+            ),
+            error = function(e) rep(1, nrow(plot_df))
+          )
+          plot_df <- plot_df %>%
+            dplyr::mutate(density = dens_vals) %>%
+            stats::na.omit()
+        }else{
+          plot_df <- plot_df %>%
+            dplyr::mutate(density = rep(1, nrow(plot_df)))
+        }
+
+        subglist[[count]] <- plot_df %>%
           ggplot2::ggplot(
             aes(x = .data[[samps[1]]],
                 y = .data[[samps[2]]],
@@ -982,8 +1017,13 @@ make_corr_plots <- function(table,
             dplyr::tibble(
               sample_1 = samps[1],
               sample_2 = samps[2],
-              correlation = stats::cor(corr_df[[samps[1]]],
-                                corr_df[[samps[2]]], use = "complete.obs")
+              correlation = if(nrow(plot_df) >= 2 &&
+                               stats::sd(plot_df[[samps[1]]]) > 0 &&
+                               stats::sd(plot_df[[samps[2]]]) > 0) {
+                stats::cor(plot_df[[samps[1]]], plot_df[[samps[2]]], use = "complete.obs")
+              } else {
+                NA_real_
+              }
             )
           )
 
@@ -1006,7 +1046,7 @@ make_corr_plots <- function(table,
 
 
   message("")
-  if(any(stat_df$correlation < cutoff)){
+  if(any(stat_df$correlation < cutoff, na.rm = TRUE)){
     message(paste0(axis_label_string, " correlation is low in one or more samples.
               Did you properly specify all sample detail columns in your metadf?")
             )
@@ -1267,14 +1307,19 @@ infer_replicates <- function(obj,
     illegal_mutcounts <- c("TT", "CC", "GG", "AA", "UU")
 
     mutcounts <- mutcounts[!(mutcounts %in% illegal_mutcounts)]
+    mutcounts[mutcounts == "NA"] <- "NtoA"
 
     # Which mutcounts are in the cB?
     mutcounts_in_cB <- cB_cols[cB_cols %in% mutcounts]
 
-  }else{
+  }else if(!is.null(obj$cB)){
 
     # Find label time columns
     mutcounts_in_cB <- find_mutcounts(obj)
+
+  }else{
+
+    mutcounts_in_cB <- unique(unlist(lapply(obj$metadata$fractions, `[[`, "populations")))
 
   }
 
@@ -1347,7 +1392,9 @@ bandwidth.nrd <- function (x)
 {
   r <- stats::quantile(x, c(0.25, 0.75))
   h <- (r[2L] - r[1L])/1.34
-  4 * 1.06 * min(sqrt(stats::var(x)), h) * length(x)^(-1/5)
+  s <- sqrt(stats::var(x))
+  spread <- if (h > 0) min(s, h) else s
+  4 * 1.06 * spread * length(x)^(-1/5)
 }
 
 kde2d <- function (x, y, h, n = 25, lims = c(range(x), range(y)))

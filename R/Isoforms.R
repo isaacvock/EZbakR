@@ -316,7 +316,7 @@ EstimateIsoformFractions <- function(obj,
 
   features <- obj[['metadata']][['fractions']][[fraction_name]][['features']]
 
-  fraction <- setDT(fraction)
+  fraction <- data.table::as.data.table(fraction)
 
   # Cute strat: transcript set should have the most unique elements
   lens <- rep(0, times = length(features))
@@ -410,14 +410,15 @@ inv_logit <- function(x) stats::plogis(x)
 beta_r_likelihood <- function(data, design_matrix, v, par,
                               prior_a, prior_b){
 
+  data_clamped <- pmin(pmax(data, inv_logit(-9)), inv_logit(9))
 
-
-  mus <- design_matrix %*% inv_logit(par)
+  mus <- as.vector(design_matrix %*% inv_logit(par))
+  mus <- pmin(pmax(mus, 1e-12), 1 - 1e-12)
 
   alphas <- mus*v
   betas <- v - alphas
 
-  logl <- sum(stats::dbeta(data, alphas, betas, log = TRUE)) + sum(stats::dnorm(par, prior_a, prior_b, log = TRUE))
+  logl <- sum(stats::dbeta(data_clamped, alphas, betas, log = TRUE)) + sum(stats::dnorm(par, prior_a, prior_b, log = TRUE))
 
   return(-logl)
 
@@ -650,12 +651,9 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
                   !!logit_fraction_se, expected_count, effective_length) %>%
     dplyr::bind_rows(Fns_multi %>% dplyr::ungroup()) %>%
     dplyr::select(sample, !!gene_colnames, transcript_id, everything()) %>%
-    dplyr::rowwise() %>%
     dplyr::mutate(n = expected_count,
                   RPK = expected_count/(effective_length/1000),
-                  !!logit_fraction_of_interest := ifelse(abs(!!sym(logit_fraction_of_interest)) >= 9,
-                                                  stats::rnorm(1, !!sym(logit_fraction_of_interest), 0.25),
-                                                  !!sym(logit_fraction_of_interest)),
+                  !!logit_fraction_of_interest := pmin(pmax(!!sym(logit_fraction_of_interest), -9), 9),
                   !!fraction_of_interest := inv_logit(!!sym(logit_fraction_of_interest))) %>%
     dplyr::select(-expected_count, -effective_length)
 
@@ -845,7 +843,7 @@ DeconvolveFractions <- function(obj,
 
   features <- obj[['metadata']][['fractions']][[fraction_name]][['features']]
 
-  fraction <- setDT(fraction)
+  fraction <- data.table::as.data.table(fraction)
 
   # Cute strat: transcript set should have the most unique elements
   lens <- rep(0, times = length(features))
@@ -1144,12 +1142,9 @@ General_Fraction_Disambiguation <- function(obj, sample_name,
                   !!logit_fraction_se, expected_count, effective_length) %>%
     dplyr::bind_rows(Fns_multi %>% dplyr::ungroup()) %>%
     dplyr::select(sample, !!other_features, !!quant_feature, everything()) %>%
-    dplyr::rowwise() %>%
     dplyr::mutate(n = expected_count,
                   RPK = expected_count/(effective_length/1000),
-                  !!logit_fraction_of_interest := ifelse(abs(!!sym(logit_fraction_of_interest)) >= 9,
-                                                         stats::rnorm(1, !!sym(logit_fraction_of_interest), 0.25),
-                                                         !!sym(logit_fraction_of_interest)),
+                  !!logit_fraction_of_interest := pmin(pmax(!!sym(logit_fraction_of_interest), -9), 9),
                   !!fraction_of_interest := inv_logit(!!sym(logit_fraction_of_interest))) %>%
     dplyr::select(-expected_count, -effective_length)
 

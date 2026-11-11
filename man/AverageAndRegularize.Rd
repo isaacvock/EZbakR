@@ -17,7 +17,7 @@ AverageAndRegularize(
   formula_mean = NULL,
   sd_grouping_factors = NULL,
   include_all_parameters = TRUE,
-  sd_reg_factor = 10,
+  sd_reg_factor = 1,
   error_if_singular = TRUE,
   min_reads = 10,
   convert_tl_to_factor = TRUE,
@@ -140,7 +140,7 @@ from that feature combination needs to have over the read count threshold.}
 
 \item{scale_factor_df}{Data frame with columns "sample" and a second column of
 whatever name you please. The second column should denote scale factors by which
-read counts in that sample should be multiplied by in order to normalize these
+read counts in that sample should be divided in order to normalize these
 read counts.}
 
 \item{overwrite}{If TRUE, identical, existing output will be overwritten.}

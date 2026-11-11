@@ -121,8 +121,8 @@
 #' from that feature combination needs to have over the read count threshold.
 #' @param scale_factor_df Data frame with columns "sample" and a second column of
 #' whatever name you please. The second column should denote scale factors by which
-#' read counts in that sample should be multiplied by in order to normalize these
-#' read counts.
+#' read counts in that sample should be divided in order to normalize these
+#' read counts (matching the DESeq2 and `EstimateKinetics()` convention).
 #' @param overwrite If TRUE, identical, existing output will be overwritten.
 #' @import data.table
 #' @importFrom magrittr %>%
@@ -157,7 +157,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                  formula_mean = NULL,
                                  sd_grouping_factors = NULL,
                                  include_all_parameters = TRUE,
-                                 sd_reg_factor = 10,
+                                 sd_reg_factor = 1,
                                  error_if_singular = TRUE,
                                  min_reads = 10,
                                  convert_tl_to_factor = TRUE,
@@ -230,69 +230,34 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
   if(type == "fractions"){
 
 
-    if(is.null(scale_factor_df)){
-
-      normalized_reads <- get_normalized_read_counts(obj = obj,
-                                                     features_to_analyze = features_to_analyze,
-                                                     fractions_name = param_name,
-                                                     feature_lengths = feature_lengths) %>%
-        dplyr::as_tibble()
-
-      # Get the kinetic parameter data frame
-      kinetics <- kinetics %>%
-        dplyr::inner_join(normalized_reads[,c("sample",
-                                              features_to_analyze,
-                                              "normalized_reads")],
-                          by = c("sample", features_to_analyze)) %>%
-        dplyr::mutate(log_normalized_reads = log10(normalized_reads))
-
-    }else{
+    if(!is.null(scale_factor_df)){
 
       scale_col <- colnames(scale_factor_df)
       scale_col <- scale_col[scale_col != "sample"]
 
-      if(length(scale_col) != 1){
+      if(length(scale_col) != 1 || !("sample" %in% colnames(scale_factor_df))){
 
         stop("scale_factor_df must have two columns, one named 'sample' and
              the other named whatever you please.")
 
       }
 
-      if(!is.null(feature_lengths)){
-
-        kinetics <- kinetics %>%
-          dplyr::inner_join(
-            feature_lengths %>%
-              dplyr::filter(length > 0),
-            by = c(features_to_analyze)
-          ) %>%
-          dplyr::inner_join(
-            scale_factor_df,
-            by = "sample"
-          ) %>%
-          dplyr::mutate(
-            normalized_reads = (n /  (length / 1000)) * !!dplyr::sym(scale_col),
-            log_normalized_reads = log10(normalized_reads)
-          )
-
-
-      }else{
-
-        kinetics <- kinetics %>%
-          dplyr::inner_join(
-            scale_factor_df,
-            by = "sample"
-          ) %>%
-          dplyr::mutate(
-            normalized_reads = n * !!dplyr::sym(scale_col),
-            log_normalized_reads = log10(normalized_reads)
-          )
-
-
-      }
-
-
     }
+
+    normalized_reads_df <- get_normalized_read_counts(obj = obj,
+                                                      features_to_analyze = features_to_analyze,
+                                                      fractions_name = param_name,
+                                                      feature_lengths = feature_lengths,
+                                                      scale_factors = scale_factor_df) %>%
+      dplyr::as_tibble()
+
+    # Get the kinetic parameter data frame
+    kinetics <- kinetics %>%
+      dplyr::inner_join(normalized_reads_df[,c("sample",
+                                               features_to_analyze,
+                                               "normalized_reads")],
+                        by = c("sample", features_to_analyze)) %>%
+      dplyr::mutate(log_normalized_reads = log10(normalized_reads))
 
 
 
@@ -321,26 +286,37 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   if(is.null(formula_mean)){
 
-    # Add kinetic parameter column to formula\
-    condition_vars <- colnames(metadf)[!grepl("tl", colnames(metadf)) &
+    # Add kinetic parameter column to formula
+    condition_vars <- colnames(metadf)[!grepl("^tl($|_)", colnames(metadf)) &
+                                         !grepl("^tpulse", colnames(metadf)) &
+                                         !grepl("^tchase", colnames(metadf)) &
                                          (colnames(metadf) != "sample")]
 
-
-    formula_mean <- stats::as.formula(paste0("~", paste(condition_vars, collapse = "+")))
+    if(length(condition_vars) == 0){
+      formula_mean <- stats::as.formula("~ 1")
+    }else{
+      formula_mean <- stats::as.formula(paste0("~", paste(condition_vars, collapse = "+")))
+    }
 
   }
 
-  formula_mean <- stats::as.formula(paste0(paste(c(parameter, formula_mean), collapse = ""), "-1"))
+  all_f_vars <- all.vars(formula_mean)
+  if(length(all_f_vars) == 0){
+    # Intercept-only formula (~ 1)
+    formula_mean <- stats::as.formula(paste0(parameter, " ~ 1"))
+    variables <- character(0)
+  }else{
+    formula_mean <- stats::as.formula(paste0(paste(c(parameter, formula_mean), collapse = ""), "-1"))
+    variables <- all.vars(formula_mean)
+    variables <- variables[2:length(variables)]
+  }
 
-
-  ### Check to see if simple averaging is compatible with specified model
-  variables <- all.vars(formula_mean)
-  variables <- variables[2:length(variables)]
 
   # Filter out -label data
   metadf <- metadf  %>%
     dplyr::rowwise() %>%
-    dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) != 0))
+    dplyr::filter(all(dplyr::c_across(dplyr::all_of(tl_cols)) != 0)) %>%
+    dplyr::ungroup()
 
   # Convert tl to factor if necessary
   if(convert_tl_to_factor & any(tl_cols %in% variables)){
@@ -350,37 +326,56 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
   }
 
-  can_simply_average <- TRUE
-  X <- stats::model.matrix(formula_mean,
-                    metadf %>%
-                      dplyr::mutate(!!parameter := 1))
+  ### Check for single-level factors BEFORE model.matrix(), which errors on 1-level factors
+  single_level_mean <- (length(variables) == 0) || checkSingleLevelFactors(formula_mean, metadf)
+  design_cor <- NULL
+
+  if(!single_level_mean){
+
+    can_simply_average <- TRUE
+    X <- stats::model.matrix(formula_mean,
+                      metadf %>%
+                        dplyr::mutate(!!parameter := 1))
+
+    qr_X <- qr(X)
+    piv_X <- qr_X$pivot[seq_len(qr_X$rank)]
+    X_fullrank <- X[, piv_X, drop = FALSE]
+    design_cor <- tryCatch(
+      stats::cov2cor(solve(t(X_fullrank) %*% X_fullrank)),
+      error = function(e) NULL
+    )
+
+    if(is.null(sd_grouping_factors)){
 
 
-  if(is.null(sd_grouping_factors)){
+      # If there is a clean parameter to sample mapping, we can infer
+      # sd_grouping_factors
+      if(all(rowSums(X!= 0) == 1)){
 
+        sd_grouping_factors <- variables
+        can_simply_average <- TRUE
 
-    # If there is a clean parameter to sample mapping, we can infer
-    # sd_grouping_factors
-    if(all(rowSums(X!= 0) == 1)){
+      }else{
 
-      sd_grouping_factors <- variables
-      can_simply_average <- TRUE
+        can_simply_average <- FALSE
+
+      }
 
     }else{
 
-      can_simply_average <- FALSE
+      # Easiest case to accommodate is if sd_grouping factors was set to all of
+      # the factors in formula_mean and formula_mean permits simple averaging.
+      # Could also accommodate case where sd_grouping_factors are distinct from
+      # formula_mean factors, but won't worry about that for now as it would be
+      # a weird decision for a user to seek out anyway.
+      can_simply_average <- identical(sd_grouping_factors, variables) &
+        all(rowSums(X) == 1)
 
     }
 
   }else{
 
-    # Easiest case to accommodate is if sd_grouping factors was set to all of
-    # the factors in formula_mean and formula_mean permits simple averaging.
-    # Could also accommodate case where sd_grouping_factors are distinct from
-    # formula_mean factors, but won't worry about that for now as it would be
-    # a weird decision for a user to seek out anyway.
-    can_simply_average <- identical(sd_grouping_factors, variables) &
-      all(rowSums(X) == 1)
+    can_simply_average <- TRUE
 
   }
 
@@ -462,16 +457,15 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
 
 
-  ### Need to cover for edge case where there are single level factors
-  single_level_mean <- checkSingleLevelFactors(kinetics,
-                                               formula_mean)
+  ### Re-check in case filtering kinetics dropped a factor level
+  single_level_mean <- (length(variables) == 0) || checkSingleLevelFactors(formula_mean, kinetics)
 
 
   message("Fitting linear model")
 
   if(single_level_mean){
 
-    if(length(all.vars(formula_mean)) != 2 ){
+    if(length(all.vars(formula_mean)) > 2 ){
 
       stop("You have specified a multi-covariate model where one or more of the covariates
            has a single level. The mean and standard deviations of all of the groups
@@ -490,10 +484,38 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
 
     }
 
-    ### TO-DO; DEAL WITH THIS EDGE-CASE EFFECTIVELY; IMPORTANT FOR TILAC
+    if(length(all.vars(formula_mean)) == 2){
+      sl_var <- all.vars(formula_mean)[2]
+      sl_lvl <- as.character(unique(kinetics[[sl_var]]))[1]
+      sl_name <- paste0(sl_var, sl_lvl)
+    }else{
+      sl_name <- "Intercept"
+    }
+
     model_fit <- kinetics %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
-      dplyr::summarise()
+      dplyr::summarise(
+        mean = mean(!!dplyr::sym(parameter)),
+        logsd = log(ifelse(dplyr::n() > 1, stats::sd(!!dplyr::sym(parameter)), 0)),
+        logsd_from_uncert = log(mean(!!dplyr::sym(parameter_se))),
+        coverage = mean(log_normalized_reads),
+        replicates = dplyr::n(),
+        .groups = "drop"
+      ) %>%
+      dplyr::mutate(
+        logsd = log(sqrt(exp(logsd_from_uncert)^2 + exp(logsd)^2) + 0.025/sqrt(replicates)),
+        se_mean = exp(logsd)/sqrt(replicates),
+        se_logse = 1/sqrt(2*pmax(replicates - 1, 0.5)),
+        logse = log(exp(logsd)/sqrt(replicates))
+      ) %>%
+      dplyr::select(
+        dplyr::all_of(features_to_analyze),
+        !!paste0("mean_", sl_name) := mean,
+        !!paste0("logse_", sl_name) := logse,
+        !!paste0("coverage_", sl_name) := coverage,
+        !!paste0("se_mean_", sl_name) := se_mean,
+        !!paste0("se_logse_", sl_name) := se_logse
+      )
 
   }else{
 
@@ -511,7 +533,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
       model_fit <- kinetics %>%
         dplyr::group_by(dplyr::across(dplyr::all_of(c(mean_vars[2:length(mean_vars)], features_to_analyze)))) %>%
         dplyr::summarise(mean = mean(!!dplyr::sym(parameter)),
-                         logsd = log(stats::sd(!!dplyr::sym(parameter)) ),
+                         logsd = log(ifelse(dplyr::n() > 1, stats::sd(!!dplyr::sym(parameter)), 0)),
                          logsd_from_uncert = log(mean(!!dplyr::sym(parameter_se))),
                          coverage = mean(log_normalized_reads),
                          replicates = dplyr::n()) %>%
@@ -524,7 +546,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
         # )) %>%
         dplyr::select(-logsd_from_uncert) %>%
         dplyr::mutate(se_mean = exp(logsd)/sqrt(replicates),
-                      se_logse = 1/sqrt(2*(replicates - 1)),
+                      se_logse = 1/sqrt(2*pmax(replicates - 1, 0.5)),
                       logse = log(exp(logsd)/sqrt(replicates)))
 
       # Only two possibilities: you have exclusively interaction terms
@@ -562,11 +584,12 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
         dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
         dplyr::do(dplyr::tibble(parameters = list(
           fit_ezbakR_linear_model(.,
+                                  parameter = parameter,
                                   formula_mean = formula_mean,
                                   sd_groups = sd_grouping_factors,
                                   coverage_col = "normalized_reads",
                                   uncertainties_col = parameter_se_col,
-                                  error_if_singular = TRUE)
+                                  error_if_singular = error_if_singular)
         ))) %>%
         tidyr::unnest_wider(parameters)
 
@@ -686,7 +709,8 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
     # Regularize
     model_fit <- model_fit %>%
       dplyr::ungroup() %>%
-      dplyr::mutate(!!col_name := get_sd_posterior(sd_est = !!dplyr::sym(sd_est_name),
+      dplyr::mutate(!!col_name := get_sd_posterior(n = sd_reg_factor,
+                                                   sd_est = !!dplyr::sym(sd_est_name),
                                                    sd_var = (!!dplyr::sym(sd_var_name)) ^ 2,
                                                    fit_var = stats::var(regression_results[[c]]$lm_result$residuals),
                                                    fit_mean = !!dplyr::sym(fit_mean_name),
@@ -780,6 +804,7 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                                       kstrat = kstrat,
                                                       populations = populations,
                                                       fraction_design = fraction_design,
+                                                      design_cor = design_cor,
                                                       repeatID = repeatID)
 
 
@@ -811,13 +836,14 @@ checkSingleLevelFactors <- function(formula, data) {
   # Initialize a vector to keep track of single-level factors
   singleLevelFactors <- logical(length = 0)
 
-  # Loop through each variable to check if it's a factor present
-  # in the data with only one level
+  # Loop through each variable to check if it's a factor or character present
+  # in the data with only one unique level
   for (var in variables) {
 
-    if (var %in% names(data) && is.factor(data[[var]])) {
+    if (var %in% names(data) && (is.factor(data[[var]]) || is.character(data[[var]]))) {
 
-      if (length(levels(data[[var]])) == 1) {
+      n_lvls <- if(is.factor(data[[var]])) length(unique(as.character(data[[var]]))) else length(unique(data[[var]]))
+      if (n_lvls <= 1) {
 
         singleLevelFactors <- c(singleLevelFactors, TRUE)
 
@@ -848,13 +874,13 @@ get_sd_posterior <- function(n = 1, sd_est, sd_var,
 
 
 
-  if(fit_var <= 0){
+  if(is.na(fit_var) || fit_var <= 0){
     fit_var <- fit_var_min
   }
 
 
-  denom <- (n/sd_var + 1/fit_var)
-  num <- sd_est/sd_var + fit_mean/fit_var
+  denom <- (1/sd_var + n/fit_var)
+  num <- sd_est/sd_var + (n*fit_mean)/fit_var
 
   if(conservative){
 
@@ -1119,17 +1145,34 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
 
   if(strategy == "contrast"){
 
-    ref_mean <- paste0("mean_", design_factor, reference)
-    ref_sd <- paste0("sd_", design_factor, reference, "_posterior")
-    ref_cov <- paste0("coverage_", design_factor, reference)
+    ref_param <- paste0(design_factor, reference)
+    exp_param <- paste0(design_factor, experimental)
 
-    exp_mean <- paste0("mean_", design_factor, experimental)
-    exp_sd <- paste0("sd_", design_factor, experimental, "_posterior")
-    exp_cov <- paste0("coverage_", design_factor, experimental)
+    ref_mean <- paste0("mean_", ref_param)
+    ref_sd <- paste0("sd_", ref_param, "_posterior")
+    ref_cov <- paste0("coverage_", ref_param)
+
+    exp_mean <- paste0("mean_", exp_param)
+    exp_sd <- paste0("sd_", exp_param, "_posterior")
+    exp_cov <- paste0("coverage_", exp_param)
+
+    design_cor <- obj[["metadata"]][[type]][[averages_name]][["design_cor"]]
+    if(!is.null(design_cor) &&
+       all(c(ref_param, exp_param) %in% rownames(design_cor)) &&
+       all(c(ref_param, exp_param) %in% colnames(design_cor))){
+      rho <- design_cor[ref_param, exp_param]
+      if(!is.finite(rho)) rho <- 0
+    }else{
+      rho <- 0
+    }
 
     comparison <- parameter_est %>%
       dplyr::mutate(difference = !!dplyr::sym(exp_mean) - !!dplyr::sym(ref_mean),
-                    uncertainty = sqrt( (!!dplyr::sym(ref_sd))^2 + (!!dplyr::sym(exp_sd))^2 ),
+                    uncertainty = sqrt(pmax(
+                      (!!dplyr::sym(ref_sd))^2 + (!!dplyr::sym(exp_sd))^2 -
+                        2 * rho * (!!dplyr::sym(ref_sd)) * (!!dplyr::sym(exp_sd)),
+                      1e-12
+                    )),
                     stat = difference/uncertainty,
                     pval = 2*stats::pnorm(-abs(stat)),
                     avg_coverage = ((!!dplyr::sym(ref_cov)) + (!!dplyr::sym(exp_cov))) / 2) %>%
@@ -1205,18 +1248,47 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
     par_se <- paste0("se_", parameter)
 
 
+    # Inverse-variance weighted mean and SE across matching rows
+    ivw_mean <- function(vals, ses) {
+      keep <- !is.na(vals) & !is.na(ses)
+      vals <- vals[keep]
+      ses <- ses[keep]
+      if(length(vals) == 0) return(NA_real_)
+      if(any(ses <= 0)){
+        return(mean(vals[ses <= 0]))
+      }
+      w <- 1 / (ses^2)
+      stats::weighted.mean(vals, w = w)
+    }
+
+    ivw_se <- function(vals, ses) {
+      keep <- !is.na(vals) & !is.na(ses)
+      ses <- ses[keep]
+      if(length(ses) == 0) return(NA_real_)
+      if(any(ses <= 0)) return(0)
+      sqrt(1 / sum(1 / (ses^2)))
+    }
+
     # Calculate the differences for each unique set of feature values
     comparison <- parameter_est %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(features_to_analyze))) %>%
       dplyr::summarise(
-        ref_par = stats::weighted.mean( (!!dplyr::sym(parameter))[!!create_filter_expr(design_factors, reference_list)],
-                                w = (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, reference_list)],
-                                na.rm = TRUE),
-        exp_par = stats::weighted.mean( (!!dplyr::sym(parameter))[!!create_filter_expr(design_factors, experimental_list)],
-                                w = (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, experimental_list)],
-                                na.rm = TRUE),
-        ref_se = sqrt(sum( ( (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, reference_list)])^2 )),
-        exp_se = sqrt(sum( ( (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, experimental_list)])^2 )),
+        ref_par = ivw_mean(
+          (!!dplyr::sym(parameter))[!!create_filter_expr(design_factors, reference_list)],
+          (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, reference_list)]
+        ),
+        exp_par = ivw_mean(
+          (!!dplyr::sym(parameter))[!!create_filter_expr(design_factors, experimental_list)],
+          (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, experimental_list)]
+        ),
+        ref_se = ivw_se(
+          (!!dplyr::sym(parameter))[!!create_filter_expr(design_factors, reference_list)],
+          (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, reference_list)]
+        ),
+        exp_se = ivw_se(
+          (!!dplyr::sym(parameter))[!!create_filter_expr(design_factors, experimental_list)],
+          (!!dplyr::sym(par_se))[!!create_filter_expr(design_factors, experimental_list)]
+        )
       ) %>%
       dplyr::mutate(
         difference = exp_par - ref_par,
@@ -1335,8 +1407,6 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
                                                             experimental = experimental,
                                                             param_name = param_name,
                                                             param_function = param_function,
-                                                            features = features_to_analyze,
-                                                            parameter = parameter,
                                                             cstrat = strategy,
                                                             normalize_by_median = normalize_by_median,
                                                             repeatID = repeatID)
@@ -1355,46 +1425,53 @@ CompareParameters <- function(obj, design_factor, reference, experimental,
 
 
 
-fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
+fit_ezbakR_linear_model <- function(data, parameter, formula_mean, sd_groups,
                                     coverage_col,
                                     uncertainties_col,
                                     error_if_singular = TRUE){
 
-  parameter <- fsvector <- NULL
-
-
   fit <- stats::lm(formula_mean, data,
             singular.ok = !error_if_singular)
 
-  means <- summary(fit)$coef[,"Estimate"]
+  coefs <- stats::coef(fit)
+  non_aliased <- !is.na(coefs)
+  means <- coefs[non_aliased]
   names(means) <- paste0("mean_", names(means))
 
+  X_full <- stats::model.matrix(fit)
+  X <- X_full[, non_aliased, drop = FALSE]
+  xtx_inv <- solve(t(X) %*% X)
 
   if(is.null(sd_groups)){
 
     # My version of robust se estimation: add parameter uncertainty to avoid underestimation
     # I like to be conservative in bioinformatics, because there are always unaccounted
     # for sources of variance.
-    X <- stats::model.matrix(fit)
-    s2 <- stats::sigma(fit)^2 + data[[uncertainties_col]]^2 + (0.05^2)/(nrow(data)/ncol(X))
-    vce <- solve(t(X) %*% X) %*% (t(X) %*% (s2*diag(nrow(data))) %*% X) %*% solve(t(X) %*% X)
-    ses <- log(sqrt(diag(vce)))
-
+    sig_fit <- stats::sigma(fit)
+    if(!is.finite(sig_fit)) sig_fit <- 0
+    s2 <- sig_fit^2 + data[[uncertainties_col]]^2 + (0.05^2)/(nrow(data)/ncol(X))
+    vce <- xtx_inv %*% (t(X) %*% (s2*diag(nrow(data))) %*% X) %*% xtx_inv
+    ses <- log(sqrt(pmax(diag(vce), 1e-16)))
+    names(ses) <- colnames(X)
 
     # Standard errors in the standard error. Accuracy of this is not super important
     # as it only slighly influences the strength of regularization and nothing else.
     # Result is delta approximation for log(standard devitation)
-    replicates <- colSums(X)
-    se_logses <- 1/sqrt(2*replicates - 1)
-    names(se_logses) <- paste0("se_logse_", names(se_logses))
+    df_res <- max(nrow(X) - ncol(X), 0.5)
+    eff_reps <- colSums(X != 0)
+    eff_df <- ifelse(colSums(X < 0) == 0 & eff_reps > 1,
+                     pmax(eff_reps - 1, 0.5),
+                     df_res)
+    se_logses <- 1/sqrt(2 * eff_df)
+    names(se_logses) <- paste0("se_logse_", colnames(X))
 
     # Get average coverage for regression model
     coverage <- rep(log10(mean(data[[coverage_col]])),
                     times = length(ses))
 
     # Give informative names to output
-    names(coverage) <- paste0("coverage_", names(ses))
-    names(ses) <- paste0("logse_", names(ses))
+    names(coverage) <- paste0("coverage_", colnames(X))
+    names(ses) <- paste0("logse_", colnames(X))
 
     estimates <- c(means,
                    ses, coverage, se_logses)
@@ -1405,31 +1482,33 @@ fit_ezbakR_linear_model <- function(data, formula_mean, sd_groups,
     sds <- data %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(sd_groups))) %>%
       dplyr::mutate(group_sd = stats::sd(!!dplyr::sym(parameter)),
-             group_coverage = log10(mean(!!dplyr::sym(coverage_col))))
+             group_coverage = log10(mean(!!dplyr::sym(coverage_col)))) %>%
+      dplyr::ungroup()
 
     # Robust standard errors
-    X <- stats::model.matrix(fit)
-    s2 <- sds$group_sd^2 + data[[uncertainties_col]]^2 #+ (0.025^2)/(nrow(data)/ncol(X))
-    vce <- solve(t(X) %*% X) %*% (t(X) %*% (s2*diag(nrow(data))) %*% X) %*% solve(t(X) %*% X)
-    ses <- log(sqrt(diag(vce)))
-    names(ses) <- paste0("logse_", names(ses))
+    grp_sd_clean <- ifelse(is.na(sds$group_sd), 0, sds$group_sd)
+    s2 <- grp_sd_clean^2 + data[[uncertainties_col]]^2 + (0.025^2)/(nrow(data)/ncol(X))
+    vce <- xtx_inv %*% (t(X) %*% (s2*diag(nrow(data))) %*% X) %*% xtx_inv
+    ses <- log(sqrt(pmax(diag(vce), 1e-16)))
+    names(ses) <- paste0("logse_", colnames(X))
 
     # Standard errors in the standard error. Accuracy of this is not super important
     # as it only slighly influences the strength of regularization and nothing else.
     # Result is delta approximation for log(standard devitation)
-    replicates <- colSums(X)
-    se_logses <- 1/sqrt(2*replicates - 1)
-    names(se_logses) <- paste0("se_logse_", names(se_logses))
+    eff_reps <- colSums(X != 0)
+    se_logses <- 1/sqrt(2 * pmax(eff_reps - 1, 0.5))
+    names(se_logses) <- paste0("se_logse_", colnames(X))
 
 
-    # Idea: Average coverages over group presence in each's parameter column of design
-    # matrix.
-    coverages <- t(X) %*% matrix(sds$group_coverage, nrow = nrow(data))
-    coverages <- coverages / replicates
-    rownames(coverages) <- paste0("coverage_", rownames(coverages))
+    # Idea: Average coverages over group presence in each parameter column of design matrix
+    weights_abs <- abs(X)
+    denom_cov <- colSums(weights_abs)
+    denom_cov[denom_cov == 0] <- 1
+    coverages <- as.vector(t(weights_abs) %*% matrix(sds$group_coverage, nrow = nrow(data))) / denom_cov
+    names(coverages) <- paste0("coverage_", colnames(X))
 
     estimates <- c(means, ses,
-                   coverages[,1],
+                   coverages,
                    se_logses)
 
   }

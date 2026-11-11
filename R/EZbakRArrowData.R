@@ -29,6 +29,7 @@ validate_EZbakRArrowData <- function(obj){
   illegal_mutcounts <- c("TT", "CC", "GG", "AA", "UU")
 
   mutcounts <- mutcounts[!(mutcounts %in% illegal_mutcounts)]
+  mutcounts[mutcounts == "NA"] <- "NtoA"
 
 
   ### Extract objects and info from objects
@@ -74,7 +75,8 @@ validate_EZbakRArrowData <- function(obj){
     samps_cB <- cBds %>%
       dplyr::select(sample) %>%
       dplyr::distinct() %>%
-      dplyr::collect()
+      dplyr::collect() %>%
+      dplyr::pull(sample)
 
   }
 
@@ -218,11 +220,29 @@ validate_EZbakRArrowData <- function(obj){
 
   ### Check that base counts can be coerced to positive integers
 
-  if(!all(sapply(basecounts_expected, is_arrowint))){
+  if(!all(sapply(unique(basecounts_expected), is_arrowint))){
 
     rlang::abort("Not all columns tracking counts of nucleotides are integers!",
                  class = "basecounts_not_pos_whole")
 
+  }
+
+  ### Check that mutation counts never exceed corresponding base counts
+  for(idx in seq_along(mutcounts_in_cB)){
+    mut_col <- mutcounts_in_cB[idx]
+    base_col <- basecounts_expected[idx]
+    bad_rows <- cBds %>%
+      dplyr::select(dplyr::all_of(c(mut_col, base_col))) %>%
+      dplyr::filter(.data[[mut_col]] > .data[[base_col]]) %>%
+      utils::head(1) %>%
+      dplyr::collect()
+    if(nrow(bad_rows) > 0){
+      rlang::abort(
+        paste0("Mutation counts in column ", mut_col,
+               " exceed nucleotide counts in column ", base_col, "!"),
+        class = "mut_exceeds_basecount"
+      )
+    }
   }
 
   ### Check that label times are numeric and >= 0
@@ -421,7 +441,7 @@ validate_EZbakRArrowData <- function(obj){
 #' @export
 EZbakRArrowData <- function(cBds, metadf){
 
-  metadf <- setDT(metadf)
+  metadf <- data.table::as.data.table(metadf)
 
   validate_EZbakRArrowData(new_EZbakRArrowData(cBds, metadf))
 

@@ -58,7 +58,7 @@ test_that("Dual label pulse-chase EZbakRDataobject creation works", {
                       TC = c(1, 1, 1),
                       nT = c(20, 20, 12),
                       GA = c(1, 2, 1),
-                      nG = c(10, 1, 2),
+                      nG = c(10, 5, 2),
                       XF = "GeneA",
                       n = c(1, 2, 3))
 

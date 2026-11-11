@@ -251,6 +251,7 @@ EstimateKinetics <- function(obj,
                                   exactMatch = exactMatch,
                                   character_limit = character_limit,
                                   feature_lengths = feature_lengths,
+                                  scale_factors = scale_factors,
                                   overwrite = overwrite)
 
 
@@ -303,6 +304,7 @@ Standard_kinetic_estimation <- function(obj,
   ksyn <- normalized_reads <- log_ksyn <- se_log_ksyn <- scale_factor <- n <- nolabel_rpm <- NULL
   old_rpm <- new_rpm <- geom_mean <- rpm <- nolabel_n <- nolabel_reps <- NULL
   reference_rpm <- reference_n <- reference_reps <- tpulse <- tchase <- NULL
+  fn_safe <- se_safe <- NULL
 
 
   rm(..cols_to_keep)
@@ -412,8 +414,8 @@ Standard_kinetic_estimation <- function(obj,
     kinetics[, ksyn := normalized_reads*kdeg]
     kinetics[, log_ksyn := log(ksyn)]
 
-    # Estimate uncertainty (assuming normalized_reads ~ Poisson(normalized_reads)/scale_factor)
-    kinetics[, se_log_ksyn := sqrt( (1/(normalized_reads*scale_factor)) + se_log_kdeg^2)]
+    # Estimate uncertainty (assuming raw count n ~ Poisson(n))
+    kinetics[, se_log_ksyn := sqrt( (1/n) + se_log_kdeg^2)]
 
 
 
@@ -525,11 +527,13 @@ Standard_kinetic_estimation <- function(obj,
     ### TO-DO: Incorporate number of -s4U replicates used to infer nolabel_n
 
     ### Uncertainty approximated with delta method
-    lkdeg_uncert_nss <- function(fn, se_lfn, Rs4U, Rctl, tl, kdeg){
+    lkdeg_uncert_nss <- function(fn, se_lfn, Rs4U, Rctl, tl, kdeg, reference_reps = 1){
 
-      part_1 <- (fn^2)*(se_lfn^2)
+      se_lfn <- ifelse(is.nan(se_lfn), 1.5, se_lfn)
+
+      part_1 <- (fn^2)*(se_lfn^2)/(tl^2)
       part_2 <- ((1/(Rs4U + 1))^2)*Rs4U/(tl^2)
-      part_3 <- ((1/(Rctl + 1))^2)*Rctl/(tl^2)
+      part_3 <- ((1/(Rctl + 1))^2)*Rctl/((tl^2)*reference_reps)
       kdeg_var <- part_1 + part_2 + part_3
       uncert <- sqrt(((1/kdeg)^2)*kdeg_var)
 
@@ -537,21 +541,19 @@ Standard_kinetic_estimation <- function(obj,
 
     }
 
-    lksyn_uncert_nss <- function(fn, se_lfn, Rs4U, Rctl, tl, kdeg){
+    lksyn_uncert_nss <- function(fn, se_lfn, Rs4U, Rctl, tl, kdeg, reference_reps = 1){
 
-      ### kdeg and log(kdeg) variances
-      part_1 <- (fn^2)*(se_lfn^2)
-      part_2 <- ((1/(Rs4U + 1))^2)*Rs4U/(tl^2)
-      part_3 <- ((1/(Rctl + 1))^2)*Rctl/(tl^2)
-      kdeg_var <- part_1 + part_2 + part_3
-      lkdeg_var <- sqrt(((1/kdeg)^2)*kdeg_var)
+      se_lfn <- ifelse(is.nan(se_lfn), 1.5, se_lfn)
 
-      ### log(ksyn) variance
-      part_1s <- ((1 - fn)^2)*(se_lfn^2)
-      part_2s <- ((1/(Rs4U + 1))^2)*Rs4U
-      part_3s <- lkdeg_var
-      part_4s <- ((tl*exp(-tl*kdeg))/(1 - exp(-tl*kdeg)))*kdeg_var
-      lksyn_var <- part_1s + part_2s + part_3s + part_4s
+      # Differentiate log(ksyn) = log(fn) + log(Rs4U) - log(tl) + log(u/(1 - exp(-u))) + const
+      # directly wrt independent (logit(fn), log(Rs4U), log(Rctl)), where u = tl * kdeg.
+      u <- tl * kdeg
+      h_prime <- ifelse(u < 1e-5, 0.5 - u / 12, (1 / u) - exp(-u) / (1 - exp(-u)))
+
+      part_1s <- ((1 - fn + fn * h_prime)^2) * (se_lfn^2)
+      part_2s <- ((1 - h_prime)^2) * ((1/(Rs4U + 1))^2) * Rs4U
+      part_3s <- (h_prime^2) * ((1/(Rctl + 1))^2) * Rctl / reference_reps
+      lksyn_var <- part_1s + part_2s + part_3s
 
       return(sqrt(lksyn_var))
 
@@ -564,7 +566,8 @@ Standard_kinetic_estimation <- function(obj,
                                                Rs4U = n,
                                                Rctl = reference_n,
                                                tl = tl,
-                                               kdeg = kdeg)]
+                                               kdeg = kdeg,
+                                               reference_reps = reference_reps)]
 
     # Estimate uncertainty (assuming normalized_reads ~ Poisson(normalized_reads)/scale_factor)
     kinetics[, se_log_ksyn := lksyn_uncert_nss(fn = get(fraction_of_interest),
@@ -572,7 +575,8 @@ Standard_kinetic_estimation <- function(obj,
                                                Rs4U = n,
                                                Rctl = reference_n,
                                                tl = tl,
-                                               kdeg = kdeg)]
+                                               kdeg = kdeg,
+                                               reference_reps = reference_reps)]
 
 
 
@@ -645,8 +649,8 @@ Standard_kinetic_estimation <- function(obj,
     kinetics[, ksyn := normalized_reads*kdeg]
     kinetics[, log_ksyn := log(ksyn)]
 
-    # Estimate uncertainty (assuming normalized_reads ~ Poisson(normalized_reads)/scale_factor)
-    kinetics[, se_log_ksyn := sqrt( (1/(normalized_reads*scale_factor)) + se_log_kdeg^2)]
+    # Estimate uncertainty (assuming raw count n ~ Poisson(n))
+    kinetics[, se_log_ksyn := sqrt( (1/n) + se_log_kdeg^2)]
 
 
   }else if(strategy == "pulse-chase"){
@@ -686,19 +690,32 @@ Standard_kinetic_estimation <- function(obj,
         )
       ) %>%
       dplyr::mutate(
-        kdeg = dplyr::case_when(
-          tchase == 0 ~ -log(1 - !!dplyr::sym(fraction_of_interest)) / tpulse,
-          .default = -log(!!dplyr::sym(fraction_of_interest) / mean((!!dplyr::sym(fraction_of_interest))[tchase == 0])) / tchase
+        fn_safe = dplyr::case_when(
+          !!dplyr::sym(fraction_of_interest) <= 0 ~ 1 / (n + 2),
+          !!dplyr::sym(fraction_of_interest) >= 1 ~ 1 - 1 / (n + 2),
+          .default = !!dplyr::sym(fraction_of_interest)
         ),
-        kdeg = ifelse(kdeg <= 0,
-                      -log(1 - 1/(n + 2))/ tchase, # theoretical dynamic range of experiment
+        se_safe = ifelse(is.finite(!!dplyr::sym(se_of_interest)),
+                         !!dplyr::sym(se_of_interest),
+                         1.5),
+        kdeg = dplyr::case_when(
+          tchase == 0 ~ -log(1 - fn_safe) / tpulse,
+          .default = -log(fn_safe / mean(fn_safe[tchase == 0])) / tchase
+        ),
+        kdeg = ifelse(!is.finite(kdeg) | kdeg <= 0,
+                      -log(1 - 1/(n + 2)) / ifelse(tchase == 0, tpulse, tchase), # theoretical dynamic range of experiment
                       kdeg),
         log_kdeg = log(kdeg),
         se_log_kdeg = dplyr::case_when(
-          tchase == 0 ~ !!dplyr::sym(se_of_interest) * abs(!!dplyr::sym(fraction_of_interest) / log(1 - !!dplyr::sym(fraction_of_interest))),
-          .default = sqrt( ((( 1 - inv_logit(mean((!!dplyr::sym(fraction_of_interest))[tchase == 0])) ) * sqrt(sum((!!dplyr::sym(se_of_interest))[tchase == 0]^2)) / sum(tchase == 0)) )^2 +
-                             ((((1 - inv_logit(!!dplyr::sym(fraction_of_interest)))) * !!dplyr::sym(se_of_interest)))^2 ) /
-            kdeg
+          tchase == 0 ~ se_safe * abs(fn_safe / log(1 - fn_safe)),
+          .default = sqrt(
+            sum(
+              (fn_safe[tchase == 0] *
+                 (1 - fn_safe[tchase == 0]) *
+                 se_safe[tchase == 0])^2
+            ) / (sum(fn_safe[tchase == 0])^2) +
+              ((1 - fn_safe) * se_safe)^2
+          ) / (tchase * kdeg)
         )
       ) %>%
       dplyr::ungroup() %>%
@@ -711,7 +728,7 @@ Standard_kinetic_estimation <- function(obj,
       dplyr::mutate(
         ksyn = normalized_reads * kdeg,
         log_ksyn = log(ksyn),
-        se_log_ksyn = sqrt( (1/(normalized_reads*scale_factor)) + se_log_kdeg^2)
+        se_log_ksyn = sqrt( (1/n) + se_log_kdeg^2)
       )
 
 
@@ -827,7 +844,7 @@ Standard_kinetic_estimation <- function(obj,
 
   # Eventually want to add count matrix output
   obj[["readcounts"]][[readcount_vect]] <- dplyr::as_tibble(reads_norm) %>%
-    dplyr::select(sample, !!features_to_analyze, n, normalized_reads, geom_mean, scale_factor)
+    dplyr::select(sample, !!features_to_analyze, n, normalized_reads, dplyr::any_of("geom_mean"), scale_factor)
 
 
   obj[["metadata"]][["kinetics"]][[kinetics_vect]] <- list(features = features_to_analyze,
@@ -860,10 +877,12 @@ tilac_ratio_estimation <- function(obj,
                                    repeatID = NULL,
                                    character_limit = 20,
                                    feature_lengths = NULL,
+                                   scale_factors = NULL,
                                    overwrite = TRUE){
 
   ### Hack to deal with devtools::check() NOTEs
-  ..cols_to_keep <- TILAC_ratio <- log_TILAC_ratio <- ..cols_keep <- NULL
+  ..cols_to_keep <- TILAC_ratio <- log_TILAC_ratio <- se_log_TILAC_ratio <- ..cols_keep <- NULL
+  n <- normalized_reads <- scale_factor <- NULL
 
   rm(..cols_to_keep)
   rm(..cols_keep)
@@ -872,57 +891,36 @@ tilac_ratio_estimation <- function(obj,
 
   ### Figure out which fraction new estimates to use
 
-  # Need to determine which columns of the cB to group reads by
-  if(is.null(features)){
+  fractions_name <- EZget(obj,
+                          type = "fractions",
+                          features = features,
+                          populations = populations,
+                          fraction_design = fraction_design,
+                          repeatID = repeatID,
+                          exactMatch = exactMatch,
+                          returnNameOnly = TRUE)
 
-    fractions_name <- names(obj)[grepl("fractions_", names(obj))]
-
-    if(length(fractions_name) > 1){
-
-      stop("There is more than one fractions estimate data frame; therefore,
-           you need to explicit specify a `features` vector to let EZbakR
-           know which of these you would like to use!")
-
-    }
-
-    features_to_analyze <- unname(unlist(strsplit(fractions_name, "_")))
-    lf <- length(features_to_analyze)
-    features_to_analyze <- features_to_analyze[2:lf]
-
-  }else{
-
-    supposed_fractions_name <- paste0("fractions_", paste(features, collapse = "_"))
-
-    if(!(supposed_fractions_name %in% names(obj))){
-
-      stop("features do not have an associated fractions data frame!")
-
-    }else{
-
-      features_to_analyze <- features
-
-    }
-
+  if(is.null(fractions_name)){
+    stop("No tables from your EZbakR analysis match your search criteria!")
   }
 
-  # Name of fractions table to use
-  fractions_table_name <- paste(c("fractions", features_to_analyze), collapse = "_")
-
   # Get fractions
-  kinetics <- obj[[fractions_table_name]]
-
+  kinetics <- obj[["fractions"]][[fractions_name]]
+  features_to_analyze <- obj[["metadata"]][["fractions"]][[fractions_name]][["features"]]
 
 
   ### Estimate TILAC ratio
 
-  # Determine which column to use for kinetic parameter estimation
+  # Determine which columns represent the two single-label-high TILAC populations
   fraction_cols <- colnames(kinetics)
-  fraction_of_interest <- fraction_cols[grepl("^fraction_high", fraction_cols)]
+  all_fraction_cols <- fraction_cols[grepl("^fraction_", fraction_cols)]
+  nhigh <- lengths(regmatches(all_fraction_cols, gregexpr("high", all_fraction_cols)))
+  fraction_of_interest <- all_fraction_cols[nhigh == 1]
 
   # TODO: COULD ADD PARAMETER TO ALLOW USER TO DECIDE WHICH FRACTION COLUMNS TO USE
   if(length(fraction_of_interest) != 2){
 
-    stop("There are not exactly two `high` mutational content fractions!
+    stop("There are not exactly two single-`high` mutational content fractions!
          Are you sure this is TILAC data?")
 
   }
@@ -937,49 +935,138 @@ tilac_ratio_estimation <- function(obj,
   setkey(metadf, sample)
   setkey(kinetics, sample)
 
-  tl_cols <- metacols[grepl("tl", metacols)]
+  tl_cols <- metacols[grepl("^tl($|_)", metacols)]
 
 
   cols_keep <- c("sample", tl_cols)
   kinetics <- kinetics[metadf[,..cols_keep], nomatch = NULL]
 
-  # Make sure no -s4U controls made it through
-  # Not sure how to easily do this filtering in data.table
+  # Make sure no -label controls made it through
   kinetics <- setDT(dplyr::as_tibble(kinetics) %>%
-                      dplyr::filter(dplyr::if_all(dplyr::starts_with("tl"), ~ . > 0)))
+                      dplyr::filter(dplyr::if_all(dplyr::all_of(tl_cols), ~ . > 0)))
 
 
   kinetics[, TILAC_ratio := get(fraction_of_interest[1])/get(fraction_of_interest[2])]
-  kinetics[, log_TILAC_ratio := TILAC_ratio]
+  kinetics[, log_TILAC_ratio := log(TILAC_ratio)]
 
+  # Estimate uncertainty in log_TILAC_ratio via exact CLR parallelogram identity
+  # Var(z_1 - z_2) = 2*(Var(z_1) + Var(z_2)) - Var(z_3) when K <= 3, with
+  # Bayesian multinomial fallback if se_invsoftmax_* columns are absent.
+  pop_suffixes <- sub("^fraction_", "", all_fraction_cols)
+  foi_suffixes <- sub("^fraction_", "", fraction_of_interest)
+  se_ism_cols <- paste0("se_invsoftmax_", pop_suffixes)
+  se_foi_cols <- paste0("se_invsoftmax_", foi_suffixes)
+
+  fallback_var <- 1 / (kinetics[[fraction_of_interest[1]]] * kinetics[["n"]] + 1) +
+    1 / (kinetics[[fraction_of_interest[2]]] * kinetics[["n"]] + 1)
+
+  if(all(se_ism_cols %in% colnames(kinetics)) && length(all_fraction_cols) <= 3){
+    other_se_cols <- setdiff(se_ism_cols, se_foi_cols)
+    if(length(other_se_cols) == 1){
+      clr_var <- 2 * (kinetics[[se_foi_cols[1]]]^2 + kinetics[[se_foi_cols[2]]]^2) -
+        kinetics[[other_se_cols[1]]]^2
+    }else{
+      clr_var <- 2 * (kinetics[[se_foi_cols[1]]]^2 + kinetics[[se_foi_cols[2]]]^2)
+    }
+    var_log_ratio <- ifelse(!is.finite(clr_var) | clr_var <= 0, fallback_var, clr_var)
+  }else{
+    var_log_ratio <- fallback_var
+  }
+
+  kinetics[, se_log_TILAC_ratio := sqrt(var_log_ratio)]
 
 
   ### Get normalized read counts
 
-  reads_norm <- get_normalized_read_counts(obj,
+  reads_norm <- get_normalized_read_counts(obj = obj,
                                            features_to_analyze = features_to_analyze,
-                                           feature_lengths = feature_lengths)
+                                           fractions_name = fractions_name,
+                                           feature_lengths = feature_lengths,
+                                           scale_factors = scale_factors)
 
 
-  ### Estimate ksyn
-
-  # Merge with kinetics
+  # Merge normalized_reads with kinetics
   setkeyv(reads_norm, c("sample", features_to_analyze))
   setkeyv(kinetics, c("sample", features_to_analyze))
 
-  cols_to_keep <- c("sample", features_to_analyze, "reads", "normalized_reads")
+  cols_to_keep <- c("sample", features_to_analyze, "normalized_reads")
 
   kinetics <- kinetics[reads_norm[,..cols_to_keep], nomatch = NULL]
 
 
-  # Figure out what to name output
-  kinetics_name <- paste(features_to_analyze, collapse = "_")
-  reads_name <- paste(c("readcounts", features_to_analyze), collapse = "_")
+  # Naming & metadata identical to Standard_kinetic_estimation
+  kinetics_vect <- paste(gsub("_", "", features_to_analyze), collapse = "_")
 
-  obj[['kinetics']][[kinetics_name]] <- dplyr::as_tibble(kinetics)
+  if(nchar(kinetics_vect) > character_limit){
+    num_kinetics <- length(obj[['kinetics']])
+    kinetics_vect <- paste0("kinetics", num_kinetics + 1)
+  }
 
-  # Eventually want to add count matrix output
-  obj[['readcounts']][[reads_name]] <- list(reads_df = reads_norm)
+  readcount_vect <- paste0(paste(gsub("_", "", features_to_analyze), collapse = "_"),
+                           "_readcount_df")
+
+  if(nchar(readcount_vect) > character_limit){
+    num_reads <- sum(grepl("^readcount_df", names(obj[['readcounts']])))
+    readcount_vect <- paste0("readcount_df", num_reads + 1)
+  }
+
+  if(length(obj[['metadata']][['kinetics']]) > 0){
+    kinetics_vect <- decide_output(obj,
+                                   proposed_name = kinetics_vect,
+                                   type = "kinetics",
+                                   features = features_to_analyze,
+                                   kstrat = "tilac",
+                                   overwrite = overwrite)
+    if(overwrite){
+      repeatID_out <- 1
+    }else{
+      repeatID_out <- length(EZget(obj,
+                                   type = 'kinetics',
+                                   features = features_to_analyze,
+                                   kstrat = "tilac",
+                                   returnNameOnly = TRUE,
+                                   exactMatch = TRUE,
+                                   alwaysCheck = TRUE)) + 1
+    }
+  }else{
+    repeatID_out <- 1
+  }
+
+  if(length(obj[['metadata']][['readcounts']]) > 0){
+    readcount_vect <- decide_output(obj,
+                                    proposed_name = readcount_vect,
+                                    type = "readcounts",
+                                    features = features_to_analyze,
+                                    counttype = "TMM_normalized",
+                                    overwrite = overwrite)
+    if(overwrite){
+      rc_repeatID <- 1
+    }else{
+      rc_repeatID <- length(EZget(obj,
+                                  type = 'readcounts',
+                                  features = features_to_analyze,
+                                  counttype = "TMM_normalized",
+                                  returnNameOnly = TRUE,
+                                  exactMatch = TRUE,
+                                  alwaysCheck = TRUE)) + 1
+    }
+  }else{
+    rc_repeatID <- 1
+  }
+
+  obj[['kinetics']][[kinetics_vect]] <- dplyr::as_tibble(kinetics) %>%
+    dplyr::select(sample, !!features_to_analyze, TILAC_ratio, log_TILAC_ratio,
+                  se_log_TILAC_ratio, normalized_reads, n)
+
+  obj[['readcounts']][[readcount_vect]] <- dplyr::as_tibble(reads_norm) %>%
+    dplyr::select(sample, !!features_to_analyze, n, normalized_reads, dplyr::any_of("geom_mean"), scale_factor)
+
+  obj[['metadata']][['kinetics']][[kinetics_vect]] <- list(features = features_to_analyze,
+                                                           kstrat = "tilac",
+                                                           repeatID = repeatID_out)
+  obj[['metadata']][['readcounts']][[readcount_vect]] <- list(features = features_to_analyze,
+                                                              counttype = "TMM_normalized",
+                                                              repeatID = rc_repeatID)
 
   if(!methods::is(obj, "EZbakRKinetics")){
 

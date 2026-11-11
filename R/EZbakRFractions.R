@@ -70,6 +70,7 @@ validate_EZbakRFractions <- function(obj){
   illegal_mutcounts <- c("TT", "CC", "GG", "AA", "UU")
 
   mutcounts <- mutcounts[!(mutcounts %in% illegal_mutcounts)]
+  mutcounts[mutcounts == "NA"] <- "NtoA"
 
 
   ### Extract objects and info from objects
@@ -93,7 +94,7 @@ validate_EZbakRFractions <- function(obj){
   # mutation types to catch this crazy edge case (or a misnamed fraction).
   substrings <- unlist(strsplit(fraction_cols[grepl("^fraction_", fraction_cols)], "_"))
   pops <- substrings[grepl("high", substrings) | grepl("low", substrings)]
-  mutations_in_fractions <- substr(pops, nchar(pops) - 1, nchar(pops))
+  mutations_in_fractions <- gsub("^(high|low)", "", pops)
 
   mutations_in_fractions <- mutations_in_fractions[mutations_in_fractions %in% mutcounts]
 
@@ -103,16 +104,20 @@ validate_EZbakRFractions <- function(obj){
 
   fraction_features <- fraction_cols[!grepl("^fraction_", fraction_cols) &
                                        !grepl("^logit_fraction_", fraction_cols) &
+                                       !grepl("^invsoftmax_", fraction_cols) &
                                        !(fraction_cols %in% c("sample", "n")) &
-                                       !grepl("^se_logit_fraction_", fraction_cols)]
+                                       !grepl("^se_logit_fraction_", fraction_cols) &
+                                       !grepl("^se_invsoftmax_", fraction_cols)]
 
 
   ### Infer uncertainty if not provided
 
 
   est_cols <- fraction_cols[!grepl("^fraction_", fraction_cols) &
-                                       grepl("^logit_fraction_", fraction_cols) &
+                                       (grepl("^logit_fraction_", fraction_cols) |
+                                          grepl("^invsoftmax_", fraction_cols)) &
                                        !grepl("^se_logit_fraction_", fraction_cols) &
+                                       !grepl("^se_invsoftmax_", fraction_cols) &
                                        !(fraction_cols %in% c("sample", "n"))]
 
 
@@ -141,16 +146,17 @@ validate_EZbakRFractions <- function(obj){
 
     for(m in missing_ses){
 
-      new_col <- paste0("se_", missing_ses)
+      new_col <- paste0("se_", m)
 
       fs <- inv_logit(fractions[[m]])
       ns <- fractions[['n']]
 
       alpha <- fs*ns + 1
-      beta <- ns + 2
+      beta <- (1 - fs)*ns + 1
       se_nat <- sqrt(alpha*beta/( ((alpha + beta)^2) * (alpha + beta + 1) ))
 
-      se_logit <- se_nat*abs(1/fs + 1/(1 - fs))
+      fs_jac <- ifelse(fs <= 0 | fs >= 1, alpha / (alpha + beta), fs)
+      se_logit <- se_nat*abs(1/fs_jac + 1/(1 - fs_jac))
 
       fractions[[new_col]] <- se_logit
 

@@ -159,70 +159,54 @@ EZVolcanoPlot <- function(obj,
   # Track which features user wants highlighted
   if(!is.null(features_to_highlight)){
 
-    features <- obj[['metadata']][['comparisons']][['features']]
+    features <- obj[['metadata']][['comparisons']][[comparison_name]][['features']]
 
     if(is.null(features)){
       # Mainly for backwards compatibility where a bug prevented the features
-      # entry of the comparisons metadata from getting updated. Just try to
-      # join by the features that exist and hope for the best.
+      # entry of the comparisons metadata from getting updated. Infer feature
+      # columns from non-statistic columns of the comparison table.
+      features <- setdiff(
+        colnames(comparison),
+        c("difference", "uncertainty", "stat", "pval", "padj", "avg_coverage")
+      )
+    }
 
-      comparison <- comparison %>%
-        dplyr::left_join(
-          features_to_highlight %>%
-            dplyr::mutate(
-              highlight = TRUE
-            )
-        ) %>%
-        tidyr::replace_na(
-          list(
-            highlight = FALSE
-          )
-        )
+    if(!is.data.frame(features_to_highlight)){
+      # Make into one column data frame if user provided a single vector of
+      # feature names
 
-    }else{
+      if(length(features) > 1){
 
-      if(is.vector(features_to_highlight)){
-        # Make into one column data frame is user provided a single vector of
-        # feature names
-
-        if(length(features) > 1){
-
-          stop("You provided a vector to features_to_highlight but your comparison table has more than one feature!
-              features_to_highlight must be a data frame with columns for each of the feature
-              types tracked in the relevant comparison table.")
-
-        }
-
-        features_to_highlight <- dplyr::tibble(
-          !!features := features_to_highlight
-        )
+        stop("You provided a vector to features_to_highlight but your comparison table has more than one feature!
+            features_to_highlight must be a data frame with columns for each of the feature
+            types tracked in the relevant comparison table.")
 
       }
 
-      if(!(all(features %in% colnames(features_to_highlight)))){
-        stop("Not all features in comparison table are columns in features_to_highlight!")
-      }
-
-
-      comparison <- comparison %>%
-        dplyr::left_join(
-          features_to_highlight %>%
-            dplyr::mutate(
-              highlight = TRUE
-            ),
-          by = features
-        ) %>%
-        tidyr::replace_na(
-          list(
-            highlight = FALSE
-          )
-        )
+      features_to_highlight <- dplyr::tibble(
+        !!features := as.character(features_to_highlight)
+      )
 
     }
 
+    if(!(all(features %in% colnames(features_to_highlight)))){
+      stop("Not all features in comparison table are columns in features_to_highlight!")
+    }
 
 
-
+    comparison <- comparison %>%
+      dplyr::left_join(
+        features_to_highlight %>%
+          dplyr::mutate(
+            highlight = TRUE
+          ),
+        by = features
+      ) %>%
+      tidyr::replace_na(
+        list(
+          highlight = FALSE
+        )
+      )
 
   }
 
@@ -505,66 +489,55 @@ EZMAPlot <- function(obj,
   # Track which features user wants highlighted
   if(!is.null(features_to_highlight)){
 
-    features <- obj[['metadata']][['comparisons']][['features']]
+    features <- obj[['metadata']][['comparisons']][[comparison_name]][['features']]
 
     if(is.null(features)){
       # Mainly for backwards compatibility where a bug prevented the features
-      # entry of the comparisons metadata from getting updated. Just try to
-      # join by the features that exist and hope for the best.
+      # entry of the comparisons metadata from getting updated. Infer feature
+      # columns from non-statistic columns of the comparison table.
+      features <- setdiff(
+        colnames(comparison),
+        c("difference", "uncertainty", "stat", "pval", "padj", "avg_coverage")
+      )
+    }
 
-      comparison <- comparison %>%
-        dplyr::left_join(
-          features_to_highlight %>%
-            dplyr::mutate(
-              highlight = TRUE
-            )
-        ) %>%
-        tidyr::replace_na(
-          list(
-            highlight = FALSE
-          )
-        )
+    if(!is.data.frame(features_to_highlight)){
+      # Make into one column data frame if user provided a single vector of
+      # feature names
 
-    }else{
+      if(length(features) > 1){
 
-      if(is.vector(features_to_highlight)){
-        # Make into one column data frame is user provided a single vector of
-        # feature names
-
-        if(length(features) > 1){
-
-          stop("You provided a vector to features_to_highlight but your comparison table has more than one feature!
-              features_to_highlight must be a data frame with columns for each of the feature
-              types tracked in the relevant comparison table.")
-
-        }
-
-        features_to_highlight <- dplyr::tibble(
-          !!features := features_to_highlight
-        )
+        stop("You provided a vector to features_to_highlight but your comparison table has more than one feature!
+            features_to_highlight must be a data frame with columns for each of the feature
+            types tracked in the relevant comparison table.")
 
       }
 
-      if(!(all(features %in% colnames(features_to_highlight)))){
-        stop("Not all features in comparison table are columns in features_to_highlight!")
-      }
-
-
-      comparison <- comparison %>%
-        dplyr::left_join(
-          features_to_highlight %>%
-            dplyr::mutate(
-              highlight = TRUE
-            ),
-          by = features
-        ) %>%
-        tidyr::replace_na(
-          list(
-            highlight = FALSE
-          )
-        )
+      features_to_highlight <- dplyr::tibble(
+        !!features := as.character(features_to_highlight)
+      )
 
     }
+
+    if(!(all(features %in% colnames(features_to_highlight)))){
+      stop("Not all features in comparison table are columns in features_to_highlight!")
+    }
+
+
+    comparison <- comparison %>%
+      dplyr::left_join(
+        features_to_highlight %>%
+          dplyr::mutate(
+            highlight = TRUE
+          ),
+        by = features
+      ) %>%
+      tidyr::replace_na(
+        list(
+          highlight = FALSE
+        )
+      )
+
   }
 
 
@@ -910,16 +883,17 @@ EZpcaPlot <- function(obj, data_type = c("fraction_labeled", "reads"),  features
 
 
   samps_to_keep <- colnames(logit_fn_mat)
-  fn_pca_df <- dplyr::tibble(PC1 = fn_PC1,
-                      PC2 = fn_PC2) %>%
-    dplyr::bind_cols(obj$metadf %>%
+  fn_pca_df <- dplyr::tibble(sample = rownames(fn_eigenvect),
+                             PC1 = fn_PC1,
+                             PC2 = fn_PC2) %>%
+    dplyr::left_join(obj$metadf %>%
                        dplyr::filter(
                          sample %in% samps_to_keep
                        ) %>%
                        dplyr::select(
-                         !!metadf_cols_to_use
-                       )
-                ) %>%
+                         sample, !!metadf_cols_to_use
+                       ),
+                     by = "sample") %>%
     dplyr::mutate(
       combo = interaction(
         dplyr::across(
