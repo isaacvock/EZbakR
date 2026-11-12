@@ -638,9 +638,9 @@ EZDynamics <- function(obj,
 
 
     # Add nuisance name if not multi-compartment modeling
-    if(is.null(names(modeled_to_measured))){
+    if(is.null(sample_feature) && (length(modeled_to_measured) == 0L || !is.list(modeled_to_measured[[1]]))){
 
-      modeled_to_measured <- list(total = modeled_to_measured)
+      modeled_to_measured <- list(total = unname(modeled_to_measured))
       tidy_avgs <- tidy_avgs %>%
         dplyr::mutate(imputed_sample_feature = 'total')
 
@@ -660,8 +660,10 @@ EZDynamics <- function(obj,
     if(!use_coverage){
 
       # Don't estimate ksyn if coverage is not being modeled
-      npars <- npars - 1
-
+      npars <- npars - length(ksyn_index)
+      if(length(parameter_names) == max(graph)){
+        parameter_names <- parameter_names[-ksyn_index]
+      }
 
       prior_means <- prior_means[-ksyn_index]
       prior_sds <- prior_sds[-ksyn_index]
@@ -674,6 +676,7 @@ EZDynamics <- function(obj,
       upper_bounds[ksyn_index] <- 15
       lower_bounds[ksyn_index] <- 0
     }
+    eff_use_coverage <- use_coverage
 
 
     ### Infer replicate numbers
@@ -762,10 +765,10 @@ EZDynamics <- function(obj,
     setkey(metadf, sample)
     setkey(kinetics, sample)
 
-    kinetics <- kinetics[metadf[,c("sample", label_time_name)], nomatch = NULL]
+    kinetics <- kinetics[metadf[, c("sample", label_time_name), with = FALSE], nomatch = NULL]
 
     # Make sure no -s4U controls made it through
-    kinetics <- kinetics[tl > 0]
+    kinetics <- kinetics[kinetics[[label_time_name]] > 0]
 
 
     ### Infer which measured species each row belongs to
@@ -812,9 +815,9 @@ EZDynamics <- function(obj,
 
 
     ### Impute dummy value for modeled_to_measured
-    if(is.null(names(modeled_to_measured))){
+    if(is.null(sample_feature) && (length(modeled_to_measured) == 0L || !is.list(modeled_to_measured[[1]]))){
 
-      modeled_to_measured <- list(total = modeled_to_measured)
+      modeled_to_measured <- list(total = unname(modeled_to_measured))
       kinetics <- kinetics %>%
         dplyr::mutate(imputed_sample_feature = 'total')
 
@@ -839,11 +842,27 @@ EZDynamics <- function(obj,
     upper_bounds <- 10 + bound_offsets
     starting_values <- bound_offsets
 
+    ksyn_index <- unique(graph["0", ])
+    ksyn_index <- ksyn_index[ksyn_index != 0]
+    if(!use_coverage){
+      npars <- npars - length(ksyn_index)
+      if(length(parameter_names) == max(graph)){
+        parameter_names <- parameter_names[-ksyn_index]
+      }
+      prior_means <- prior_means[-ksyn_index]
+      prior_sds <- prior_sds[-ksyn_index]
+      starting_values <- starting_values[-ksyn_index]
+      upper_bounds <- upper_bounds[-ksyn_index]
+      lower_bounds <- lower_bounds[-ksyn_index]
+    }
+
     cols_to_group_by = c("sample", grouping_features)
 
-    prep_kin <- kinetics %>%
-      dplyr::mutate(tl = as.numeric(tl),
-                    .ez_nreps_col = 1)
+    prep_kin <- as.data.frame(kinetics)
+    prep_kin[[label_time_name]] <- as.numeric(prep_kin[[label_time_name]])
+    prep_kin$.ez_nreps_col <- 1
+
+    eff_use_coverage <- use_coverage
 
     dynfit <- fit_dynamics_table(
       df = prep_kin,
@@ -857,13 +876,13 @@ EZDynamics <- function(obj,
       logit_fn_sd_col = fraction_se,
       coverage_col = "n",
       nreps_col = ".ez_nreps_col",
-      tl_col = "tl",
+      tl_col = label_time_name,
       sample_feature_col = sample_feature,
       feature_type_col = "measured_specie",
       scale_col = NULL,
       prior_means = prior_means,
       prior_sds = prior_sds,
-      use_coverage = TRUE,
+      use_coverage = use_coverage,
       parameter_names = parameter_names,
       include_mean_n = TRUE
     )
@@ -890,7 +909,8 @@ EZDynamics <- function(obj,
                                  dynamics_design_factors = design_factors,
                                  scale_factors = scale_factors,
                                  feature_lengths = feature_lengths,
-                                 parameter = parameter)
+                                 parameter = parameter,
+                                 overwrite = overwrite)
 
     # How many identical tables already exist?
     if(overwrite){
@@ -932,6 +952,16 @@ EZDynamics <- function(obj,
                                                          dynamics_design_factors = design_factors,
                                                          scale_factors = scale_factors,
                                                          feature_lengths = feature_lengths,
+                                                         use_coverage = eff_use_coverage,
+                                                         parameter_names = parameter_names,
+                                                         label_time_name = label_time_name,
+                                                         unassigned_name = unassigned_name,
+                                                         source_type = type,
+                                                         source_table = table_name,
+                                                         populations = populations,
+                                                         fraction_design = fraction_design,
+                                                         lower_bounds = lower_bounds,
+                                                         upper_bounds = upper_bounds,
                                                          repeatID = repeatID)
 
 
@@ -1373,6 +1403,10 @@ dynamics_likelihood <- function(parameter_ests, graph, formula_list = NULL,
                                    mean = prior_means,
                                    sd = prior_sds,
                                    log = TRUE))
+
+  if(!is.finite(ll)){
+    return(1e10)
+  }
 
   return(-ll)
 

@@ -166,7 +166,9 @@ EZconcat <- function(obj1, obj2,
   }
 
   combined_classes <- unique(c(class(obj1), class(obj2)))
-  canonical_order <- c("EZbakRKinetics", "EZbakRFractions", "EZbakRArrowData", "EZbakRData")
+  canonical_order <- c("EZbakRGoF", "EZbakRDynamics", "EZbakRCompare",
+                       "EZbakRFit", "EZbakRKinetics", "EZbakRFractions",
+                       "EZbakRArrowData", "EZbakRData")
   ordered_classes <- intersect(canonical_order, combined_classes)
   if(length(ordered_classes) > 0){
     class(final_obj) <- ordered_classes

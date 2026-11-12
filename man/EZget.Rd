@@ -6,7 +6,8 @@
 \usage{
 EZget(
   obj,
-  type = c("fractions", "kinetics", "readcounts", "averages", "comparisons", "dynamics"),
+  type = c("fractions", "kinetics", "readcounts", "averages", "comparisons", "dynamics",
+    "gof", "gof_residuals"),
   features = NULL,
   populations = NULL,
   fraction_design = NULL,
@@ -34,6 +35,8 @@ EZget(
   graph = NULL,
   normalize_by_median = NULL,
   deconvolved = NULL,
+  source_type = NULL,
+  source_table = NULL,
   returnNameOnly = FALSE,
   exactMatch = FALSE,
   alwaysCheck = FALSE
@@ -140,6 +143,11 @@ kinetic parameter difference. Thus, only relevant if type == "comparisons".}
 fractions table is result of performing multi-feature deconvolution with
 \code{DeconvolveFractions()}.}
 
+\item{source_type}{Relevant if \code{type} is "gof", "gof_residuals", "averages", or "dynamics".
+Upstream table class ("averages", "dynamics", "kinetics", or "fractions") used to generate the table.}
+
+\item{source_table}{Name of the specific upstream table used to generate the table of interest.}
+
 \item{returnNameOnly}{If TRUE, then only the names of tables that passed your
 search criteria will be returned. Else, the single table passing your search
 criteria will be returned. If there is more than one table that passes your
@@ -164,7 +172,7 @@ systems models, comparisons, etc.
 }
 \details{
 The input to \code{EZget()} is 1) the type of table you want to get ("fractions",
-"kinetics", "averages", "comparisons", or "dynamics") and 2) the metadata necessary
+"kinetics", "averages", "comparisons", "dynamics", "gof", or "gof_residuals") and 2) the metadata necessary
 to uniquely specify the table of interest. Above, every available piece of metadata
 that can be specified for this purpose is documented. You only need to specify the
 minimum information necessary. For example, if you would like to get a "fractions"

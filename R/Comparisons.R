@@ -225,6 +225,9 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
   kinetics <- obj[[type]][[param_name]]
 
   features_to_analyze <- obj[["metadata"]][[type]][[param_name]][["features"]]
+  if(type == "kinetics" && is.null(kstrat)){
+    kstrat <- obj[["metadata"]][["kinetics"]][[param_name]][["kstrat"]]
+  }
 
 
   if(type == "fractions"){
@@ -795,6 +798,19 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
   # Save
   obj[['averages']][[avg_vect]] <- dplyr::as_tibble(final_output)
 
+  if(single_level_mean){
+    design_matrix_meta <- matrix(1,
+                                 nrow = nrow(metadf),
+                                 ncol = length(covariate_names),
+                                 dimnames = list(as.character(metadf$sample),
+                                                 covariate_names))
+  }else if(exists("X", inherits = FALSE) && all(covariate_names %in% colnames(X))){
+    design_matrix_meta <- X[, covariate_names, drop = FALSE]
+    rownames(design_matrix_meta) <- as.character(metadf$sample)
+  }else{
+    design_matrix_meta <- NULL
+  }
+
   # Save metadata
   obj[['metadata']][['averages']][[avg_vect]] <- list(features = features_to_analyze,
                                                       parameter = parameter,
@@ -805,6 +821,10 @@ AverageAndRegularize <- function(obj, features = NULL, parameter = "log_kdeg",
                                                       populations = populations,
                                                       fraction_design = fraction_design,
                                                       design_cor = design_cor,
+                                                      design_matrix = design_matrix_meta,
+                                                      source_type = type,
+                                                      source_table = param_name,
+                                                      convert_tl_to_factor = convert_tl_to_factor,
                                                       repeatID = repeatID)
 
 

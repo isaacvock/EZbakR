@@ -12,7 +12,7 @@
 #' systems models, comparisons, etc.
 #'
 #' The input to `EZget()` is 1) the type of table you want to get ("fractions",
-#' "kinetics", "averages", "comparisons", or "dynamics") and 2) the metadata necessary
+#' "kinetics", "averages", "comparisons", "dynamics", "gof", or "gof_residuals") and 2) the metadata necessary
 #' to uniquely specify the table of interest. Above, every available piece of metadata
 #' that can be specified for this purpose is documented. You only need to specify the
 #' minimum information necessary. For example, if you would like to get a "fractions"
@@ -108,6 +108,9 @@
 #' @param deconvolved Only relevant if type == "fractions". Boolean that is TRUE if
 #' fractions table is result of performing multi-feature deconvolution with
 #' `DeconvolveFractions()`.
+#' @param source_type Relevant if `type` is "gof", "gof_residuals", "averages", or "dynamics".
+#' Upstream table class ("averages", "dynamics", "kinetics", or "fractions") used to generate the table.
+#' @param source_table Name of the specific upstream table used to generate the table of interest.
 #' @param returnNameOnly If TRUE, then only the names of tables that passed your
 #' search criteria will be returned. Else, the single table passing your search
 #' criteria will be returned. If there is more than one table that passes your
@@ -156,7 +159,8 @@
 #' @export
 EZget <- function(obj,
                   type = c("fractions", "kinetics", "readcounts",
-                           "averages", "comparisons", "dynamics"),
+                           "averages", "comparisons", "dynamics",
+                           "gof", "gof_residuals"),
                   features = NULL,
                   populations = NULL,
                   fraction_design = NULL,
@@ -184,6 +188,8 @@ EZget <- function(obj,
                   graph = NULL,
                   normalize_by_median = NULL,
                   deconvolved = NULL,
+                  source_type = NULL,
+                  source_table = NULL,
                   returnNameOnly = FALSE,
                   exactMatch = FALSE,
                   alwaysCheck = FALSE){
@@ -509,7 +515,7 @@ EZget <- function(obj,
   if(!is.null(repeatID)){
 
     possible_tables_rep <- exact_ezsearch(metadata,
-                                          query = repeatID,
+                                          query = as.numeric(repeatID),
                                           object = "repeatID")
 
     possible_tables <- intersect(possible_tables, possible_tables_rep)
@@ -616,6 +622,26 @@ EZget <- function(obj,
 
     possible_tables <- intersect(possible_tables, possible_tables_m)
 
+
+  }
+
+  if(!is.null(source_type)){
+
+    possible_tables_st <- exact_ezsearch(metadata,
+                                         source_type,
+                                         "source_type")
+
+    possible_tables <- intersect(possible_tables, possible_tables_st)
+
+  }
+
+  if(!is.null(source_table)){
+
+    possible_tables_stb <- exact_ezsearch(metadata,
+                                          source_table,
+                                          "source_table")
+
+    possible_tables <- intersect(possible_tables, possible_tables_stb)
 
   }
 
@@ -741,7 +767,8 @@ exact_ezsearch <- function(metadata,
 decide_output <- function(obj, proposed_name,
                           type = c("fractions", "kinetics",
                                    "readcounts", "averages",
-                                   "comparisons", "dynamics"),
+                                   "comparisons", "dynamics",
+                                   "gof", "gof_residuals"),
                           overwrite = TRUE,
                           ...){
 
@@ -1407,7 +1434,8 @@ ezprint <- function(x, max_name_chars, arrow = FALSE){
   # Don't care about metadata table
   elements <- elements[!(elements %in% c("metadata",
                                          "mutation_rates",
-                                         "readcounts"))]
+                                         "readcounts",
+                                         "gof_residuals"))]
 
   element_df <- dplyr::tibble()
   for(e in seq_along(elements)){
