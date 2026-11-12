@@ -2,12 +2,13 @@
 % Please edit documentation in R/Visualizations.R
 \name{EZFitPlot}
 \alias{EZFitPlot}
-\title{Plot model-predicted trajectories and sample-level fraction fits for selected features}
+\title{Plot model-predicted trajectories or read-level mixture histograms for selected features}
 \usage{
 EZFitPlot(
   obj,
   features_to_plot = NULL,
-  rank_by = c("worst_lof", "worst_wrmse", "worst_rep", "best_fit"),
+  rank_by = c("worst_lof", "worst_wrmse", "worst_rep", "best_fit", "worst_gof",
+    "worst_tvd"),
   top_n = 6,
   source_type = NULL,
   source_table = NULL,
@@ -24,25 +25,28 @@ EZFitPlot(
   annotate_stats = TRUE,
   point_size = 2.2,
   line_width = 0.9,
-  ncol = NULL
+  ncol = NULL,
+  samples = NULL,
+  max_mut_plot = 10
 )
 }
 \arguments{
-\item{obj}{An \code{EZbakRData} object containing \code{AssessGoF()} output (or upstream
-\code{EstimateFractions()} + \code{AverageAndRegularize()} / \code{EZDynamics()} tables).}
+\item{obj}{An \code{EZbakRData} (or \code{EZbakRArrowData}) object containing \code{AssessGoF()}
+output (or upstream \code{EstimateFractions()} / \code{AverageAndRegularize()} / \code{EZDynamics()} tables).}
 
 \item{features_to_plot}{Optional character vector of feature names (when a single
 feature or grouping feature identifies genes) or data frame of feature columns to plot.
 If \code{NULL} (default), selects the top \code{top_n} features according to \code{rank_by}.}
 
 \item{rank_by}{Automatic feature ranking criterion when \code{features_to_plot = NULL}:
-\code{"worst_lof"} (default; smallest structural lack-of-fit p-value), \code{"worst_wrmse"}
-(largest weighted fraction RMSE), \code{"worst_rep"} (smallest replicate dispersion p-value),
-or \code{"best_fit"} (smallest weighted fraction RMSE among well-covered features).}
+\code{"worst_lof"} / \code{"worst_gof"} (default; smallest lack-of-fit / mixture GoF p-value),
+\code{"worst_wrmse"} / \code{"worst_tvd"} (largest \code{wrmse_fn} or \code{mean_tvd}), \code{"worst_rep"}
+(smallest replicate dispersion or \code{-label} p-value), or \code{"best_fit"} (smallest error).}
 
 \item{top_n}{Number of features to display when \code{features_to_plot = NULL} (default \code{6}).}
 
-\item{source_type}{Optional filter (\code{"averages"} or \code{"dynamics"}) passed to \code{EZget()}.}
+\item{source_type}{Optional filter (\code{"fractions"}, \code{"averages"}, or \code{"dynamics"})
+passed to \code{EZget()}.}
 
 \item{source_table}{Optional upstream table name passed to \code{EZget()}.}
 
@@ -60,46 +64,56 @@ or \code{"best_fit"} (smallest weighted fraction RMSE among well-covered feature
 
 \item{exactMatch}{Logical; passed to \code{EZget()} (default \code{FALSE}).}
 
-\item{x_axis}{Layout mode: \code{"auto"} (default), \code{"time"} (continuous label-time
-trajectory curves starting at \code{t = 0}), or \code{"condition"} (categorical condition comparison).}
+\item{x_axis}{Layout mode for kinetic/ODE models: \code{"auto"} (default), \code{"time"}
+(continuous label-time trajectory curves starting at \code{t = 0}), or \code{"condition"}
+(categorical condition comparison).}
 
 \item{n_grid}{Number of time-grid evaluation points for smooth trajectory curves (default \code{150}).}
 
 \item{show_ci}{Logical (default \code{TRUE}); if \code{TRUE}, draws 95\\% profile-likelihood
-confidence intervals on observed sample points.}
+confidence intervals on observed sample points in kinetic/ODE plots.}
 
-\item{annotate_stats}{Logical (default \code{TRUE}); if \code{TRUE}, includes \code{wRMSE} in each
-facet strip header.}
+\item{annotate_stats}{Logical (default \code{TRUE}); if \code{TRUE}, includes \code{wRMSE} (or \code{TVD}
+and \code{failure_mode} for mixture plots) in each facet strip header.}
 
-\item{point_size}{Point size for observed sample fractions (default \code{2.2}).}
+\item{point_size}{Point size for observed sample fractions or histogram curve markers (default \code{2.2}).}
 
-\item{line_width}{Line width for model trajectory curves (default \code{0.9}).}
+\item{line_width}{Line width for model curves (default \code{0.9}).}
 
 \item{ncol}{Optional number of facet columns passed to \code{facet_wrap()}.}
+
+\item{samples}{Optional character vector of sample names (or \code{"all"}) to display when
+\code{source_type = "fractions"}. When \code{NULL} (default), displays the single most informative
+representative sample per selected feature.}
+
+\item{max_mut_plot}{Maximum mutation-count bin (\verb{M+}) displayed on the X-axis when
+\code{source_type = "fractions"} (default \code{10}).}
 }
 \value{
 A \code{ggplot2} object.
 }
 \description{
-\code{EZFitPlot()} overlays smooth model-predicted fraction high \verb{<muttype>} curves
-(from either \code{AverageAndRegularize()} kinetic models or \code{EZDynamics()} ODE reaction
-graphs) onto the individual sample estimates and 95\\% profile-likelihood confidence
-intervals from \code{EstimateFractions()}.
+\code{EZFitPlot()} visualizes individual feature fits from \code{AssessGoF()}:
+\itemize{
+\item \strong{Mixture models (\code{source_type = "fractions"})}: Plots each selected
+feature's observed read-level mutation-count distribution (\verb{0, 1, ..., M+} mutations
+per read) as bars overlaid with the exact \code{nT}-conditioned Binomial component curves
+(\verb{Old component}, \verb{New component}, and \verb{Total mixture}).
+\item \strong{Kinetic & ODE models (\code{source_type = "averages"} or \code{"dynamics"})}:
+Overlays smooth model-predicted \verb{fraction_high<muttype>} trajectories (or categorical
+condition predictions) onto individual sample estimates and 95\\% profile-likelihood
+confidence intervals from \code{EstimateFractions()}.
+}
 }
 \details{
 Features can either be specified explicitly via \code{features_to_plot} or automatically
-ranked via \code{rank_by} (\code{"worst_lof"}, \code{"worst_wrmse"}, \code{"worst_rep"}, or \code{"best_fit"}).
-When \code{x_axis = "auto"}, time-course and \code{EZDynamics()} models plot continuous
-trajectories over label time \code{tl}, whereas single-timepoint multi-condition
-\code{AverageAndRegularize()} fits display replicate points alongside condition-level
-model predictions on a categorical condition axis.
+ranked via \code{rank_by} (\code{"worst_lof"}/\code{"worst_gof"}, \code{"worst_wrmse"}/\code{"worst_tvd"},
+\code{"worst_rep"}, or \code{"best_fit"}).
 }
 \examples{
 simdata <- EZSimulate(30, nreps = 2)
 ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
 ezbdo <- EstimateFractions(ezbdo)
-ezbdo <- EstimateKinetics(ezbdo)
-ezbdo <- AverageAndRegularize(ezbdo)
-ezbdo <- AssessGoF(ezbdo)
+ezbdo <- AssessGoF(ezbdo, type = "fractions")
 EZFitPlot(ezbdo, top_n = 4)
 }

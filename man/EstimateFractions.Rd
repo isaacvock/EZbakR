@@ -16,6 +16,7 @@ EstimateFractions(
   filter_cols = "all",
   filter_condition = `&`,
   remove_features = c("NA", "__no_feature"),
+  remove_multi_features = FALSE,
   split_multi_features = FALSE,
   multi_feature_cols = NULL,
   multi_feature_sep = "+",
@@ -45,6 +46,7 @@ EstimateFractions(
   filter_cols = "all",
   filter_condition = `&`,
   remove_features = c("NA", "__no_feature"),
+  remove_multi_features = FALSE,
   split_multi_features = FALSE,
   multi_feature_cols = NULL,
   multi_feature_sep = "+",
@@ -74,6 +76,7 @@ EstimateFractions(
   filter_cols = "all",
   filter_condition = `&`,
   remove_features = c("NA", "__no_feature"),
+  remove_multi_features = FALSE,
   split_multi_features = FALSE,
   multi_feature_cols = NULL,
   multi_feature_sep = "+",
@@ -182,20 +185,34 @@ a single feature in \code{filter_cols} needs to have one of these "null" values 
 \item{remove_features}{All of the feature names that could indicate failed assignment of a read
 to a given feature. the fastq2EZbakR pipeline uses a value of '__no_feature'.}
 
+\item{remove_multi_features}{Logical; if \code{TRUE}, filter out reads assigned
+ambiguously to multiple features (identified by containing \code{multi_feature_sep},
+e.g., \code{"featureA+featureB"}). Defaults to \code{FALSE} for backwards compatibility.
+By default (\code{multi_feature_cols = NULL}), all analyzed \code{features} columns are
+checked; pass a character vector to \code{multi_feature_cols} to restrict multi-feature
+filtering to specific feature columns (e.g., \code{multi_feature_cols = "XF"} when
+analyzing \code{features = c("XF", "TEC")} so multi-gene reads are dropped while
+multi-isoform equivalence classes are retained). Cannot be \code{TRUE} at the same
+time as \code{split_multi_features}.}
+
 \item{split_multi_features}{If a set of reads maps ambiguously to multiple features,
 should data for such reads be copied for each feature in the ambiguous set? If this is
 \code{TRUE}, then \code{multi_feature_cols} also must be set. Examples where this should be set
 to \code{TRUE} includes when analyzing exonic bins (concept defined in original DEXSeq paper),
-exon-exon junctions, etc.}
+exon-exon junctions, etc. Cannot be \code{TRUE} at the same time as \code{remove_multi_features}.}
 
 \item{multi_feature_cols}{Character vector of columns that have the potential to
-include assignment to multiple features. Only these columns will have their features split
-if \code{split_multi_features} is \code{TRUE}.}
+include assignment to multiple features. When \code{split_multi_features = TRUE}, this
+argument is required and specifies which columns have their features split. When
+\code{remove_multi_features = TRUE}, this optionally restricts which analyzed feature
+columns are checked for multi-feature assignments (\code{NULL} or \code{"all"} checks all
+analyzed features).}
 
 \item{multi_feature_sep}{String representing how ambiguous feature assignments are
-distinguished in the feature names. For example, the default value of "+" denotes
+distinguished in the feature names (used by both \code{remove_multi_features} and
+\code{split_multi_features}). For example, the default value of \code{"+"} denotes
 that if a read maps to multiple features (call them featureA and featureB, for example),
-then the feature column will have a value of "featureA+featureB" for that read.}
+then the feature column will have a value of \code{"featureA+featureB"} for that read.}
 
 \item{pnew_prior_mean}{Mean for logit(pnew) prior.}
 

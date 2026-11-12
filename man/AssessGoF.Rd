@@ -2,11 +2,11 @@
 % Please edit documentation in R/GoF.R
 \name{AssessGoF}
 \alias{AssessGoF}
-\title{Assess goodness of fit of kinetic or dynamical systems models}
+\title{Assess goodness of fit of mixture, kinetic, or dynamical systems models}
 \usage{
 AssessGoF(
   obj,
-  type = c("auto", "averages", "dynamics"),
+  type = c("auto", "fractions", "averages", "dynamics"),
   features = NULL,
   parameter = NULL,
   formula_mean = NULL,
@@ -27,7 +27,13 @@ AssessGoF(
   fractions_repeatID = NULL,
   exactMatch = TRUE,
   fraction_col = NULL,
-  dispersion_mode = c("shrunk", "global", "measurement_only"),
+  min_reads = NULL,
+  min_samples = NULL,
+  feature_sample_counts = NULL,
+  min_bin_count = 5,
+  sample_padj_cutoff = 0.05,
+  sample_tvd_cutoff = 0.05,
+  dispersion_mode = c("shrunk", "empirical", "global", "measurement_only", "nominal"),
   logit_sd_floor = 0.05,
   include_coverage_gof = TRUE,
   store_residuals = TRUE,
@@ -37,10 +43,11 @@ AssessGoF(
 }
 \arguments{
 \item{obj}{An \code{EZbakRData} (or \code{EZbakRArrowData}) object containing output from
-\code{EstimateFractions()} as well as either \code{AverageAndRegularize()} or \code{EZDynamics()}.}
+\code{EstimateFractions()} (and optionally \code{AverageAndRegularize()} or \code{EZDynamics()}).}
 
-\item{type}{Which upstream model class to assess: \code{"auto"} (default; automatically
-selects \code{"dynamics"} or \code{"averages"} when unambiguous), \code{"averages"}, or \code{"dynamics"}.}
+\item{type}{Which model class to assess: \code{"auto"} (default; selects \code{"dynamics"} or
+\code{"averages"} when present and unambiguous, or \code{"fractions"} when only \code{EstimateFractions()}
+has been run on a \code{cB}-backed object), \code{"fractions"}, \code{"averages"}, or \code{"dynamics"}.}
 
 \item{features}{Optional feature column vector passed to \code{EZget()} to select the
 upstream model table.}
@@ -79,31 +86,58 @@ query passed to \code{EZget()} for \code{"averages"}.}
 
 \item{feature_lengths}{Optional \code{feature_lengths} query passed to \code{EZget()}.}
 
-\item{repeatID}{Optional numerical repeat ID of the upstream \code{"averages"} or \code{"dynamics"} table.}
+\item{repeatID}{Optional numerical repeat ID of the upstream table.}
 
-\item{fractions_repeatID}{Optional numerical repeat ID of the \code{EstimateFractions()} table to compare against.}
+\item{fractions_repeatID}{Optional numerical repeat ID of the \code{EstimateFractions()} table.}
 
 \item{exactMatch}{Logical; passed to \code{EZget()} (default \code{TRUE}).}
 
 \item{fraction_col}{Optional name of the \verb{fraction_high<muttype>} column in the
 \code{fractions} table to evaluate (auto-detected when a single high-mutation population exists).}
 
-\item{dispersion_mode}{How replicate dispersion is accounted for when testing structural
-lack-of-fit (\code{pval_lof}): \code{"shrunk"} (default; Empirical-Bayes trend-moderated dispersion
-across replicates when available), \code{"global"} (single dataset-wide median replicate
-overdispersion factor), or \code{"measurement_only"} (uses only \code{EstimateFractions()} profile
-uncertainty plus \code{logit_sd_floor}).}
+\item{min_reads}{Minimum read count (\code{n > min_reads}) required for a feature-sample
+observation to be included in \code{AssessGoF()}'s output table (without modifying any
+upstream tables). Defaults to \code{10} when \code{type = "fractions"} (matching
+\code{AverageAndRegularize()}) and \code{0} when \code{type = "averages"} or \code{"dynamics"}.}
+
+\item{min_samples}{Minimum number of labeled samples with \code{n > min_reads} required
+for a feature to be included in \code{AssessGoF(..., type = "fractions")}. When \code{NULL}
+(default) and \code{feature_sample_counts = NULL}, requires all labeled samples (matching
+\code{AverageAndRegularize()}).}
+
+\item{feature_sample_counts}{Optional data frame with \verb{<feature columns>} and \code{nsamps}
+specifying feature-specific sample-count thresholds for \code{type = "fractions"}, matching
+the \code{feature_sample_counts} convention of \code{AverageAndRegularize()}.}
+
+\item{min_bin_count}{Minimum expected read count per mutation-count bin before adaptive
+tail pooling in \code{type = "fractions"} (default \code{5}).}
+
+\item{sample_padj_cutoff}{Per-sample BH-adjusted p-value threshold used to count
+\code{n_samples_flagged} in \code{type = "fractions"} (default \code{0.05}).}
+
+\item{sample_tvd_cutoff}{Per-sample Total Variation Distance threshold used to count
+\code{n_samples_flagged} in \code{type = "fractions"} (default \code{0.05}, i.e., 5\\% displaced reads).}
+
+\item{dispersion_mode}{How baseline biological dispersion is calibrated:
+\itemize{
+\item For \code{type = "averages"} / \code{"dynamics"}: \code{"shrunk"} / \code{"empirical"} (default;
+Empirical-Bayes trend-moderated replicate dispersion), \code{"global"}, or
+\code{"measurement_only"} / \code{"nominal"}.
+\item For \code{type = "fractions"}: \code{"shrunk"} / \code{"empirical"} / \code{"global"} (default;
+calibrates deviance against each sample's median per-read divergence across features
+so ultra-deep housekeeping genes are not flagged for negligible \code{pnew} drift), or
+\code{"measurement_only"} / \code{"nominal"} (strict nominal Binomial mixture test).
+}}
 
 \item{logit_sd_floor}{Baseline technical standard deviation floor on the logit fraction
-scale (default \code{0.05}) preventing ultra-high-coverage housekeeping genes from being
-flagged for negligible technical jitter.}
+scale for kinetic/ODE GoF (default \code{0.05}).}
 
 \item{include_coverage_gof}{Logical (default \code{TRUE}); when assessing an \code{EZDynamics()}
 fit that used \code{use_coverage = TRUE}, also evaluate steady-state normalized read coverage
 goodness-of-fit (\code{wrmse_log10_cov}, \code{chisq_cov}, \code{pval_lof_joint}, \code{padj_lof_joint}).}
 
 \item{store_residuals}{Logical (default \code{TRUE}); if \code{TRUE}, stores sample-by-sample
-predictions and residuals in \code{obj$gof_residuals[[output_name]]} (required for
+diagnostics and residuals in \code{obj$gof_residuals[[output_name]]} (required for
 \code{EZFitPlot()} and sample-level \code{EZGoFPlot()} modes).}
 
 \item{character_limit}{Maximum length of automatically generated output table names.}
@@ -114,47 +148,46 @@ with identical metadata.}
 \value{
 Input \code{EZbakRData} object with class \code{"EZbakRGoF"} prepended, containing
 feature-level goodness-of-fit metrics in \code{obj$gof} and (optionally) sample-level
-predictions/residuals in \code{obj$gof_residuals}.
+diagnostics/residuals in \code{obj$gof_residuals}.
 }
 \description{
-\code{AssessGoF()} evaluates how well model-predicted sample-by-sample fractions of
-high-mutation reads (\verb{fraction_high<muttype>}) from either \code{AverageAndRegularize()}
-(e.g., standard steady-state turnover \eqn{dR/dt = k_{\text{syn}} - k_{\text{deg}} R})
-or \code{EZDynamics()} (generalized linear ODE reaction networks) agree with the
-observed sample-level estimates and profile-likelihood uncertainties from
-\code{EstimateFractions()}.
+\code{AssessGoF()} evaluates goodness of fit at either the read-level mutational mixture
+modeling stage (\code{type = "fractions"}, assessing \code{EstimateFractions()}) or the
+cross-sample kinetic / compartmental ODE modeling stage (\code{type = "averages"} or
+\code{"dynamics"}, assessing \code{AverageAndRegularize()} or \code{EZDynamics()}):
+\itemize{
+\item \strong{Mixture model goodness of fit (\code{type = "fractions"})}: Evaluates how well
+each feature's observed read-level mutational distribution in \code{cB} (or \code{EZbakRArrowData})
+agrees with the exact \code{nT}-conditioned Binomial mixture distribution implied by
+\code{EstimateFractions()} (supporting standard 2-component, hierarchical feature-specific
+\code{pnew}, and general \verb{>2}-component multi-label mixtures, as well as \code{-label} background
+controls). Reports sample-size-invariant Total Variation Distance (\code{mean_tvd}, \code{max_tvd},
+representing the fraction of reads displaced into the wrong mutational count bin),
+empirical-overdispersion-calibrated likelihood-ratio deviance (\code{chisq_gof}, \code{df_gof},
+\code{pval_gof}, \code{padj_gof}), cross-sample failure frequency (\code{n_samples_flagged},
+\code{frac_samples_flagged}), and mechanistic \code{dominant_failure_mode} tags. Input filtering
+(\code{min_reads}, \code{min_samples}, \code{feature_sample_counts}) determines which features enter the
+\code{AssessGoF()} output tables without modifying \code{obj$fractions} or any other table.
+\item \strong{Kinetic & ODE goodness of fit (\code{type = "averages"} or \code{"dynamics"})}:
+Evaluates how well model-predicted sample-by-sample fractions (\verb{fraction_high<muttype>})
+agree with \code{EstimateFractions()} point estimates and 95\\% profile-likelihood confidence
+intervals, orthogonally decomposing total discrepancy into \strong{replicate overdispersion}
+(\code{chisq_rep}, \code{pval_rep}, \code{padj_rep}) and \strong{structural model lack-of-fit}
+(\code{chisq_lof}, \code{pval_lof}, \code{padj_lof}), alongside probability-scale \code{wrmse_fn}.
+}
 }
 \details{
-For each feature, \code{AssessGoF()} computes both interpretable probability-scale
-effect sizes (precision-weighted root-mean-square error \code{wrmse_fn}, mean absolute
-error \code{mae_fn}, and signed bias \code{mean_signed_resid_fn}) and uncertainty-standardized
-goodness-of-fit statistics that cleanly handle boundary observations
-(\eqn{\hat{\theta} \in \{0, 1\}}) using the 95\\% profile-likelihood confidence bounds
-from \code{EstimateFractions()}. When experimental cells contain biological replicates,
-total lack-of-fit is orthogonally decomposed into:
-\itemize{
-\item \strong{Replicate overdispersion} (\code{chisq_rep}, \code{df_rep}, \code{pval_rep}, \code{padj_rep}):
-tests whether biological replicates within identical experimental conditions and
-label times scatter more than expected from \code{EstimateFractions()} measurement
-uncertainty alone.
-\item \strong{Structural model lack-of-fit} (\code{chisq_lof}, \code{df_lof}, \code{pval_lof}, \code{padj_lof}):
-tests whether condition/timepoint/compartment means systematically deviate from
-the fitted kinetic trajectory (for example, multi-exponential decay, RNA processing
-or export delays, premature nuclear degradation, or non-additive covariate effects),
-calibrated against Empirical-Bayes-moderated replicate dispersion by default.
-}
-
 Summary statistics per feature are stored in \code{obj$gof[[output_name]]} and
-sample-by-sample observed vs. predicted values and residuals are stored in
-\code{obj$gof_residuals[[output_name]]} (when \code{store_residuals = TRUE}), both accessible
-via \code{EZget(obj, type = "gof")} and \code{EZget(obj, type = "gof_residuals")}.
+sample-by-sample diagnostics/residuals are stored in \code{obj$gof_residuals[[output_name]]}
+(when \code{store_residuals = TRUE}), both accessible via \code{EZget(obj, type = "gof")} and
+\code{EZget(obj, type = "gof_residuals")}.
 }
 \examples{
 simdata <- EZSimulate(30, nreps = 2)
 ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
 ezbdo <- EstimateFractions(ezbdo)
+ezbdo <- AssessGoF(ezbdo, type = "fractions")
 ezbdo <- EstimateKinetics(ezbdo)
 ezbdo <- AverageAndRegularize(ezbdo)
-ezbdo <- AssessGoF(ezbdo)
-gof_tbl <- EZget(ezbdo, type = "gof")
+ezbdo <- AssessGoF(ezbdo, type = "averages")
 }

@@ -183,18 +183,31 @@ create_fraction_design <- function(mutrate_populations){
 #' a single feature in `filter_cols` needs to have one of these "null" values to get filtered out.
 #' @param remove_features All of the feature names that could indicate failed assignment of a read
 #' to a given feature. the fastq2EZbakR pipeline uses a value of '__no_feature'.
+#' @param remove_multi_features Logical; if `TRUE`, filter out reads assigned
+#' ambiguously to multiple features (identified by containing `multi_feature_sep`,
+#' e.g., `"featureA+featureB"`). Defaults to `FALSE` for backwards compatibility.
+#' By default (`multi_feature_cols = NULL`), all analyzed `features` columns are
+#' checked; pass a character vector to `multi_feature_cols` to restrict multi-feature
+#' filtering to specific feature columns (e.g., `multi_feature_cols = "XF"` when
+#' analyzing `features = c("XF", "TEC")` so multi-gene reads are dropped while
+#' multi-isoform equivalence classes are retained). Cannot be `TRUE` at the same
+#' time as `split_multi_features`.
 #' @param split_multi_features If a set of reads maps ambiguously to multiple features,
 #' should data for such reads be copied for each feature in the ambiguous set? If this is
 #' `TRUE`, then `multi_feature_cols` also must be set. Examples where this should be set
 #' to `TRUE` includes when analyzing exonic bins (concept defined in original DEXSeq paper),
-#' exon-exon junctions, etc.
+#' exon-exon junctions, etc. Cannot be `TRUE` at the same time as `remove_multi_features`.
 #' @param multi_feature_cols Character vector of columns that have the potential to
-#' include assignment to multiple features. Only these columns will have their features split
-#' if `split_multi_features` is `TRUE`.
+#' include assignment to multiple features. When `split_multi_features = TRUE`, this
+#' argument is required and specifies which columns have their features split. When
+#' `remove_multi_features = TRUE`, this optionally restricts which analyzed feature
+#' columns are checked for multi-feature assignments (`NULL` or `"all"` checks all
+#' analyzed features).
 #' @param multi_feature_sep String representing how ambiguous feature assignments are
-#' distinguished in the feature names. For example, the default value of "+" denotes
+#' distinguished in the feature names (used by both `remove_multi_features` and
+#' `split_multi_features`). For example, the default value of `"+"` denotes
 #' that if a read maps to multiple features (call them featureA and featureB, for example),
-#' then the feature column will have a value of "featureA+featureB" for that read.
+#' then the feature column will have a value of `"featureA+featureB"` for that read.
 #' @param pnew_prior_mean Mean for logit(pnew) prior.
 #' @param pnew_prior_sd Standard deviation for logit(pnew) prior.
 #' @param pold_prior_mean Mean for logit(pold) prior.
@@ -263,6 +276,7 @@ EstimateFractions <- function(obj, features = "all",
                               filter_cols = "all",
                               filter_condition = `&`,
                               remove_features = c("NA", "__no_feature"),
+                              remove_multi_features = FALSE,
                               split_multi_features = FALSE,
                               multi_feature_cols = NULL,
                               multi_feature_sep = "+",
@@ -367,6 +381,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
                                          filter_cols = "all",
                                          filter_condition = `&`,
                                          remove_features = c("NA", "__no_feature"),
+                                         remove_multi_features = FALSE,
                                          split_multi_features = FALSE,
                                          multi_feature_cols = NULL,
                                          multi_feature_sep = "+",
@@ -539,6 +554,28 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
   cB <- cB[cB[, !Reduce(filter_condition, lapply(.SD, `%in%`, remove_features)),.SDcols = filter_cols], ]
 
+  ### Filter out multi-feature mappers if necessary
+  multi_feature_cols_to_use <- multi_feature_cols
+  if(remove_multi_features){
+
+    if(is.null(multi_feature_cols) ||
+       (length(multi_feature_cols) == 1L && identical(multi_feature_cols, "all"))){
+      multi_feature_cols_to_use <- features_to_analyze
+    }else{
+      if(!all(multi_feature_cols %in% features_to_analyze)){
+        stop("multi_feature_cols includes columns that are not in the features being analyzed!")
+      }
+      multi_feature_cols_to_use <- multi_feature_cols
+    }
+
+    cB <- remove_multi_feature_rows(cB, multi_feature_cols_to_use, sep = multi_feature_sep)
+
+    if(nrow(cB) == 0L){
+      stop("No reads remain after filtering with remove_multi_features = TRUE!")
+    }
+
+  }
+
 
   # Pair down design matrix
   fraction_design <- dplyr::as_tibble(fraction_design)
@@ -564,9 +601,16 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
 
   if(split_multi_features){
 
-    cB <- split_features(cB, multi_feature_cols,  c(cols_to_group, necessary_basecounts))
+    if(!all(multi_feature_cols %in% features_to_analyze)){
+      stop("multi_feature_cols includes columns that are not in the features being analyzed!")
+    }
+
+    cB <- split_features(cB, multi_feature_cols, c(cols_to_group, necessary_basecounts), sep = multi_feature_sep)
 
   }
+
+  hier_mutrate_name <- NULL
+  hier_prior_df <- NULL
 
   # TO-DO: Add an estimated runtime here based on the number of rows in the cB,
   # the number of features, and what model is being run.
@@ -704,7 +748,9 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
         ]
 
       current_name <- names(obj$mutation_rates)[1]
-      obj$mutation_rates[[paste0(paste(features_to_analyze, collapse = "_"), "_", current_name)]] <- feature_mutrates
+      hier_mutrate_name <- paste0(paste(features_to_analyze, collapse = "_"), "_", current_name)
+      hier_prior_df <- dplyr::as_tibble(global_est[, .(sample, pnew_prior, pnew_prior_sd)])
+      obj$mutation_rates[[hier_mutrate_name]] <- feature_mutrates
 
 
 
@@ -817,9 +863,17 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   obj[['metadata']][['fractions']][[fraction_vect]] <- list(features = features_to_analyze,
                                                             populations = pops_to_analyze,
                                                             fraction_design = fraction_design,
+                                                            strategy = if(ncol(mutrate_design) == 1) strategy else "general",
+                                                            Poisson = Poisson,
+                                                            remove_multi_features = remove_multi_features,
+                                                            split_multi_features = split_multi_features,
+                                                            multi_feature_cols = multi_feature_cols_to_use,
+                                                            multi_feature_sep = multi_feature_sep,
+                                                            filter_cols = filter_cols,
+                                                            remove_features = remove_features,
+                                                            hier_mutrate_table = hier_mutrate_name,
+                                                            hier_prior = hier_prior_df,
                                                             repeatID = repeatID)
-
-
 
   # Add new class information
   if(!("EZbakRFractions" %in% class(obj))){
@@ -1087,6 +1141,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
                                               filter_cols = "all",
                                               filter_condition = `&`,
                                               remove_features = c("NA", "__no_feature"),
+                                              remove_multi_features = FALSE,
                                               split_multi_features = FALSE,
                                               multi_feature_cols = NULL,
                                               multi_feature_sep = "+",
@@ -1321,6 +1376,30 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
   }
 
+  multi_feature_cols_to_use <- multi_feature_cols
+  if(remove_multi_features){
+    if(is.null(multi_feature_cols) ||
+       (length(multi_feature_cols) == 1L && identical(multi_feature_cols, "all"))){
+      multi_feature_cols_to_use <- features_to_analyze
+    }else{
+      if(!all(multi_feature_cols %in% features_to_analyze)){
+        stop("multi_feature_cols includes columns that are not in the features being analyzed!")
+      }
+      multi_feature_cols_to_use <- multi_feature_cols
+    }
+  }else if(split_multi_features){
+    if(!all(multi_feature_cols %in% features_to_analyze)){
+      stop("multi_feature_cols includes columns that are not in the features being analyzed!")
+    }
+  }
+
+
+  hier_mutrate_name <- NULL
+  hier_prior_df <- NULL
+  if(ncol(mutrate_design) == 1 && strategy == "hierarchical"){
+    hier_mutrate_name <- paste0(paste(features_to_analyze, collapse = "_"), "_", names(obj$mutation_rates)[1])
+    obj$mutation_rates[[hier_mutrate_name]] <- NULL
+  }
 
   for(s in seq_along(all_samples)){
 
@@ -1347,7 +1426,18 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
       ### Filter out columns not mapping to any feature (easier and faster in data.table)
       sample_fns <- setDT(sample_fns)
-      sample_fns <- dplyr::as_tibble(sample_fns[sample_fns[, !Reduce(filter_condition, lapply(.SD, `%in%`, remove_features)),.SDcols = filter_cols], ])
+      sample_fns <- sample_fns[sample_fns[, !Reduce(filter_condition, lapply(.SD, `%in%`, remove_features)),.SDcols = filter_cols], ]
+
+      ### Filter out multi-feature mappers if necessary
+      if(remove_multi_features){
+
+        message("Filtering out multi-feature mapping reads")
+
+        sample_fns <- remove_multi_feature_rows(sample_fns, multi_feature_cols_to_use, sep = multi_feature_sep)
+
+      }
+
+      sample_fns <- dplyr::as_tibble(sample_fns)
 
       ### Split multi feature mappers if necessary
       if(split_multi_features){
@@ -1355,7 +1445,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
         message("Splitting multi-feature mapping reads")
 
 
-        sample_fns <- split_features(sample_fns, multi_feature_cols, ctl_cols_to_group)
+        sample_fns <- split_features(sample_fns, multi_feature_cols, ctl_cols_to_group, sep = multi_feature_sep)
 
       }
 
@@ -1375,9 +1465,10 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
           sample = all_samples[s],
           samples_with_no_label = samples_without_label
         )
+        nolabel_tbl <- dplyr::as_tibble(nolabel_mix)[rep(1L, nrow(sample_fns)), , drop = FALSE]
         sample_fns <- dplyr::bind_cols(
           dplyr::as_tibble(sample_fns),
-          dplyr::as_tibble(nolabel_mix)
+          nolabel_tbl
         )
       }
 
@@ -1423,14 +1514,25 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
       ### Filter out columns not mapping to any feature (easier and faster in data.table)
       sample_cB <- setDT(sample_cB)
-      sample_cB <- dplyr::as_tibble(sample_cB[sample_cB[, !Reduce(filter_condition, lapply(.SD, `%in%`, remove_features)),.SDcols = filter_cols], ])
+      sample_cB <- sample_cB[sample_cB[, !Reduce(filter_condition, lapply(.SD, `%in%`, remove_features)),.SDcols = filter_cols], ]
+
+      ### Filter out multi-feature mappers if necessary
+      if(remove_multi_features){
+
+        message("Filtering out multi-feature mapping reads")
+
+        sample_cB <- remove_multi_feature_rows(sample_cB, multi_feature_cols_to_use, sep = multi_feature_sep)
+
+      }
+
+      sample_cB <- dplyr::as_tibble(sample_cB)
 
       ### Split multi feature mappers if necessary
       if(split_multi_features){
 
         message("Splitting multi-feature mapping reads")
 
-        sample_cB <- split_features(sample_cB, multi_feature_cols, c(cols_to_group, necessary_basecounts))
+        sample_cB <- split_features(sample_cB, multi_feature_cols, c(cols_to_group, necessary_basecounts), sep = multi_feature_sep)
 
 
       }
@@ -1574,11 +1676,18 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
           ### MULTIPLE DIFFERENT FEATURE SET HIERARCHICAL
           ### ANALYSES RIGHT NOW
           current_name <- names(obj$mutation_rates)[1]
+          hier_mutrate_name <- paste0(paste(features_to_analyze, collapse = "_"), "_", current_name)
+          hier_prior_df <- dplyr::bind_rows(
+            hier_prior_df,
+            dplyr::as_tibble(global_est[, .(sample, pnew_prior, pnew_prior_sd)])
+          )
 
           # Kinda cutesy, but works because bind_rows(dataframe, NULL) = dataframe
           # so don't need a special condition for s == 1.
-          obj$mutation_rates[[paste0(paste(features_to_analyze, collapse = "_"), "_", current_name)]] <- dplyr::bind_rows(feature_mutrates,
-                                                                                                                          obj$mutation_rates[[paste0(paste(features_to_analyze, collapse = "_"), "_", current_name)]])
+          obj$mutation_rates[[hier_mutrate_name]] <- dplyr::bind_rows(
+            obj$mutation_rates[[hier_mutrate_name]],
+            feature_mutrates
+          )
 
 
         }else{
@@ -1631,6 +1740,10 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
 
 
   fns <- dplyr::bind_rows(fns)
+
+  if(remove_multi_features && nrow(fns) == 0L){
+    stop("No reads remain after filtering with remove_multi_features = TRUE!")
+  }
 
 
   message("Processing output")
@@ -1692,9 +1805,17 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
   obj[['metadata']][['fractions']][[fraction_vect]] <- list(features = features_to_analyze,
                                                             populations = pops_to_analyze,
                                                             fraction_design = fraction_design,
+                                                            strategy = if(ncol(mutrate_design) == 1) strategy else "general",
+                                                            Poisson = Poisson,
+                                                            remove_multi_features = remove_multi_features,
+                                                            split_multi_features = split_multi_features,
+                                                            multi_feature_cols = multi_feature_cols_to_use,
+                                                            multi_feature_sep = multi_feature_sep,
+                                                            filter_cols = filter_cols,
+                                                            remove_features = remove_features,
+                                                            hier_mutrate_table = hier_mutrate_name,
+                                                            hier_prior = hier_prior_df,
                                                             repeatID = repeatID)
-
-
 
   # Add new class information
   if(!("EZbakRFractions" %in% class(obj))){
@@ -2018,13 +2139,57 @@ EstimateMutRates.EZbakRArrowData <- function(obj,
 ###################################################
 
 
+# Filter out rows containing multi-feature assignments (e.g., "featureA+featureB")
+remove_multi_feature_rows <- function(dt, cols_check, sep = "+"){
+
+  if(nrow(dt) == 0L || length(cols_check) == 0L){
+    return(dt)
+  }
+
+  has_multi <- rep(FALSE, nrow(dt))
+
+  for(col in cols_check){
+    vals <- dt[[col]]
+    if(is.factor(vals)){
+      lvls <- levels(vals)
+      bad_lvl <- grepl(sep, lvls, fixed = TRUE)
+      if(any(bad_lvl)){
+        col_multi <- bad_lvl[as.integer(vals)]
+        col_multi[is.na(col_multi)] <- FALSE
+        has_multi <- has_multi | col_multi
+      }
+    }else{
+      if(!is.character(vals)){
+        vals <- as.character(vals)
+      }
+      col_multi <- grepl(sep, vals, fixed = TRUE)
+      col_multi[is.na(col_multi)] <- FALSE
+      has_multi <- has_multi | col_multi
+    }
+  }
+
+  if(any(has_multi)){
+    dt <- dt[!has_multi, ]
+  }
+
+  return(dt)
+
+}
+
+
 # Split up multi-feature sets
-split_features <- function(cB, multi_feature_cols, grouping_cols){
+split_features <- function(cB, multi_feature_cols, grouping_cols, sep = "+"){
 
   ### Hack to deal with devtools::check() NOTEs
   n <- NULL
 
   `.` <- list
+
+  if(nrow(cB) == 0L){
+    return(data.table::as.data.table(cB))
+  }
+
+  sep_regex <- gsub("([.\\\\|()\\[\\]{}^$*+?])", "\\\\\\1", sep, perl = TRUE)
 
   ### Copy junction data more efficiently
   unique_juncs <- cB %>%
@@ -2040,7 +2205,7 @@ split_features <- function(cB, multi_feature_cols, grouping_cols){
 
   ### Back to the tidyverse, because can't easily do this in data.table (sigh...)
   unique_juncs <- unique_juncs %>%
-    tidyr::separate_rows(dplyr::all_of(new_temp_cols), sep = "\\+")
+    tidyr::separate_rows(dplyr::all_of(new_temp_cols), sep = sep_regex)
 
   cB <- cB %>%
     dplyr::inner_join(unique_juncs, by = multi_feature_cols,
@@ -2943,6 +3108,50 @@ check_EstimateFractions_input <- function(args){
      (!is.logical(args$EBayes) || length(args$EBayes) != 1L || is.na(args$EBayes))){
 
     stop("EBayes must be a single logical (TRUE or FALSE)!")
+
+  }
+
+  ### remove_multi_features & split_multi_features
+
+  if(!is.null(args$remove_multi_features) &&
+     (!is.logical(args$remove_multi_features) || length(args$remove_multi_features) != 1L || is.na(args$remove_multi_features))){
+
+    stop("remove_multi_features must be a single logical (TRUE or FALSE)!")
+
+  }
+
+  if(!is.null(args$split_multi_features) &&
+     (!is.logical(args$split_multi_features) || length(args$split_multi_features) != 1L || is.na(args$split_multi_features))){
+
+    stop("split_multi_features must be a single logical (TRUE or FALSE)!")
+
+  }
+
+  if(isTRUE(args$remove_multi_features) && isTRUE(args$split_multi_features)){
+
+    stop("Cannot set both remove_multi_features = TRUE and split_multi_features = TRUE!")
+
+  }
+
+  if(isTRUE(args$split_multi_features) &&
+     (is.null(args$multi_feature_cols) || !is.character(args$multi_feature_cols) || length(args$multi_feature_cols) == 0L)){
+
+    stop("multi_feature_cols must be provided as a non-empty character vector when split_multi_features = TRUE!")
+
+  }
+
+  if(!is.null(args$multi_feature_cols) &&
+     (!is.character(args$multi_feature_cols) || length(args$multi_feature_cols) == 0L || any(is.na(args$multi_feature_cols)))){
+
+    stop("multi_feature_cols must be NULL or a non-empty character vector!")
+
+  }
+
+  if(!is.null(args$multi_feature_sep) &&
+     (!is.character(args$multi_feature_sep) || length(args$multi_feature_sep) != 1L ||
+      is.na(args$multi_feature_sep) || !nzchar(args$multi_feature_sep))){
+
+    stop("multi_feature_sep must be a single non-empty string!")
 
   }
 

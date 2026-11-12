@@ -835,3 +835,206 @@ test_that("Object validators, non-mutating constructors, SimpleSim checks, and E
   expect_true(!is.null(ez_app$metadata$kinetics))
   expect_true(!is.null(ez_app$metadata$fractions))
 })
+
+
+test_that("EstimateFractions remove_multi_features works across EZbakRData, Arrow, multi_feature_cols, sep, and AssessGoF", {
+  set.seed(2026)
+
+  # Build synthetic dataset with +label and -label samples, single-gene and multi-gene XF,
+  # and single/multi-isoform TEC
+  make_gene_rows <- function(samp, xf, tec, n_reads, fn_true, pnew = 0.06, pold = 0.002) {
+    is_new <- stats::rbinom(n_reads, 1, fn_true)
+    nT <- rep(35L, n_reads)
+    tc <- ifelse(is_new == 1L,
+                 stats::rbinom(n_reads, nT, pnew),
+                 stats::rbinom(n_reads, nT, pold))
+    dplyr::tibble(sample = samp, XF = xf, TEC = tec, TC = tc, nT = nT, n = 1L) %>%
+      dplyr::group_by(sample, XF, TEC, TC, nT) %>%
+      dplyr::summarise(n = sum(n), .groups = "drop")
+  }
+
+  genes_single <- paste0("Gene", 1:12)
+  rows_list <- list()
+  for (g_i in seq_along(genes_single)) {
+    g <- genes_single[g_i]
+    tec_val <- if (g_i %% 2 == 0) paste0(g, "_tx1+", g, "_tx2") else paste0(g, "_tx1")
+    fn_g <- 0.15 + 0.05 * (g_i %% 10)
+    rows_list[[length(rows_list) + 1L]] <- make_gene_rows("s4U_1", g, tec_val, 150, fn_g)
+    rows_list[[length(rows_list) + 1L]] <- make_gene_rows("ctl_1", g, tec_val, 120, 0.0)
+  }
+  # Add multi-gene ambiguous rows ("Gene1+Gene2", "Gene3+Gene4+Gene5") and "__no_feature"
+  rows_list[[length(rows_list) + 1L]] <- make_gene_rows("s4U_1", "Gene1+Gene2", "Gene1_tx1+Gene2_tx1", 200, 0.85)
+  rows_list[[length(rows_list) + 1L]] <- make_gene_rows("ctl_1", "Gene1+Gene2", "Gene1_tx1+Gene2_tx1", 160, 0.0)
+  rows_list[[length(rows_list) + 1L]] <- make_gene_rows("s4U_1", "Gene3+Gene4+Gene5", "Gene3_tx1", 180, 0.10)
+  rows_list[[length(rows_list) + 1L]] <- make_gene_rows("ctl_1", "Gene3+Gene4+Gene5", "Gene3_tx1", 140, 0.0)
+  rows_list[[length(rows_list) + 1L]] <- make_gene_rows("s4U_1", "__no_feature", "__no_feature", 50, 0.5)
+
+  cB_df <- dplyr::bind_rows(rows_list)
+  metadf <- dplyr::tibble(
+    sample = c("s4U_1", "ctl_1"),
+    tl = c(2, 0),
+    condition = c("A", "A")
+  )
+
+  ezbdo <- EZbakRData(cB_df, metadf)
+
+  # 1. Backwards compatibility: default remove_multi_features = FALSE retains multi-feature rows
+  ez_keep <- suppressMessages(EstimateFractions(ezbdo, features = "XF"))
+  fxn_keep <- EZget(ez_keep, type = "fractions", features = "XF")
+  expect_true(all(c("Gene1+Gene2", "Gene3+Gene4+Gene5") %in% fxn_keep$XF))
+  expect_false(ez_keep$metadata$fractions$XF$remove_multi_features)
+
+  # 2. remove_multi_features = TRUE drops multi-feature rows in both +label and -label samples
+  for (pois in c(TRUE, FALSE)) {
+    for (strat in c("standard", "hierarchical")) {
+      ez_rm <- suppressMessages(EstimateFractions(
+        ezbdo,
+        features = "XF",
+        Poisson = pois,
+        strategy = strat,
+        hier_readcutoff = 50,
+        remove_multi_features = TRUE
+      ))
+      fxn_rm <- EZget(ez_rm, type = "fractions", features = "XF")
+      expect_false(any(grepl("+", fxn_rm$XF, fixed = TRUE)))
+      expect_setequal(unique(fxn_rm$XF), genes_single)
+      expect_setequal(unique(fxn_rm$sample), c("s4U_1", "ctl_1"))
+      expect_true(ez_rm$metadata$fractions$XF$remove_multi_features)
+      expect_equal(ez_rm$metadata$fractions$XF$multi_feature_cols, "XF")
+    }
+  }
+
+  # 3. Selective multi_feature_cols: filter XF multi-genes while preserving TEC multi-isoforms
+  ez_sel <- suppressMessages(EstimateFractions(
+    ezbdo,
+    features = c("XF", "TEC"),
+    remove_multi_features = TRUE,
+    multi_feature_cols = "XF"
+  ))
+  fxn_sel <- EZget(ez_sel, type = "fractions", features = c("XF", "TEC"))
+  expect_false(any(grepl("+", fxn_sel$XF, fixed = TRUE)))
+  expect_true(any(grepl("+", fxn_sel$TEC, fixed = TRUE)))
+  expect_setequal(unique(fxn_sel$XF), genes_single)
+
+  # Whereas default multi_feature_cols = NULL checks all analyzed features (both XF and TEC)
+  ez_all <- suppressMessages(EstimateFractions(
+    ezbdo,
+    features = c("XF", "TEC"),
+    remove_multi_features = TRUE
+  ))
+  fxn_all <- EZget(ez_all, type = "fractions", features = c("XF", "TEC"))
+  expect_false(any(grepl("+", fxn_all$XF, fixed = TRUE)))
+  expect_false(any(grepl("+", fxn_all$TEC, fixed = TRUE)))
+
+  # 4. Custom multi_feature_sep works for both remove_multi_features and split_multi_features
+  cB_semi <- cB_df %>%
+    dplyr::mutate(XF = gsub("+", ";", XF, fixed = TRUE))
+  ez_semi <- EZbakRData(cB_semi, metadf)
+
+  ez_semi_rm <- suppressMessages(EstimateFractions(
+    ez_semi,
+    features = "XF",
+    remove_multi_features = TRUE,
+    multi_feature_sep = ";"
+  ))
+  fxn_semi_rm <- EZget(ez_semi_rm, type = "fractions", features = "XF")
+  expect_false(any(grepl(";", fxn_semi_rm$XF, fixed = TRUE)))
+  expect_setequal(unique(fxn_semi_rm$XF), genes_single)
+
+  ez_semi_sp <- suppressMessages(EstimateFractions(
+    ez_semi,
+    features = "XF",
+    split_multi_features = TRUE,
+    multi_feature_cols = "XF",
+    multi_feature_sep = ";"
+  ))
+  fxn_semi_sp <- EZget(ez_semi_sp, type = "fractions", features = "XF")
+  expect_false(any(grepl(";", fxn_semi_sp$XF, fixed = TRUE)))
+  # Gene1 read count in s4U_1 should include the 200 split reads from "Gene1;Gene2"
+  n_g1_rm <- fxn_semi_rm$n[fxn_semi_rm$sample == "s4U_1" & fxn_semi_rm$XF == "Gene1"]
+  n_g1_sp <- fxn_semi_sp$n[fxn_semi_sp$sample == "s4U_1" & fxn_semi_sp$XF == "Gene1"]
+  expect_equal(n_g1_sp - n_g1_rm, 200)
+
+  # 5. Exact parity with EZbakRArrowData & compatibility with AssessGoF(type = "fractions")
+  if (requireNamespace("arrow", quietly = TRUE)) {
+    tmp_dir <- tempfile("arrow_rm_mf_")
+    dir.create(tmp_dir, recursive = TRUE)
+    on.exit(unlink(tmp_dir, recursive = TRUE, force = TRUE), add = TRUE)
+    arrow::write_dataset(cB_df, path = tmp_dir, partitioning = "sample")
+
+    for (pois in c(TRUE, FALSE)) {
+      ez_mem <- suppressMessages(EstimateFractions(
+        ezbdo,
+        features = "XF",
+        Poisson = pois,
+        remove_multi_features = TRUE
+      ))
+      ds <- arrow::open_dataset(tmp_dir)
+      ez_arr <- EZbakRArrowData(ds, metadf)
+      ez_arr <- suppressMessages(EstimateFractions(
+        ez_arr,
+        features = "XF",
+        Poisson = pois,
+        remove_multi_features = TRUE
+      ))
+
+      f_mem <- EZget(ez_mem, type = "fractions", features = "XF") %>%
+        dplyr::arrange(sample, XF)
+      f_arr <- EZget(ez_arr, type = "fractions", features = "XF") %>%
+        dplyr::arrange(sample, XF)
+
+      expect_equal(f_arr$XF, f_mem$XF)
+      expect_equal(f_arr$n, f_mem$n)
+      expect_equal(f_arr$fraction_highTC, f_mem$fraction_highTC, tolerance = 1e-6)
+      expect_equal(f_arr$se_logit_fraction_highTC, f_mem$se_logit_fraction_highTC, tolerance = 1e-6)
+    }
+
+    # AssessGoF(type = "fractions") succeeds and excludes multi-feature rows on both backends
+    ez_mem_gof <- suppressMessages(EstimateFractions(
+      ezbdo, features = "XF", Poisson = FALSE, remove_multi_features = TRUE
+    ))
+    ez_mem_gof <- suppressMessages(AssessGoF(ez_mem_gof, type = "fractions", min_reads = 10))
+    gof_mem <- EZget(ez_mem_gof, type = "gof")
+    expect_false(any(grepl("+", gof_mem$XF, fixed = TRUE)))
+
+    ds2 <- arrow::open_dataset(tmp_dir)
+    ez_arr_gof <- EZbakRArrowData(ds2, metadf)
+    ez_arr_gof <- suppressMessages(EstimateFractions(
+      ez_arr_gof, features = "XF", Poisson = FALSE, remove_multi_features = TRUE
+    ))
+    ez_arr_gof <- suppressMessages(AssessGoF(ez_arr_gof, type = "fractions", min_reads = 10))
+    gof_arr <- EZget(ez_arr_gof, type = "gof")
+    expect_equal(
+      dplyr::arrange(gof_arr, XF)$mean_tvd,
+      dplyr::arrange(gof_mem, XF)$mean_tvd,
+      tolerance = 1e-8
+    )
+    expect_equal(
+      dplyr::arrange(gof_arr, XF)$mean_n,
+      dplyr::arrange(gof_mem, XF)$mean_n,
+      tolerance = 1e-8
+    )
+  }
+
+  # 6. Input validation errors
+  expect_error(
+    EstimateFractions(ezbdo, remove_multi_features = TRUE, split_multi_features = TRUE, multi_feature_cols = "XF"),
+    "Cannot set both"
+  )
+  expect_error(
+    EstimateFractions(ezbdo, split_multi_features = TRUE),
+    "multi_feature_cols"
+  )
+  expect_error(
+    suppressMessages(EstimateFractions(ezbdo, features = "XF", remove_multi_features = TRUE, multi_feature_cols = "TEC")),
+    "multi_feature_cols"
+  )
+  expect_error(
+    EstimateFractions(ezbdo, remove_multi_features = TRUE, multi_feature_sep = ""),
+    "multi_feature_sep"
+  )
+  expect_error(
+    EstimateFractions(ezbdo, remove_multi_features = NA),
+    "remove_multi_features"
+  )
+})

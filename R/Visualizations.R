@@ -928,29 +928,33 @@ EZpcaPlot <- function(obj, data_type = c("fraction_labeled", "reads"),  features
 #' Visualize dataset-wide and sample-level goodness of fit
 #'
 #' `EZGoFPlot()` provides four complementary diagnostic views of model goodness of fit
-#' computed by `AssessGoF()` (and will automatically run `AssessGoF()` on the fly if
-#' no GoF table is present yet):
+#' computed by `AssessGoF()` for either mixture models (`source_type = "fractions"`) or
+#' kinetic/ODE models (`source_type = "averages"` or `"dynamics"`), running `AssessGoF()`
+#' automatically on the fly if needed:
 #' \itemize{
-#'   \item `"volcano"` (default): Feature-level triage plotting probability-scale error
-#'   (`wrmse_fn`, or `mean_signed_resid_fn` if `signed = TRUE`) against `-log10(padj)`
-#'   for structural lack of fit (or replicate overdispersion when single-timepoint
-#'   designs have zero structural degrees of freedom).
-#'   \item `"sample_qc"`: Per-sample boxplots of residuals (`obs_fn - pred_fn`,
-#'   standardized residuals `std_resid`, or logit residuals), immediately flagging
-#'   outlier samples, mis-specified label times, s4U dropout, or compartment contamination.
-#'   \item `"obs_vs_pred"`: Global parity scatter/density plot of observed vs. predicted
-#'   fractions (or logit fractions) against the `y = x` identity line.
-#'   \item `"residual_trend"`: Median and interquartile ribbon of residuals across
-#'   label time `tl` (or predicted fraction), revealing transcriptome-wide splicing/export
-#'   lags or long-label toxicity.
+#'   \item `"volcano"` (default): Feature-level triage plotting distributional or fraction
+#'   error (`mean_tvd` for `"fractions"`; `wrmse_fn` or `mean_signed_resid_fn` for
+#'   `"averages"`/`"dynamics"`) against `-log10(padj)`. For mixture GoF, poor fits are
+#'   additionally colored by their mechanistic `dominant_failure_mode`.
+#'   \item `"sample_qc"`: Per-sample boxplots of residuals or mixture divergence (`tvd`,
+#'   normalized deviance `std_dev`, or `kl_div` for `"fractions"`; `obs_fn - pred_fn`,
+#'   `std_resid`, or logit residuals for `"averages"`/`"dynamics"`).
+#'   \item `"obs_vs_pred"`: Global parity scatter plot of observed vs. model-predicted
+#'   fractions (or unpenalized MLE vs. `EstimateFractions()` posterior estimates for
+#'   `"fractions"`) against the `y = x` identity line.
+#'   \item `"residual_trend"`: Median and interquartile ribbon of residuals across label
+#'   time `tl` / predicted fraction (for `"averages"`/`"dynamics"`) or across binned
+#'   `log10(n)` read coverage (for `"fractions"`).
 #' }
 #'
-#' @param obj An `EZbakRData` object on which `AssessGoF()` has been run (or containing
-#' `EstimateFractions()` + `AverageAndRegularize()` / `EZDynamics()` outputs).
+#' @param obj An `EZbakRData` (or `EZbakRArrowData`) object on which `AssessGoF()` has
+#' been run (or containing `EstimateFractions()`, `AverageAndRegularize()`, or
+#' `EZDynamics()` outputs).
 #' @param plot_type Type of diagnostic plot: `"volcano"`, `"sample_qc"`, `"obs_vs_pred"`,
 #' or `"residual_trend"`.
-#' @param source_type Optional filter (`"averages"` or `"dynamics"`) selecting which GoF
-#' table to plot when multiple exist.
+#' @param source_type Optional filter (`"fractions"`, `"averages"`, or `"dynamics"`)
+#' selecting which GoF table to plot when multiple exist (or which model class to evaluate
+#' on the fly).
 #' @param source_table Optional exact upstream table name passed to `EZget()`.
 #' @param features Optional feature vector passed to `EZget()`.
 #' @param parameter Optional parameter name passed to `EZget()`.
@@ -960,12 +964,14 @@ EZpcaPlot <- function(obj, data_type = c("fraction_labeled", "reads"),  features
 #' @param repeatID Optional repeat ID passed to `EZget()`.
 #' @param exactMatch Logical; passed to `EZget()` (default `FALSE` so partial queries match cleanly).
 #' @param metric Which adjusted p-value to display on `"volcano"`: `"auto"` (default;
-#' prioritizes `padj_lof`, then `padj_lof_joint`, then `padj_rep`), `"lof"`, `"joint"`, or `"rep"`.
+#' selects `"gof"` for `"fractions"`, or prioritizes `"lof"`, `"joint"`, then `"rep"`
+#' for kinetic/ODE models), `"lof"`, `"joint"`, `"rep"`, `"gof"`, or `"nolabel"`.
 #' @param FDR_cutoff Adjusted p-value threshold for highlighting poor fits on `"volcano"` (default `0.05`).
-#' @param rmse_cutoff Fraction-scale weighted RMSE (or `|mean_signed_resid_fn|`) threshold
-#' for highlighting poor fits on `"volcano"` (default `0.05`, i.e., 5 percentage points).
-#' @param signed Logical (default `FALSE`); if `TRUE` on `"volcano"`, plots signed mean
-#' residual (`obs - pred`) on X instead of `wrmse_fn`.
+#' @param rmse_cutoff Effect-size threshold (`mean_tvd` for `"fractions"`, `wrmse_fn` or
+#' `|mean_signed_resid_fn|` for kinetic/ODE models) for highlighting poor fits on `"volcano"`
+#' (default `0.05`, i.e., 5\% displaced reads or 5 percentage points).
+#' @param signed Logical (default `FALSE`); if `TRUE` on kinetic/ODE `"volcano"`, plots
+#' signed mean residual (`obs - pred`) on X instead of `wrmse_fn`.
 #' @param size Optional point size for scatter plots.
 #' @param features_to_highlight Optional vector of feature IDs (or data frame of feature
 #' key columns) to circle on `"volcano"`.
@@ -974,8 +980,10 @@ EZpcaPlot <- function(obj, data_type = c("fraction_labeled", "reads"),  features
 #' @param highlight_stroke Stroke width for highlighted points (default `0.7`).
 #' @param highlight_fill Fill color for highlighted points (default `NA`).
 #' @param highlight_color Border color for highlighted points (default `"black"`).
-#' @param residual_scale Scale for residuals in `"sample_qc"`, `"obs_vs_pred"`, and
-#' `"residual_trend"`: `"fraction"` (default), `"standardized"`, or `"logit"`.
+#' @param residual_scale Scale for diagnostics in `"sample_qc"`, `"obs_vs_pred"`, and
+#' `"residual_trend"`: `"fraction"` (default; `tvd` for mixture GoF, `resid_fn` for kinetic GoF),
+#' `"standardized"` (`std_dev` for mixture GoF, `std_resid` for kinetic GoF), or `"logit"`
+#' (`kl_div` / logit scale).
 #' @param facet_by Optional column name(s) in `gof_residuals` to facet `"obs_vs_pred"`
 #' or `"residual_trend"` by.
 #' @return A `ggplot2` object.
@@ -985,9 +993,7 @@ EZpcaPlot <- function(obj, data_type = c("fraction_labeled", "reads"),  features
 #' simdata <- EZSimulate(30, nreps = 2)
 #' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
 #' ezbdo <- EstimateFractions(ezbdo)
-#' ezbdo <- EstimateKinetics(ezbdo)
-#' ezbdo <- AverageAndRegularize(ezbdo)
-#' ezbdo <- AssessGoF(ezbdo)
+#' ezbdo <- AssessGoF(ezbdo, type = "fractions")
 #' EZGoFPlot(ezbdo, plot_type = "volcano")
 #' EZGoFPlot(ezbdo, plot_type = "sample_qc")
 #' @export
@@ -1002,7 +1008,7 @@ EZGoFPlot <- function(obj,
                       grouping_features = NULL,
                       repeatID = NULL,
                       exactMatch = FALSE,
-                      metric = c("auto", "lof", "joint", "rep"),
+                      metric = c("auto", "lof", "joint", "rep", "gof", "nolabel"),
                       FDR_cutoff = 0.05,
                       rmse_cutoff = 0.05,
                       signed = FALSE,
@@ -1019,13 +1025,22 @@ EZGoFPlot <- function(obj,
   # Silence R CMD check NSE notes
   x_val <- y_val <- conclusion <- highlight <- sample_ord <- resid_val <- NULL
   group_fill <- pred_x <- obs_y <- x_bin <- med_r <- q25_r <- q75_r <- trend_group <- NULL
+  fit_status <- NULL
 
   plot_type <- match.arg(plot_type)
   metric <- match.arg(metric)
   residual_scale <- match.arg(residual_scale)
 
-  if(length(obj[["metadata"]][["gof"]]) == 0L){
-    message("No GoF tables found in `obj`; running `AssessGoF()` on the fly...")
+  has_requested_type <- if(is.null(source_type)){
+    length(obj[["metadata"]][["gof"]]) > 0L
+  }else{
+    any(vapply(obj[["metadata"]][["gof"]],
+               function(m) identical(m[["source_type"]], source_type),
+               logical(1)))
+  }
+
+  if(!has_requested_type){
+    message("No matching GoF table found in `obj`; running `AssessGoF()` on the fly...")
     obj <- AssessGoF(
       obj,
       type = source_type %||% "auto",
@@ -1068,9 +1083,125 @@ EZGoFPlot <- function(obj,
 
   gof_tbl <- obj[["gof"]][[gof_name]]
   gof_meta <- obj[["metadata"]][["gof"]][[gof_name]]
+  is_fxn_gof <- identical(gof_meta[["source_type"]], "fractions")
+
+  # Helper for optional feature highlight matching
+  attach_highlights <- function(df_in){
+    if(is.null(features_to_highlight)) return(df_in)
+    f_cols <- gof_meta[["features"]]
+    if(!is.data.frame(features_to_highlight)){
+      if(length(f_cols) == 1L){
+        hl_df <- dplyr::tibble(!!f_cols := as.character(features_to_highlight))
+        join_hl <- f_cols
+      }else if(!is.null(gof_meta[["grouping_features"]]) &&
+               length(gof_meta[["grouping_features"]]) == 1L){
+        gf1 <- gof_meta[["grouping_features"]]
+        hl_df <- dplyr::tibble(!!gf1 := as.character(features_to_highlight))
+        join_hl <- gf1
+      }else{
+        stop("When `gof` table has multiple feature columns (", paste(f_cols, collapse = ", "),
+             "), `features_to_highlight` must be a data frame with those columns!")
+      }
+    }else{
+      join_hl <- intersect(colnames(features_to_highlight), colnames(df_in))
+      if(length(join_hl) == 0L){
+        stop("`features_to_highlight` shares no feature columns with the `gof` table!")
+      }
+      hl_df <- dplyr::distinct(features_to_highlight[, join_hl, drop = FALSE])
+    }
+    hl_df$highlight <- TRUE
+    out_df <- dplyr::left_join(df_in, hl_df, by = join_hl)
+    out_df$highlight[is.na(out_df$highlight)] <- FALSE
+    out_df
+  }
 
   ### 1. VOLCANO / FEATURE TRIAGE PLOT
   if(plot_type == "volcano"){
+    if(is_fxn_gof){
+      eff_metric <- if(metric == "auto") "gof" else metric
+      if(!(eff_metric %in% c("gof", "nolabel"))){
+        stop("For `source_type = 'fractions'`, `metric` must be `'auto'`, `'gof'`, or `'nolabel'`!")
+      }
+      if(eff_metric == "nolabel"){
+        if(!("nolabel_padj" %in% colnames(gof_tbl))){
+          stop("`metric = 'nolabel'` requires `-label` (`tl == 0`) control samples in the evaluated dataset!")
+        }
+        padj_vec <- gof_tbl$nolabel_padj
+        x_raw <- gof_tbl$nolabel_tvd
+        x_lab <- "Mean -label Total Variation Distance (displaced read fraction)"
+        y_lab <- "-log10(padj) [-label background GoF]"
+      }else{
+        padj_vec <- gof_tbl$padj_gof
+        x_raw <- gof_tbl$mean_tvd
+        x_lab <- "Mean Total Variation Distance (displaced read fraction)"
+        y_lab <- "-log10(padj) [Mixture goodness of fit]"
+      }
+
+      if(all(is.na(padj_vec))){
+        stop("All adjusted p-values for `metric = '", eff_metric, "'` are NA (0 degrees of freedom)!")
+      }
+
+      df_plot <- gof_tbl
+      df_plot$x_val <- as.numeric(x_raw)
+      df_plot$y_val <- -log10(pmax(as.numeric(padj_vec), 1e-300))
+      df_plot <- df_plot[is.finite(df_plot$x_val) & is.finite(df_plot$y_val), , drop = FALSE]
+      df_plot <- attach_highlights(df_plot)
+
+      if(is.null(size)){
+        nr <- nrow(df_plot)
+        size <- if(nr < 1000L) 1.2 else if(nr > 10000L) 0.5 else (0.5 / 9000) * nr + (4 / 9)
+      }
+
+      is_poor <- (df_plot$x_val >= abs(rmse_cutoff)) & ((10^(-df_plot$y_val)) < FDR_cutoff)
+      dom_chr <- as.character(df_plot$dominant_failure_mode)
+      raw_conc <- ifelse(!is_poor, "Good Fit",
+                         ifelse(!is.na(dom_chr) & dom_chr != "ok", dom_chr, "Poor Fit"))
+
+      palette_fxn <- c(
+        "intermediate_spike" = "darkorange",
+        "high_mut_tail" = "firebrick3",
+        "overdispersed_muts" = "purple4",
+        "multilabel_mismatch" = "dodgerblue3",
+        "nolabel_anomaly" = "goldenrod3",
+        "Poor Fit" = "darkorange",
+        "Good Fit" = "darkgray"
+      )
+      present_lvls <- intersect(names(palette_fxn), unique(c(raw_conc, "Good Fit")))
+      df_plot$conclusion <- factor(raw_conc, levels = present_lvls)
+      colors <- palette_fxn[present_lvls]
+
+      gg <- ggplot(df_plot, aes(x = x_val, y = y_val, color = conclusion)) +
+        geom_point(size = size) +
+        scale_color_manual(values = colors, name = "Mixture GoF") +
+        theme_classic() +
+        xlab(x_lab) +
+        ylab(y_lab) +
+        geom_hline(yintercept = -log10(FDR_cutoff),
+                   color = "darkred", linetype = "dotted", linewidth = 0.75)
+
+      if(abs(rmse_cutoff) > 0){
+        gg <- gg +
+          geom_vline(xintercept = abs(rmse_cutoff),
+                     color = "darkred", linetype = "dotted", linewidth = 0.75)
+      }
+
+      if(!is.null(features_to_highlight)){
+        gg <- gg +
+          geom_point(
+            data = df_plot[df_plot$highlight, , drop = FALSE],
+            aes(x = x_val, y = y_val),
+            inherit.aes = FALSE,
+            shape = highlight_shape,
+            size = size + highlight_size_diff,
+            stroke = highlight_stroke,
+            fill = highlight_fill,
+            color = highlight_color
+          )
+      }
+
+      return(gg)
+    }
+
     if(metric == "auto"){
       if(any(gof_tbl$df_lof > 0L, na.rm = TRUE) && any(!is.na(gof_tbl$padj_lof))){
         eff_metric <- "lof"
@@ -1084,6 +1215,9 @@ EZGoFPlot <- function(obj,
         stop("Selected GoF table has 0 degrees of freedom for both model lack-of-fit and replicate dispersion!")
       }
     }else{
+      if(metric %in% c("gof", "nolabel")){
+        stop("`metric = '", metric, "'` is only applicable to `source_type = 'fractions'` GoF tables!")
+      }
       eff_metric <- metric
     }
 
@@ -1109,34 +1243,7 @@ EZGoFPlot <- function(obj,
     df_plot$x_val <- if(signed) df_plot$mean_signed_resid_fn else df_plot$wrmse_fn
     df_plot$y_val <- -log10(pmax(padj_vec, 1e-300))
     df_plot <- df_plot[is.finite(df_plot$x_val) & is.finite(df_plot$y_val), , drop = FALSE]
-
-    # Optional feature highlighting (supports vector on 1-feature or grouping_features)
-    if(!is.null(features_to_highlight)){
-      f_cols <- gof_meta[["features"]]
-      if(!is.data.frame(features_to_highlight)){
-        if(length(f_cols) == 1L){
-          hl_df <- dplyr::tibble(!!f_cols := as.character(features_to_highlight))
-          join_hl <- f_cols
-        }else if(!is.null(gof_meta[["grouping_features"]]) &&
-                 length(gof_meta[["grouping_features"]]) == 1L){
-          gf1 <- gof_meta[["grouping_features"]]
-          hl_df <- dplyr::tibble(!!gf1 := as.character(features_to_highlight))
-          join_hl <- gf1
-        }else{
-          stop("When `gof` table has multiple feature columns (", paste(f_cols, collapse = ", "),
-               "), `features_to_highlight` must be a data frame with those columns!")
-        }
-      }else{
-        join_hl <- intersect(colnames(features_to_highlight), colnames(df_plot))
-        if(length(join_hl) == 0L){
-          stop("`features_to_highlight` shares no feature columns with the `gof` table!")
-        }
-        hl_df <- dplyr::distinct(features_to_highlight[, join_hl, drop = FALSE])
-      }
-      hl_df$highlight <- TRUE
-      df_plot <- dplyr::left_join(df_plot, hl_df, by = join_hl)
-      df_plot$highlight[is.na(df_plot$highlight)] <- FALSE
-    }
+    df_plot <- attach_highlights(df_plot)
 
     if(is.null(size)){
       nr <- nrow(df_plot)
@@ -1206,25 +1313,45 @@ EZGoFPlot <- function(obj,
     stop("`plot_type = '", plot_type, "'` requires sample-level residuals! Re-run `AssessGoF(..., store_residuals = TRUE)`.")
   }
 
-  # Helper to choose residual column and y-axis label
-  if(residual_scale == "fraction"){
-    r_col <- "resid_fn"
-    r_lab <- "Residual (observed - predicted fraction)"
-  }else if(residual_scale == "standardized"){
-    r_col <- "std_resid"
-    r_lab <- "Standardized residual (profile z-score)"
+  if(is_fxn_gof){
+    if(residual_scale == "fraction"){
+      r_col <- "tvd"
+      r_lab <- "Total Variation Distance (displaced read fraction)"
+      ref_hline <- gof_meta[["sample_tvd_cutoff"]] %||% 0.05
+    }else if(residual_scale == "standardized"){
+      r_col <- "std_dev"
+      r_lab <- "Normalized deviance sqrt(G^2 / df)"
+      ref_hline <- 1.0
+    }else{
+      r_col <- "kl_div"
+      r_lab <- "KL divergence (nats / read)"
+      ref_hline <- 0
+    }
+    reserved_res_cols <- c("sample", gof_meta[["features"]], "tl", "n",
+                           "est_fn", "mle_fn", "tvd", "kl_div",
+                           "chisq_gof", "chisq_nominal", "df_gof",
+                           "std_dev", "pval_gof", "padj_gof", "failure_mode")
+    sf_real <- NULL
   }else{
-    r_col <- "resid_logit_fn"
-    r_lab <- "Logit residual (obs - pred logit fraction)"
+    if(residual_scale == "fraction"){
+      r_col <- "resid_fn"
+      r_lab <- "Residual (observed - predicted fraction)"
+    }else if(residual_scale == "standardized"){
+      r_col <- "std_resid"
+      r_lab <- "Standardized residual (profile z-score)"
+    }else{
+      r_col <- "resid_logit_fn"
+      r_lab <- "Logit residual (obs - pred logit fraction)"
+    }
+    ref_hline <- 0
+    reserved_res_cols <- c("sample", gof_meta[["features"]], gof_meta[["raw_features"]],
+                           "measured_specie", "tl", "obs_fn", "pred_fn", "resid_fn",
+                           "obs_logit_fn", "pred_logit_fn", "resid_logit_fn", "std_resid",
+                           "ci_lower_fn", "ci_upper_fn", "n", "obs_log10_cov",
+                           "pred_log10_cov", "resid_log10_cov", "std_resid_cov")
+    sf_real <- if(!identical(gof_meta[["sample_feature"]], "imputed_sample_feature")) gof_meta[["sample_feature"]] else NULL
   }
 
-  # Identify sample metadata grouping columns for coloring/ordering
-  reserved_res_cols <- c("sample", gof_meta[["features"]], gof_meta[["raw_features"]],
-                         "measured_specie", "tl", "obs_fn", "pred_fn", "resid_fn",
-                         "obs_logit_fn", "pred_logit_fn", "resid_logit_fn", "std_resid",
-                         "ci_lower_fn", "ci_upper_fn", "n", "obs_log10_cov",
-                         "pred_log10_cov", "resid_log10_cov", "std_resid_cov")
-  sf_real <- if(!identical(gof_meta[["sample_feature"]], "imputed_sample_feature")) gof_meta[["sample_feature"]] else NULL
   cond_cols <- unique(c(sf_real, setdiff(colnames(res_tbl), reserved_res_cols)))
   cond_cols <- cond_cols[cond_cols %in% colnames(res_tbl)]
 
@@ -1248,7 +1375,7 @@ EZGoFPlot <- function(obj,
     df_sq$sample_ord <- factor(df_sq$sample, levels = u_samps)
 
     gg <- ggplot(df_sq, aes(x = sample_ord, y = resid_val, fill = group_fill)) +
-      geom_hline(yintercept = 0, color = "darkred", linetype = "dotted", linewidth = 0.8) +
+      geom_hline(yintercept = ref_hline, color = "darkred", linetype = "dotted", linewidth = 0.8) +
       geom_boxplot(outlier.size = 0.5, outlier.alpha = 0.35, alpha = 0.8) +
       scale_fill_viridis_d() +
       theme_classic() +
@@ -1257,7 +1384,7 @@ EZGoFPlot <- function(obj,
       ylab(r_lab) +
       guides(fill = guide_legend(title = fill_title))
 
-    if(residual_scale == "standardized"){
+    if(!is_fxn_gof && residual_scale == "standardized"){
       gg <- gg +
         geom_hline(yintercept = c(-1.96, 1.96), color = "gray40", linetype = "dashed", linewidth = 0.5)
     }
@@ -1268,33 +1395,64 @@ EZGoFPlot <- function(obj,
   ### 3. OBSERVED VS PREDICTED PARITY PLOT
   if(plot_type == "obs_vs_pred"){
     df_op <- res_tbl
-    if(residual_scale == "logit"){
-      df_op$pred_x <- as.numeric(df_op$pred_logit_fn)
-      df_op$obs_y <- as.numeric(df_op$obs_logit_fn)
-      x_lab <- "Model-predicted logit(fraction high)"
-      y_lab <- "Observed logit(fraction high)"
+    if(is_fxn_gof){
+      if(residual_scale == "logit"){
+        eps_l <- 1e-4
+        df_op$pred_x <- stats::qlogis(pmin(pmax(as.numeric(df_op$est_fn), eps_l), 1 - eps_l))
+        df_op$obs_y <- stats::qlogis(pmin(pmax(as.numeric(df_op$mle_fn), eps_l), 1 - eps_l))
+        x_lab <- "EstimateFractions() logit(fraction high)"
+        y_lab <- "Unpenalized MLE logit(fraction high)"
+      }else{
+        df_op$pred_x <- as.numeric(df_op$est_fn)
+        df_op$obs_y <- as.numeric(df_op$mle_fn)
+        x_lab <- "EstimateFractions() fraction high"
+        y_lab <- "Unpenalized MLE fraction high"
+      }
+      df_op$fit_status <- factor(
+        ifelse(df_op$failure_mode == "ok", "Good Fit", "Flagged"),
+        levels = c("Good Fit", "Flagged")
+      )
+      df_op <- df_op[is.finite(df_op$pred_x) & is.finite(df_op$obs_y), , drop = FALSE]
+      pt_sz <- size %||% (if(nrow(df_op) > 20000L) 0.4 else 0.8)
+      pt_al <- if(nrow(df_op) > 20000L) 0.2 else 0.4
+
+      gg <- ggplot(df_op, aes(x = pred_x, y = obs_y, color = fit_status)) +
+        geom_point(size = pt_sz, alpha = pt_al) +
+        scale_color_manual(values = c("Good Fit" = "deepskyblue4", "Flagged" = "darkorange"),
+                           name = "Mixture GoF") +
+        geom_abline(slope = 1, intercept = 0, color = "darkred", linetype = "dashed", linewidth = 0.8) +
+        theme_classic() +
+        xlab(x_lab) +
+        ylab(y_lab)
     }else{
-      df_op$pred_x <- as.numeric(df_op$pred_fn)
-      df_op$obs_y <- as.numeric(df_op$obs_fn)
-      x_lab <- "Model-predicted fraction high"
-      y_lab <- "Observed fraction high"
+      if(residual_scale == "logit"){
+        df_op$pred_x <- as.numeric(df_op$pred_logit_fn)
+        df_op$obs_y <- as.numeric(df_op$obs_logit_fn)
+        x_lab <- "Model-predicted logit(fraction high)"
+        y_lab <- "Observed logit(fraction high)"
+      }else{
+        df_op$pred_x <- as.numeric(df_op$pred_fn)
+        df_op$obs_y <- as.numeric(df_op$obs_fn)
+        x_lab <- "Model-predicted fraction high"
+        y_lab <- "Observed fraction high"
+      }
+      df_op <- df_op[is.finite(df_op$pred_x) & is.finite(df_op$obs_y), , drop = FALSE]
+
+      if(is.null(facet_by) && identical(gof_meta[["source_type"]], "dynamics")){
+        auto_f <- c(sf_real, if(length(unique(df_op$measured_specie)) > 1L) "measured_specie" else NULL)
+        if(length(auto_f) > 0L) facet_by <- auto_f
+      }
+
+      pt_sz <- size %||% (if(nrow(df_op) > 20000L) 0.4 else 0.8)
+      pt_al <- if(nrow(df_op) > 20000L) 0.15 else 0.3
+
+      gg <- ggplot(df_op, aes(x = pred_x, y = obs_y)) +
+        geom_point(size = pt_sz, alpha = pt_al, color = "deepskyblue4") +
+        geom_abline(slope = 1, intercept = 0, color = "darkred", linetype = "dashed", linewidth = 0.8) +
+        theme_classic() +
+        xlab(x_lab) +
+        ylab(y_lab)
     }
-    df_op <- df_op[is.finite(df_op$pred_x) & is.finite(df_op$obs_y), , drop = FALSE]
-
-    if(is.null(facet_by) && identical(gof_meta[["source_type"]], "dynamics")){
-      auto_f <- c(sf_real, if(length(unique(df_op$measured_specie)) > 1L) "measured_specie" else NULL)
-      if(length(auto_f) > 0L) facet_by <- auto_f
-    }
-
-    pt_sz <- size %||% (if(nrow(df_op) > 20000L) 0.4 else 0.8)
-    pt_al <- if(nrow(df_op) > 20000L) 0.15 else 0.3
-
-    gg <- ggplot(df_op, aes(x = pred_x, y = obs_y)) +
-      geom_point(size = pt_sz, alpha = pt_al, color = "deepskyblue4") +
-      geom_abline(slope = 1, intercept = 0, color = "darkred", linetype = "dashed", linewidth = 0.8) +
-      theme_classic() +
-      xlab(x_lab) +
-      ylab(y_lab)
 
     if(residual_scale != "logit"){
       gg <- gg + coord_cartesian(xlim = c(0, 1), ylim = c(0, 1))
@@ -1312,7 +1470,7 @@ EZGoFPlot <- function(obj,
     return(gg)
   }
 
-  ### 4. RESIDUAL TREND PLOT (across tl or pred_fn)
+  ### 4. RESIDUAL TREND PLOT (across log10(n) for fractions, or tl / pred_fn for kinetic/ODE)
   df_rt <- res_tbl
   df_rt$resid_val <- as.numeric(df_rt[[r_col]])
   df_rt <- df_rt[is.finite(df_rt$resid_val), , drop = FALSE]
@@ -1337,17 +1495,31 @@ EZGoFPlot <- function(obj,
     grp_title <- "Group"
   }
 
-  multi_tl <- length(unique(df_rt$tl)) > 1L
-  if(multi_tl){
-    df_rt$x_bin <- as.numeric(df_rt$tl)
-    x_lab <- "Label time (tl)"
+  if(is_fxn_gof){
+    log_n <- log10(pmax(as.numeric(df_rt$n), 1))
+    rng_n <- range(log_n, na.rm = TRUE)
+    if(!all(is.finite(rng_n)) || diff(rng_n) < 1e-6){
+      df_rt$x_bin <- rng_n[1L]
+    }else{
+      n_brks <- min(11L, max(3L, length(unique(round(log_n, 2))) + 1L))
+      breaks <- seq(rng_n[1L], rng_n[2L], length.out = n_brks)
+      bin_id <- findInterval(log_n, breaks, rightmost.closed = TRUE)
+      mids <- 0.5 * (breaks[-length(breaks)] + breaks[-1L])
+      df_rt$x_bin <- mids[bin_id]
+    }
+    x_lab <- "log10(Read coverage n) [binned]"
   }else{
-    # Bin pred_fn into deciles/bins when single label time
-    breaks <- seq(0, 1, length.out = 11L)
-    bin_id <- findInterval(pmin(pmax(df_rt$pred_fn, 0), 1), breaks, rightmost.closed = TRUE)
-    mids <- 0.5 * (breaks[-length(breaks)] + breaks[-1L])
-    df_rt$x_bin <- mids[bin_id]
-    x_lab <- "Model-predicted fraction high (binned)"
+    multi_tl <- length(unique(df_rt$tl)) > 1L
+    if(multi_tl){
+      df_rt$x_bin <- as.numeric(df_rt$tl)
+      x_lab <- "Label time (tl)"
+    }else{
+      breaks <- seq(0, 1, length.out = 11L)
+      bin_id <- findInterval(pmin(pmax(df_rt$pred_fn, 0), 1), breaks, rightmost.closed = TRUE)
+      mids <- 0.5 * (breaks[-length(breaks)] + breaks[-1L])
+      df_rt$x_bin <- mids[bin_id]
+      x_lab <- "Model-predicted fraction high (binned)"
+    }
   }
 
   group_vars_sum <- c("trend_group", "x_bin", facet_by)
@@ -1363,7 +1535,7 @@ EZGoFPlot <- function(obj,
     )
 
   gg <- ggplot(sum_rt, aes(x = x_bin, y = med_r, color = trend_group, fill = trend_group)) +
-    geom_hline(yintercept = 0, color = "darkred", linetype = "dotted", linewidth = 0.8) +
+    geom_hline(yintercept = ref_hline, color = "darkred", linetype = "dotted", linewidth = 0.8) +
     geom_ribbon(aes(ymin = q25_r, ymax = q75_r), alpha = 0.18, color = NA) +
     geom_line(linewidth = 0.9) +
     geom_point(size = 2) +
@@ -1384,31 +1556,36 @@ EZGoFPlot <- function(obj,
 }
 
 
-#' Plot model-predicted trajectories and sample-level fraction fits for selected features
+#' Plot model-predicted trajectories or read-level mixture histograms for selected features
 #'
-#' `EZFitPlot()` overlays smooth model-predicted fraction high `<muttype>` curves
-#' (from either `AverageAndRegularize()` kinetic models or `EZDynamics()` ODE reaction
-#' graphs) onto the individual sample estimates and 95\% profile-likelihood confidence
-#' intervals from `EstimateFractions()`.
+#' `EZFitPlot()` visualizes individual feature fits from `AssessGoF()`:
+#' \itemize{
+#'   \item \strong{Mixture models (`source_type = "fractions"`)}: Plots each selected
+#'   feature's observed read-level mutation-count distribution (`0, 1, ..., M+` mutations
+#'   per read) as bars overlaid with the exact `nT`-conditioned Binomial component curves
+#'   (`Old component`, `New component`, and `Total mixture`).
+#'   \item \strong{Kinetic & ODE models (`source_type = "averages"` or `"dynamics"`)}:
+#'   Overlays smooth model-predicted `fraction_high<muttype>` trajectories (or categorical
+#'   condition predictions) onto individual sample estimates and 95\% profile-likelihood
+#'   confidence intervals from `EstimateFractions()`.
+#' }
 #'
 #' Features can either be specified explicitly via `features_to_plot` or automatically
-#' ranked via `rank_by` (`"worst_lof"`, `"worst_wrmse"`, `"worst_rep"`, or `"best_fit"`).
-#' When `x_axis = "auto"`, time-course and `EZDynamics()` models plot continuous
-#' trajectories over label time `tl`, whereas single-timepoint multi-condition
-#' `AverageAndRegularize()` fits display replicate points alongside condition-level
-#' model predictions on a categorical condition axis.
+#' ranked via `rank_by` (`"worst_lof"`/`"worst_gof"`, `"worst_wrmse"`/`"worst_tvd"`,
+#' `"worst_rep"`, or `"best_fit"`).
 #'
-#' @param obj An `EZbakRData` object containing `AssessGoF()` output (or upstream
-#' `EstimateFractions()` + `AverageAndRegularize()` / `EZDynamics()` tables).
+#' @param obj An `EZbakRData` (or `EZbakRArrowData`) object containing `AssessGoF()`
+#' output (or upstream `EstimateFractions()` / `AverageAndRegularize()` / `EZDynamics()` tables).
 #' @param features_to_plot Optional character vector of feature names (when a single
 #' feature or grouping feature identifies genes) or data frame of feature columns to plot.
 #' If `NULL` (default), selects the top `top_n` features according to `rank_by`.
 #' @param rank_by Automatic feature ranking criterion when `features_to_plot = NULL`:
-#' `"worst_lof"` (default; smallest structural lack-of-fit p-value), `"worst_wrmse"`
-#' (largest weighted fraction RMSE), `"worst_rep"` (smallest replicate dispersion p-value),
-#' or `"best_fit"` (smallest weighted fraction RMSE among well-covered features).
+#' `"worst_lof"` / `"worst_gof"` (default; smallest lack-of-fit / mixture GoF p-value),
+#' `"worst_wrmse"` / `"worst_tvd"` (largest `wrmse_fn` or `mean_tvd`), `"worst_rep"`
+#' (smallest replicate dispersion or `-label` p-value), or `"best_fit"` (smallest error).
 #' @param top_n Number of features to display when `features_to_plot = NULL` (default `6`).
-#' @param source_type Optional filter (`"averages"` or `"dynamics"`) passed to `EZget()`.
+#' @param source_type Optional filter (`"fractions"`, `"averages"`, or `"dynamics"`)
+#' passed to `EZget()`.
 #' @param source_table Optional upstream table name passed to `EZget()`.
 #' @param features Optional feature vector passed to `EZget()`.
 #' @param parameter Optional parameter name passed to `EZget()`.
@@ -1417,16 +1594,22 @@ EZGoFPlot <- function(obj,
 #' @param grouping_features Optional `grouping_features` vector passed to `EZget()`.
 #' @param repeatID Optional repeat ID passed to `EZget()`.
 #' @param exactMatch Logical; passed to `EZget()` (default `FALSE`).
-#' @param x_axis Layout mode: `"auto"` (default), `"time"` (continuous label-time
-#' trajectory curves starting at `t = 0`), or `"condition"` (categorical condition comparison).
+#' @param x_axis Layout mode for kinetic/ODE models: `"auto"` (default), `"time"`
+#' (continuous label-time trajectory curves starting at `t = 0`), or `"condition"`
+#' (categorical condition comparison).
 #' @param n_grid Number of time-grid evaluation points for smooth trajectory curves (default `150`).
 #' @param show_ci Logical (default `TRUE`); if `TRUE`, draws 95\% profile-likelihood
-#' confidence intervals on observed sample points.
-#' @param annotate_stats Logical (default `TRUE`); if `TRUE`, includes `wRMSE` in each
-#' facet strip header.
-#' @param point_size Point size for observed sample fractions (default `2.2`).
-#' @param line_width Line width for model trajectory curves (default `0.9`).
+#' confidence intervals on observed sample points in kinetic/ODE plots.
+#' @param annotate_stats Logical (default `TRUE`); if `TRUE`, includes `wRMSE` (or `TVD`
+#' and `failure_mode` for mixture plots) in each facet strip header.
+#' @param point_size Point size for observed sample fractions or histogram curve markers (default `2.2`).
+#' @param line_width Line width for model curves (default `0.9`).
 #' @param ncol Optional number of facet columns passed to `facet_wrap()`.
+#' @param samples Optional character vector of sample names (or `"all"`) to display when
+#' `source_type = "fractions"`. When `NULL` (default), displays the single most informative
+#' representative sample per selected feature.
+#' @param max_mut_plot Maximum mutation-count bin (`M+`) displayed on the X-axis when
+#' `source_type = "fractions"` (default `10`).
 #' @return A `ggplot2` object.
 #' @import ggplot2
 #' @importFrom magrittr %>%
@@ -1434,14 +1617,13 @@ EZGoFPlot <- function(obj,
 #' simdata <- EZSimulate(30, nreps = 2)
 #' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
 #' ezbdo <- EstimateFractions(ezbdo)
-#' ezbdo <- EstimateKinetics(ezbdo)
-#' ezbdo <- AverageAndRegularize(ezbdo)
-#' ezbdo <- AssessGoF(ezbdo)
+#' ezbdo <- AssessGoF(ezbdo, type = "fractions")
 #' EZFitPlot(ezbdo, top_n = 4)
 #' @export
 EZFitPlot <- function(obj,
                       features_to_plot = NULL,
-                      rank_by = c("worst_lof", "worst_wrmse", "worst_rep", "best_fit"),
+                      rank_by = c("worst_lof", "worst_wrmse", "worst_rep", "best_fit",
+                                  "worst_gof", "worst_tvd"),
                       top_n = 6,
                       source_type = NULL,
                       source_table = NULL,
@@ -1458,17 +1640,27 @@ EZFitPlot <- function(obj,
                       annotate_stats = TRUE,
                       point_size = 2.2,
                       line_width = 0.9,
-                      ncol = NULL){
+                      ncol = NULL,
+                      samples = NULL,
+                      max_mut_plot = 10){
 
   # Silence R CMD check NSE notes
   tl <- pred_fn <- obs_fn <- ci_lower_fn <- ci_upper_fn <- curve_group <- NULL
-  panel_label <- cond_x <- NULL
+  panel_label <- cond_x <- mut_label <- obs_prop <- pred_prop <- component <- NULL
 
   rank_by <- match.arg(rank_by)
   x_axis <- match.arg(x_axis)
 
-  if(length(obj[["metadata"]][["gof"]]) == 0L){
-    message("No GoF tables found in `obj`; running `AssessGoF()` on the fly...")
+  has_requested_type <- if(is.null(source_type)){
+    length(obj[["metadata"]][["gof"]]) > 0L
+  }else{
+    any(vapply(obj[["metadata"]][["gof"]],
+               function(m) identical(m[["source_type"]], source_type),
+               logical(1)))
+  }
+
+  if(!has_requested_type){
+    message("No matching GoF table found in `obj`; running `AssessGoF()` on the fly...")
     obj <- AssessGoF(
       obj,
       type = source_type %||% "auto",
@@ -1518,30 +1710,51 @@ EZFitPlot <- function(obj,
   }
 
   f_cols <- gof_meta[["features"]]
+  is_fxn_gof <- identical(gof_meta[["source_type"]], "fractions")
 
   ### Step 1: Select features to plot (preserving rank / user-specified order)
   if(is.null(features_to_plot)){
     n_take <- min(as.integer(top_n), nrow(gof_tbl))
-    if(rank_by == "worst_lof"){
-      if(any(!is.na(gof_tbl$pval_lof))){
-        ord <- order(is.na(gof_tbl$pval_lof), gof_tbl$pval_lof, -gof_tbl$wrmse_fn)
-      }else if("pval_lof_joint" %in% colnames(gof_tbl) && any(!is.na(gof_tbl$pval_lof_joint))){
-        ord <- order(is.na(gof_tbl$pval_lof_joint), gof_tbl$pval_lof_joint, -gof_tbl$wrmse_fn)
-      }else if(any(!is.na(gof_tbl$pval_rep))){
-        ord <- order(is.na(gof_tbl$pval_rep), gof_tbl$pval_rep, -gof_tbl$wrmse_fn)
+    if(is_fxn_gof){
+      if(rank_by %in% c("worst_lof", "worst_gof")){
+        if(any(!is.na(gof_tbl$pval_gof))){
+          ord <- order(is.na(gof_tbl$pval_gof), gof_tbl$pval_gof, -gof_tbl$mean_tvd)
+        }else{
+          ord <- order(is.na(gof_tbl$mean_tvd), -gof_tbl$mean_tvd)
+        }
+      }else if(rank_by %in% c("worst_wrmse", "worst_tvd")){
+        ord <- order(is.na(gof_tbl$mean_tvd), -gof_tbl$mean_tvd)
+      }else if(rank_by == "worst_rep"){
+        if("nolabel_pval" %in% colnames(gof_tbl) && any(!is.na(gof_tbl$nolabel_pval))){
+          ord <- order(is.na(gof_tbl$nolabel_pval), gof_tbl$nolabel_pval, -gof_tbl$nolabel_tvd)
+        }else{
+          ord <- order(-gof_tbl$frac_samples_flagged, -gof_tbl$mean_tvd)
+        }
       }else{
-        ord <- order(-gof_tbl$wrmse_fn)
-      }
-    }else if(rank_by == "worst_wrmse"){
-      ord <- order(is.na(gof_tbl$wrmse_fn), -gof_tbl$wrmse_fn)
-    }else if(rank_by == "worst_rep"){
-      if(any(!is.na(gof_tbl$pval_rep))){
-        ord <- order(is.na(gof_tbl$pval_rep), gof_tbl$pval_rep, -gof_tbl$wrmse_fn)
-      }else{
-        ord <- order(-gof_tbl$wrmse_fn)
+        ord <- order(is.na(gof_tbl$mean_tvd), gof_tbl$mean_tvd, -gof_tbl$mean_n)
       }
     }else{
-      ord <- order(is.na(gof_tbl$wrmse_fn), gof_tbl$wrmse_fn)
+      if(rank_by %in% c("worst_lof", "worst_gof")){
+        if(any(!is.na(gof_tbl$pval_lof))){
+          ord <- order(is.na(gof_tbl$pval_lof), gof_tbl$pval_lof, -gof_tbl$wrmse_fn)
+        }else if("pval_lof_joint" %in% colnames(gof_tbl) && any(!is.na(gof_tbl$pval_lof_joint))){
+          ord <- order(is.na(gof_tbl$pval_lof_joint), gof_tbl$pval_lof_joint, -gof_tbl$wrmse_fn)
+        }else if(any(!is.na(gof_tbl$pval_rep))){
+          ord <- order(is.na(gof_tbl$pval_rep), gof_tbl$pval_rep, -gof_tbl$wrmse_fn)
+        }else{
+          ord <- order(-gof_tbl$wrmse_fn)
+        }
+      }else if(rank_by %in% c("worst_wrmse", "worst_tvd")){
+        ord <- order(is.na(gof_tbl$wrmse_fn), -gof_tbl$wrmse_fn)
+      }else if(rank_by == "worst_rep"){
+        if(any(!is.na(gof_tbl$pval_rep))){
+          ord <- order(is.na(gof_tbl$pval_rep), gof_tbl$pval_rep, -gof_tbl$wrmse_fn)
+        }else{
+          ord <- order(-gof_tbl$wrmse_fn)
+        }
+      }else{
+        ord <- order(is.na(gof_tbl$wrmse_fn), gof_tbl$wrmse_fn)
+      }
     }
     sel_gof <- gof_tbl[ord[seq_len(n_take)], , drop = FALSE]
   }else{
@@ -1574,12 +1787,191 @@ EZFitPlot <- function(obj,
     }
   }
 
+  # Helper to wrap / middle-ellipsize long feature or sample identifiers so facet strips never clip
+  wrap_strip_id <- function(txt, max_chars = 22L, max_lines = 2L){
+    vapply(as.character(txt), function(s){
+      if(is.na(s) || nchar(s) <= max_chars) return(s)
+      parts <- regmatches(
+        s,
+        gregexpr("([^|;+:_-]+([|;+:_-]+\\s*)?)|([|;+:_-]+\\s*)", s, perl = TRUE)
+      )[[1L]]
+      parts <- parts[nzchar(parts)]
+      if(length(parts) == 0L) parts <- s
+
+      ellipsize_tok <- function(tok, w){
+        tok_trim <- sub("\\s+$", "", tok)
+        if(nchar(tok_trim) <= w) return(tok_trim)
+        if(w <= 5L) return(substr(tok_trim, 1L, w))
+        n_keep <- w - 2L
+        n_left <- ceiling(n_keep * 0.55)
+        n_right <- n_keep - n_left
+        paste0(substr(tok_trim, 1L, n_left), "..",
+               substr(tok_trim, nchar(tok_trim) - n_right + 1L, nchar(tok_trim)))
+      }
+
+      lines <- character(0)
+      cur <- ""
+      for(idx in seq_along(parts)){
+        p <- parts[idx]
+        cand <- paste0(cur, p)
+        if(nchar(sub("\\s+$", "", cand)) <= max_chars){
+          cur <- cand
+        }else{
+          if(nzchar(cur)){
+            lines <- c(lines, sub("\\s+$", "", cur))
+            cur <- ""
+          }
+          if(length(lines) >= max_lines - 1L){
+            rem <- paste(parts[idx:length(parts)], collapse = "")
+            cur <- ellipsize_tok(rem, max_chars)
+            break
+          }
+          if(nchar(sub("\\s+$", "", p)) > max_chars){
+            lines <- c(lines, ellipsize_tok(p, max_chars))
+          }else{
+            cur <- p
+          }
+        }
+      }
+      if(nzchar(cur)) lines <- c(lines, sub("\\s+$", "", cur))
+      if(length(lines) > max_lines) lines <- lines[seq_len(max_lines)]
+      paste(lines, collapse = "\n")
+    }, character(1), USE.NAMES = FALSE)
+  }
+
+  ### Branch A: Mixture-model mutation-count histogram fit plot (source_type == "fractions")
+  if(is_fxn_gof){
+    hist_res <- predict_mixture_histograms(
+      obj = obj,
+      gof_name = gof_name,
+      selected_keys_df = sel_gof[, f_cols, drop = FALSE],
+      samples = samples,
+      rank_by = rank_by,
+      max_mut_plot = as.integer(max_mut_plot)
+    )
+    obs_df <- hist_res$obs_df
+    curve_df <- hist_res$curve_df
+    multi_j <- hist_res$J >= 2L
+
+    join_pcols <- c(f_cols, "sample", "muttype")
+    panel_df <- dplyr::distinct(obs_df[, c(join_pcols, "tvd", "failure_mode"), drop = FALSE])
+    n_panels_fxn <- nrow(panel_df)
+    eff_ncol_fxn <- if(!is.null(ncol)) as.integer(ncol) else ggplot2::wrap_dims(n_panels_fxn)[2L]
+    max_chars_fxn <- if(eff_ncol_fxn <= 1L) 44L else if(eff_ncol_fxn == 2L) 28L else if(eff_ncol_fxn == 3L) 20L else 15L
+
+    short_fm_map <- c(
+      "intermediate_spike" = "interm. spike",
+      "high_mut_tail" = "high-mut tail",
+      "overdispersed_muts" = "overdispersed",
+      "multilabel_mismatch" = "multilabel",
+      "nolabel_anomaly" = "-label anomaly"
+    )
+
+    fk_raw <- apply(panel_df[, f_cols, drop = FALSE], 1L, paste, collapse = " | ")
+    sc_raw <- paste0(panel_df$sample, if(multi_j) paste0(" [", panel_df$muttype, "]") else "")
+
+    id_block <- vapply(seq_len(n_panels_fxn), function(i){
+      comb_1l <- paste0(fk_raw[i], " | ", sc_raw[i])
+      if(nchar(comb_1l) <= max_chars_fxn){
+        comb_1l
+      }else{
+        paste0(
+          wrap_strip_id(fk_raw[i], max_chars = max_chars_fxn, max_lines = 2L),
+          "\n",
+          wrap_strip_id(sc_raw[i], max_chars = max_chars_fxn, max_lines = 1L)
+        )
+      }
+    }, character(1))
+
+    if(annotate_stats){
+      stat_block <- vapply(seq_len(n_panels_fxn), function(i){
+        tvd_s <- sprintf("TVD=%.3f", panel_df$tvd[i])
+        fm_i <- as.character(panel_df$failure_mode[i])
+        if(is.na(fm_i) || fm_i == "ok"){
+          tvd_s
+        }else{
+          fm_lbl <- if(fm_i %in% names(short_fm_map)) unname(short_fm_map[fm_i]) else fm_i
+          one_l <- paste0(tvd_s, " (", fm_lbl, ")")
+          if(nchar(one_l) <= max_chars_fxn) one_l else paste0(tvd_s, "\n(", fm_lbl, ")")
+        }
+      }, character(1))
+      raw_panel_lvls <- paste0(id_block, "\n", stat_block)
+    }else{
+      raw_panel_lvls <- id_block
+    }
+
+    if(anyDuplicated(raw_panel_lvls)){
+      raw_panel_lvls <- make.unique(raw_panel_lvls, sep = " #")
+    }
+    panel_df$panel_label <- factor(raw_panel_lvls, levels = raw_panel_lvls)
+    panel_join <- panel_df[, c(join_pcols, "panel_label"), drop = FALSE]
+
+    obs_df <- dplyr::inner_join(obs_df, panel_join, by = join_pcols)
+    curve_df <- dplyr::inner_join(curve_df, panel_join, by = join_pcols)
+
+    comp_colors <- c(
+      "Total mixture" = "darkred",
+      "Old component" = "deepskyblue4",
+      "New component" = "darkorange"
+    )
+    comp_ltypes <- c(
+      "Total mixture" = "solid",
+      "Old component" = "dashed",
+      "New component" = "dashed"
+    )
+
+    gg <- ggplot() +
+      geom_col(
+        data = obs_df,
+        aes(x = mut_label, y = obs_prop),
+        fill = "gray82",
+        color = "gray55",
+        width = 0.72
+      ) +
+      geom_line(
+        data = curve_df,
+        aes(x = mut_label, y = pred_prop, color = component,
+            linetype = component, group = component),
+        linewidth = line_width
+      ) +
+      geom_point(
+        data = curve_df,
+        aes(x = mut_label, y = pred_prop, color = component),
+        size = point_size * 0.75
+      ) +
+      scale_color_manual(values = comp_colors, name = "Mixture curve") +
+      scale_linetype_manual(values = comp_ltypes, name = "Mixture curve") +
+      facet_wrap(~ panel_label, ncol = ncol, scales = "free_x") +
+      theme_classic() +
+      theme(
+        legend.position = "top",
+        strip.text = element_text(size = 8.5, lineheight = 1.05,
+                                  margin = margin(t = 3, r = 3, b = 3, l = 3))
+      ) +
+      xlab("Mutations per read") +
+      ylab("Fraction of reads")
+
+    return(gg)
+  }
+
   sel_keys <- sel_gof[, f_cols, drop = FALSE]
+  n_panels_b <- nrow(sel_keys)
+  eff_ncol_b <- if(!is.null(ncol)) as.integer(ncol) else ggplot2::wrap_dims(n_panels_b)[2L]
+  max_chars_b <- if(eff_ncol_b <= 1L) 42L else if(eff_ncol_b == 2L) 28L else if(eff_ncol_b == 3L) 22L else 16L
   key_label_raw <- apply(sel_keys, 1L, paste, collapse = " | ")
+  key_wrapped <- wrap_strip_id(key_label_raw, max_chars = max_chars_b, max_lines = 2L)
   if(annotate_stats){
-    panel_lvls <- sprintf("%s (wRMSE=%.3f)", key_label_raw, sel_gof$wrmse_fn)
+    stat_b <- sprintf("(wRMSE=%.3f)", sel_gof$wrmse_fn)
+    panel_lvls <- ifelse(
+      !grepl("\n", key_wrapped) & (nchar(key_wrapped) + 1L + nchar(stat_b) <= max_chars_b),
+      paste(key_wrapped, stat_b),
+      paste0(key_wrapped, "\n", stat_b)
+    )
   }else{
-    panel_lvls <- key_label_raw
+    panel_lvls <- key_wrapped
+  }
+  if(anyDuplicated(panel_lvls)){
+    panel_lvls <- make.unique(panel_lvls, sep = " #")
   }
   panel_map <- sel_keys
   panel_map$panel_label <- factor(panel_lvls, levels = unique(panel_lvls))
@@ -1646,7 +2038,9 @@ EZFitPlot <- function(obj,
       facet_wrap(~ panel_label, ncol = ncol) +
       theme_classic() +
       theme(axis.text.x = element_text(angle = 35, hjust = 1),
-            legend.position = "none") +
+            legend.position = "none",
+            strip.text = element_text(size = 8.5, lineheight = 1.05,
+                                      margin = margin(t = 3, r = 3, b = 3, l = 3))) +
       xlab(x_title) +
       ylab("Fraction high (points = samples, red bar = model)")
 
@@ -1710,6 +2104,8 @@ EZFitPlot <- function(obj,
     coord_cartesian(ylim = c(0, 1)) +
     facet_wrap(~ panel_label, ncol = ncol) +
     theme_classic() +
+    theme(strip.text = element_text(size = 8.5, lineheight = 1.05,
+                                    margin = margin(t = 3, r = 3, b = 3, l = 3))) +
     xlab("Label time (tl)") +
     ylab("Fraction high") +
     guides(color = guide_legend(title = leg_title))

@@ -16,7 +16,7 @@ EZGoFPlot(
   grouping_features = NULL,
   repeatID = NULL,
   exactMatch = FALSE,
-  metric = c("auto", "lof", "joint", "rep"),
+  metric = c("auto", "lof", "joint", "rep", "gof", "nolabel"),
   FDR_cutoff = 0.05,
   rmse_cutoff = 0.05,
   signed = FALSE,
@@ -32,14 +32,16 @@ EZGoFPlot(
 )
 }
 \arguments{
-\item{obj}{An \code{EZbakRData} object on which \code{AssessGoF()} has been run (or containing
-\code{EstimateFractions()} + \code{AverageAndRegularize()} / \code{EZDynamics()} outputs).}
+\item{obj}{An \code{EZbakRData} (or \code{EZbakRArrowData}) object on which \code{AssessGoF()} has
+been run (or containing \code{EstimateFractions()}, \code{AverageAndRegularize()}, or
+\code{EZDynamics()} outputs).}
 
 \item{plot_type}{Type of diagnostic plot: \code{"volcano"}, \code{"sample_qc"}, \code{"obs_vs_pred"},
 or \code{"residual_trend"}.}
 
-\item{source_type}{Optional filter (\code{"averages"} or \code{"dynamics"}) selecting which GoF
-table to plot when multiple exist.}
+\item{source_type}{Optional filter (\code{"fractions"}, \code{"averages"}, or \code{"dynamics"})
+selecting which GoF table to plot when multiple exist (or which model class to evaluate
+on the fly).}
 
 \item{source_table}{Optional exact upstream table name passed to \code{EZget()}.}
 
@@ -58,15 +60,17 @@ table to plot when multiple exist.}
 \item{exactMatch}{Logical; passed to \code{EZget()} (default \code{FALSE} so partial queries match cleanly).}
 
 \item{metric}{Which adjusted p-value to display on \code{"volcano"}: \code{"auto"} (default;
-prioritizes \code{padj_lof}, then \code{padj_lof_joint}, then \code{padj_rep}), \code{"lof"}, \code{"joint"}, or \code{"rep"}.}
+selects \code{"gof"} for \code{"fractions"}, or prioritizes \code{"lof"}, \code{"joint"}, then \code{"rep"}
+for kinetic/ODE models), \code{"lof"}, \code{"joint"}, \code{"rep"}, \code{"gof"}, or \code{"nolabel"}.}
 
 \item{FDR_cutoff}{Adjusted p-value threshold for highlighting poor fits on \code{"volcano"} (default \code{0.05}).}
 
-\item{rmse_cutoff}{Fraction-scale weighted RMSE (or \verb{|mean_signed_resid_fn|}) threshold
-for highlighting poor fits on \code{"volcano"} (default \code{0.05}, i.e., 5 percentage points).}
+\item{rmse_cutoff}{Effect-size threshold (\code{mean_tvd} for \code{"fractions"}, \code{wrmse_fn} or
+\verb{|mean_signed_resid_fn|} for kinetic/ODE models) for highlighting poor fits on \code{"volcano"}
+(default \code{0.05}, i.e., 5\\% displaced reads or 5 percentage points).}
 
-\item{signed}{Logical (default \code{FALSE}); if \code{TRUE} on \code{"volcano"}, plots signed mean
-residual (\code{obs - pred}) on X instead of \code{wrmse_fn}.}
+\item{signed}{Logical (default \code{FALSE}); if \code{TRUE} on kinetic/ODE \code{"volcano"}, plots
+signed mean residual (\code{obs - pred}) on X instead of \code{wrmse_fn}.}
 
 \item{size}{Optional point size for scatter plots.}
 
@@ -83,8 +87,10 @@ key columns) to circle on \code{"volcano"}.}
 
 \item{highlight_color}{Border color for highlighted points (default \code{"black"}).}
 
-\item{residual_scale}{Scale for residuals in \code{"sample_qc"}, \code{"obs_vs_pred"}, and
-\code{"residual_trend"}: \code{"fraction"} (default), \code{"standardized"}, or \code{"logit"}.}
+\item{residual_scale}{Scale for diagnostics in \code{"sample_qc"}, \code{"obs_vs_pred"}, and
+\code{"residual_trend"}: \code{"fraction"} (default; \code{tvd} for mixture GoF, \code{resid_fn} for kinetic GoF),
+\code{"standardized"} (\code{std_dev} for mixture GoF, \code{std_resid} for kinetic GoF), or \code{"logit"}
+(\code{kl_div} / logit scale).}
 
 \item{facet_by}{Optional column name(s) in \code{gof_residuals} to facet \code{"obs_vs_pred"}
 or \code{"residual_trend"} by.}
@@ -94,30 +100,30 @@ A \code{ggplot2} object.
 }
 \description{
 \code{EZGoFPlot()} provides four complementary diagnostic views of model goodness of fit
-computed by \code{AssessGoF()} (and will automatically run \code{AssessGoF()} on the fly if
-no GoF table is present yet):
+computed by \code{AssessGoF()} for either mixture models (\code{source_type = "fractions"}) or
+kinetic/ODE models (\code{source_type = "averages"} or \code{"dynamics"}), running \code{AssessGoF()}
+automatically on the fly if needed:
 \itemize{
-\item \code{"volcano"} (default): Feature-level triage plotting probability-scale error
-(\code{wrmse_fn}, or \code{mean_signed_resid_fn} if \code{signed = TRUE}) against \code{-log10(padj)}
-for structural lack of fit (or replicate overdispersion when single-timepoint
-designs have zero structural degrees of freedom).
-\item \code{"sample_qc"}: Per-sample boxplots of residuals (\code{obs_fn - pred_fn},
-standardized residuals \code{std_resid}, or logit residuals), immediately flagging
-outlier samples, mis-specified label times, s4U dropout, or compartment contamination.
-\item \code{"obs_vs_pred"}: Global parity scatter/density plot of observed vs. predicted
-fractions (or logit fractions) against the \code{y = x} identity line.
-\item \code{"residual_trend"}: Median and interquartile ribbon of residuals across
-label time \code{tl} (or predicted fraction), revealing transcriptome-wide splicing/export
-lags or long-label toxicity.
+\item \code{"volcano"} (default): Feature-level triage plotting distributional or fraction
+error (\code{mean_tvd} for \code{"fractions"}; \code{wrmse_fn} or \code{mean_signed_resid_fn} for
+\code{"averages"}/\code{"dynamics"}) against \code{-log10(padj)}. For mixture GoF, poor fits are
+additionally colored by their mechanistic \code{dominant_failure_mode}.
+\item \code{"sample_qc"}: Per-sample boxplots of residuals or mixture divergence (\code{tvd},
+normalized deviance \code{std_dev}, or \code{kl_div} for \code{"fractions"}; \code{obs_fn - pred_fn},
+\code{std_resid}, or logit residuals for \code{"averages"}/\code{"dynamics"}).
+\item \code{"obs_vs_pred"}: Global parity scatter plot of observed vs. model-predicted
+fractions (or unpenalized MLE vs. \code{EstimateFractions()} posterior estimates for
+\code{"fractions"}) against the \code{y = x} identity line.
+\item \code{"residual_trend"}: Median and interquartile ribbon of residuals across label
+time \code{tl} / predicted fraction (for \code{"averages"}/\code{"dynamics"}) or across binned
+\code{log10(n)} read coverage (for \code{"fractions"}).
 }
 }
 \examples{
 simdata <- EZSimulate(30, nreps = 2)
 ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
 ezbdo <- EstimateFractions(ezbdo)
-ezbdo <- EstimateKinetics(ezbdo)
-ezbdo <- AverageAndRegularize(ezbdo)
-ezbdo <- AssessGoF(ezbdo)
+ezbdo <- AssessGoF(ezbdo, type = "fractions")
 EZGoFPlot(ezbdo, plot_type = "volcano")
 EZGoFPlot(ezbdo, plot_type = "sample_qc")
 }

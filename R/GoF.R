@@ -1,40 +1,40 @@
-#' Assess goodness of fit of kinetic or dynamical systems models
+#' Assess goodness of fit of mixture, kinetic, or dynamical systems models
 #'
-#' `AssessGoF()` evaluates how well model-predicted sample-by-sample fractions of
-#' high-mutation reads (`fraction_high<muttype>`) from either `AverageAndRegularize()`
-#' (e.g., standard steady-state turnover \eqn{dR/dt = k_{\text{syn}} - k_{\text{deg}} R})
-#' or `EZDynamics()` (generalized linear ODE reaction networks) agree with the
-#' observed sample-level estimates and profile-likelihood uncertainties from
-#' `EstimateFractions()`.
-#'
-#' For each feature, `AssessGoF()` computes both interpretable probability-scale
-#' effect sizes (precision-weighted root-mean-square error `wrmse_fn`, mean absolute
-#' error `mae_fn`, and signed bias `mean_signed_resid_fn`) and uncertainty-standardized
-#' goodness-of-fit statistics that cleanly handle boundary observations
-#' (\eqn{\hat{\theta} \in \{0, 1\}}) using the 95\% profile-likelihood confidence bounds
-#' from `EstimateFractions()`. When experimental cells contain biological replicates,
-#' total lack-of-fit is orthogonally decomposed into:
+#' `AssessGoF()` evaluates goodness of fit at either the read-level mutational mixture
+#' modeling stage (`type = "fractions"`, assessing `EstimateFractions()`) or the
+#' cross-sample kinetic / compartmental ODE modeling stage (`type = "averages"` or
+#' `"dynamics"`, assessing `AverageAndRegularize()` or `EZDynamics()`):
 #' \itemize{
-#'   \item \strong{Replicate overdispersion} (`chisq_rep`, `df_rep`, `pval_rep`, `padj_rep`):
-#'   tests whether biological replicates within identical experimental conditions and
-#'   label times scatter more than expected from `EstimateFractions()` measurement
-#'   uncertainty alone.
-#'   \item \strong{Structural model lack-of-fit} (`chisq_lof`, `df_lof`, `pval_lof`, `padj_lof`):
-#'   tests whether condition/timepoint/compartment means systematically deviate from
-#'   the fitted kinetic trajectory (for example, multi-exponential decay, RNA processing
-#'   or export delays, premature nuclear degradation, or non-additive covariate effects),
-#'   calibrated against Empirical-Bayes-moderated replicate dispersion by default.
+#'   \item \strong{Mixture model goodness of fit (`type = "fractions"`)}: Evaluates how well
+#'   each feature's observed read-level mutational distribution in `cB` (or `EZbakRArrowData`)
+#'   agrees with the exact `nT`-conditioned Binomial mixture distribution implied by
+#'   `EstimateFractions()` (supporting standard 2-component, hierarchical feature-specific
+#'   `pnew`, and general `>2`-component multi-label mixtures, as well as `-label` background
+#'   controls). Reports sample-size-invariant Total Variation Distance (`mean_tvd`, `max_tvd`,
+#'   representing the fraction of reads displaced into the wrong mutational count bin),
+#'   empirical-overdispersion-calibrated likelihood-ratio deviance (`chisq_gof`, `df_gof`,
+#'   `pval_gof`, `padj_gof`), cross-sample failure frequency (`n_samples_flagged`,
+#'   `frac_samples_flagged`), and mechanistic `dominant_failure_mode` tags. Input filtering
+#'   (`min_reads`, `min_samples`, `feature_sample_counts`) determines which features enter the
+#'   `AssessGoF()` output tables without modifying `obj$fractions` or any other table.
+#'   \item \strong{Kinetic & ODE goodness of fit (`type = "averages"` or `"dynamics"`)}:
+#'   Evaluates how well model-predicted sample-by-sample fractions (`fraction_high<muttype>`)
+#'   agree with `EstimateFractions()` point estimates and 95\% profile-likelihood confidence
+#'   intervals, orthogonally decomposing total discrepancy into \strong{replicate overdispersion}
+#'   (`chisq_rep`, `pval_rep`, `padj_rep`) and \strong{structural model lack-of-fit}
+#'   (`chisq_lof`, `pval_lof`, `padj_lof`), alongside probability-scale `wrmse_fn`.
 #' }
 #'
 #' Summary statistics per feature are stored in `obj$gof[[output_name]]` and
-#' sample-by-sample observed vs. predicted values and residuals are stored in
-#' `obj$gof_residuals[[output_name]]` (when `store_residuals = TRUE`), both accessible
-#' via `EZget(obj, type = "gof")` and `EZget(obj, type = "gof_residuals")`.
+#' sample-by-sample diagnostics/residuals are stored in `obj$gof_residuals[[output_name]]`
+#' (when `store_residuals = TRUE`), both accessible via `EZget(obj, type = "gof")` and
+#' `EZget(obj, type = "gof_residuals")`.
 #'
 #' @param obj An `EZbakRData` (or `EZbakRArrowData`) object containing output from
-#' `EstimateFractions()` as well as either `AverageAndRegularize()` or `EZDynamics()`.
-#' @param type Which upstream model class to assess: `"auto"` (default; automatically
-#' selects `"dynamics"` or `"averages"` when unambiguous), `"averages"`, or `"dynamics"`.
+#' `EstimateFractions()` (and optionally `AverageAndRegularize()` or `EZDynamics()`).
+#' @param type Which model class to assess: `"auto"` (default; selects `"dynamics"` or
+#' `"averages"` when present and unambiguous, or `"fractions"` when only `EstimateFractions()`
+#' has been run on a `cB`-backed object), `"fractions"`, `"averages"`, or `"dynamics"`.
 #' @param features Optional feature column vector passed to `EZget()` to select the
 #' upstream model table.
 #' @param parameter Optional parameter name passed to `EZget()` when `type = "averages"`
@@ -56,44 +56,65 @@
 #' @param dynamics_design_factors Optional `dynamics_design_factors` query passed to `EZget()`.
 #' @param scale_factors Optional `scale_factors` query passed to `EZget()` for `"dynamics"`.
 #' @param feature_lengths Optional `feature_lengths` query passed to `EZget()`.
-#' @param repeatID Optional numerical repeat ID of the upstream `"averages"` or `"dynamics"` table.
-#' @param fractions_repeatID Optional numerical repeat ID of the `EstimateFractions()` table to compare against.
+#' @param repeatID Optional numerical repeat ID of the upstream table.
+#' @param fractions_repeatID Optional numerical repeat ID of the `EstimateFractions()` table.
 #' @param exactMatch Logical; passed to `EZget()` (default `TRUE`).
 #' @param fraction_col Optional name of the `fraction_high<muttype>` column in the
 #' `fractions` table to evaluate (auto-detected when a single high-mutation population exists).
-#' @param dispersion_mode How replicate dispersion is accounted for when testing structural
-#' lack-of-fit (`pval_lof`): `"shrunk"` (default; Empirical-Bayes trend-moderated dispersion
-#' across replicates when available), `"global"` (single dataset-wide median replicate
-#' overdispersion factor), or `"measurement_only"` (uses only `EstimateFractions()` profile
-#' uncertainty plus `logit_sd_floor`).
+#' @param min_reads Minimum read count (`n > min_reads`) required for a feature-sample
+#' observation to be included in `AssessGoF()`'s output table (without modifying any
+#' upstream tables). Defaults to `10` when `type = "fractions"` (matching
+#' `AverageAndRegularize()`) and `0` when `type = "averages"` or `"dynamics"`.
+#' @param min_samples Minimum number of labeled samples with `n > min_reads` required
+#' for a feature to be included in `AssessGoF(..., type = "fractions")`. When `NULL`
+#' (default) and `feature_sample_counts = NULL`, requires all labeled samples (matching
+#' `AverageAndRegularize()`).
+#' @param feature_sample_counts Optional data frame with `<feature columns>` and `nsamps`
+#' specifying feature-specific sample-count thresholds for `type = "fractions"`, matching
+#' the `feature_sample_counts` convention of `AverageAndRegularize()`.
+#' @param min_bin_count Minimum expected read count per mutation-count bin before adaptive
+#' tail pooling in `type = "fractions"` (default `5`).
+#' @param sample_padj_cutoff Per-sample BH-adjusted p-value threshold used to count
+#' `n_samples_flagged` in `type = "fractions"` (default `0.05`).
+#' @param sample_tvd_cutoff Per-sample Total Variation Distance threshold used to count
+#' `n_samples_flagged` in `type = "fractions"` (default `0.05`, i.e., 5\% displaced reads).
+#' @param dispersion_mode How baseline biological dispersion is calibrated:
+#' \itemize{
+#'   \item For `type = "averages"` / `"dynamics"`: `"shrunk"` / `"empirical"` (default;
+#'   Empirical-Bayes trend-moderated replicate dispersion), `"global"`, or
+#'   `"measurement_only"` / `"nominal"`.
+#'   \item For `type = "fractions"`: `"shrunk"` / `"empirical"` / `"global"` (default;
+#'   calibrates deviance against each sample's median per-read divergence across features
+#'   so ultra-deep housekeeping genes are not flagged for negligible `pnew` drift), or
+#'   `"measurement_only"` / `"nominal"` (strict nominal Binomial mixture test).
+#' }
 #' @param logit_sd_floor Baseline technical standard deviation floor on the logit fraction
-#' scale (default `0.05`) preventing ultra-high-coverage housekeeping genes from being
-#' flagged for negligible technical jitter.
+#' scale for kinetic/ODE GoF (default `0.05`).
 #' @param include_coverage_gof Logical (default `TRUE`); when assessing an `EZDynamics()`
 #' fit that used `use_coverage = TRUE`, also evaluate steady-state normalized read coverage
 #' goodness-of-fit (`wrmse_log10_cov`, `chisq_cov`, `pval_lof_joint`, `padj_lof_joint`).
 #' @param store_residuals Logical (default `TRUE`); if `TRUE`, stores sample-by-sample
-#' predictions and residuals in `obj$gof_residuals[[output_name]]` (required for
+#' diagnostics and residuals in `obj$gof_residuals[[output_name]]` (required for
 #' `EZFitPlot()` and sample-level `EZGoFPlot()` modes).
 #' @param character_limit Maximum length of automatically generated output table names.
 #' @param overwrite Logical (default `TRUE`); whether to overwrite an existing GoF table
 #' with identical metadata.
 #' @return Input `EZbakRData` object with class `"EZbakRGoF"` prepended, containing
 #' feature-level goodness-of-fit metrics in `obj$gof` and (optionally) sample-level
-#' predictions/residuals in `obj$gof_residuals`.
+#' diagnostics/residuals in `obj$gof_residuals`.
 #' @import data.table
 #' @importFrom magrittr %>%
 #' @examples
 #' simdata <- EZSimulate(30, nreps = 2)
 #' ezbdo <- EZbakRData(simdata$cB, simdata$metadf)
 #' ezbdo <- EstimateFractions(ezbdo)
+#' ezbdo <- AssessGoF(ezbdo, type = "fractions")
 #' ezbdo <- EstimateKinetics(ezbdo)
 #' ezbdo <- AverageAndRegularize(ezbdo)
-#' ezbdo <- AssessGoF(ezbdo)
-#' gof_tbl <- EZget(ezbdo, type = "gof")
+#' ezbdo <- AssessGoF(ezbdo, type = "averages")
 #' @export
 AssessGoF <- function(obj,
-                      type = c("auto", "averages", "dynamics"),
+                      type = c("auto", "fractions", "averages", "dynamics"),
                       features = NULL,
                       parameter = NULL,
                       formula_mean = NULL,
@@ -114,7 +135,13 @@ AssessGoF <- function(obj,
                       fractions_repeatID = NULL,
                       exactMatch = TRUE,
                       fraction_col = NULL,
-                      dispersion_mode = c("shrunk", "global", "measurement_only"),
+                      min_reads = NULL,
+                      min_samples = NULL,
+                      feature_sample_counts = NULL,
+                      min_bin_count = 5,
+                      sample_padj_cutoff = 0.05,
+                      sample_tvd_cutoff = 0.05,
+                      dispersion_mode = c("shrunk", "empirical", "global", "measurement_only", "nominal"),
                       logit_sd_floor = 0.05,
                       include_coverage_gof = TRUE,
                       store_residuals = TRUE,
@@ -132,14 +159,23 @@ AssessGoF <- function(obj,
      !is.finite(logit_sd_floor) || logit_sd_floor < 0){
     stop("`logit_sd_floor` must be a single non-negative finite number!")
   }
+  if(!is.null(min_reads) && (!is.numeric(min_reads) || length(min_reads) != 1L ||
+                             !is.finite(min_reads) || min_reads < 0)){
+    stop("`min_reads` must be a single non-negative finite number!")
+  }
+  if(!is.numeric(min_bin_count) || length(min_bin_count) != 1L ||
+     !is.finite(min_bin_count) || min_bin_count <= 0){
+    stop("`min_bin_count` must be a single positive finite number!")
+  }
 
   if(!is.null(formula_mean)){
     environment(formula_mean) <- NULL
   }
 
-  ### Step 1: Resolve upstream model type ("averages" vs "dynamics")
+  ### Step 1: Resolve upstream model type ("fractions", "averages", or "dynamics")
   has_dyn <- length(obj[["metadata"]][["dynamics"]]) > 0L
   has_avg <- length(obj[["metadata"]][["averages"]]) > 0L
+  has_cb <- !is.null(obj[["cB"]]) || !is.null(obj[["cBds"]]) || methods::is(obj, "EZbakRArrowData")
 
   if(type == "auto"){
     dyn_hint <- !is.null(graph) || !is.null(sub_features) ||
@@ -158,23 +194,72 @@ AssessGoF <- function(obj,
       }else if(avg_hint && !dyn_hint){
         model_type <- "averages"
       }else{
-        stop("Both `averages` and `dynamics` tables exist in `obj`! Please specify `type = 'averages'` or `type = 'dynamics'`.")
+        stop("Both `averages` and `dynamics` tables exist in `obj`! Please specify `type = 'fractions'`, `'averages'`, or `'dynamics'`.")
       }
+    }else if(has_cb && length(obj[["mutation_rates"]]) > 0L){
+      model_type <- "fractions"
     }else{
-      stop("`obj` has neither `averages` nor `dynamics` tables! Run `AverageAndRegularize()` or `EZDynamics()` before `AssessGoF()`.")
+      stop("`obj` has neither `averages`/`dynamics` tables (for kinetic GoF) nor read-level `cB` + `mutation_rates` (for mixture GoF)!")
     }
   }else{
     model_type <- type
-    if(model_type == "averages" && !has_avg){
+    if(model_type == "fractions"){
+      if(!has_cb || length(obj[["mutation_rates"]]) == 0L){
+        stop("`type = 'fractions'` mixture GoF requires read-level mutational counts (`obj$cB` or `EZbakRArrowData`) and `obj$mutation_rates` from `EstimateFractions()`!")
+      }
+    }else if(model_type == "averages" && !has_avg){
       stop("No `averages` tables found in `obj`! Run `AverageAndRegularize()` first.")
-    }
-    if(model_type == "dynamics" && !has_dyn){
+    }else if(model_type == "dynamics" && !has_dyn){
       stop("No `dynamics` tables found in `obj`! Run `EZDynamics()` first.")
     }
   }
 
-  ### Step 2: Locate upstream table and run forward predictions
-  if(model_type == "averages"){
+  ### Step 2: Locate upstream table and compute GoF
+  if(model_type == "fractions"){
+    eff_disp <- if(dispersion_mode %in% c("measurement_only", "nominal")) "nominal" else "empirical"
+    eff_fxn_rep <- repeatID %||% fractions_repeatID
+    always_chk <- !is.null(features) || !is.null(populations) ||
+      !is.null(fraction_design) || !is.null(eff_fxn_rep)
+
+    source_table <- EZget(
+      obj,
+      type = "fractions",
+      features = features,
+      populations = populations,
+      fraction_design = fraction_design,
+      repeatID = eff_fxn_rep,
+      exactMatch = exactMatch,
+      alwaysCheck = always_chk,
+      returnNameOnly = TRUE
+    )
+
+    if(is.null(source_table) || length(source_table) == 0L){
+      stop("No `fractions` table matched your search criteria!")
+    }
+    if(length(source_table) > 1L){
+      stop("More than one `fractions` table matched your search criteria (",
+           paste(source_table, collapse = ", "),
+           ")! Specify `features`, `populations`, `fraction_design`, or `repeatID` to disambiguate.")
+    }
+
+    pred_res <- compute_fractions_gof(
+      obj = obj,
+      source_table = source_table,
+      min_reads = min_reads %||% 10,
+      min_samples = min_samples,
+      feature_sample_counts = feature_sample_counts,
+      min_bin_count = min_bin_count,
+      sample_padj_cutoff = sample_padj_cutoff,
+      sample_tvd_cutoff = sample_tvd_cutoff,
+      dispersion_mode = eff_disp
+    )
+    eff_disp_store <- eff_disp
+
+  }else if(model_type == "averages"){
+    eff_disp <- switch(dispersion_mode,
+                       empirical = "shrunk",
+                       nominal = "measurement_only",
+                       dispersion_mode)
     eff_param <- parameter
     if(is.null(eff_param)){
       avg_metas <- obj[["metadata"]][["averages"]]
@@ -233,11 +318,16 @@ AssessGoF <- function(obj,
       fraction_design = fraction_design,
       fractions_repeatID = fractions_repeatID,
       fraction_col = fraction_col,
-      dispersion_mode = dispersion_mode,
+      dispersion_mode = eff_disp,
       logit_sd_floor = logit_sd_floor
     )
+    eff_disp_store <- eff_disp
 
   }else{
+    eff_disp <- switch(dispersion_mode,
+                       empirical = "shrunk",
+                       nominal = "measurement_only",
+                       dispersion_mode)
     always_chk <- !is.null(features) || !is.null(sub_features) || !is.null(grouping_features) ||
       !is.null(sample_feature) || !is.null(modeled_to_measured) || !is.null(graph) ||
       !is.null(dynamics_design_factors) || !is.null(parameter) || !is.null(repeatID)
@@ -277,14 +367,51 @@ AssessGoF <- function(obj,
       fraction_design = fraction_design,
       fractions_repeatID = fractions_repeatID,
       fraction_col = fraction_col,
-      dispersion_mode = dispersion_mode,
+      dispersion_mode = eff_disp,
       logit_sd_floor = logit_sd_floor,
       include_coverage_gof = include_coverage_gof
+    )
+    eff_disp_store <- eff_disp
+  }
+
+  # Optional explicit min_reads filter on kinetic/ODE GoF tables
+  if(model_type != "fractions" && !is.null(min_reads) && min_reads > 0){
+    st_f <- pred_res$summary_tbl
+    keep_k <- !is.na(st_f$mean_n) & (st_f$mean_n > min_reads)
+    if(!any(keep_k)){
+      stop("No features made it past `min_reads` filtering!")
+    }
+    st_f <- st_f[keep_k, , drop = FALSE]
+    if("pval_rep" %in% colnames(st_f)){
+      ok_r <- !is.na(st_f$pval_rep)
+      st_f$padj_rep <- rep(NA_real_, nrow(st_f))
+      if(any(ok_r)) st_f$padj_rep[ok_r] <- stats::p.adjust(st_f$pval_rep[ok_r], method = "BH")
+    }
+    if("pval_lof" %in% colnames(st_f)){
+      ok_l <- !is.na(st_f$pval_lof)
+      st_f$padj_lof <- rep(NA_real_, nrow(st_f))
+      if(any(ok_l)) st_f$padj_lof[ok_l] <- stats::p.adjust(st_f$pval_lof[ok_l], method = "BH")
+    }
+    if("pval_lof_joint" %in% colnames(st_f)){
+      ok_j <- !is.na(st_f$pval_lof_joint)
+      st_f$padj_lof_joint <- rep(NA_real_, nrow(st_f))
+      if(any(ok_j)) st_f$padj_lof_joint[ok_j] <- stats::p.adjust(st_f$pval_lof_joint[ok_j], method = "BH")
+    }
+    pred_res$summary_tbl <- st_f
+    f_cols_k <- pred_res$metadata$features
+    pred_res$residuals_tbl <- dplyr::semi_join(
+      pred_res$residuals_tbl,
+      st_f[, f_cols_k, drop = FALSE],
+      by = f_cols_k
     )
   }
 
   ### Step 3: Name and store outputs in obj$gof and obj$gof_residuals
-  proposed_name <- paste0("gof_", source_table)
+  proposed_name <- if(model_type == "fractions"){
+    paste0("gof_fxn_", source_table)
+  }else{
+    paste0("gof_", source_table)
+  }
   if(nchar(proposed_name) > character_limit){
     num_gof <- length(obj[["gof"]])
     proposed_name <- paste0("gof", num_gof + 1L)
@@ -300,6 +427,8 @@ AssessGoF <- function(obj,
       source_type = gof_meta$source_type,
       source_table = gof_meta$source_table,
       features = gof_meta$features,
+      populations = gof_meta$populations,
+      fraction_design = gof_meta$fraction_design,
       parameter = gof_meta$parameter,
       kstrat = gof_meta$kstrat,
       overwrite = overwrite
@@ -312,6 +441,8 @@ AssessGoF <- function(obj,
         type = "gof",
         source_type = gof_meta$source_type,
         features = gof_meta$features,
+        populations = gof_meta$populations,
+        fraction_design = gof_meta$fraction_design,
         parameter = gof_meta$parameter,
         kstrat = gof_meta$kstrat,
         formula_mean = gof_meta$formula_mean,
@@ -329,7 +460,7 @@ AssessGoF <- function(obj,
   }
 
   gof_meta$repeatID <- as.numeric(gof_repeatID)
-  gof_meta$dispersion_mode <- dispersion_mode
+  gof_meta$dispersion_mode <- eff_disp_store
   gof_meta$logit_sd_floor <- logit_sd_floor
   gof_meta$store_residuals <- store_residuals
 
@@ -1826,3 +1957,1258 @@ predict_gof_trajectories <- function(obj, gof_name, selected_keys_df, n_grid = 1
 
   dplyr::bind_rows(curve_rows)
 }
+
+
+################################################################################
+# MIXTURE MODEL GOODNESS OF FIT ENGINE (type = "fractions")
+################################################################################
+
+# Fast vectorized pure-data MLE for 2-component mixtures (skips profile CI loops)
+fast_2comp_mle_vec <- function(grp_id, grp_end, n, delta, N_grp = NULL,
+                               eta_min = -25, eta_max = 25){
+  ngroups <- length(grp_end)
+  if(ngroups == 0L){
+    return(list(
+      pi_mle = numeric(0),
+      eta_mle = numeric(0),
+      at_0 = logical(0),
+      at_1 = logical(0)
+    ))
+  }
+  if(is.null(N_grp)) N_grp <- grp_sum_contig(n, grp_end)
+
+  delta_clean <- delta
+  delta_clean[is.nan(delta_clean)] <- 0
+  delta_clean <- pmin(pmax(delta_clean, -300), 300)
+
+  log_n <- log(pmax(n, 1e-300))
+  log_N <- log(pmax(N_grp, 1e-300))
+
+  lse0 <- grp_logsumexp(log_n + delta_clean, grp_id, grp_end)
+  lse1 <- grp_logsumexp(log_n - delta_clean, grp_id, grp_end)
+
+  at_0 <- lse0 <= log_N + 1e-13
+  at_1 <- !at_0 & (lse1 <= log_N + 1e-13)
+
+  eta_mle <- numeric(ngroups)
+  eta_mle[at_0] <- -Inf
+  eta_mle[at_1] <- Inf
+
+  eval_grad <- function(eta_v, sg, se, sn, sdel, sN){
+    theta <- stats::plogis(eta_v)
+    w <- stats::plogis(eta_v[sg] + sdel)
+    nw <- sn * w
+    g1 <- grp_sum_contig(nw, se) - sN * theta
+    info <- sN * theta * (1 - theta) - grp_sum_contig(nw * (1 - w), se)
+    list(g1 = g1, info = info)
+  }
+
+  interior <- which(!(at_0 | at_1))
+  if(length(interior) > 0L){
+    active <- interior
+    act_map <- integer(ngroups)
+    act_map[active] <- seq_along(active)
+    rk0 <- act_map[grp_id] > 0L
+    sg <- act_map[grp_id[rk0]]
+    gsz <- diff(c(0L, grp_end))[active]
+    se <- cumsum(gsz)
+    sn <- n[rk0]
+    sdel <- delta_clean[rk0]
+    sN <- N_grp[active]
+
+    lo_a <- rep(eta_min, length(active))
+    hi_a <- rep(eta_max, length(active))
+    eta_a <- rep(0, length(active))
+
+    g_lo <- eval_grad(lo_a, sg, se, sn, sdel, sN)$g1
+    g_hi <- eval_grad(hi_a, sg, se, sn, sdel, sN)$g1
+    pin_lo <- g_lo <= 0
+    pin_hi <- !pin_lo & (g_hi >= 0)
+    if(any(pin_lo | pin_hi)){
+      if(any(pin_lo)) eta_mle[active[pin_lo]] <- eta_min
+      if(any(pin_hi)) eta_mle[active[pin_hi]] <- eta_max
+      keep <- which(!(pin_lo | pin_hi))
+      if(length(keep) > 0L){
+        remap <- integer(length(active))
+        remap[keep] <- seq_along(keep)
+        rk <- remap[sg] > 0L
+        sg <- remap[sg[rk]]
+        gsz <- gsz[keep]
+        se <- cumsum(gsz)
+        sn <- sn[rk]; sdel <- sdel[rk]; sN <- sN[keep]
+        active <- active[keep]
+        lo_a <- lo_a[keep]; hi_a <- hi_a[keep]; eta_a <- eta_a[keep]
+      }else{
+        active <- integer(0)
+      }
+    }
+
+    if(length(active) > 0L){
+      for(iter in seq_len(25L)){
+        ev <- eval_grad(eta_a, sg, se, sn, sdel, sN)
+        pos <- ev$g1 > 0
+        lo_a[pos] <- pmax(lo_a[pos], eta_a[pos])
+        hi_a[!pos] <- pmin(hi_a[!pos], eta_a[!pos])
+
+        step <- ifelse(ev$info > 1e-12, ev$g1 / ev$info, NA_real_)
+        cand <- eta_a + step
+        bad <- is.na(cand) | cand <= lo_a | cand >= hi_a
+        cand[bad] <- 0.5 * (lo_a[bad] + hi_a[bad])
+
+        d_eta <- abs(cand - eta_a)
+        eta_a <- cand
+        conv <- (d_eta < 1e-9 & abs(ev$g1) < 1e-7) | ((hi_a - lo_a) < 1e-9)
+        if(all(conv)){
+          eta_mle[active] <- eta_a
+          break
+        }
+        if(iter %% 3L == 0L && sum(conv) > 0.25 * length(conv)){
+          done <- which(conv)
+          eta_mle[active[done]] <- eta_a[done]
+          rem <- which(!conv)
+          active <- active[rem]
+          eta_a <- eta_a[rem]; lo_a <- lo_a[rem]; hi_a <- hi_a[rem]
+          sN <- sN[rem]; gsz <- gsz[rem]
+          remap <- integer(length(conv))
+          remap[rem] <- seq_along(rem)
+          rk <- remap[sg] > 0L
+          sg <- remap[sg[rk]]; se <- cumsum(gsz)
+          sn <- sn[rk]; sdel <- sdel[rk]
+        }
+        if(iter == 25L) eta_mle[active] <- eta_a
+      }
+    }
+  }
+
+  pi_mle <- stats::plogis(eta_mle)
+  pi_mle[at_0] <- 0
+  pi_mle[at_1] <- 1
+
+  list(
+    pi_mle = pi_mle,
+    eta_mle = eta_mle,
+    at_0 = at_0,
+    at_1 = at_1
+  )
+}
+
+
+# Vectorized adaptive bin pooling guaranteeing E_pool >= min_bin_count in active bins
+pool_gof_bins_vec <- function(O_mat, E_mat, min_bin_count = 5){
+  nr <- nrow(E_mat)
+  nc <- ncol(E_mat)
+  O_pool <- O_mat
+  E_pool <- E_mat
+  active <- matrix(TRUE, nrow = nr, ncol = nc)
+
+  if(nr == 0L || nc <= 1L){
+    return(list(
+      O_pool = O_pool,
+      E_pool = E_pool,
+      active = active,
+      C_act = rowSums(active)
+    ))
+  }
+
+  # Sweep 1: pool sparse upper tails downward (c -> c - 1)
+  for(c_idx in seq.int(nc, 2L, by = -1L)){
+    merge_down <- active[, c_idx] & (E_pool[, c_idx] < min_bin_count)
+    if(any(merge_down)){
+      E_pool[merge_down, c_idx - 1L] <- E_pool[merge_down, c_idx - 1L] + E_pool[merge_down, c_idx]
+      O_pool[merge_down, c_idx - 1L] <- O_pool[merge_down, c_idx - 1L] + O_pool[merge_down, c_idx]
+      E_pool[merge_down, c_idx] <- 0
+      O_pool[merge_down, c_idx] <- 0
+      active[merge_down, c_idx] <- FALSE
+    }
+  }
+
+  # Sweep 2: pool sparse lower bins upward into the next surviving active bin > c_idx
+  for(c_idx in seq_len(nc - 1L)){
+    need_up <- which(active[, c_idx] & (E_pool[, c_idx] < min_bin_count))
+    if(length(need_up) > 0L){
+      act_right <- active[need_up, (c_idx + 1L):nc, drop = FALSE]
+      has_right <- rowSums(act_right) > 0L
+      if(any(has_right)){
+        rows_u <- need_up[has_right]
+        ar_u <- act_right[has_right, , drop = FALSE]
+        # First TRUE column in (c_idx + 1):nc for each row
+        next_col <- c_idx + max.col(ar_u, ties.method = "first")
+        lin_src <- cbind(rows_u, rep.int(c_idx, length(rows_u)))
+        lin_dst <- cbind(rows_u, next_col)
+        E_pool[lin_dst] <- E_pool[lin_dst] + E_pool[lin_src]
+        O_pool[lin_dst] <- O_pool[lin_dst] + O_pool[lin_src]
+        E_pool[lin_src] <- 0
+        O_pool[lin_src] <- 0
+        active[lin_src] <- FALSE
+      }
+    }
+  }
+
+  list(
+    O_pool = O_pool,
+    E_pool = E_pool,
+    active = active,
+    C_act = rowSums(active)
+  )
+}
+
+
+# Extract exact conditional Binomial read counts (sample, features, mutcols, basecols, n)
+# from either in-memory EZbakRData$cB or on-disk EZbakRArrowData
+extract_cb_for_gof <- function(obj, samples_keep, samples_nolabel,
+                               feat_cols, mutcols, basecols,
+                               fxn_meta, features_keep_df = NULL){
+  sample <- n <- NULL
+  `.` <- list
+
+  remove_features <- fxn_meta[["remove_features"]] %||% c("NA", "__no_feature")
+  filter_cols <- fxn_meta[["filter_cols"]] %||% feat_cols
+  if(length(filter_cols) == 1L && identical(filter_cols, "all")){
+    filter_cols <- feat_cols
+  }
+  filter_cols <- intersect(filter_cols, feat_cols)
+  remove_mf <- isTRUE(fxn_meta[["remove_multi_features"]])
+  split_mf <- isTRUE(fxn_meta[["split_multi_features"]])
+  mf_cols <- fxn_meta[["multi_feature_cols"]]
+  mf_sep <- fxn_meta[["multi_feature_sep"]] %||% "+"
+  mf_cols_rm <- if(is.null(mf_cols) || (length(mf_cols) == 1L && identical(mf_cols, "all"))){
+    feat_cols
+  }else{
+    intersect(mf_cols, feat_cols)
+  }
+
+  cols_grp <- unique(c("sample", feat_cols, mutcols, basecols))
+  pold_nolabel <- list()
+  nl_keep <- intersect(samples_keep, samples_nolabel)
+
+  keep_dt <- NULL
+  if(!is.null(features_keep_df)){
+    keep_dt <- data.table::as.data.table(dplyr::distinct(features_keep_df[, feat_cols, drop = FALSE]))
+    for(fc in feat_cols) keep_dt[[fc]] <- as.character(keep_dt[[fc]])
+    data.table::setkeyv(keep_dt, feat_cols)
+  }
+
+  filter_and_split_dt <- function(dt_in){
+    dt_w <- data.table::as.data.table(dt_in)
+    if(nrow(dt_w) == 0L) return(dt_w)
+    if(length(filter_cols) > 0L && length(remove_features) > 0L){
+      bad_row <- Reduce(`|`, lapply(dt_w[, filter_cols, with = FALSE], `%in%`, remove_features))
+      dt_w <- dt_w[!bad_row]
+    }
+    if(nrow(dt_w) == 0L) return(dt_w)
+    if(remove_mf && length(mf_cols_rm) > 0L){
+      dt_w <- remove_multi_feature_rows(dt_w, mf_cols_rm, sep = mf_sep)
+    }
+    if(nrow(dt_w) == 0L) return(dt_w)
+    if(split_mf && !is.null(mf_cols) && length(mf_cols) > 0L){
+      dt_w <- data.table::as.data.table(split_features(dt_w, mf_cols, cols_grp, sep = mf_sep))
+    }
+    for(fc in feat_cols) dt_w[[fc]] <- as.character(dt_w[[fc]])
+    if(!is.null(keep_dt)){
+      dt_w <- dt_w[keep_dt, on = feat_cols, nomatch = NULL]
+    }
+    dt_w
+  }
+
+  if(methods::is(obj, "EZbakRArrowData")){
+    ds <- get_arrow_ds(obj)
+    sel_cols <- unique(c(cols_grp, "n"))
+    parts <- vector("list", length(samples_keep))
+
+    for(si in seq_along(samples_keep)){
+      s_cur <- samples_keep[si]
+      s_raw <- ds %>%
+        dplyr::filter(sample == s_cur) %>%
+        dplyr::select(dplyr::all_of(sel_cols)) %>%
+        dplyr::group_by(dplyr::across(dplyr::all_of(cols_grp))) %>%
+        dplyr::summarise(n = sum(n), .groups = "drop") %>%
+        dplyr::collect() %>%
+        dplyr::mutate(
+          n = as.numeric(n),
+          dplyr::across(dplyr::all_of(unique(c(mutcols, basecols))), as.numeric)
+        )
+
+      if(s_cur %in% nl_keep && nrow(s_raw) > 0L){
+        rates_nl <- vapply(seq_along(mutcols), function(j){
+          num_j <- sum(as.numeric(s_raw[[mutcols[j]]]) * s_raw$n)
+          den_j <- max(sum(as.numeric(s_raw[[basecols[j]]]) * s_raw$n), 1)
+          pmin(pmax(num_j / den_j, 1e-6), 0.25)
+        }, numeric(1))
+        names(rates_nl) <- mutcols
+        pold_nolabel[[s_cur]] <- rates_nl
+      }
+
+      parts[[si]] <- filter_and_split_dt(s_raw)
+    }
+
+    cb_dt <- data.table::rbindlist(parts, use.names = TRUE, fill = TRUE)
+  }else{
+    cB_raw <- data.table::as.data.table(obj[["cB"]])
+    cB_sub <- cB_raw[sample %in% samples_keep, .(n = as.numeric(sum(n))), by = cols_grp]
+
+    for(s_cur in nl_keep){
+      s_rows <- cB_sub[sample == s_cur]
+      if(nrow(s_rows) > 0L){
+        rates_nl <- vapply(seq_along(mutcols), function(j){
+          num_j <- sum(as.numeric(s_rows[[mutcols[j]]]) * s_rows$n)
+          den_j <- max(sum(as.numeric(s_rows[[basecols[j]]]) * s_rows$n), 1)
+          pmin(pmax(num_j / den_j, 1e-6), 0.25)
+        }, numeric(1))
+        names(rates_nl) <- mutcols
+        pold_nolabel[[s_cur]] <- rates_nl
+      }
+    }
+
+    cb_dt <- filter_and_split_dt(cB_sub)
+  }
+
+  list(
+    cb_dt = cb_dt,
+    pold_nolabel = pold_nolabel
+  )
+}
+
+
+# Evaluate mixture-model goodness of fit for EstimateFractions() output
+compute_fractions_gof <- function(obj,
+                                  source_table,
+                                  min_reads = 10,
+                                  min_samples = NULL,
+                                  feature_sample_counts = NULL,
+                                  min_bin_count = 5,
+                                  sample_padj_cutoff = 0.05,
+                                  sample_tvd_cutoff = 0.05,
+                                  dispersion_mode = "empirical"){
+  sample <- n <- nsamps <- tvd <- kl_div <- NULL
+  failure_mode <- is_nolabel <- cnt <- sum_cnt <- NULL
+  .raw_mode <- .g2_s <- .df_s <- NULL
+
+  fxn_tbl <- as.data.frame(obj[["fractions"]][[source_table]])
+  fxn_meta <- obj[["metadata"]][["fractions"]][[source_table]]
+  feat_cols <- fxn_meta[["features"]]
+  fraction_design <- as.data.frame(fxn_meta[["fraction_design"]])
+  mutrate_design <- fraction_design[as.logical(fraction_design$present),
+                                    setdiff(colnames(fraction_design), "present"),
+                                    drop = FALSE]
+
+  mutcols <- colnames(mutrate_design)
+  basecols <- paste0("n", substr(mutcols, 1L, 1L))
+  K <- nrow(mutrate_design)
+  J <- ncol(mutrate_design)
+  md_mat <- as.matrix(mutrate_design)
+
+  # Identify strategy ("standard", "hierarchical", or "general")
+  hier_cand_name <- paste0(paste(feat_cols, collapse = "_"), "_", mutcols[1L])
+  if(J == 1L && K == 2L){
+    strat_meta <- fxn_meta[["strategy"]]
+    if(identical(strat_meta, "hierarchical") ||
+       (is.null(strat_meta) && (hier_cand_name %in% names(obj[["mutation_rates"]])))){
+      eff_strategy <- "hierarchical"
+    }else{
+      eff_strategy <- "standard"
+    }
+  }else{
+    eff_strategy <- "general"
+  }
+  hier_table_name <- fxn_meta[["hier_mutrate_table"]] %||% hier_cand_name
+
+  # Identify labeled vs -label samples from metadf
+  metadf <- as.data.frame(obj[["metadf"]])
+  metadf$sample <- as.character(metadf$sample)
+  tl_cols_possible <- if(J == 1L){
+    c("tl", "tpulse")
+  }else{
+    c(paste0("tl_", mutcols), paste0("tpulse_", mutcols), "tl", "tpulse")
+  }
+  tl_cols <- intersect(tl_cols_possible, colnames(metadf))
+  if(length(tl_cols) == 0L){
+    stop("Could not find label-time columns (`tl` / `tpulse`) in `obj$metadf`!")
+  }
+
+  tl_mat <- as.matrix(metadf[, tl_cols, drop = FALSE])
+  storage.mode(tl_mat) <- "double"
+  is_nl_meta <- apply(tl_mat == 0, 1L, all)
+  samples_nolabel <- metadf$sample[is_nl_meta]
+  samples_labeled <- metadf$sample[!is_nl_meta]
+
+  tl_disp_vec <- if("tl" %in% colnames(metadf)){
+    as.numeric(metadf$tl)
+  }else if("tpulse" %in% colnames(metadf)){
+    as.numeric(metadf$tpulse)
+  }else{
+    apply(tl_mat, 1L, max)
+  }
+  names(tl_disp_vec) <- metadf$sample
+
+  cond_cols <- setdiff(colnames(metadf), c("sample", "tl"))
+
+  # Coerce feature columns to character on our local copy (never touching obj$fractions)
+  fxn_tbl$sample <- as.character(fxn_tbl$sample)
+  for(fc in feat_cols) fxn_tbl[[fc]] <- as.character(fxn_tbl[[fc]])
+
+  fxn_labeled <- fxn_tbl[fxn_tbl$sample %in% samples_labeled, , drop = FALSE]
+  num_labeled_samps <- length(unique(fxn_labeled$sample))
+  if(num_labeled_samps == 0L){
+    stop("No labeled samples found in the selected `fractions` table!")
+  }
+
+  ### Step 1: Filter features strictly for AssessGoF output (mirrors AverageAndRegularize)
+  cnt_labeled <- fxn_labeled %>%
+    dplyr::filter(n > min_reads) %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(feat_cols))) %>%
+    dplyr::summarise(cnt = dplyr::n(), .groups = "drop")
+
+  if(!is.null(feature_sample_counts)){
+    if(!is.data.frame(feature_sample_counts) || !("nsamps" %in% colnames(feature_sample_counts))){
+      stop("`feature_sample_counts` must be a data frame containing `<feature columns>` and `nsamps`!")
+    }
+    fsc_df <- as.data.frame(feature_sample_counts)
+    filter_features <- setdiff(colnames(fsc_df), "nsamps")
+    if(length(filter_features) == 0L || !all(filter_features %in% feat_cols)){
+      stop("`feature_sample_counts` feature columns must be a subset of `features` (",
+           paste(feat_cols, collapse = ", "), ")!")
+    }
+    for(fc in filter_features) fsc_df[[fc]] <- as.character(fsc_df[[fc]])
+
+    keep_groups <- cnt_labeled %>%
+      dplyr::inner_join(fsc_df, by = filter_features) %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(c(filter_features, "nsamps")))) %>%
+      dplyr::summarise(sum_cnt = sum(cnt), .groups = "drop") %>%
+      dplyr::filter(sum_cnt >= nsamps) %>%
+      dplyr::select(dplyr::all_of(filter_features))
+
+    distinct_feats <- dplyr::distinct(fxn_labeled[, feat_cols, drop = FALSE])
+    features_to_keep <- dplyr::inner_join(distinct_feats, keep_groups, by = filter_features)
+  }else{
+    req_samps <- if(is.null(min_samples)){
+      num_labeled_samps
+    }else{
+      as.integer(min_samples)
+    }
+    if(length(req_samps) != 1L || is.na(req_samps) || req_samps < 1L){
+      stop("`min_samples` must be a positive integer!")
+    }
+    features_to_keep <- cnt_labeled %>%
+      dplyr::filter(cnt >= req_samps) %>%
+      dplyr::select(dplyr::all_of(feat_cols))
+  }
+
+  if(nrow(features_to_keep) == 0L){
+    stop("No features made it past read-count filtering (`min_reads = ", min_reads, "`) in `AssessGoF()`!")
+  }
+
+  fxn_eval <- fxn_tbl %>%
+    dplyr::inner_join(features_to_keep, by = feat_cols) %>%
+    dplyr::filter(n > min_reads)
+
+  samples_eval <- unique(fxn_eval$sample)
+
+  ### Step 2: Extract read-level conditional Binomial counts for surviving features
+  ext <- extract_cb_for_gof(
+    obj = obj,
+    samples_keep = samples_eval,
+    samples_nolabel = samples_nolabel,
+    feat_cols = feat_cols,
+    mutcols = mutcols,
+    basecols = basecols,
+    fxn_meta = fxn_meta,
+    features_keep_df = features_to_keep
+  )
+  cb_dt <- ext$cb_dt
+  pold_nolabel <- ext$pold_nolabel
+
+  if(nrow(cb_dt) == 0L){
+    stop("No matching read-level rows found in `cB` for the selected `fractions` table!")
+  }
+
+  # Helper for 1D mechanistic failure-mode tagging
+  classify_1d_failure <- function(P_obs, P_exp){
+    nr <- nrow(P_obs)
+    if(nr == 0L) return(character(0))
+    diff_p <- P_obs - P_exp
+    exc_inter <- pmax(diff_p[, 2L], 0) + pmax(diff_p[, 3L], 0)
+    exc_tail <- rowSums(pmax(diff_p[, 5:7, drop = FALSE], 0))
+    m_mid <- c(0, 1, 2, 3, 4, 5, 6.5)
+    mu_obs <- as.vector(P_obs %*% m_mid)
+    mu_exp <- as.vector(P_exp %*% m_mid)
+    var_obs <- pmax(as.vector(P_obs %*% (m_mid * m_mid)) - mu_obs * mu_obs, 0)
+    var_exp <- pmax(as.vector(P_exp %*% (m_mid * m_mid)) - mu_exp * mu_exp, 0)
+
+    out_mode <- rep("intermediate_spike", nr)
+    is_overdisp <- (diff_p[, 1L] > 0.02 & exc_tail > 0.01) | (var_obs > 1.25 * var_exp & diff_p[, 1L] > 0.005)
+    out_mode[is_overdisp] <- "overdispersed_muts"
+    is_tail <- (exc_tail >= exc_inter) & (exc_tail > 0.02)
+    out_mode[is_tail] <- "high_mut_tail"
+    out_mode
+  }
+
+  ### Step 3: Evaluate sample-by-sample exact conditional Binomial mixture GoF
+  sample_res_list <- vector("list", length(samples_eval))
+  disp_records <- vector("list", length(samples_eval))
+
+  # Precompute population column names for general mixture
+  if(eff_strategy == "general"){
+    pop_labels <- vapply(seq_len(K), function(k_i){
+      pv <- ifelse(as.logical(md_mat[k_i, ]), "high", "low")
+      paste(paste0(pv, mutcols), collapse = "_")
+    }, character(1))
+    frac_cols_gen <- paste0("fraction_", pop_labels)
+    low_rows_gen <- which(rowSums(md_mat) == 0)
+    has_all_low <- length(low_rows_gen) > 0L
+    low_idx_gen <- if(has_all_low) low_rows_gen[1L] else NA_integer_
+  }else{
+    frac_col_1d <- paste0("fraction_high", mutcols[1L])
+  }
+
+  for(si in seq_along(samples_eval)){
+    s_cur <- samples_eval[si]
+    s_is_nl <- s_cur %in% samples_nolabel
+
+    s_dt <- cb_dt[sample == s_cur]
+    if(nrow(s_dt) == 0L) next
+
+    fxn_s_dt <- data.table::as.data.table(fxn_eval[fxn_eval$sample == s_cur, , drop = FALSE])
+    data.table::setkeyv(fxn_s_dt, feat_cols)
+    s_dt <- s_dt[fxn_s_dt[, feat_cols, with = FALSE], on = feat_cols, nomatch = NULL]
+    if(nrow(s_dt) == 0L) next
+
+    data.table::setorderv(s_dt, feat_cols)
+    grp_id <- data.table::rleidv(s_dt, cols = feat_cols)
+    n_rows <- nrow(s_dt)
+    grp_end <- if(n_rows > 1L){
+      c(which(grp_id[-1L] != grp_id[-n_rows]), n_rows)
+    }else{
+      1L
+    }
+    ng <- length(grp_end)
+    n_vec <- as.numeric(s_dt[["n"]])
+    N_grp <- grp_sum_contig(n_vec, grp_end)
+
+    grp_keys_dt <- s_dt[grp_end, feat_cols, with = FALSE]
+    fxn_matched <- fxn_s_dt[grp_keys_dt, on = feat_cols]
+
+    if(eff_strategy %in% c("standard", "hierarchical")){
+      # 1D 7-bin exact conditional Binomial mixture (bins: 0, 1, 2, 3, 4, 5, 6+)
+      C_bins <- 7L
+      m_vec <- as.integer(round(as.numeric(s_dt[[mutcols[1L]]])))
+      b_vec <- as.integer(round(as.numeric(s_dt[[basecols[1L]]])))
+      bin_idx <- pmin(pmax(m_vec, 0L), 6L) + 1L
+
+      O_mat <- matrix(0, nrow = ng, ncol = C_bins)
+      for(c_i in seq_len(C_bins)){
+        O_mat[, c_i] <- grp_sum_contig(ifelse(bin_idx == c_i, n_vec, 0), grp_end)
+      }
+
+      est_fn <- as.numeric(fxn_matched[[frac_col_1d]])
+      max_b <- max(b_vec, 0L)
+      b_grid <- 0:max_b
+
+      if(s_is_nl){
+        pold_s <- pold_nolabel[[s_cur]][1L] %||% 1e-4
+        pold_s <- pmin(pmax(pold_s, 1e-7), 1 - 1e-7)
+        P_old_lut <- matrix(0, nrow = max_b + 1L, ncol = C_bins)
+        for(km in 0:5) P_old_lut[, km + 1L] <- stats::dbinom(km, b_grid, pold_s)
+        P_old_lut[, 7L] <- stats::pbinom(5L, b_grid, pold_s, lower.tail = FALSE)
+
+        E_mat <- matrix(0, nrow = ng, ncol = C_bins)
+        b_idx1 <- b_vec + 1L
+        for(c_i in seq_len(C_bins)){
+          E_mat[, c_i] <- grp_sum_contig(n_vec * P_old_lut[b_idx1, c_i], grp_end)
+        }
+        mle_fn <- rep(0, ng)
+        p_eff <- rep(0, ng)
+        at_upper_bound <- rep(FALSE, ng)
+
+      }else if(eff_strategy == "standard"){
+        mr_tbl <- as.data.frame(obj[["mutation_rates"]][[mutcols[1L]]])
+        mr_row <- mr_tbl[as.character(mr_tbl$sample) == s_cur, , drop = FALSE]
+        pnew_s <- pmin(pmax(as.numeric(mr_row$pnew[1L]), 1e-7), 1 - 1e-7)
+        pold_s <- pmin(pmax(as.numeric(mr_row$pold[1L]), 1e-7), 1 - 1e-7)
+
+        ll_new <- stats::dbinom(m_vec, b_vec, pnew_s, log = TRUE)
+        ll_old <- stats::dbinom(m_vec, b_vec, pold_s, log = TRUE)
+        mle_res <- fast_2comp_mle_vec(grp_id, grp_end, n_vec, ll_new - ll_old, N_grp)
+        mle_fn <- mle_res$pi_mle
+        at_upper_bound <- mle_res$at_1 | (mle_fn >= 1 - 1e-6)
+
+        P_new_lut <- matrix(0, nrow = max_b + 1L, ncol = C_bins)
+        P_old_lut <- matrix(0, nrow = max_b + 1L, ncol = C_bins)
+        for(km in 0:5){
+          P_new_lut[, km + 1L] <- stats::dbinom(km, b_grid, pnew_s)
+          P_old_lut[, km + 1L] <- stats::dbinom(km, b_grid, pold_s)
+        }
+        P_new_lut[, 7L] <- stats::pbinom(5L, b_grid, pnew_s, lower.tail = FALSE)
+        P_old_lut[, 7L] <- stats::pbinom(5L, b_grid, pold_s, lower.tail = FALSE)
+
+        E_new <- matrix(0, nrow = ng, ncol = C_bins)
+        E_old <- matrix(0, nrow = ng, ncol = C_bins)
+        b_idx1 <- b_vec + 1L
+        for(c_i in seq_len(C_bins)){
+          E_new[, c_i] <- grp_sum_contig(n_vec * P_new_lut[b_idx1, c_i], grp_end)
+          E_old[, c_i] <- grp_sum_contig(n_vec * P_old_lut[b_idx1, c_i], grp_end)
+        }
+        E_mat <- mle_fn * E_new + (1 - mle_fn) * E_old
+        p_eff <- rep(1, ng)
+
+      }else{
+        # Hierarchical feature-specific pnew 2-component model
+        hmr <- data.table::as.data.table(obj[["mutation_rates"]][[hier_table_name]])
+        hmr$sample <- as.character(hmr$sample)
+        for(fc in feat_cols) hmr[[fc]] <- as.character(hmr[[fc]])
+        hmr_s <- hmr[sample == s_cur]
+        data.table::setkeyv(hmr_s, feat_cols)
+        hmr_matched <- hmr_s[grp_keys_dt, on = feat_cols]
+
+        pnew_g <- pmin(pmax(as.numeric(hmr_matched$pnew), 1e-7), 1 - 1e-7)
+        pold_s <- pmin(pmax(as.numeric(hmr_matched$pold[1L]), 1e-7), 1 - 1e-7)
+        pnew_r <- pnew_g[grp_id]
+
+        ll_new <- stats::dbinom(m_vec, b_vec, pnew_r, log = TRUE)
+        ll_old <- stats::dbinom(m_vec, b_vec, pold_s, log = TRUE)
+        mle_res <- fast_2comp_mle_vec(grp_id, grp_end, n_vec, ll_new - ll_old, N_grp)
+        mle_fn <- mle_res$pi_mle
+        at_upper_bound <- mle_res$at_1 | (mle_fn >= 1 - 1e-6)
+
+        P_old_lut <- matrix(0, nrow = max_b + 1L, ncol = C_bins)
+        for(km in 0:5) P_old_lut[, km + 1L] <- stats::dbinom(km, b_grid, pold_s)
+        P_old_lut[, 7L] <- stats::pbinom(5L, b_grid, pold_s, lower.tail = FALSE)
+
+        E_new <- matrix(0, nrow = ng, ncol = C_bins)
+        E_old <- matrix(0, nrow = ng, ncol = C_bins)
+        b_idx1 <- b_vec + 1L
+        for(km in 0:5){
+          E_new[, km + 1L] <- grp_sum_contig(n_vec * stats::dbinom(km, b_vec, pnew_r), grp_end)
+          E_old[, km + 1L] <- grp_sum_contig(n_vec * P_old_lut[b_idx1, km + 1L], grp_end)
+        }
+        E_new[, 7L] <- grp_sum_contig(n_vec * stats::pbinom(5L, b_vec, pnew_r, lower.tail = FALSE), grp_end)
+        E_old[, 7L] <- grp_sum_contig(n_vec * P_old_lut[b_idx1, 7L], grp_end)
+
+        E_mat <- mle_fn * E_new + (1 - mle_fn) * E_old
+
+        # Effective parameter count p_eff = 1 + I_22 / (I_22 + tau_2) in [1, 2]
+        hp_df <- fxn_meta[["hier_prior"]]
+        prior_sd_s <- NA_real_
+        if(!is.null(hp_df) && is.data.frame(hp_df) && "pnew_prior_sd" %in% colnames(hp_df)){
+          idx_hp <- which(as.character(hp_df$sample) == s_cur)
+          if(length(idx_hp) > 0L) prior_sd_s <- as.numeric(hp_df$pnew_prior_sd[idx_hp[1L]])
+        }
+        if(!is.finite(prior_sd_s) || prior_sd_s <= 0){
+          lp_all <- stats::qlogis(pmin(pmax(as.numeric(hmr_s$pnew), 1e-5), 1 - 1e-5))
+          prior_sd_s <- if(length(lp_all) >= 2L) pmin(pmax(stats::sd(lp_all), 0.05), 0.5) else 0.15
+        }
+        tau_2 <- 1 / (prior_sd_s * prior_sd_s)
+
+        eta_clamped <- stats::qlogis(pmin(pmax(mle_fn, 1e-12), 1 - 1e-12))
+        w_r <- stats::plogis(eta_clamped[grp_id] + pmin(pmax(ll_new - ll_old, -300), 300))
+        w_r[mle_fn[grp_id] <= 0] <- 0
+        w_r[mle_fn[grp_id] >= 1] <- 1
+        d1_r <- m_vec - b_vec * pnew_r
+        info_22 <- pmax(
+          grp_sum_contig(n_vec * (w_r * b_vec * pnew_r * (1 - pnew_r) - w_r * (1 - w_r) * d1_r * d1_r), grp_end),
+          0
+        )
+        p_eff <- 1 + (info_22 / (info_22 + tau_2))
+      }
+
+      raw_diag_mode <- if(s_is_nl) rep("nolabel_anomaly", ng) else classify_1d_failure(O_mat / N_grp, E_mat / N_grp)
+
+    }else{
+      # General K-component / multi-channel exact conditional Binomial mixture
+      B1 <- if(J == 1L) 7L else if(J == 2L) 4L else if(J == 3L) 3L else 2L
+      cap_m <- B1 - 1L
+      C_bins <- as.integer(B1^J)
+
+      m_list <- vector("list", J)
+      b_list <- vector("list", J)
+      cell_idx <- rep(1L, n_rows)
+      stride <- 1L
+      for(j in seq_len(J)){
+        mj <- as.integer(round(as.numeric(s_dt[[mutcols[j]]])))
+        bj <- as.integer(round(as.numeric(s_dt[[basecols[j]]])))
+        m_list[[j]] <- mj
+        b_list[[j]] <- bj
+        cell_idx <- cell_idx + pmin(pmax(mj, 0L), cap_m) * stride
+        stride <- stride * B1
+      }
+
+      O_mat <- matrix(0, nrow = ng, ncol = C_bins)
+      for(c_i in seq_len(C_bins)){
+        O_mat[, c_i] <- grp_sum_contig(ifelse(cell_idx == c_i, n_vec, 0), grp_end)
+      }
+
+      frac_est_mat <- as.matrix(fxn_matched[, frac_cols_gen, with = FALSE])
+      storage.mode(frac_est_mat) <- "double"
+
+      if(s_is_nl){
+        pold_s <- pold_nolabel[[s_cur]]
+        if(is.null(pold_s)){
+          pold_s <- rep(1e-4, J)
+          names(pold_s) <- mutcols
+        }
+        pold_s <- pmin(pmax(pold_s, 1e-7), 1 - 1e-7)
+        pnew_s <- pold_s
+
+        pi_mle <- matrix(0, nrow = ng, ncol = K)
+        if(has_all_low){
+          pi_mle[, low_idx_gen] <- 1
+        }else{
+          pi_mle[, 1L] <- 1
+        }
+        p_eff <- rep(0, ng)
+        est_fn <- rep(0, ng)
+        mle_fn <- rep(0, ng)
+        at_upper_bound <- rep(FALSE, ng)
+      }else{
+        pnew_s <- numeric(J)
+        pold_s <- numeric(J)
+        for(j in seq_len(J)){
+          nm_j <- mutcols[j]
+          mr_j <- as.data.frame(obj[["mutation_rates"]][[nm_j]])
+          mr_row <- mr_j[as.character(mr_j$sample) == s_cur, , drop = FALSE]
+          if(nrow(mr_row) > 0L && is.finite(mr_row$pnew[1L]) && is.finite(mr_row$pold[1L])){
+            pnew_s[j] <- pmin(pmax(as.numeric(mr_row$pnew[1L]), 1e-7), 1 - 1e-7)
+            pold_s[j] <- pmin(pmax(as.numeric(mr_row$pold[1L]), 1e-7), 1 - 1e-7)
+          }else{
+            emp_r <- sum(m_list[[j]] * n_vec) / max(sum(b_list[[j]] * n_vec), 1)
+            pold_s[j] <- pmin(pmax(emp_r, 1e-6), 0.25)
+            pnew_s[j] <- pold_s[j]
+          }
+        }
+
+        # Exact conditional Binomial log-likelihood matrix (n_rows x K)
+        L_mat <- matrix(0, nrow = n_rows, ncol = K)
+        for(j in seq_len(J)){
+          ll_hi <- stats::dbinom(m_list[[j]], b_list[[j]], pnew_s[j], log = TRUE)
+          ll_lo <- stats::dbinom(m_list[[j]], b_list[[j]], pold_s[j], log = TRUE)
+          for(k_i in seq_len(K)){
+            L_mat[, k_i] <- L_mat[, k_i] + if(as.logical(md_mat[k_i, j])) ll_hi else ll_lo
+          }
+        }
+
+        # 12 vectorized EM updates warm-started from EstimateFractions weights
+        pi_mle <- pmax(frac_est_mat, 1e-6)
+        pi_mle <- pi_mle / rowSums(pi_mle)
+        for(em_it in seq_len(12L)){
+          log_pi <- log(pmax(pi_mle, 1e-300))
+          Z <- log_pi[grp_id, , drop = FALSE] + L_mat
+          z_mx <- do.call(pmax, unname(split(Z, col(Z))))
+          z_mx_s <- ifelse(is.finite(z_mx), z_mx, 0)
+          exp_Z <- exp(Z - z_mx_s)
+          sum_ez <- rowSums(exp_Z)
+          resp <- exp_Z / pmax(sum_ez, 1e-300)
+          for(k_i in seq_len(K)){
+            pi_mle[, k_i] <- grp_sum_contig(n_vec * resp[, k_i], grp_end) / N_grp
+          }
+          pi_mle <- pmax(pi_mle, 0)
+          pi_mle <- pi_mle / rowSums(pi_mle)
+        }
+
+        p_eff <- pmax(rowSums(pi_mle > 1e-4) - 1, 0)
+        if(has_all_low){
+          est_fn <- 1 - frac_est_mat[, low_idx_gen]
+          mle_fn <- 1 - pi_mle[, low_idx_gen]
+        }else{
+          est_fn <- frac_est_mat[, 1L]
+          mle_fn <- pi_mle[, 1L]
+        }
+        at_upper_bound <- rep(FALSE, ng)
+      }
+
+      # Lookup tables per channel j: P_hi_list[[j]] and P_lo_list[[j]] of size (max_bj + 1) x B1
+      P_hi_list <- vector("list", J)
+      P_lo_list <- vector("list", J)
+      for(j in seq_len(J)){
+        max_bj <- max(b_list[[j]], 0L)
+        bg_j <- 0:max_bj
+        Phi <- matrix(0, nrow = max_bj + 1L, ncol = B1)
+        Plo <- matrix(0, nrow = max_bj + 1L, ncol = B1)
+        for(km in 0:(cap_m - 1L)){
+          Phi[, km + 1L] <- stats::dbinom(km, bg_j, pnew_s[j])
+          Plo[, km + 1L] <- stats::dbinom(km, bg_j, pold_s[j])
+        }
+        Phi[, B1] <- stats::pbinom(cap_m - 1L, bg_j, pnew_s[j], lower.tail = FALSE)
+        Plo[, B1] <- stats::pbinom(cap_m - 1L, bg_j, pold_s[j], lower.tail = FALSE)
+        P_hi_list[[j]] <- Phi
+        P_lo_list[[j]] <- Plo
+      }
+
+      # Multi-index grid across C_bins = B1^J
+      grid_args <- replicate(J, seq_len(B1), simplify = FALSE)
+      cell_grid <- as.matrix(do.call(expand.grid, grid_args))
+
+      E_mat <- matrix(0, nrow = ng, ncol = C_bins)
+      for(k_i in seq_len(K)){
+        # Skip strictly inactive component across all features (e.g., -label controls)
+        if(all(pi_mle[, k_i] == 0)) next
+        E_k <- matrix(0, nrow = ng, ncol = C_bins)
+        for(c_i in seq_len(C_bins)){
+          prob_r <- rep(1, n_rows)
+          for(j in seq_len(J)){
+            lut_kj <- if(as.logical(md_mat[k_i, j])) P_hi_list[[j]] else P_lo_list[[j]]
+            prob_r <- prob_r * lut_kj[b_list[[j]] + 1L, cell_grid[c_i, j]]
+          }
+          E_k[, c_i] <- grp_sum_contig(n_vec * prob_r, grp_end)
+        }
+        E_mat <- E_mat + pi_mle[, k_i] * E_k
+      }
+
+      raw_diag_mode <- rep(if(s_is_nl) "nolabel_anomaly" else "multilabel_mismatch", ng)
+    }
+
+    ### Distributional effect sizes (unpooled, depth-invariant)
+    P_obs <- O_mat / N_grp
+    P_exp <- E_mat / N_grp
+    tvd_vec <- 0.5 * rowSums(abs(P_obs - P_exp))
+    ratio_oe <- ifelse(O_mat > 0, O_mat / pmax(E_mat, 1e-300), 1)
+    kl_vec <- pmax(rowSums(ifelse(O_mat > 0, P_obs * log(ratio_oe), 0)), 0)
+
+    ### Adaptive bin pooling and likelihood-ratio deviance G^2
+    pooled <- pool_gof_bins_vec(O_mat, E_mat, min_bin_count = min_bin_count)
+    O_pool <- pooled$O_pool
+    E_pool <- pooled$E_pool
+    act_bins <- pooled$active
+    C_act <- pooled$C_act
+
+    term_g2 <- ifelse(act_bins & (O_pool > 0),
+                      2 * O_pool * log(O_pool / pmax(E_pool, 1e-300)),
+                      0)
+    G2_nom <- pmax(rowSums(term_g2), 0)
+
+    df_vec <- pmax(C_act - 1 - p_eff, 0)
+    # Rescue active upper-boundary pinning when 2 pooled bins remain (0 vs 1+)
+    if(eff_strategy == "standard" && !s_is_nl){
+      # Find highest active bin for C_act == 2 rows
+      c2_mask <- (C_act == 2L) & at_upper_bound
+      if(any(c2_mask)){
+        rows_c2 <- which(c2_mask)
+        hi_col <- max.col(act_bins[rows_c2, , drop = FALSE], ties.method = "last")
+        lin_hi <- cbind(rows_c2, hi_col)
+        pinned_excess <- O_pool[lin_hi] > E_pool[lin_hi]
+        if(any(pinned_excess)){
+          df_vec[rows_c2[pinned_excess]] <- 1
+        }
+      }
+    }
+    df_vec[df_vec < 0.25] <- 0
+
+    ### Empirical sample-wide per-read overdispersion calibration
+    elig <- (df_vec >= 0.5) & (N_grp >= max(25, min_reads))
+    phi_hat_s <- 0
+    if(identical(dispersion_mode, "empirical") && sum(elig) >= 10L){
+      med_chisq <- stats::qchisq(0.5, df = df_vec[elig])
+      phi_cand <- (df_vec[elig] / N_grp[elig]) * ((G2_nom[elig] / pmax(med_chisq, 1e-12)) - 1)
+      phi_hat_s <- max(0, stats::median(phi_cand, na.rm = TRUE))
+    }
+
+    scale_fac <- 1 + phi_hat_s * (N_grp / pmax(df_vec, 1e-6))
+    G2_adj <- ifelse(df_vec > 0, G2_nom / scale_fac, NA_real_)
+    std_dev_vec <- ifelse(df_vec > 0, sqrt(G2_adj / df_vec), NA_real_)
+    pval_vec <- ifelse(df_vec > 0, stats::pchisq(G2_adj, df = df_vec, lower.tail = FALSE), NA_real_)
+    padj_vec <- rep(NA_real_, ng)
+    ok_p <- !is.na(pval_vec)
+    if(any(ok_p)){
+      padj_vec[ok_p] <- stats::p.adjust(pval_vec[ok_p], method = "BH")
+    }
+
+    is_flagged <- !is.na(padj_vec) & (padj_vec < sample_padj_cutoff) & (tvd_vec >= sample_tvd_cutoff)
+    f_mode <- ifelse(is_flagged, raw_diag_mode, "ok")
+
+    meta_row_s <- metadf[metadf$sample == s_cur, cond_cols, drop = FALSE]
+    res_s <- dplyr::bind_cols(
+      dplyr::tibble(sample = rep(s_cur, ng)),
+      dplyr::as_tibble(grp_keys_dt),
+      dplyr::tibble(tl = rep(unname(tl_disp_vec[s_cur]), ng))
+    )
+    if(length(cond_cols) > 0L && nrow(meta_row_s) >= 1L){
+      res_s <- dplyr::bind_cols(res_s, meta_row_s[rep(1L, ng), , drop = FALSE])
+    }
+    res_s <- dplyr::bind_cols(
+      res_s,
+      dplyr::tibble(
+        n = N_grp,
+        est_fn = est_fn,
+        mle_fn = mle_fn,
+        tvd = tvd_vec,
+        kl_div = kl_vec,
+        chisq_gof = G2_adj,
+        chisq_nominal = ifelse(df_vec > 0, G2_nom, NA_real_),
+        df_gof = df_vec,
+        std_dev = std_dev_vec,
+        pval_gof = pval_vec,
+        padj_gof = padj_vec,
+        failure_mode = f_mode,
+        .raw_mode = raw_diag_mode,
+        is_nolabel = rep(s_is_nl, ng)
+      )
+    )
+
+    sample_res_list[[si]] <- res_s
+    disp_records[[si]] <- dplyr::tibble(
+      sample = s_cur,
+      is_nolabel = s_is_nl,
+      phi_dispersion = phi_hat_s,
+      n_features_calibrated = sum(elig)
+    )
+  }
+
+  all_res <- dplyr::bind_rows(sample_res_list)
+  all_res$.g2_s <- all_res$chisq_gof
+  all_res$.df_s <- all_res$df_gof
+  sample_disp_tbl <- dplyr::bind_rows(disp_records)
+
+  ### Step 4: Aggregate across samples into feature-level summary_tbl
+  has_nl_rows <- any(all_res$is_nolabel)
+
+  summary_tbl <- all_res %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(feat_cols))) %>%
+    dplyr::summarise(
+      n_samples = dplyr::n(),
+      n_labeled_samples = sum(!is_nolabel),
+      n_samples_flagged = sum(failure_mode != "ok"),
+      frac_samples_flagged = sum(failure_mode != "ok") / dplyr::n(),
+      mean_n = mean(n[!is_nolabel], na.rm = TRUE),
+      mean_tvd = mean(tvd[!is_nolabel], na.rm = TRUE),
+      max_tvd = if(any(!is_nolabel)) max(tvd[!is_nolabel], na.rm = TRUE) else NA_real_,
+      mean_kl_div = mean(kl_div[!is_nolabel], na.rm = TRUE),
+      chisq_gof = {
+        ok_c <- (!is_nolabel) & (.df_s > 0) & is.finite(.g2_s)
+        if(any(ok_c)) sum(.g2_s[ok_c]) else NA_real_
+      },
+      df_gof = {
+        ok_c <- (!is_nolabel) & (.df_s > 0) & is.finite(.g2_s)
+        if(any(ok_c)) sum(.df_s[ok_c]) else 0
+      },
+      pval_gof = {
+        ok_c <- (!is_nolabel) & (.df_s > 0) & is.finite(.g2_s)
+        if(any(ok_c)) stats::pchisq(sum(.g2_s[ok_c]), df = sum(.df_s[ok_c]), lower.tail = FALSE) else NA_real_
+      },
+      .raw_dom_cand = {
+        lb_idx <- which(!is_nolabel)
+        if(length(lb_idx) > 0L) .raw_mode[lb_idx[which.max(tvd[lb_idx])[1L]]] else .raw_mode[1L]
+      },
+      .flagged_dom = {
+        fm <- failure_mode[failure_mode != "ok"]
+        if(length(fm) > 0L){
+          tb <- table(fm)
+          names(tb)[which.max(tb)]
+        }else{
+          NA_character_
+        }
+      },
+      nolabel_tvd = if(any(is_nolabel)) mean(tvd[is_nolabel], na.rm = TRUE) else NA_real_,
+      nolabel_pval = {
+        ok_nl <- is_nolabel & (.df_s > 0) & is.finite(.g2_s)
+        if(any(ok_nl)) stats::pchisq(sum(.g2_s[ok_nl]), df = sum(.df_s[ok_nl]), lower.tail = FALSE) else NA_real_
+      },
+      .groups = "drop"
+    )
+
+  summary_tbl$padj_gof <- rep(NA_real_, nrow(summary_tbl))
+  ok_pg <- !is.na(summary_tbl$pval_gof)
+  if(any(ok_pg)){
+    summary_tbl$padj_gof[ok_pg] <- stats::p.adjust(summary_tbl$pval_gof[ok_pg], method = "BH")
+  }
+
+  if(has_nl_rows){
+    summary_tbl$nolabel_padj <- rep(NA_real_, nrow(summary_tbl))
+    ok_pnl <- !is.na(summary_tbl$nolabel_pval)
+    if(any(ok_pnl)){
+      summary_tbl$nolabel_padj[ok_pnl] <- stats::p.adjust(summary_tbl$nolabel_pval[ok_pnl], method = "BH")
+    }
+  }else{
+    summary_tbl$nolabel_tvd <- NULL
+    summary_tbl$nolabel_pval <- NULL
+  }
+
+  comb_flagged <- !is.na(summary_tbl$padj_gof) &
+    (summary_tbl$padj_gof < sample_padj_cutoff) &
+    is.finite(summary_tbl$mean_tvd) &
+    (summary_tbl$mean_tvd >= sample_tvd_cutoff)
+
+  summary_tbl$dominant_failure_mode <- ifelse(
+    !is.na(summary_tbl$.flagged_dom),
+    summary_tbl$.flagged_dom,
+    ifelse(comb_flagged, summary_tbl$.raw_dom_cand, "ok")
+  )
+  summary_tbl$.raw_dom_cand <- NULL
+  summary_tbl$.flagged_dom <- NULL
+
+  # Order columns cleanly
+  base_sum_cols <- c(feat_cols, "n_samples", "n_labeled_samples",
+                     "n_samples_flagged", "frac_samples_flagged",
+                     "mean_n", "mean_tvd", "max_tvd", "mean_kl_div",
+                     "chisq_gof", "df_gof", "pval_gof", "padj_gof")
+  nl_sum_cols <- if(has_nl_rows) c("nolabel_tvd", "nolabel_pval", "nolabel_padj") else character(0)
+  summary_tbl <- summary_tbl[, c(base_sum_cols, nl_sum_cols, "dominant_failure_mode"), drop = FALSE]
+
+  residuals_tbl <- all_res %>%
+    dplyr::select(-dplyr::all_of(c(".raw_mode", "is_nolabel", ".g2_s", ".df_s")))
+
+  list(
+    summary_tbl = summary_tbl,
+    residuals_tbl = residuals_tbl,
+    metadata = list(
+      source_type = "fractions",
+      source_table = source_table,
+      features = feat_cols,
+      populations = fxn_meta[["populations"]],
+      fraction_design = fxn_meta[["fraction_design"]],
+      strategy = eff_strategy,
+      min_reads = min_reads,
+      min_bin_count = min_bin_count,
+      sample_padj_cutoff = sample_padj_cutoff,
+      sample_tvd_cutoff = sample_tvd_cutoff,
+      sample_dispersion = sample_disp_tbl
+    )
+  )
+}
+
+
+# Reconstruct exact observed & fitted mutation-count histograms on the fly for EZFitPlot()
+predict_mixture_histograms <- function(obj,
+                                       gof_name,
+                                       selected_keys_df,
+                                       samples = NULL,
+                                       rank_by = "worst_lof",
+                                       max_mut_plot = 10L){
+  sample <- NULL
+
+  gof_meta <- obj[["metadata"]][["gof"]][[gof_name]]
+  res_tbl <- as.data.frame(obj[["gof_residuals"]][[gof_name]])
+  source_table <- gof_meta[["source_table"]]
+  fxn_tbl <- as.data.frame(obj[["fractions"]][[source_table]])
+  fxn_meta <- obj[["metadata"]][["fractions"]][[source_table]]
+  feat_cols <- gof_meta[["features"]]
+  eff_strategy <- gof_meta[["strategy"]] %||% "standard"
+
+  fraction_design <- as.data.frame(fxn_meta[["fraction_design"]])
+  mutrate_design <- fraction_design[as.logical(fraction_design$present),
+                                    setdiff(colnames(fraction_design), "present"),
+                                    drop = FALSE]
+  mutcols <- colnames(mutrate_design)
+  basecols <- paste0("n", substr(mutcols, 1L, 1L))
+  K <- nrow(mutrate_design)
+  J <- ncol(mutrate_design)
+  md_mat <- as.matrix(mutrate_design)
+
+  metadf <- as.data.frame(obj[["metadf"]])
+  metadf$sample <- as.character(metadf$sample)
+  tl_cols_possible <- if(J == 1L){
+    c("tl", "tpulse")
+  }else{
+    c(paste0("tl_", mutcols), paste0("tpulse_", mutcols), "tl", "tpulse")
+  }
+  tl_cols <- intersect(tl_cols_possible, colnames(metadf))
+  tl_mat <- as.matrix(metadf[, tl_cols, drop = FALSE])
+  storage.mode(tl_mat) <- "double"
+  samples_nolabel <- metadf$sample[apply(tl_mat == 0, 1L, all)]
+
+  for(fc in feat_cols){
+    res_tbl[[fc]] <- as.character(res_tbl[[fc]])
+    selected_keys_df[[fc]] <- as.character(selected_keys_df[[fc]])
+    fxn_tbl[[fc]] <- as.character(fxn_tbl[[fc]])
+  }
+  fxn_tbl$sample <- as.character(fxn_tbl$sample)
+  res_tbl$sample <- as.character(res_tbl$sample)
+
+  res_sub <- dplyr::inner_join(res_tbl, selected_keys_df, by = feat_cols)
+  if(nrow(res_sub) == 0L){
+    stop("No residual records found for the requested features!")
+  }
+
+  # Choose which (feature, sample) pairs to plot
+  if(!is.null(samples)){
+    if(!identical(samples, "all")){
+      samps_req <- as.character(samples)
+      res_sub <- res_sub[res_sub$sample %in% samps_req, , drop = FALSE]
+      if(nrow(res_sub) == 0L){
+        stop("None of the requested `samples` were found for the selected features!")
+      }
+    }
+    pairs_df <- res_sub
+  }else{
+    # Pick 1 representative sample per selected feature
+    pair_rows <- vector("list", nrow(selected_keys_df))
+    for(i in seq_len(nrow(selected_keys_df))){
+      rk <- selected_keys_df[i, feat_cols, drop = FALSE]
+      cand <- dplyr::inner_join(res_sub, rk, by = feat_cols)
+      if(rank_by == "best_fit"){
+        cand_lb <- cand[!(cand$sample %in% samples_nolabel), , drop = FALSE]
+        if(nrow(cand_lb) > 0L) cand <- cand_lb
+        idx_pick <- order(cand$tvd, -cand$n)[1L]
+      }else if(rank_by == "worst_rep" && any(cand$sample %in% samples_nolabel)){
+        cand_nl <- cand[cand$sample %in% samples_nolabel, , drop = FALSE]
+        idx_pick <- order(-cand_nl$tvd, cand_nl$pval_gof)[1L]
+        cand <- cand_nl
+      }else{
+        cand_lb <- cand[!(cand$sample %in% samples_nolabel), , drop = FALSE]
+        base_c <- if(nrow(cand_lb) > 0L) cand_lb else cand
+        flagged_c <- base_c[base_c$failure_mode != "ok", , drop = FALSE]
+        pool_c <- if(nrow(flagged_c) > 0L) flagged_c else base_c
+        idx_pick <- order(-pool_c$tvd, pool_c$pval_gof)[1L]
+        cand <- pool_c
+      }
+      pair_rows[[i]] <- cand[idx_pick, , drop = FALSE]
+    }
+    pairs_df <- dplyr::bind_rows(pair_rows)
+  }
+
+  ext <- extract_cb_for_gof(
+    obj = obj,
+    samples_keep = unique(pairs_df$sample),
+    samples_nolabel = samples_nolabel,
+    feat_cols = feat_cols,
+    mutcols = mutcols,
+    basecols = basecols,
+    fxn_meta = fxn_meta,
+    features_keep_df = selected_keys_df
+  )
+  cb_dt <- ext$cb_dt
+  pold_nolabel <- ext$pold_nolabel
+
+  hier_cand_name <- fxn_meta[["hier_mutrate_table"]] %||%
+    paste0(paste(feat_cols, collapse = "_"), "_", mutcols[1L])
+
+  if(eff_strategy == "general"){
+    pop_labels <- vapply(seq_len(K), function(k_i){
+      pv <- ifelse(as.logical(md_mat[k_i, ]), "high", "low")
+      paste(paste0(pv, mutcols), collapse = "_")
+    }, character(1))
+    frac_cols_gen <- paste0("fraction_", pop_labels)
+  }
+
+  obs_out <- list()
+  curve_out <- list()
+
+  for(r_i in seq_len(nrow(pairs_df))){
+    pr <- pairs_df[r_i, , drop = FALSE]
+    s_cur <- pr$sample[1L]
+    s_is_nl <- s_cur %in% samples_nolabel
+    fk_df <- pr[, feat_cols, drop = FALSE]
+
+    sub_dt <- data.table::as.data.table(fk_df)
+    dt_pair <- cb_dt[sample == s_cur][sub_dt, on = feat_cols, nomatch = NULL]
+    if(nrow(dt_pair) == 0L) next
+    n_r <- as.numeric(dt_pair[["n"]])
+    N_tot <- sum(n_r)
+
+    for(j in seq_len(J)){
+      mut_j <- mutcols[j]
+      base_j <- basecols[j]
+      mj <- as.integer(round(as.numeric(dt_pair[[mut_j]])))
+      bj <- as.integer(round(as.numeric(dt_pair[[base_j]])))
+
+      m_cap <- as.integer(max(6L, min(as.integer(max_mut_plot), max(mj, 6L))))
+      n_bins <- m_cap + 1L
+      bin_labels <- c(as.character(0:(m_cap - 1L)), paste0(m_cap, "+"))
+      m_binned <- pmin(pmax(mj, 0L), m_cap)
+
+      obs_prop <- vapply(0:m_cap, function(mm){
+        sum(n_r[m_binned == mm]) / N_tot
+      }, numeric(1))
+
+      if(s_is_nl){
+        po_j <- if(!is.null(pold_nolabel[[s_cur]])) pold_nolabel[[s_cur]][mut_j] else 1e-4
+        po_j <- pmin(pmax(po_j, 1e-7), 1 - 1e-7)
+        pn_j <- po_j
+        pi_hi <- 0
+      }else if(eff_strategy == "hierarchical" && J == 1L){
+        hmr <- as.data.frame(obj[["mutation_rates"]][[hier_cand_name]])
+        hmr$sample <- as.character(hmr$sample)
+        for(fc in feat_cols) hmr[[fc]] <- as.character(hmr[[fc]])
+        hmr_m <- dplyr::inner_join(hmr[hmr$sample == s_cur, , drop = FALSE], fk_df, by = feat_cols)
+        pn_j <- pmin(pmax(as.numeric(hmr_m$pnew[1L]), 1e-7), 1 - 1e-7)
+        po_j <- pmin(pmax(as.numeric(hmr_m$pold[1L]), 1e-7), 1 - 1e-7)
+        pi_hi <- as.numeric(pr$mle_fn[1L])
+      }else if(eff_strategy == "standard" && J == 1L){
+        mr_j <- as.data.frame(obj[["mutation_rates"]][[mut_j]])
+        mr_m <- mr_j[as.character(mr_j$sample) == s_cur, , drop = FALSE]
+        pn_j <- pmin(pmax(as.numeric(mr_m$pnew[1L]), 1e-7), 1 - 1e-7)
+        po_j <- pmin(pmax(as.numeric(mr_m$pold[1L]), 1e-7), 1 - 1e-7)
+        pi_hi <- as.numeric(pr$mle_fn[1L])
+      }else{
+        mr_j <- as.data.frame(obj[["mutation_rates"]][[mut_j]])
+        mr_m <- mr_j[as.character(mr_j$sample) == s_cur, , drop = FALSE]
+        if(nrow(mr_m) > 0L && is.finite(mr_m$pnew[1L])){
+          pn_j <- pmin(pmax(as.numeric(mr_m$pnew[1L]), 1e-7), 1 - 1e-7)
+          po_j <- pmin(pmax(as.numeric(mr_m$pold[1L]), 1e-7), 1 - 1e-7)
+        }else{
+          po_j <- pmin(pmax(sum(mj * n_r) / max(sum(bj * n_r), 1), 1e-6), 0.25)
+          pn_j <- po_j
+        }
+        fxn_row <- dplyr::inner_join(fxn_tbl[fxn_tbl$sample == s_cur, , drop = FALSE], fk_df, by = feat_cols)
+        hi_k <- which(as.logical(md_mat[, j]))
+        pi_hi <- if(length(hi_k) > 0L && nrow(fxn_row) > 0L){
+          sum(as.numeric(fxn_row[1L, frac_cols_gen[hi_k]]))
+        }else{
+          0
+        }
+      }
+
+      p_old_vec <- numeric(n_bins)
+      p_new_vec <- numeric(n_bins)
+      for(mm in 0:(m_cap - 1L)){
+        p_old_vec[mm + 1L] <- sum(n_r * stats::dbinom(mm, bj, po_j)) / N_tot
+        p_new_vec[mm + 1L] <- sum(n_r * stats::dbinom(mm, bj, pn_j)) / N_tot
+      }
+      p_old_vec[n_bins] <- sum(n_r * stats::pbinom(m_cap - 1L, bj, po_j, lower.tail = FALSE)) / N_tot
+      p_new_vec[n_bins] <- sum(n_r * stats::pbinom(m_cap - 1L, bj, pn_j, lower.tail = FALSE)) / N_tot
+
+      comp_old <- (1 - pi_hi) * p_old_vec
+      comp_new <- pi_hi * p_new_vec
+      comp_tot <- comp_old + comp_new
+
+      base_info <- dplyr::bind_cols(
+        fk_df[rep(1L, n_bins), , drop = FALSE],
+        dplyr::tibble(
+          sample = rep(s_cur, n_bins),
+          muttype = rep(mut_j, n_bins),
+          mut_bin = 0:m_cap,
+          mut_label = factor(bin_labels, levels = bin_labels),
+          tvd = rep(pr$tvd[1L], n_bins),
+          failure_mode = rep(pr$failure_mode[1L], n_bins)
+        )
+      )
+
+      obs_out[[length(obs_out) + 1L]] <- dplyr::bind_cols(
+        base_info,
+        dplyr::tibble(obs_prop = obs_prop)
+      )
+
+      if(s_is_nl){
+        curve_out[[length(curve_out) + 1L]] <- dplyr::bind_cols(
+          base_info,
+          dplyr::tibble(
+            component = factor(rep("Total mixture", n_bins),
+                               levels = c("Total mixture", "Old component", "New component")),
+            pred_prop = comp_tot
+          )
+        )
+      }else{
+        curve_out[[length(curve_out) + 1L]] <- dplyr::bind_rows(
+          dplyr::bind_cols(base_info, dplyr::tibble(
+            component = "Total mixture", pred_prop = comp_tot
+          )),
+          dplyr::bind_cols(base_info, dplyr::tibble(
+            component = "Old component", pred_prop = comp_old
+          )),
+          dplyr::bind_cols(base_info, dplyr::tibble(
+            component = "New component", pred_prop = comp_new
+          ))
+        )
+        curve_out[[length(curve_out)]]$component <- factor(
+          curve_out[[length(curve_out)]]$component,
+          levels = c("Total mixture", "Old component", "New component")
+        )
+      }
+    }
+  }
+
+  list(
+    obs_df = dplyr::bind_rows(obs_out),
+    curve_df = dplyr::bind_rows(curve_out),
+    pairs_df = pairs_df,
+    J = J
+  )
+}
+

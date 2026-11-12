@@ -497,3 +497,385 @@ test_that("EZGoFPlot, EZFitPlot, print, EZget, store_residuals = FALSE, and EZco
   expect_equal(length(ez_nores$gof_residuals), 0L)
   expect_error(EZFitPlot(ez_nores), "store_residuals = TRUE")
 })
+
+
+test_that("AssessGoF(type = 'fractions') evaluates exact conditional Binomial 2-comp GoF without touching obj$fractions", {
+  set.seed(606)
+  metadf <- dplyr::tibble(
+    sample = c("s_nl", "s_lb1", "s_lb2"),
+    tl = c(0, 2, 2),
+    condition = c("ctl", "A", "A")
+  )
+  pnew_true <- 0.065
+  pold_true <- 0.001
+
+  clean_genes <- paste0("Clean_", seq_len(28))
+  all_genes <- c(clean_genes, "LowDepthGene", "HetSNPGene", "ParalogTailGene")
+
+  sim_reads_1d <- function(samp, tl_s){
+    rows_g <- vector("list", length(all_genes))
+    for(gi in seq_along(all_genes)){
+      gn <- all_genes[gi]
+      N <- if(gn == "LowDepthGene" && samp == "s_lb2") 7L else 300L
+      nT <- pmax(stats::rbinom(N, size = 60, prob = 0.30), 6L)
+
+      if(tl_s == 0){
+        tc <- stats::rbinom(N, size = nT, prob = pold_true)
+        if(gn == "HetSNPGene"){
+          has_snp <- stats::rbinom(N, size = 1, prob = 0.55) == 1L
+          tc[has_snp] <- pmin(tc[has_snp] + 1L, nT[has_snp])
+        }
+      }else{
+        fn_g <- stats::runif(1, 0.25, 0.70)
+        is_new <- stats::rbinom(N, size = 1, prob = fn_g) == 1L
+        tc <- ifelse(
+          is_new,
+          stats::rbinom(N, size = nT, prob = pnew_true),
+          stats::rbinom(N, size = nT, prob = pold_true)
+        )
+        if(gn == "HetSNPGene"){
+          # Uncalled SNP adds +2 mismatched positions on 50% of reads
+          has_snp <- stats::rbinom(N, size = 1, prob = 0.50) == 1L
+          tc[has_snp] <- pmin(tc[has_snp] + 2L, nT[has_snp])
+        }else if(gn == "ParalogTailGene"){
+          # Cross-mapping paralog reads carry 6 T->C mismatches
+          is_par <- stats::rbinom(N, size = 1, prob = 0.25) == 1L
+          nT[is_par] <- pmax(nT[is_par], 10L)
+          tc[is_par] <- 6L
+        }
+      }
+
+      dt_g <- data.table::data.table(sample = samp, XF = gn, TC = tc, nT = nT)[
+        , .(n = .N), by = .(sample, XF, TC, nT)
+      ]
+      rows_g[[gi]] <- dt_g
+    }
+    data.table::rbindlist(rows_g)
+  }
+
+  cB_sim <- dplyr::bind_rows(
+    sim_reads_1d("s_nl", 0),
+    sim_reads_1d("s_lb1", 2),
+    sim_reads_1d("s_lb2", 2)
+  )
+
+  ez <- EZbakRData(cB_sim, metadf)
+  # Fit with Poisson = TRUE to verify AssessGoF still uses exact conditional Binomial from cB!
+  ez <- suppressMessages(EstimateFractions(ez, Poisson = TRUE))
+  fxn_snapshot <- ez$fractions[[1]]
+
+  # Auto-detection chooses "fractions" when neither averages nor dynamics exists
+  ez <- AssessGoF(ez)
+  expect_identical(ez$fractions[[1]], fxn_snapshot)
+
+  gof_def <- EZget(ez, type = "gof", source_type = "fractions")
+  # LowDepthGene has only 7 reads in s_lb2 (<= min_reads = 10), so filtered out of default GoF table
+  expect_false("LowDepthGene" %in% gof_def$XF)
+  # Yet LowDepthGene remains untouched in obj$fractions!
+  expect_true("LowDepthGene" %in% EZget(ez, type = "fractions")$XF)
+
+  snp_row <- gof_def[gof_def$XF == "HetSNPGene", ]
+  par_row <- gof_def[gof_def$XF == "ParalogTailGene", ]
+  ok_rows <- gof_def[gof_def$XF %in% clean_genes, ]
+
+  expect_lt(snp_row$padj_gof, 1e-6)
+  expect_gt(snp_row$mean_tvd, 0.10)
+  expect_lt(snp_row$nolabel_padj, 1e-5)
+
+  expect_lt(par_row$padj_gof, 1e-6)
+  expect_gt(par_row$mean_tvd, 0.10)
+  expect_equal(par_row$dominant_failure_mode, "high_mut_tail")
+
+  # Clean Binomial genes remain well calibrated even though EstimateFractions used Poisson = TRUE
+  expect_lte(sum(ok_rows$padj_gof < 0.05 & ok_rows$mean_tvd >= 0.05, na.rm = TRUE), 2L)
+
+  # Test min_samples = 1 and feature_sample_counts (filtering only GoF output, never obj$fractions)
+  ez_ms1 <- AssessGoF(ez, type = "fractions", min_samples = 1, overwrite = FALSE)
+  expect_identical(ez_ms1$fractions[[1]], fxn_snapshot)
+  gof_ms1 <- EZget(ez_ms1, type = "gof", repeatID = 2)
+  expect_true("LowDepthGene" %in% gof_ms1$XF)
+
+  fsc_tbl <- dplyr::tibble(XF = c("LowDepthGene", "HetSNPGene"), nsamps = c(1L, 2L))
+  ez_fsc <- AssessGoF(ez, type = "fractions", feature_sample_counts = fsc_tbl, overwrite = FALSE)
+  expect_identical(ez_fsc$fractions[[1]], fxn_snapshot)
+  gof_fsc <- EZget(ez_fsc, type = "gof", repeatID = 2)
+  expect_setequal(gof_fsc$XF, c("LowDepthGene", "HetSNPGene"))
+})
+
+
+test_that("Empirical sample overdispersion calibration protects ultra-deep genes while catching real artifacts", {
+  set.seed(707)
+  metadf <- dplyr::tibble(sample = c("deep1", "deep2"), tl = c(2, 2))
+  pold_s <- 0.001
+  pnew_center <- 0.055
+
+  mod_genes <- paste0("Mod_", seq_len(36))
+  all_g <- c(mod_genes, "Housekeeping20k", "RealParalog")
+
+  rows_list <- list()
+  for(s_i in seq_len(nrow(metadf))){
+    s_nm <- metadf$sample[s_i]
+    for(gn in all_g){
+      N <- if(gn == "Housekeeping20k") 20000L else 350L
+      nT <- pmax(stats::rbinom(N, size = 55, prob = 0.30), 8L)
+      # Realistic slight gene-to-gene pnew variation around 0.055
+      pnew_g <- if(gn == "Housekeeping20k"){
+        0.061
+      }else{
+        stats::plogis(stats::qlogis(pnew_center) + stats::rnorm(1, 0, 0.14))
+      }
+      is_new <- stats::rbinom(N, size = 1, prob = 0.45) == 1L
+      tc <- ifelse(
+        is_new,
+        stats::rbinom(N, size = nT, prob = pnew_g),
+        stats::rbinom(N, size = nT, prob = pold_s)
+      )
+      if(gn == "RealParalog"){
+        sp <- stats::rbinom(N, size = 1, prob = 0.30) == 1L
+        tc[sp] <- 5L
+      }
+      dt_g <- data.table::data.table(sample = s_nm, XF = gn, TC = tc, nT = nT)[
+        , .(n = .N), by = .(sample, XF, TC, nT)
+      ]
+      rows_list[[length(rows_list) + 1L]] <- dt_g
+    }
+  }
+
+  ez_od <- EZbakRData(data.table::rbindlist(rows_list), metadf)
+  ez_od <- suppressMessages(EstimateFractions(ez_od, Poisson = FALSE))
+
+  # Nominal mode rejects Housekeeping20k due to N = 20,000 magnifying tiny pnew drift
+  ez_nom <- AssessGoF(ez_od, type = "fractions", dispersion_mode = "nominal")
+  gof_nom <- EZget(ez_nom, type = "gof")
+  hk_nom <- gof_nom[gof_nom$XF == "Housekeeping20k", ]
+  expect_lt(hk_nom$pval_gof, 0.01)
+
+  # Default empirical mode calibrates sample-level phi_s > 0, rescuing Housekeeping20k
+  # while still catching RealParalog with p << 1e-6!
+  ez_emp <- AssessGoF(ez_od, type = "fractions", dispersion_mode = "empirical")
+  gof_emp <- EZget(ez_emp, type = "gof")
+  disp_tbl <- ez_emp$metadata$gof[[1]]$sample_dispersion
+  expect_true(all(disp_tbl$phi_dispersion > 0))
+
+  hk_emp <- gof_emp[gof_emp$XF == "Housekeeping20k", ]
+  par_emp <- gof_emp[gof_emp$XF == "RealParalog", ]
+  expect_equal(hk_emp$dominant_failure_mode, "ok")
+  expect_lt(hk_emp$mean_tvd, 0.04)
+  expect_gt(hk_emp$pval_gof, hk_nom$pval_gof)
+  expect_lt(par_emp$padj_gof, 1e-6)
+  expect_equal(par_emp$dominant_failure_mode, "high_mut_tail")
+})
+
+
+test_that("Hierarchical 2-component GoF rescues feature-specific pnew shifts while catching paralog spikes", {
+  set.seed(808)
+  metadf <- dplyr::tibble(sample = c("h1", "h2"), tl = c(2, 2))
+  norm_genes <- paste0("HNorm_", seq_len(28))
+  all_g <- c(norm_genes, "ShiftedPnew", "HierParalog")
+
+  norm_pnews <- stats::plogis(stats::qlogis(0.070) + seq(-0.18, 0.18, length.out = length(norm_genes)))
+  names(norm_pnews) <- norm_genes
+
+  rows_h <- list()
+  for(s_nm in metadf$sample){
+    for(gn in all_g){
+      N <- if(gn == "ShiftedPnew") 1500L else 650L
+      nT <- rep(28L, N)
+      pnew_g <- if(gn == "ShiftedPnew") 0.036 else if(gn == "HierParalog") 0.070 else unname(norm_pnews[gn])
+      fn_g <- if(gn == "ShiftedPnew") 0.80 else 0.50
+      is_new <- stats::rbinom(N, size = 1, prob = fn_g) == 1L
+      tc <- ifelse(
+        is_new,
+        stats::rbinom(N, size = nT, prob = pnew_g),
+        stats::rbinom(N, size = nT, prob = 0.001)
+      )
+      if(gn == "HierParalog"){
+        sp <- stats::rbinom(N, size = 1, prob = 0.28) == 1L
+        tc[sp] <- 6L
+      }
+      rows_h[[length(rows_h) + 1L]] <- data.table::data.table(
+        sample = s_nm, XF = gn, TC = tc, nT = nT
+      )[, .(n = .N), by = .(sample, XF, TC, nT)]
+    }
+  }
+
+  ez_h <- EZbakRData(data.table::rbindlist(rows_h), metadf)
+  ez_std <- suppressMessages(EstimateFractions(ez_h, strategy = "standard", Poisson = FALSE))
+  ez_std <- AssessGoF(ez_std, type = "fractions")
+  gof_std <- EZget(ez_std, type = "gof")
+
+  ez_hier <- suppressMessages(EstimateFractions(ez_h, strategy = "hierarchical", Poisson = FALSE))
+  ez_hier <- AssessGoF(ez_hier, type = "fractions")
+  gof_hier <- EZget(ez_hier, type = "gof")
+
+  sh_std <- gof_std[gof_std$XF == "ShiftedPnew", ]
+  sh_hier <- gof_hier[gof_hier$XF == "ShiftedPnew", ]
+  par_hier <- gof_hier[gof_hier$XF == "HierParalog", ]
+
+  # ShiftedPnew fails standard 2-component GoF strongly, and is rescued by hierarchical GoF!
+  expect_lt(sh_std$padj_gof, 1e-4)
+  expect_gt(sh_std$mean_tvd, 0.07)
+  expect_lt(sh_hier$mean_tvd, 0.04)
+  expect_equal(sh_hier$dominant_failure_mode, "ok")
+
+  # True paralog spike still fails hierarchical GoF!
+  expect_lt(par_hier$padj_gof, 1e-6)
+})
+
+
+test_that("Multi-label (>2-component) TILAC mixture GoF catches forbidden double-labeled populations", {
+  set.seed(909)
+  metadf <- dplyr::tibble(
+    sample = c("tilac_nl", "tilac_1", "tilac_2"),
+    tl_TC = c(0, 2, 2),
+    tl_GA = c(0, 2, 2)
+  )
+  # TILAC design: (highTC, highGA) is absent (K = 3 populations across J = 2 channels)
+  fdesign_tilac <- dplyr::tibble(
+    TC = c(TRUE, TRUE, FALSE, FALSE),
+    GA = c(TRUE, FALSE, TRUE, FALSE),
+    present = c(FALSE, TRUE, TRUE, TRUE)
+  )
+
+  clean_t <- paste0("TilacOK_", seq_len(22))
+  all_t <- c(clean_t, "DoubleLabeledArtifact")
+
+  rows_t <- list()
+  for(i in seq_len(nrow(metadf))){
+    s_nm <- metadf$sample[i]
+    is_nl <- metadf$tl_TC[i] == 0
+    for(gn in all_t){
+      N <- 400L
+      nT <- rep(22L, N)
+      nG <- rep(22L, N)
+      if(is_nl){
+        tc <- stats::rbinom(N, nT, 0.001)
+        ga <- stats::rbinom(N, nG, 0.001)
+      }else{
+        comp <- sample.int(3L, size = N, replace = TRUE, prob = c(0.35, 0.35, 0.30))
+        tc <- ifelse(comp == 1L, stats::rbinom(N, nT, 0.075), stats::rbinom(N, nT, 0.001))
+        ga <- ifelse(comp == 2L, stats::rbinom(N, nG, 0.075), stats::rbinom(N, nG, 0.001))
+        if(gn == "DoubleLabeledArtifact"){
+          # Inject forbidden (highTC & highGA) chimeric doublets
+          dbl <- stats::rbinom(N, 1, 0.40) == 1L
+          tc[dbl] <- stats::rbinom(sum(dbl), nT[dbl], 0.12)
+          ga[dbl] <- stats::rbinom(sum(dbl), nG[dbl], 0.12)
+        }
+      }
+      rows_t[[length(rows_t) + 1L]] <- data.table::data.table(
+        sample = s_nm, XF = gn, TC = tc, GA = ga, nT = nT, nG = nG
+      )[, .(n = .N), by = .(sample, XF, TC, GA, nT, nG)]
+    }
+  }
+
+  ez_tilac <- EZbakRData(data.table::rbindlist(rows_t), metadf)
+  ez_tilac <- suppressMessages(EstimateFractions(
+    ez_tilac,
+    mutrate_populations = c("TC", "GA"),
+    fraction_design = fdesign_tilac,
+    Poisson = FALSE
+  ))
+  ez_tilac <- AssessGoF(ez_tilac, type = "fractions")
+  gof_tilac <- EZget(ez_tilac, type = "gof")
+
+  art_t <- gof_tilac[gof_tilac$XF == "DoubleLabeledArtifact", ]
+  ok_t <- gof_tilac[gof_tilac$XF %in% clean_t, ]
+
+  expect_lt(art_t$padj_gof, 1e-6)
+  expect_gt(art_t$mean_tvd, 0.08)
+  expect_equal(art_t$dominant_failure_mode, "multilabel_mismatch")
+  expect_lte(sum(ok_t$dominant_failure_mode != "ok"), 1L)
+
+  # Multi-channel EZFitPlot builds cleanly with [TC] and [GA] facets
+  expect_s3_class(
+    ggplot2::ggplot_build(EZFitPlot(ez_tilac, source_type = "fractions", top_n = 2)),
+    "ggplot_built"
+  )
+})
+
+
+test_that("EZbakRArrowData backend and coexisting fractions + averages GoF plots work identically", {
+  skip_if_not_installed("arrow")
+  set.seed(1010)
+  sim <- EZSimulate(25, nreps = 2)
+  # Add a -s4U control sample and an artifact feature to test all plot modes
+  fcol_sim <- setdiff(colnames(sim$cB), c("sample", "TC", "nT", "n"))[1L]
+  nl_cB <- sim$cB[sim$cB$sample == sim$metadf$sample[1], ]
+  nl_cB$sample <- "sample_nl"
+  nl_cB$TC <- 0L
+  # Inject spike into first feature across labeled samples
+  feat1 <- unique(sim$cB[[fcol_sim]])[1L]
+  cB_mod <- dplyr::bind_rows(sim$cB, nl_cB)
+  is_f1_lb <- (cB_mod[[fcol_sim]] == feat1) & (cB_mod$sample != "sample_nl") & (cB_mod$nT >= 6)
+  cB_mod$TC[is_f1_lb] <- pmin(cB_mod$nT[is_f1_lb], 6L)
+
+  meta_mod <- dplyr::bind_rows(
+    sim$metadf,
+    dplyr::tibble(sample = "sample_nl", tl = 0, treatment = sim$metadf$treatment[1])
+  )
+
+  # 1. In-memory EZbakRData
+  ez_mem <- EZbakRData(cB_mod, meta_mod)
+  ez_mem <- suppressMessages(EstimateFractions(ez_mem, Poisson = FALSE))
+  ez_mem <- AssessGoF(ez_mem, type = "fractions")
+
+  # 2. On-disk EZbakRArrowData
+  pq_dir <- tempfile("ez_arrow_gof_")
+  dir.create(pq_dir, recursive = TRUE)
+  on.exit(unlink(pq_dir, recursive = TRUE), add = TRUE)
+  arrow::write_dataset(cB_mod, path = pq_dir, format = "parquet", partitioning = "sample")
+
+  ez_arr <- EZbakRArrowData(pq_dir, meta_mod)
+  ez_arr <- suppressMessages(EstimateFractions(ez_arr, Poisson = FALSE))
+  ez_arr <- AssessGoF(ez_arr, type = "fractions")
+
+  gof_mem <- EZget(ez_mem, type = "gof", source_type = "fractions")
+  gof_arr <- EZget(ez_arr, type = "gof", source_type = "fractions")
+  gof_mem <- gof_mem[order(gof_mem[[fcol_sim]]), ]
+  gof_arr <- gof_arr[order(gof_arr[[fcol_sim]]), ]
+
+  expect_equal(gof_arr$mean_tvd, gof_mem$mean_tvd, tolerance = 1e-10)
+  expect_equal(gof_arr$pval_gof, gof_mem$pval_gof, tolerance = 1e-10)
+  expect_lt(gof_arr$padj_gof[gof_arr[[fcol_sim]] == feat1], 1e-5)
+
+  # Coexist with kinetic averages GoF in the same object + test all EZGoFPlot & EZFitPlot modes
+  ez_arr <- suppressMessages(EstimateKinetics(ez_arr))
+  ez_arr <- suppressMessages(AverageAndRegularize(ez_arr))
+  ez_arr <- AssessGoF(ez_arr, type = "averages")
+
+  expect_equal(length(ez_arr$gof), 2L)
+  for(pt in c("volcano", "sample_qc", "obs_vs_pred", "residual_trend")){
+    expect_s3_class(
+      ggplot2::ggplot_build(EZGoFPlot(ez_arr, source_type = "fractions", plot_type = pt)),
+      "ggplot_built"
+    )
+  }
+  expect_s3_class(
+    ggplot2::ggplot_build(EZGoFPlot(ez_arr, source_type = "fractions", plot_type = "volcano",
+                                    metric = "nolabel", features_to_highlight = feat1)),
+    "ggplot_built"
+  )
+  for(sc in c("fraction", "standardized", "logit")){
+    expect_s3_class(
+      ggplot2::ggplot_build(EZGoFPlot(ez_arr, source_type = "fractions", plot_type = "sample_qc",
+                                      residual_scale = sc)),
+      "ggplot_built"
+    )
+  }
+  for(rb in c("worst_gof", "worst_tvd", "worst_rep", "best_fit")){
+    expect_s3_class(
+      ggplot2::ggplot_build(EZFitPlot(ez_arr, source_type = "fractions", rank_by = rb, top_n = 2)),
+      "ggplot_built"
+    )
+  }
+  expect_s3_class(
+    ggplot2::ggplot_build(EZFitPlot(ez_arr, source_type = "fractions",
+                                    features_to_plot = feat1, samples = "all")),
+    "ggplot_built"
+  )
+  p_top3 <- EZFitPlot(ez_arr, rank_by = "worst_lof", top_n = 3, source_type = "fractions")
+  strip_lvls <- levels(p_top3$layers[[1]]$data$panel_label)
+  max_line_len <- max(nchar(unlist(strsplit(strip_lvls, "\n", fixed = TRUE))))
+  expect_lte(max_line_len, 20L)
+})
+
