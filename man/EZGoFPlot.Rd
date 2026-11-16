@@ -10,6 +10,7 @@ EZGoFPlot(
   source_type = NULL,
   source_table = NULL,
   features = NULL,
+  deconvolved = NULL,
   parameter = NULL,
   kstrat = NULL,
   graph = NULL,
@@ -33,8 +34,8 @@ EZGoFPlot(
 }
 \arguments{
 \item{obj}{An \code{EZbakRData} (or \code{EZbakRArrowData}) object on which \code{AssessGoF()} has
-been run (or containing \code{EstimateFractions()}, \code{AverageAndRegularize()}, or
-\code{EZDynamics()} outputs).}
+been run (or containing \code{EstimateFractions()}, \code{EstimateIsoformFractions()},
+\code{DeconvolveFractions()}, \code{AverageAndRegularize()}, or \code{EZDynamics()} outputs).}
 
 \item{plot_type}{Type of diagnostic plot: \code{"volcano"}, \code{"sample_qc"}, \code{"obs_vs_pred"},
 or \code{"residual_trend"}.}
@@ -46,6 +47,9 @@ on the fly).}
 \item{source_table}{Optional exact upstream table name passed to \code{EZget()}.}
 
 \item{features}{Optional feature vector passed to \code{EZget()}.}
+
+\item{deconvolved}{Optional logical filter selecting deconvolved (\code{TRUE}) vs.
+non-deconvolved (\code{FALSE}) fraction GoF tables.}
 
 \item{parameter}{Optional parameter name passed to \code{EZget()}.}
 
@@ -67,7 +71,7 @@ for kinetic/ODE models), \code{"lof"}, \code{"joint"}, \code{"rep"}, \code{"gof"
 
 \item{rmse_cutoff}{Effect-size threshold (\code{mean_tvd} for \code{"fractions"}, \code{wrmse_fn} or
 \verb{|mean_signed_resid_fn|} for kinetic/ODE models) for highlighting poor fits on \code{"volcano"}
-(default \code{0.05}, i.e., 5\\% displaced reads or 5 percentage points).}
+(default \code{0.05}, i.e., 5\% displaced reads or 5 percentage points).}
 
 \item{signed}{Logical (default \code{FALSE}); if \code{TRUE} on kinetic/ODE \code{"volcano"}, plots
 signed mean residual (\code{obs - pred}) on X instead of \code{wrmse_fn}.}

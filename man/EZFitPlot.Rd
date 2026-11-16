@@ -13,6 +13,7 @@ EZFitPlot(
   source_type = NULL,
   source_table = NULL,
   features = NULL,
+  deconvolved = NULL,
   parameter = NULL,
   kstrat = NULL,
   graph = NULL,
@@ -32,7 +33,8 @@ EZFitPlot(
 }
 \arguments{
 \item{obj}{An \code{EZbakRData} (or \code{EZbakRArrowData}) object containing \code{AssessGoF()}
-output (or upstream \code{EstimateFractions()} / \code{AverageAndRegularize()} / \code{EZDynamics()} tables).}
+output (or upstream \code{EstimateFractions()} / \code{EstimateIsoformFractions()} /
+\code{DeconvolveFractions()} / \code{AverageAndRegularize()} / \code{EZDynamics()} tables).}
 
 \item{features_to_plot}{Optional character vector of feature names (when a single
 feature or grouping feature identifies genes) or data frame of feature columns to plot.
@@ -52,6 +54,9 @@ passed to \code{EZget()}.}
 
 \item{features}{Optional feature vector passed to \code{EZget()}.}
 
+\item{deconvolved}{Optional logical filter selecting deconvolved (\code{TRUE}) vs.
+non-deconvolved (\code{FALSE}) fraction GoF tables.}
+
 \item{parameter}{Optional parameter name passed to \code{EZget()}.}
 
 \item{kstrat}{Optional kinetic strategy passed to \code{EZget()}.}
@@ -70,7 +75,7 @@ passed to \code{EZget()}.}
 
 \item{n_grid}{Number of time-grid evaluation points for smooth trajectory curves (default \code{150}).}
 
-\item{show_ci}{Logical (default \code{TRUE}); if \code{TRUE}, draws 95\\% profile-likelihood
+\item{show_ci}{Logical (default \code{TRUE}); if \code{TRUE}, draws 95\% profile-likelihood
 confidence intervals on observed sample points in kinetic/ODE plots.}
 
 \item{annotate_stats}{Logical (default \code{TRUE}); if \code{TRUE}, includes \code{wRMSE} (or \code{TVD}
@@ -101,7 +106,7 @@ per read) as bars overlaid with the exact \code{nT}-conditioned Binomial compone
 (\verb{Old component}, \verb{New component}, and \verb{Total mixture}).
 \item \strong{Kinetic & ODE models (\code{source_type = "averages"} or \code{"dynamics"})}:
 Overlays smooth model-predicted \verb{fraction_high<muttype>} trajectories (or categorical
-condition predictions) onto individual sample estimates and 95\\% profile-likelihood
+condition predictions) onto individual sample estimates and 95\% profile-likelihood
 confidence intervals from \code{EstimateFractions()}.
 }
 }

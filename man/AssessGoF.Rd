@@ -15,6 +15,7 @@ AssessGoF(
   kstrat = NULL,
   populations = NULL,
   fraction_design = NULL,
+  deconvolved = NULL,
   sub_features = NULL,
   grouping_features = NULL,
   sample_feature = NULL,
@@ -28,7 +29,7 @@ AssessGoF(
   exactMatch = TRUE,
   fraction_col = NULL,
   min_reads = NULL,
-  min_samples = NULL,
+  min_samples = 1,
   feature_sample_counts = NULL,
   min_bin_count = 5,
   sample_padj_cutoff = 0.05,
@@ -70,6 +71,9 @@ query passed to \code{EZget()} for \code{"averages"}.}
 
 \item{fraction_design}{Optional fraction design table passed to \code{EZget()}.}
 
+\item{deconvolved}{Optional logical passed to \code{EZget()} when selecting a
+\code{DeconvolveFractions()} table (\code{TRUE} vs \code{NULL}).}
+
 \item{sub_features}{Optional \code{sub_features} query passed to \code{EZget()} for \code{"dynamics"}.}
 
 \item{grouping_features}{Optional \code{grouping_features} query passed to \code{EZget()} for \code{"dynamics"}.}
@@ -101,9 +105,9 @@ upstream tables). Defaults to \code{10} when \code{type = "fractions"} (matching
 \code{AverageAndRegularize()}) and \code{0} when \code{type = "averages"} or \code{"dynamics"}.}
 
 \item{min_samples}{Minimum number of labeled samples with \code{n > min_reads} required
-for a feature to be included in \code{AssessGoF(..., type = "fractions")}. When \code{NULL}
-(default) and \code{feature_sample_counts = NULL}, requires all labeled samples (matching
-\code{AverageAndRegularize()}).}
+for a feature to be included in \code{AssessGoF(..., type = "fractions")}. Defaults to \code{1}
+(any feature passing \code{min_reads} in at least one labeled sample is included). Set to
+\code{NULL} or \code{"all"} to require all labeled samples (matching \code{AverageAndRegularize()}).}
 
 \item{feature_sample_counts}{Optional data frame with \verb{<feature columns>} and \code{nsamps}
 specifying feature-specific sample-count thresholds for \code{type = "fractions"}, matching
@@ -116,7 +120,7 @@ tail pooling in \code{type = "fractions"} (default \code{5}).}
 \code{n_samples_flagged} in \code{type = "fractions"} (default \code{0.05}).}
 
 \item{sample_tvd_cutoff}{Per-sample Total Variation Distance threshold used to count
-\code{n_samples_flagged} in \code{type = "fractions"} (default \code{0.05}, i.e., 5\\% displaced reads).}
+\code{n_samples_flagged} in \code{type = "fractions"} (default \code{0.05}, i.e., 5\% displaced reads).}
 
 \item{dispersion_mode}{How baseline biological dispersion is calibrated:
 \itemize{
@@ -159,18 +163,21 @@ cross-sample kinetic / compartmental ODE modeling stage (\code{type = "averages"
 \item \strong{Mixture model goodness of fit (\code{type = "fractions"})}: Evaluates how well
 each feature's observed read-level mutational distribution in \code{cB} (or \code{EZbakRArrowData})
 agrees with the exact \code{nT}-conditioned Binomial mixture distribution implied by
-\code{EstimateFractions()} (supporting standard 2-component, hierarchical feature-specific
-\code{pnew}, and general \verb{>2}-component multi-label mixtures, as well as \code{-label} background
-controls). Reports sample-size-invariant Total Variation Distance (\code{mean_tvd}, \code{max_tvd},
-representing the fraction of reads displaced into the wrong mutational count bin),
-empirical-overdispersion-calibrated likelihood-ratio deviance (\code{chisq_gof}, \code{df_gof},
-\code{pval_gof}, \code{padj_gof}), cross-sample failure frequency (\code{n_samples_flagged},
-\code{frac_samples_flagged}), and mechanistic \code{dominant_failure_mode} tags. Input filtering
-(\code{min_reads}, \code{min_samples}, \code{feature_sample_counts}) determines which features enter the
-\code{AssessGoF()} output tables without modifying \code{obj$fractions} or any other table.
+\code{EstimateFractions()}, \code{EstimateIsoformFractions()}, or \code{DeconvolveFractions()}
+(supporting standard 2-component, hierarchical feature-specific \code{pnew}, general
+\verb{>2}-component multi-label mixtures, deconvolved transcript-isoform / multi-feature
+mixtures, and \code{-label} background controls). Reports sample-size-invariant Total Variation
+Distance (\code{mean_tvd}, \code{max_tvd}, representing the fraction of reads displaced into the
+wrong mutational count bin), empirical-overdispersion-calibrated likelihood-ratio deviance
+(\code{chisq_gof}, \code{df_gof}, \code{pval_gof}, \code{padj_gof}), cross-sample failure frequency
+(\code{n_samples_flagged}, \code{frac_samples_flagged}), and mechanistic \code{dominant_failure_mode}
+tags (including \code{"deconvolution_mismatch"} when equivalence classes disagree with linear
+isoform deconvolution). Input filtering (\code{min_reads}, \code{min_samples},
+\code{feature_sample_counts}) determines which features enter the \code{AssessGoF()} output tables
+without modifying \code{obj$fractions} or any other table.
 \item \strong{Kinetic & ODE goodness of fit (\code{type = "averages"} or \code{"dynamics"})}:
 Evaluates how well model-predicted sample-by-sample fractions (\verb{fraction_high<muttype>})
-agree with \code{EstimateFractions()} point estimates and 95\\% profile-likelihood confidence
+agree with \code{EstimateFractions()} point estimates and 95\% profile-likelihood confidence
 intervals, orthogonally decomposing total discrepancy into \strong{replicate overdispersion}
 (\code{chisq_rep}, \code{pval_rep}, \code{padj_rep}) and \strong{structural model lack-of-fit}
 (\code{chisq_lof}, \code{pval_lof}, \code{padj_lof}), alongside probability-scale \code{wrmse_fn}.

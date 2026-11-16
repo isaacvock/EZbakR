@@ -393,6 +393,11 @@ EstimateIsoformFractions <- function(obj,
   obj[['metadata']][['fractions']][[output_name]] <- list(features = c(gene_colnames, "transcript_id"),
                                                           populations = pops,
                                                           fraction_design = fd,
+                                                          deconvolved = TRUE,
+                                                          source_table = fraction_name,
+                                                          convolved_feature = isoform_feature,
+                                                          deconvolved_feature = "transcript_id",
+                                                          quant_name = quant_name,
                                                           repeatID = repeatID)
 
 
@@ -655,9 +660,13 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
 
     Fns <- Fns %>%
       dplyr::mutate(group = 1:dplyr::n()) %>%
-      tidyr::separate_rows(!!transcript_colname, sep = "\\+") %>%
-      dplyr::mutate(transcript_id = !!sym(transcript_colname)) %>%
-      dplyr::select(-!!transcript_colname) %>%
+      tidyr::separate_rows(!!transcript_colname, sep = "\\+")
+    if(transcript_colname != "transcript_id"){
+      Fns <- Fns %>%
+        dplyr::mutate(transcript_id = !!sym(transcript_colname)) %>%
+        dplyr::select(-!!transcript_colname)
+    }
+    Fns <- Fns %>%
       dplyr::inner_join(quant,
                         by = c("transcript_id", "sample"))
 
@@ -665,9 +674,13 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
 
     Fns <- Fns %>%
       dplyr::mutate(group = 1:dplyr::n()) %>%
-      tidyr::separate_rows(!!transcript_colname, sep = "\\+") %>%
-      dplyr::mutate(transcript_id = !!sym(transcript_colname)) %>%
-      dplyr::select(-!!transcript_colname) %>%
+      tidyr::separate_rows(!!transcript_colname, sep = "\\+")
+    if(transcript_colname != "transcript_id"){
+      Fns <- Fns %>%
+        dplyr::mutate(transcript_id = !!sym(transcript_colname)) %>%
+        dplyr::select(-!!transcript_colname)
+    }
+    Fns <- Fns %>%
       dplyr::inner_join(gene_to_transcript,
                         by = c("transcript_id", gene_colnames)) %>%
       dplyr::inner_join(quant,
@@ -746,7 +759,7 @@ Isoform_Fraction_Disambiguation <- function(obj, sample_name,
     dplyr::select(-logit_fn, -se_logit_fn) %>%
     dplyr::inner_join(quant,
                       by = c("transcript_id")) %>%
-    dplyr::select(-TPM)
+    dplyr::select(-dplyr::any_of("TPM"))
 
 
   # Combine single and multi-isoform gene estimates
@@ -1049,6 +1062,10 @@ DeconvolveFractions <- function(obj,
                                                           populations = pops,
                                                           fraction_design = fd,
                                                           deconvolved = TRUE,
+                                                          source_table = fraction_name,
+                                                          convolved_feature = convolved_feature,
+                                                          deconvolved_feature = new_feature,
+                                                          quant_name = quant_name,
                                                           repeatID = repeatID)
 
 
@@ -1151,9 +1168,13 @@ General_Fraction_Disambiguation <- function(obj, sample_name,
 
     Fns <- Fns %>%
       dplyr::mutate(group = 1:dplyr::n()) %>%
-      tidyr::separate_rows(!!convolved_feature, sep = "\\+") %>%
-      dplyr::mutate(!!quant_feature := !!sym(convolved_feature)) %>%
-      dplyr::select(-!!convolved_feature) %>%
+      tidyr::separate_rows(!!convolved_feature, sep = "\\+")
+    if(convolved_feature != quant_feature){
+      Fns <- Fns %>%
+        dplyr::mutate(!!quant_feature := !!sym(convolved_feature)) %>%
+        dplyr::select(-!!convolved_feature)
+    }
+    Fns <- Fns %>%
       dplyr::inner_join(quant,
                         by = c(quant_feature, "sample"))
 
@@ -1170,9 +1191,14 @@ General_Fraction_Disambiguation <- function(obj, sample_name,
 
     Fns <- Fns %>%
       dplyr::mutate(group = 1:dplyr::n()) %>%
-      tidyr::separate_rows(!!convolved_feature, sep = "\\+") %>%
-      dplyr::mutate(transcript_id = !!sym(convolved_feature)) %>%
-      dplyr::select(-!!convolved_feature, -!!gene_colnames) %>%
+      tidyr::separate_rows(!!convolved_feature, sep = "\\+")
+    if(convolved_feature != "transcript_id"){
+      Fns <- Fns %>%
+        dplyr::mutate(transcript_id = !!sym(convolved_feature)) %>%
+        dplyr::select(-!!convolved_feature)
+    }
+    Fns <- Fns %>%
+      dplyr::select(-!!gene_colnames) %>%
       dplyr::inner_join(gene_to_transcript,
                         by = c("transcript_id")) %>%
       dplyr::inner_join(quant,
@@ -1264,7 +1290,7 @@ General_Fraction_Disambiguation <- function(obj, sample_name,
     dplyr::select(-logit_fn, -se_logit_fn) %>%
     dplyr::inner_join(quant,
                       by = quant_feature) %>%
-    dplyr::select(-TPM)
+    dplyr::select(-dplyr::any_of("TPM"))
 
 
 

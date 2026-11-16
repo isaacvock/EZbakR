@@ -510,13 +510,19 @@ test_that("AssessGoF(type = 'fractions') evaluates exact conditional Binomial 2-
   pold_true <- 0.001
 
   clean_genes <- paste0("Clean_", seq_len(28))
-  all_genes <- c(clean_genes, "LowDepthGene", "HetSNPGene", "ParalogTailGene")
+  all_genes <- c(clean_genes, "LowDepthGene", "UltraLowGene", "HetSNPGene", "ParalogTailGene")
 
   sim_reads_1d <- function(samp, tl_s){
     rows_g <- vector("list", length(all_genes))
     for(gi in seq_along(all_genes)){
       gn <- all_genes[gi]
-      N <- if(gn == "LowDepthGene" && samp == "s_lb2") 7L else 300L
+      N <- if(gn == "UltraLowGene"){
+        6L
+      }else if(gn == "LowDepthGene" && samp == "s_lb2"){
+        7L
+      }else{
+        300L
+      }
       nT <- pmax(stats::rbinom(N, size = 60, prob = 0.30), 6L)
 
       if(tl_s == 0){
@@ -569,10 +575,14 @@ test_that("AssessGoF(type = 'fractions') evaluates exact conditional Binomial 2-
   expect_identical(ez$fractions[[1]], fxn_snapshot)
 
   gof_def <- EZget(ez, type = "gof", source_type = "fractions")
-  # LowDepthGene has only 7 reads in s_lb2 (<= min_reads = 10), so filtered out of default GoF table
-  expect_false("LowDepthGene" %in% gof_def$XF)
-  # Yet LowDepthGene remains untouched in obj$fractions!
-  expect_true("LowDepthGene" %in% EZget(ez, type = "fractions")$XF)
+  res_def <- EZget(ez, type = "gof_residuals", source_type = "fractions")
+  # Default min_samples = 1 retains LowDepthGene (passes min_reads = 10 in s_lb1 & s_nl, dropped only in s_lb2)
+  expect_true("LowDepthGene" %in% gof_def$XF)
+  expect_equal(gof_def$n_labeled_samples[gof_def$XF == "LowDepthGene"], 1L)
+  expect_setequal(res_def$sample[res_def$XF == "LowDepthGene"], c("s_nl", "s_lb1"))
+  # UltraLowGene (6 reads <= min_reads = 10 in all samples) is filtered out of GoF, yet untouched in obj$fractions!
+  expect_false("UltraLowGene" %in% gof_def$XF)
+  expect_true(all(c("LowDepthGene", "UltraLowGene") %in% EZget(ez, type = "fractions")$XF))
 
   snp_row <- gof_def[gof_def$XF == "HetSNPGene", ]
   par_row <- gof_def[gof_def$XF == "ParalogTailGene", ]
@@ -589,11 +599,11 @@ test_that("AssessGoF(type = 'fractions') evaluates exact conditional Binomial 2-
   # Clean Binomial genes remain well calibrated even though EstimateFractions used Poisson = TRUE
   expect_lte(sum(ok_rows$padj_gof < 0.05 & ok_rows$mean_tvd >= 0.05, na.rm = TRUE), 2L)
 
-  # Test min_samples = 1 and feature_sample_counts (filtering only GoF output, never obj$fractions)
-  ez_ms1 <- AssessGoF(ez, type = "fractions", min_samples = 1, overwrite = FALSE)
-  expect_identical(ez_ms1$fractions[[1]], fxn_snapshot)
-  gof_ms1 <- EZget(ez_ms1, type = "gof", repeatID = 2)
-  expect_true("LowDepthGene" %in% gof_ms1$XF)
+  # Test min_samples = "all" (or NULL) and feature_sample_counts (filtering only GoF output, never obj$fractions)
+  ez_all <- AssessGoF(ez, type = "fractions", min_samples = "all", overwrite = FALSE)
+  expect_identical(ez_all$fractions[[1]], fxn_snapshot)
+  gof_all <- EZget(ez_all, type = "gof", repeatID = 2)
+  expect_false("LowDepthGene" %in% gof_all$XF)
 
   fsc_tbl <- dplyr::tibble(XF = c("LowDepthGene", "HetSNPGene"), nsamps = c(1L, 2L))
   ez_fsc <- AssessGoF(ez, type = "fractions", feature_sample_counts = fsc_tbl, overwrite = FALSE)
@@ -878,4 +888,281 @@ test_that("EZbakRArrowData backend and coexisting fractions + averages GoF plots
   max_line_len <- max(nchar(unlist(strsplit(strip_lvls, "\n", fixed = TRUE))))
   expect_lte(max_line_len, 20L)
 })
+
+
+test_that("GoF Rd documentation files parse without any Rd macro or section warnings", {
+  man_dir <- testthat::test_path("..", "..", "man")
+  skip_if_not(dir.exists(man_dir), "Package man/ directory not available in installed test environment")
+
+  for(rd_file in c("AssessGoF.Rd", "EZGoFPlot.Rd", "EZFitPlot.Rd")){
+    rd_path <- file.path(man_dir, rd_file)
+    expect_true(file.exists(rd_path), info = rd_file)
+    warns <- character(0)
+    withCallingHandlers(
+      tools::parse_Rd(rd_path),
+      warning = function(w){
+        warns <<- c(warns, conditionMessage(w))
+        invokeRestart("muffleWarning")
+      }
+    )
+    expect_length(warns, 0L)
+  }
+})
+
+
+test_that("AssessGoF, EZGoFPlot, and EZFitPlot support deconvolved EstimateIsoformFractions and DeconvolveFractions tables", {
+  set.seed(20261113)
+  iso1 <- SimulateIsoforms(nfeatures = 25, pnew = 0.06, pold = 0.002)
+  iso2 <- SimulateIsoforms(nfeatures = 25, pnew = 0.06, pold = 0.002)
+  cB2 <- iso2$cB
+  cB2$sample <- "sampleB"
+  gt2 <- iso2$ground_truth
+
+  cB_all <- dplyr::bind_rows(iso1$cB, cB2) %>%
+    dplyr::rename(XF = feature, TEC = transcripts)
+  meta_iso <- dplyr::tibble(
+    sample = c("sampleA", "sampleB"),
+    tl = c(4, 4),
+    condition = c("WT", "WT")
+  )
+
+  quant_tbl <- dplyr::bind_rows(
+    iso1$ground_truth %>%
+      dplyr::select(transcript_id, true_count, true_TPM) %>%
+      dplyr::mutate(sample = "sampleA", effective_length = 2000) %>%
+      dplyr::rename(expected_count = true_count, TPM = true_TPM),
+    gt2 %>%
+      dplyr::select(transcript_id, true_count, true_TPM) %>%
+      dplyr::mutate(sample = "sampleB", effective_length = 2000) %>%
+      dplyr::rename(expected_count = true_count, TPM = true_TPM)
+  )
+
+  # 1. Clean null isoform dataset
+  ez_iso <- EZbakRData(cB_all, meta_iso)
+  ez_iso <- suppressMessages(EstimateFractions(ez_iso, features = c("XF", "TEC"), Poisson = FALSE))
+  ez_iso[["readcounts"]][["simulated_isoform_quant"]] <- quant_tbl
+  ez_iso <- suppressMessages(EstimateIsoformFractions(ez_iso))
+
+  fxn_before <- ez_iso$fractions
+  ez_iso <- AssessGoF(
+    ez_iso,
+    type = "fractions",
+    features = c("XF", "transcript_id"),
+    min_reads = 50
+  )
+  # Upstream fractions tables are never modified
+  expect_identical(ez_iso$fractions, fxn_before)
+
+  gof_null <- EZget(ez_iso, type = "gof", features = c("XF", "transcript_id"))
+  expect_gt(nrow(gof_null), 5L)
+  expect_true(all(c("XF", "transcript_id", "mean_tvd", "padj_gof", "dominant_failure_mode") %in% colnames(gof_null)))
+  expect_lt(stats::median(gof_null$mean_tvd, na.rm = TRUE), 0.04)
+  expect_lte(mean(gof_null$dominant_failure_mode != "ok"), 0.05)
+
+  # 2. Legacy in-memory ezbdo compatibility (pre-existing metadata without convolved_feature)
+  ez_legacy <- ez_iso
+  ez_legacy$gof <- list()
+  ez_legacy$gof_residuals <- list()
+  ez_legacy$metadata$gof <- list()
+  iso_tbl_nm <- EZget(ez_legacy, type = "fractions", features = c("XF", "transcript_id"), returnNameOnly = TRUE)
+  ez_legacy$metadata$fractions[[iso_tbl_nm]] <- list(
+    features = c("XF", "transcript_id"),
+    populations = ez_iso$metadata$fractions[[iso_tbl_nm]]$populations,
+    fraction_design = ez_iso$metadata$fractions[[iso_tbl_nm]]$fraction_design,
+    repeatID = 1L
+  )
+  ez_legacy <- AssessGoF(
+    ez_legacy,
+    type = "fractions",
+    features = c("XF", "transcript_id"),
+    min_reads = 50
+  )
+  gof_legacy <- EZget(ez_legacy, type = "gof", features = c("XF", "transcript_id"))
+  expect_equal(gof_legacy$mean_tvd, gof_null$mean_tvd, tolerance = 1e-12)
+  expect_equal(gof_legacy$pval_gof, gof_null$pval_gof, tolerance = 1e-12)
+
+  # 3. Inject (a) within-TEC high-mutation spike and (b) opposite-signed between-TEC deconvolution conflict
+  synth_rows <- list()
+  for(s_nm in c("sampleA", "sampleB")){
+    # GeneSpike: 2 isoforms, SpikeIso1 has a 6-mutation artifact tail in its unique TEC
+    n1 <- 400L
+    tc_sp1 <- c(stats::rbinom(300L, 25L, 0.06), rep(6L, 100L))
+    tc_sp2 <- stats::rbinom(300L, 25L, 0.002)
+    tc_sh <- c(stats::rbinom(150L, 25L, 0.06), stats::rbinom(150L, 25L, 0.002))
+
+    # GeneDeconvMismatch: IsoD1 and IsoD2 share TEC IsoD1+IsoD2 (50/50 abundance),
+    # where unique TEC IsoD1 has fn = 0.90, unique TEC IsoD2 has fn = 0.90,
+    # YET shared TEC IsoD1+IsoD2 has fn = 0.05 (impossible under any linear deconvolution!)
+    tc_d1 <- c(stats::rbinom(360L, 30L, 0.06), stats::rbinom(40L, 30L, 0.002))
+    tc_d2 <- c(stats::rbinom(360L, 30L, 0.06), stats::rbinom(40L, 30L, 0.002))
+    tc_d12 <- c(stats::rbinom(40L, 30L, 0.06), stats::rbinom(760L, 30L, 0.002))
+
+    dt_s <- data.table::rbindlist(list(
+      data.table::data.table(sample = s_nm, XF = "GeneSpike", TEC = "SpikeIso1", TC = tc_sp1, nT = 25L),
+      data.table::data.table(sample = s_nm, XF = "GeneSpike", TEC = "SpikeIso2", TC = tc_sp2, nT = 25L),
+      data.table::data.table(sample = s_nm, XF = "GeneSpike", TEC = "SpikeIso1+SpikeIso2", TC = tc_sh, nT = 25L),
+      data.table::data.table(sample = s_nm, XF = "GeneDeconv", TEC = "IsoD1", TC = tc_d1, nT = 30L),
+      data.table::data.table(sample = s_nm, XF = "GeneDeconv", TEC = "IsoD2", TC = tc_d2, nT = 30L),
+      data.table::data.table(sample = s_nm, XF = "GeneDeconv", TEC = "IsoD1+IsoD2", TC = tc_d12, nT = 30L)
+    ))[, .(n = .N), by = .(sample, XF, TEC, TC, nT)]
+    synth_rows[[s_nm]] <- dt_s
+  }
+
+  cB_art <- dplyr::bind_rows(cB_all, data.table::rbindlist(synth_rows))
+  quant_extra <- tidyr::expand_grid(
+    sample = c("sampleA", "sampleB"),
+    transcript_id = c("SpikeIso1", "SpikeIso2", "IsoD1", "IsoD2")
+  ) %>%
+    dplyr::mutate(expected_count = 600, TPM = 50, effective_length = 2000)
+  quant_art <- dplyr::bind_rows(quant_tbl, quant_extra)
+
+  ez_art <- EZbakRData(cB_art, meta_iso)
+  ez_art <- suppressMessages(EstimateFractions(ez_art, features = c("XF", "TEC"), Poisson = FALSE))
+  ez_art[["readcounts"]][["simulated_isoform_quant"]] <- quant_art
+  ez_art <- suppressMessages(EstimateIsoformFractions(ez_art))
+
+  # Evaluate both non-deconvolved TEC GoF and deconvolved isoform GoF on the same object
+  ez_art <- AssessGoF(ez_art, type = "fractions", features = c("XF", "TEC"), min_reads = 50)
+  ez_art <- AssessGoF(ez_art, type = "fractions", features = c("XF", "transcript_id"), min_reads = 50)
+  expect_equal(length(ez_art$gof), 2L)
+
+  gof_art <- EZget(ez_art, type = "gof", features = c("XF", "transcript_id"))
+  sp_row <- gof_art[gof_art$transcript_id == "SpikeIso1", ]
+  dc_row <- gof_art[gof_art$transcript_id == "IsoD1", ]
+
+  expect_lt(sp_row$padj_gof, 1e-6)
+  expect_gt(sp_row$mean_tvd, 0.08)
+  expect_equal(sp_row$dominant_failure_mode, "high_mut_tail")
+
+  expect_lt(dc_row$padj_gof, 1e-6)
+  expect_gt(dc_row$mean_tvd, 0.08)
+  expect_equal(dc_row$dominant_failure_mode, "deconvolution_mismatch")
+
+  # Coexisting GoF tables disambiguate cleanly in EZGoFPlot and EZFitPlot
+  expect_s3_class(
+    ggplot2::ggplot_build(EZGoFPlot(
+      ez_art,
+      source_type = "fractions",
+      deconvolved = TRUE,
+      plot_type = "volcano",
+      features_to_highlight = c("SpikeIso1", "IsoD1")
+    )),
+    "ggplot_built"
+  )
+  expect_s3_class(
+    ggplot2::ggplot_build(EZGoFPlot(
+      ez_art,
+      source_type = "fractions",
+      features = c("XF", "transcript_id"),
+      plot_type = "obs_vs_pred"
+    )),
+    "ggplot_built"
+  )
+  expect_s3_class(
+    ggplot2::ggplot_build(EZFitPlot(
+      ez_art,
+      source_type = "fractions",
+      features = c("XF", "transcript_id"),
+      features_to_plot = c("SpikeIso1", "IsoD1")
+    )),
+    "ggplot_built"
+  )
+
+  # Hierarchical EstimateFractions + EstimateIsoformFractions + AssessGoF
+  ez_hier <- EZbakRData(cB_art, meta_iso)
+  ez_hier <- suppressMessages(EstimateFractions(
+    ez_hier,
+    features = c("XF", "TEC"),
+    strategy = "hierarchical",
+    Poisson = FALSE
+  ))
+  ez_hier[["readcounts"]][["simulated_isoform_quant"]] <- quant_art
+  ez_hier <- suppressMessages(EstimateIsoformFractions(ez_hier))
+  ez_hier <- AssessGoF(ez_hier, type = "fractions", features = c("XF", "transcript_id"), min_reads = 50)
+  gof_hier_iso <- EZget(ez_hier, type = "gof", deconvolved = TRUE)
+  expect_lt(gof_hier_iso$padj_gof[gof_hier_iso$transcript_id == "SpikeIso1"], 1e-5)
+  expect_lt(gof_hier_iso$padj_gof[gof_hier_iso$transcript_id == "IsoD1"], 1e-5)
+
+  # 4a. DeconvolveFractions standard 1-column "GF" -> deconvolved "gene_id"
+  cB_gf_std <- data.table::copy(data.table::as.data.table(cB_art))
+  cB_gf_std[, GF := TEC]
+  cB_gf_std[, c("XF", "TEC") := NULL]
+  quant_gf <- quant_art %>% dplyr::rename(gene_id = transcript_id)
+
+  ez_dec0 <- EZbakRData(cB_gf_std, meta_iso)
+  ez_dec0 <- suppressMessages(EstimateFractions(ez_dec0, features = "GF", Poisson = FALSE))
+  ez_dec0[["readcounts"]][["simulated_gene_quant"]] <- quant_gf
+  ez_dec0 <- suppressMessages(DeconvolveFractions(ez_dec0, feature_type = "gene"))
+  ez_dec0 <- AssessGoF(ez_dec0, type = "fractions", features = "gene_id", min_reads = 50)
+  gof_dec0 <- EZget(ez_dec0, type = "gof", deconvolved = TRUE)
+  expect_lt(gof_dec0$padj_gof[gof_dec0$gene_id == "SpikeIso1"], 1e-6)
+  expect_lt(gof_dec0$padj_gof[gof_dec0$gene_id == "IsoD1"], 1e-6)
+
+  # 4b. DeconvolveFractions where convolved_feature == new_feature (1-column "gene_id", including legacy metadata)
+  cB_gf <- data.table::copy(data.table::as.data.table(cB_art))
+  cB_gf[, gene_id := TEC]
+  cB_gf[, c("XF", "TEC") := NULL]
+
+  ez_dec1 <- EZbakRData(cB_gf, meta_iso)
+  ez_dec1 <- suppressMessages(EstimateFractions(ez_dec1, features = "gene_id", Poisson = FALSE))
+  ez_dec1[["readcounts"]][["simulated_gene_quant"]] <- quant_gf
+  ez_dec1 <- suppressMessages(DeconvolveFractions(
+    ez_dec1,
+    feature_type = "gene"
+  ))
+  # Strip newly added metadata keys to verify legacy detection when convolved_col == deconv_col
+  ez_dec1$metadata$fractions$deconvolved_gene <- list(
+    features = "gene_id",
+    populations = "TC",
+    fraction_design = ez_dec1$metadata$fractions$deconvolved_gene$fraction_design,
+    deconvolved = TRUE,
+    repeatID = 1
+  )
+  ez_dec1 <- AssessGoF(ez_dec1, type = "fractions", deconvolved = TRUE, min_reads = 50)
+  gof_dec1 <- EZget(ez_dec1, type = "gof", deconvolved = TRUE)
+  expect_lt(gof_dec1$padj_gof[gof_dec1$gene_id == "SpikeIso1"], 1e-6)
+  expect_lt(gof_dec1$padj_gof[gof_dec1$gene_id == "IsoD1"], 1e-6)
+  expect_s3_class(
+    ggplot2::ggplot_build(EZFitPlot(ez_dec1, source_type = "fractions", deconvolved = TRUE, top_n = 2)),
+    "ggplot_built"
+  )
+})
+
+
+test_that("extract_cb_for_gof honors filter_condition = `&` and AssessGoF filters averages by min_reads", {
+  set.seed(20261114)
+  # 1. Multi-column features = c("GF", "XF") where intronic rows have XF == "__no_feature":
+  # Default EstimateFractions uses filter_condition = `&` (drops only when BOTH GF & XF are __no_feature)
+  rows_intron <- list()
+  for(s_nm in c("s1", "s2")){
+    for(g_i in seq_len(12L)){
+      gn <- paste0("Gene", g_i)
+      tc_in <- c(stats::rbinom(120L, 25L, 0.06), stats::rbinom(80L, 25L, 0.002))
+      tc_ex <- c(stats::rbinom(60L, 25L, 0.06), stats::rbinom(140L, 25L, 0.002))
+      dt_g <- data.table::rbindlist(list(
+        data.table::data.table(sample = s_nm, GF = gn, XF = "__no_feature", TC = tc_in, nT = 25L),
+        data.table::data.table(sample = s_nm, GF = gn, XF = gn, TC = tc_ex, nT = 25L)
+      ))[, .(n = .N), by = .(sample, GF, XF, TC, nT)]
+      rows_intron[[length(rows_intron) + 1L]] <- dt_g
+    }
+  }
+  meta_2 <- dplyr::tibble(sample = c("s1", "s2"), tl = c(2, 2), group = c("A", "A"))
+  ez_in <- EZbakRData(data.table::rbindlist(rows_intron), meta_2)
+  ez_in <- suppressMessages(EstimateFractions(ez_in, features = c("GF", "XF"), Poisson = FALSE))
+  ez_in <- AssessGoF(ez_in, type = "fractions", features = c("GF", "XF"), min_reads = 50)
+  gof_in <- EZget(ez_in, type = "gof")
+
+  # Both exonic (XF == GF) AND intronic (XF == "__no_feature") rows must be retained!
+  expect_equal(sum(gof_in$XF == "__no_feature"), 12L)
+  expect_equal(sum(gof_in$XF != "__no_feature"), 12L)
+
+  # 2. AssessGoF(..., type = "averages", min_reads = ...) filters cleanly on mean_coverage
+  ez_in <- suppressMessages(EstimateKinetics(ez_in, features = c("GF", "XF")))
+  ez_in <- suppressMessages(AverageAndRegularize(ez_in, features = c("GF", "XF"), formula_mean = ~ 1))
+  ez_in <- AssessGoF(ez_in, type = "averages", features = c("GF", "XF"), min_reads = 100)
+  gof_avg <- EZget(ez_in, type = "gof", source_type = "averages")
+  expect_equal(nrow(gof_avg), 24L)
+  expect_true(all(gof_avg$mean_coverage >= 100))
+})
+
 

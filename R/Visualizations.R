@@ -925,6 +925,94 @@ EZpcaPlot <- function(obj, data_type = c("fraction_labeled", "reads"),  features
 }
 
 
+# Resolve matching GoF table name (running AssessGoF on the fly if needed and
+# disambiguating exact feature-set matches when partial matching hits supersets)
+resolve_gof_for_plot <- function(obj,
+                                 source_type = NULL,
+                                 source_table = NULL,
+                                 features = NULL,
+                                 deconvolved = NULL,
+                                 parameter = NULL,
+                                 kstrat = NULL,
+                                 graph = NULL,
+                                 grouping_features = NULL,
+                                 repeatID = NULL,
+                                 exactMatch = FALSE){
+
+  always_chk <- !is.null(source_type) || !is.null(source_table) || !is.null(features) ||
+    !is.null(deconvolved) || !is.null(parameter) || !is.null(kstrat) ||
+    !is.null(graph) || !is.null(grouping_features) || !is.null(repeatID)
+
+  query_gof <- function(o, ex_m){
+    if(length(o[["metadata"]][["gof"]]) == 0L) return(NULL)
+    nm <- suppressWarnings(EZget(
+      o,
+      type = "gof",
+      source_type = source_type,
+      source_table = source_table,
+      features = features,
+      deconvolved = deconvolved,
+      parameter = parameter,
+      kstrat = kstrat,
+      graph = graph,
+      grouping_features = grouping_features,
+      repeatID = repeatID,
+      exactMatch = ex_m,
+      alwaysCheck = always_chk,
+      returnNameOnly = TRUE
+    ))
+    if(length(nm) > 1L && !ex_m && !is.null(features)){
+      nm_ex <- suppressWarnings(EZget(
+        o,
+        type = "gof",
+        source_type = source_type,
+        source_table = source_table,
+        features = features,
+        deconvolved = deconvolved,
+        parameter = parameter,
+        kstrat = kstrat,
+        graph = graph,
+        grouping_features = grouping_features,
+        repeatID = repeatID,
+        exactMatch = TRUE,
+        alwaysCheck = TRUE,
+        returnNameOnly = TRUE
+      ))
+      if(length(nm_ex) == 1L) return(nm_ex)
+    }
+    nm
+  }
+
+  gof_name <- query_gof(obj, exactMatch)
+  if(is.null(gof_name) || length(gof_name) == 0L){
+    message("No matching GoF table found in `obj`; running `AssessGoF()` on the fly...")
+    obj <- AssessGoF(
+      obj,
+      type = source_type %||% "auto",
+      features = features,
+      deconvolved = deconvolved,
+      parameter = parameter,
+      kstrat = kstrat,
+      graph = graph,
+      grouping_features = grouping_features,
+      repeatID = repeatID,
+      store_residuals = TRUE
+    )
+    gof_name <- query_gof(obj, exactMatch)
+  }
+
+  if(is.null(gof_name) || length(gof_name) == 0L){
+    stop("No `gof` tables in `obj` matched your search criteria!")
+  }
+  if(length(gof_name) > 1L){
+    stop("Multiple `gof` tables matched (", paste(gof_name, collapse = ", "),
+         ")! Specify `source_type`, `source_table`, `features`, `deconvolved`, or `parameter`.")
+  }
+
+  list(obj = obj, gof_name = gof_name)
+}
+
+
 #' Visualize dataset-wide and sample-level goodness of fit
 #'
 #' `EZGoFPlot()` provides four complementary diagnostic views of model goodness of fit
@@ -948,8 +1036,8 @@ EZpcaPlot <- function(obj, data_type = c("fraction_labeled", "reads"),  features
 #' }
 #'
 #' @param obj An `EZbakRData` (or `EZbakRArrowData`) object on which `AssessGoF()` has
-#' been run (or containing `EstimateFractions()`, `AverageAndRegularize()`, or
-#' `EZDynamics()` outputs).
+#' been run (or containing `EstimateFractions()`, `EstimateIsoformFractions()`,
+#' `DeconvolveFractions()`, `AverageAndRegularize()`, or `EZDynamics()` outputs).
 #' @param plot_type Type of diagnostic plot: `"volcano"`, `"sample_qc"`, `"obs_vs_pred"`,
 #' or `"residual_trend"`.
 #' @param source_type Optional filter (`"fractions"`, `"averages"`, or `"dynamics"`)
@@ -957,6 +1045,8 @@ EZpcaPlot <- function(obj, data_type = c("fraction_labeled", "reads"),  features
 #' on the fly).
 #' @param source_table Optional exact upstream table name passed to `EZget()`.
 #' @param features Optional feature vector passed to `EZget()`.
+#' @param deconvolved Optional logical filter selecting deconvolved (`TRUE`) vs.
+#' non-deconvolved (`FALSE`) fraction GoF tables.
 #' @param parameter Optional parameter name passed to `EZget()`.
 #' @param kstrat Optional kinetic strategy passed to `EZget()`.
 #' @param graph Optional `EZDynamics` graph matrix passed to `EZget()`.
@@ -969,7 +1059,7 @@ EZpcaPlot <- function(obj, data_type = c("fraction_labeled", "reads"),  features
 #' @param FDR_cutoff Adjusted p-value threshold for highlighting poor fits on `"volcano"` (default `0.05`).
 #' @param rmse_cutoff Effect-size threshold (`mean_tvd` for `"fractions"`, `wrmse_fn` or
 #' `|mean_signed_resid_fn|` for kinetic/ODE models) for highlighting poor fits on `"volcano"`
-#' (default `0.05`, i.e., 5\% displaced reads or 5 percentage points).
+#' (default `0.05`, i.e., 5% displaced reads or 5 percentage points).
 #' @param signed Logical (default `FALSE`); if `TRUE` on kinetic/ODE `"volcano"`, plots
 #' signed mean residual (`obs - pred`) on X instead of `wrmse_fn`.
 #' @param size Optional point size for scatter plots.
@@ -1002,6 +1092,7 @@ EZGoFPlot <- function(obj,
                       source_type = NULL,
                       source_table = NULL,
                       features = NULL,
+                      deconvolved = NULL,
                       parameter = NULL,
                       kstrat = NULL,
                       graph = NULL,
@@ -1031,55 +1122,21 @@ EZGoFPlot <- function(obj,
   metric <- match.arg(metric)
   residual_scale <- match.arg(residual_scale)
 
-  has_requested_type <- if(is.null(source_type)){
-    length(obj[["metadata"]][["gof"]]) > 0L
-  }else{
-    any(vapply(obj[["metadata"]][["gof"]],
-               function(m) identical(m[["source_type"]], source_type),
-               logical(1)))
-  }
-
-  if(!has_requested_type){
-    message("No matching GoF table found in `obj`; running `AssessGoF()` on the fly...")
-    obj <- AssessGoF(
-      obj,
-      type = source_type %||% "auto",
-      features = features,
-      parameter = parameter,
-      kstrat = kstrat,
-      graph = graph,
-      grouping_features = grouping_features,
-      repeatID = repeatID
-    )
-  }
-
-  always_chk <- !is.null(source_type) || !is.null(source_table) || !is.null(features) ||
-    !is.null(parameter) || !is.null(kstrat) || !is.null(graph) ||
-    !is.null(grouping_features) || !is.null(repeatID)
-
-  gof_name <- EZget(
-    obj,
-    type = "gof",
+  resolved <- resolve_gof_for_plot(
+    obj = obj,
     source_type = source_type,
     source_table = source_table,
     features = features,
+    deconvolved = deconvolved,
     parameter = parameter,
     kstrat = kstrat,
     graph = graph,
     grouping_features = grouping_features,
     repeatID = repeatID,
-    exactMatch = exactMatch,
-    alwaysCheck = always_chk,
-    returnNameOnly = TRUE
+    exactMatch = exactMatch
   )
-
-  if(is.null(gof_name) || length(gof_name) == 0L){
-    stop("No `gof` tables in `obj` matched your search criteria!")
-  }
-  if(length(gof_name) > 1L){
-    stop("Multiple `gof` tables matched (", paste(gof_name, collapse = ", "),
-         ")! Specify `source_type`, `source_table`, `features`, or `parameter`.")
-  }
+  obj <- resolved$obj
+  gof_name <- resolved$gof_name
 
   gof_tbl <- obj[["gof"]][[gof_name]]
   gof_meta <- obj[["metadata"]][["gof"]][[gof_name]]
@@ -1090,17 +1147,26 @@ EZGoFPlot <- function(obj,
     if(is.null(features_to_highlight)) return(df_in)
     f_cols <- gof_meta[["features"]]
     if(!is.data.frame(features_to_highlight)){
+      q_chr <- as.character(features_to_highlight)
       if(length(f_cols) == 1L){
-        hl_df <- dplyr::tibble(!!f_cols := as.character(features_to_highlight))
+        hl_df <- dplyr::tibble(!!f_cols := q_chr)
         join_hl <- f_cols
-      }else if(!is.null(gof_meta[["grouping_features"]]) &&
-               length(gof_meta[["grouping_features"]]) == 1L){
-        gf1 <- gof_meta[["grouping_features"]]
-        hl_df <- dplyr::tibble(!!gf1 := as.character(features_to_highlight))
-        join_hl <- gf1
       }else{
-        stop("When `gof` table has multiple feature columns (", paste(f_cols, collapse = ", "),
-             "), `features_to_highlight` must be a data frame with those columns!")
+        hit_cols <- f_cols[vapply(f_cols, function(fc) any(q_chr %in% as.character(df_in[[fc]])), logical(1))]
+        if(length(hit_cols) == 1L){
+          join_hl <- hit_cols
+          hl_df <- dplyr::tibble(!!join_hl := q_chr)
+        }else if(!is.null(gof_meta[["grouping_features"]]) &&
+                 length(gof_meta[["grouping_features"]]) == 1L &&
+                 gof_meta[["grouping_features"]] %in% f_cols){
+          gf1 <- gof_meta[["grouping_features"]]
+          hl_df <- dplyr::tibble(!!gf1 := q_chr)
+          join_hl <- gf1
+        }else{
+          stop("When `gof` table has multiple feature columns (", paste(f_cols, collapse = ", "),
+               "), `features_to_highlight` must either match a single feature column unambiguously ",
+               "or be a data frame with those columns!")
+        }
       }
     }else{
       join_hl <- intersect(colnames(features_to_highlight), colnames(df_in))
@@ -1161,6 +1227,7 @@ EZGoFPlot <- function(obj,
         "intermediate_spike" = "darkorange",
         "high_mut_tail" = "firebrick3",
         "overdispersed_muts" = "purple4",
+        "deconvolution_mismatch" = "mediumvioletred",
         "multilabel_mismatch" = "dodgerblue3",
         "nolabel_anomaly" = "goldenrod3",
         "Poor Fit" = "darkorange",
@@ -1396,17 +1463,18 @@ EZGoFPlot <- function(obj,
   if(plot_type == "obs_vs_pred"){
     df_op <- res_tbl
     if(is_fxn_gof){
+      is_dec_gof <- isTRUE(gof_meta[["is_deconvolved"]])
       if(residual_scale == "logit"){
         eps_l <- 1e-4
         df_op$pred_x <- stats::qlogis(pmin(pmax(as.numeric(df_op$est_fn), eps_l), 1 - eps_l))
         df_op$obs_y <- stats::qlogis(pmin(pmax(as.numeric(df_op$mle_fn), eps_l), 1 - eps_l))
-        x_lab <- "EstimateFractions() logit(fraction high)"
-        y_lab <- "Unpenalized MLE logit(fraction high)"
+        x_lab <- if(is_dec_gof) "Deconvolved logit(fraction high)" else "EstimateFractions() logit(fraction high)"
+        y_lab <- if(is_dec_gof) "Unpenalized deconv. MLE logit(fraction high)" else "Unpenalized MLE logit(fraction high)"
       }else{
         df_op$pred_x <- as.numeric(df_op$est_fn)
         df_op$obs_y <- as.numeric(df_op$mle_fn)
-        x_lab <- "EstimateFractions() fraction high"
-        y_lab <- "Unpenalized MLE fraction high"
+        x_lab <- if(is_dec_gof) "Deconvolved fraction high" else "EstimateFractions() fraction high"
+        y_lab <- if(is_dec_gof) "Unpenalized deconv. MLE fraction high" else "Unpenalized MLE fraction high"
       }
       df_op$fit_status <- factor(
         ifelse(df_op$failure_mode == "ok", "Good Fit", "Flagged"),
@@ -1566,7 +1634,7 @@ EZGoFPlot <- function(obj,
 #'   (`Old component`, `New component`, and `Total mixture`).
 #'   \item \strong{Kinetic & ODE models (`source_type = "averages"` or `"dynamics"`)}:
 #'   Overlays smooth model-predicted `fraction_high<muttype>` trajectories (or categorical
-#'   condition predictions) onto individual sample estimates and 95\% profile-likelihood
+#'   condition predictions) onto individual sample estimates and 95% profile-likelihood
 #'   confidence intervals from `EstimateFractions()`.
 #' }
 #'
@@ -1575,7 +1643,8 @@ EZGoFPlot <- function(obj,
 #' `"worst_rep"`, or `"best_fit"`).
 #'
 #' @param obj An `EZbakRData` (or `EZbakRArrowData`) object containing `AssessGoF()`
-#' output (or upstream `EstimateFractions()` / `AverageAndRegularize()` / `EZDynamics()` tables).
+#' output (or upstream `EstimateFractions()` / `EstimateIsoformFractions()` /
+#' `DeconvolveFractions()` / `AverageAndRegularize()` / `EZDynamics()` tables).
 #' @param features_to_plot Optional character vector of feature names (when a single
 #' feature or grouping feature identifies genes) or data frame of feature columns to plot.
 #' If `NULL` (default), selects the top `top_n` features according to `rank_by`.
@@ -1588,6 +1657,8 @@ EZGoFPlot <- function(obj,
 #' passed to `EZget()`.
 #' @param source_table Optional upstream table name passed to `EZget()`.
 #' @param features Optional feature vector passed to `EZget()`.
+#' @param deconvolved Optional logical filter selecting deconvolved (`TRUE`) vs.
+#' non-deconvolved (`FALSE`) fraction GoF tables.
 #' @param parameter Optional parameter name passed to `EZget()`.
 #' @param kstrat Optional kinetic strategy passed to `EZget()`.
 #' @param graph Optional `EZDynamics` graph matrix passed to `EZget()`.
@@ -1598,7 +1669,7 @@ EZGoFPlot <- function(obj,
 #' (continuous label-time trajectory curves starting at `t = 0`), or `"condition"`
 #' (categorical condition comparison).
 #' @param n_grid Number of time-grid evaluation points for smooth trajectory curves (default `150`).
-#' @param show_ci Logical (default `TRUE`); if `TRUE`, draws 95\% profile-likelihood
+#' @param show_ci Logical (default `TRUE`); if `TRUE`, draws 95% profile-likelihood
 #' confidence intervals on observed sample points in kinetic/ODE plots.
 #' @param annotate_stats Logical (default `TRUE`); if `TRUE`, includes `wRMSE` (or `TVD`
 #' and `failure_mode` for mixture plots) in each facet strip header.
@@ -1628,6 +1699,7 @@ EZFitPlot <- function(obj,
                       source_type = NULL,
                       source_table = NULL,
                       features = NULL,
+                      deconvolved = NULL,
                       parameter = NULL,
                       kstrat = NULL,
                       graph = NULL,
@@ -1651,56 +1723,21 @@ EZFitPlot <- function(obj,
   rank_by <- match.arg(rank_by)
   x_axis <- match.arg(x_axis)
 
-  has_requested_type <- if(is.null(source_type)){
-    length(obj[["metadata"]][["gof"]]) > 0L
-  }else{
-    any(vapply(obj[["metadata"]][["gof"]],
-               function(m) identical(m[["source_type"]], source_type),
-               logical(1)))
-  }
-
-  if(!has_requested_type){
-    message("No matching GoF table found in `obj`; running `AssessGoF()` on the fly...")
-    obj <- AssessGoF(
-      obj,
-      type = source_type %||% "auto",
-      features = features,
-      parameter = parameter,
-      kstrat = kstrat,
-      graph = graph,
-      grouping_features = grouping_features,
-      repeatID = repeatID,
-      store_residuals = TRUE
-    )
-  }
-
-  always_chk <- !is.null(source_type) || !is.null(source_table) || !is.null(features) ||
-    !is.null(parameter) || !is.null(kstrat) || !is.null(graph) ||
-    !is.null(grouping_features) || !is.null(repeatID)
-
-  gof_name <- EZget(
-    obj,
-    type = "gof",
+  resolved <- resolve_gof_for_plot(
+    obj = obj,
     source_type = source_type,
     source_table = source_table,
     features = features,
+    deconvolved = deconvolved,
     parameter = parameter,
     kstrat = kstrat,
     graph = graph,
     grouping_features = grouping_features,
     repeatID = repeatID,
-    exactMatch = exactMatch,
-    alwaysCheck = always_chk,
-    returnNameOnly = TRUE
+    exactMatch = exactMatch
   )
-
-  if(is.null(gof_name) || length(gof_name) == 0L){
-    stop("No `gof` tables in `obj` matched your search criteria!")
-  }
-  if(length(gof_name) > 1L){
-    stop("Multiple `gof` tables matched (", paste(gof_name, collapse = ", "),
-         ")! Specify `source_type`, `source_table`, `features`, or `parameter`.")
-  }
+  obj <- resolved$obj
+  gof_name <- resolved$gof_name
 
   gof_tbl <- obj[["gof"]][[gof_name]]
   gof_meta <- obj[["metadata"]][["gof"]][[gof_name]]
@@ -1759,17 +1796,26 @@ EZFitPlot <- function(obj,
     sel_gof <- gof_tbl[ord[seq_len(n_take)], , drop = FALSE]
   }else{
     if(!is.data.frame(features_to_plot)){
+      q_chr <- as.character(features_to_plot)
       if(length(f_cols) == 1L){
-        q_df <- dplyr::tibble(!!f_cols := as.character(features_to_plot))
+        q_df <- dplyr::tibble(!!f_cols := q_chr)
         join_cols <- f_cols
-      }else if(!is.null(gof_meta[["grouping_features"]]) &&
-               length(gof_meta[["grouping_features"]]) == 1L){
-        gf1 <- gof_meta[["grouping_features"]]
-        q_df <- dplyr::tibble(!!gf1 := as.character(features_to_plot))
-        join_cols <- gf1
       }else{
-        stop("When `gof` table has multiple feature columns (", paste(f_cols, collapse = ", "),
-             "), `features_to_plot` must be a data frame with those columns!")
+        hit_cols <- f_cols[vapply(f_cols, function(fc) any(q_chr %in% as.character(gof_tbl[[fc]])), logical(1))]
+        if(length(hit_cols) == 1L){
+          join_cols <- hit_cols
+          q_df <- dplyr::tibble(!!join_cols := q_chr)
+        }else if(!is.null(gof_meta[["grouping_features"]]) &&
+                 length(gof_meta[["grouping_features"]]) == 1L &&
+                 gof_meta[["grouping_features"]] %in% f_cols){
+          gf1 <- gof_meta[["grouping_features"]]
+          q_df <- dplyr::tibble(!!gf1 := q_chr)
+          join_cols <- gf1
+        }else{
+          stop("When `gof` table has multiple feature columns (", paste(f_cols, collapse = ", "),
+               "), `features_to_plot` must either match a single feature column unambiguously ",
+               "or be a data frame with those columns!")
+        }
       }
     }else{
       join_cols <- intersect(colnames(features_to_plot), f_cols)
@@ -1863,6 +1909,7 @@ EZFitPlot <- function(obj,
       "intermediate_spike" = "interm. spike",
       "high_mut_tail" = "high-mut tail",
       "overdispersed_muts" = "overdispersed",
+      "deconvolution_mismatch" = "deconv. mismatch",
       "multilabel_mismatch" = "multilabel",
       "nolabel_anomaly" = "-label anomaly"
     )
