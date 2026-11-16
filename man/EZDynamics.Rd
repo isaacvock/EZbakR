@@ -31,7 +31,8 @@ EZDynamics(
   normalization_repeatID = NULL,
   normalization_exactMatch = TRUE,
   species_to_sf = NULL,
-  overwrite = TRUE
+  overwrite = TRUE,
+  verbose = TRUE
 )
 }
 \arguments{
@@ -201,6 +202,9 @@ would possess the same metadata (features analyzed, populations analyzed,
 and fraction_design), then it will get overwritten with the new output. Else,
 it will be saved as a separate output with the same name + "_#" where "#" is a
 numerical ID to distinguish the similar outputs.}
+
+\item{verbose}{Logical (default \code{TRUE}); if \code{TRUE}, prints stage updates,
+progress, and estimated remaining runtime (\code{ETA}) while fitting ODE models.}
 }
 \value{
 \code{EZbakRData} object with an additional "dynamics" table.

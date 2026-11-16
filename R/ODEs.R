@@ -195,6 +195,8 @@
 #' and fraction_design), then it will get overwritten with the new output. Else,
 #' it will be saved as a separate output with the same name + "_#" where "#" is a
 #' numerical ID to distinguish the similar outputs.
+#' @param verbose Logical (default `TRUE`); if `TRUE`, prints stage updates,
+#' progress, and estimated remaining runtime (`ETA`) while fitting ODE models.
 #' @importFrom magrittr %>%
 #' @import data.table
 #' @return `EZbakRData` object with an additional "dynamics" table.
@@ -273,7 +275,8 @@ EZDynamics <- function(obj,
                      normalization_repeatID = NULL,
                      normalization_exactMatch = TRUE,
                      species_to_sf = NULL,
-                     overwrite = TRUE){
+                     overwrite = TRUE,
+                     verbose = TRUE){
 
 
   # Hack to deal with devtools::check() NOTEs
@@ -336,6 +339,9 @@ EZDynamics <- function(obj,
 
   if(type == "averages"){
 
+    if(verbose){
+      message("Preparing input data...")
+    }
 
     ### Process input data for model
 
@@ -609,6 +615,9 @@ EZDynamics <- function(obj,
         )
 
       ### Try to normalize
+      if(verbose){
+        message("Estimating compartment scale factors...")
+      }
       scale_factors <- tryCatch(
         {
           normalize_EZDynamics(norm_df,
@@ -725,11 +734,16 @@ EZDynamics <- function(obj,
       prior_sds = prior_sds,
       use_coverage = use_coverage,
       parameter_names = parameter_names,
-      include_mean_n = FALSE
+      include_mean_n = FALSE,
+      verbose = verbose
     )
 
 
   }else{
+
+    if(verbose){
+      message("Normalizing read counts and preparing input data...")
+    }
 
     # For metadata later
     design_factors <- NULL
@@ -884,7 +898,8 @@ EZDynamics <- function(obj,
       prior_sds = prior_sds,
       use_coverage = use_coverage,
       parameter_names = parameter_names,
-      include_mean_n = TRUE
+      include_mean_n = TRUE,
+      verbose = verbose
     )
 
 
@@ -1170,6 +1185,23 @@ compile_dynamics_spec <- function(graph, formula_list, tls, sample_features,
 }
 
 
+# Human-readable duration formatter for EZDynamics progress and ETA messages
+format_dyn_duration <- function(secs){
+  if(!is.finite(secs) || secs < 0) return("unknown")
+  if(secs < 1) return("<1s")
+  s_int <- as.integer(round(secs))
+  if(s_int < 60L){
+    sprintf("%ds", s_int)
+  }else if(s_int < 3600L){
+    sprintf("%dm %02ds", s_int %/% 60L, s_int %% 60L)
+  }else{
+    hrs <- s_int %/% 3600L
+    mins <- (s_int %% 3600L) %/% 60L
+    sprintf("%dh %02dm", hrs, mins)
+  }
+}
+
+
 # Fast table-level fitter for EZDynamics avoiding tidyverse group summarise & repeated solve(hessian)
 fit_dynamics_table <- function(df, cols_to_group_by,
                                starting_values, lower_bounds, upper_bounds,
@@ -1181,7 +1213,8 @@ fit_dynamics_table <- function(df, cols_to_group_by,
                                prior_means, prior_sds,
                                use_coverage = TRUE,
                                parameter_names,
-                               include_mean_n = FALSE){
+                               include_mean_n = FALSE,
+                               verbose = TRUE){
 
   grouped_df <- dplyr::group_by(df, dplyr::across(dplyr::all_of(cols_to_group_by)))
   g_keys <- dplyr::group_keys(grouped_df)
@@ -1203,6 +1236,27 @@ fit_dynamics_table <- function(df, cols_to_group_by,
   par_mat <- matrix(NA_real_, nrow = G, ncol = npars)
   se_mat <- matrix(Inf, nrow = G, ncol = npars)
   mean_n_vec <- if(include_mean_n) numeric(G) else NULL
+
+  if(verbose){
+    message(sprintf(
+      "Fitting ODE models across %s feature group%s...",
+      format(G, big.mark = ",", trim = TRUE),
+      if(G == 1L) "" else "s"
+    ))
+  }
+
+  t_start <- proc.time()[["elapsed"]]
+  is_live_tty <- isTRUE(verbose) && interactive() &&
+    !isTRUE(getOption("knitr.in.progress")) &&
+    !isTRUE(getOption("testthat.is_testing"))
+  warmup_n <- if(G > 0L) min(G, max(5L, min(50L, as.integer(ceiling(G * 0.02))))) else 1L
+  check_every <- max(1L, G %/% 200L)
+  milestones <- as.integer(ceiling(G * c(0.25, 0.50, 0.75)))
+  next_ms_idx <- 1L
+  printed_warmup <- FALSE
+  printed_cr <- FALSE
+  max_line_len <- 0L
+  last_print_t <- t_start
 
   for(g in seq_len(G)){
     idx <- g_rows[[g]]
@@ -1259,6 +1313,80 @@ fit_dynamics_table <- function(df, cols_to_group_by,
 
     if(include_mean_n){
       mean_n_vec[g] <- mean(cov_all[idx])
+    }
+
+    if(verbose && g < G &&
+       (g == warmup_n || g %% check_every == 0L || (next_ms_idx <= 3L && g >= milestones[next_ms_idx]))){
+      now_t <- proc.time()[["elapsed"]]
+      elapsed <- max(0, now_t - t_start)
+      eta <- (G - g) * (elapsed / g)
+      pct <- as.integer(floor(100 * g / G))
+
+      if(is_live_tty){
+        if(elapsed >= 0.5 && (now_t - last_print_t >= 0.25 || !printed_cr)){
+          msg_line <- sprintf(
+            "  Progress: %s / %s (%d%%) | Elapsed: %s | ETA: %s",
+            format(g, big.mark = ",", trim = TRUE),
+            format(G, big.mark = ",", trim = TRUE),
+            pct,
+            format_dyn_duration(elapsed),
+            format_dyn_duration(eta)
+          )
+          max_line_len <- max(max_line_len, nchar(msg_line))
+          message("\r", sprintf("%-*s", max_line_len, msg_line), appendLF = FALSE)
+          utils::flush.console()
+          printed_cr <- TRUE
+          last_print_t <- now_t
+        }
+      }else{
+        if(!printed_warmup && g >= warmup_n){
+          printed_warmup <- TRUE
+          if(eta >= 2){
+            message(sprintf(
+              "  Progress: %s / %s (%d%%) | Elapsed: %s | ETA: %s",
+              format(g, big.mark = ",", trim = TRUE),
+              format(G, big.mark = ",", trim = TRUE),
+              pct,
+              format_dyn_duration(elapsed),
+              format_dyn_duration(eta)
+            ))
+            last_print_t <- now_t
+          }
+        }
+        hit_ms <- FALSE
+        while(next_ms_idx <= 3L && g >= milestones[next_ms_idx]){
+          hit_ms <- TRUE
+          next_ms_idx <- next_ms_idx + 1L
+        }
+        if(hit_ms && (elapsed + eta >= 3) && (now_t - last_print_t >= 0.5)){
+          message(sprintf(
+            "  Progress: %s / %s (%d%%) | Elapsed: %s | ETA: %s",
+            format(g, big.mark = ",", trim = TRUE),
+            format(G, big.mark = ",", trim = TRUE),
+            pct,
+            format_dyn_duration(elapsed),
+            format_dyn_duration(eta)
+          ))
+          last_print_t <- now_t
+        }
+      }
+    }
+  }
+
+  if(verbose){
+    total_elapsed <- max(0, proc.time()[["elapsed"]] - t_start)
+    done_msg <- sprintf(
+      "Finished fitting %s ODE model%s in %s.",
+      format(G, big.mark = ",", trim = TRUE),
+      if(G == 1L) "" else "s",
+      format_dyn_duration(total_elapsed)
+    )
+    if(printed_cr){
+      max_line_len <- max(max_line_len, nchar(done_msg))
+      message("\r", sprintf("%-*s", max_line_len, done_msg))
+      utils::flush.console()
+    }else{
+      message(done_msg)
     }
   }
 

@@ -388,3 +388,65 @@ test_that("Fast fit_beta_regression, identify_groups, and closed-form NormalizeF
   cf_pdo <- -expm1(-delta_clamped)
   expect_equal(cf_pdo, opt_pdo, tolerance = 1e-6)
 })
+
+
+test_that("EZDynamics progress messages and verbose = FALSE work cleanly", {
+  expect_equal(EZbakR:::format_dyn_duration(0.2), "<1s")
+  expect_equal(EZbakR:::format_dyn_duration(14.3), "14s")
+  expect_equal(EZbakR:::format_dyn_duration(125), "2m 05s")
+  expect_equal(EZbakR:::format_dyn_duration(3725), "1h 02m")
+
+  set.seed(707)
+  sim <- EZSimulate(
+    nfeatures = 12,
+    ntreatments = 1,
+    nreps = 2,
+    seqdepth = 12 * 1000,
+    mode = "dynamics",
+    label_time = c(1, 3),
+    dynamics_preset = "nuc2cyto"
+  )
+  ez <- EZbakRData(sim$cB, sim$metadf)
+  ez <- suppressMessages(EstimateFractions(ez))
+  ez <- suppressMessages(AverageAndRegularize(
+    ez,
+    formula_mean = ~ tl:compartment - 1,
+    type = "fractions",
+    parameter = "logit_fraction_highTC"
+  ))
+
+  msgs <- character(0)
+  withCallingHandlers(
+    {
+      ez_v <- EZDynamics(
+        ez,
+        graph = ode_models$nuc2cyto$graph,
+        sub_features = "GF",
+        grouping_features = "GF",
+        sample_feature = "compartment",
+        modeled_to_measured = ode_models$nuc2cyto$formulas,
+        verbose = TRUE
+      )
+    },
+    message = function(m){
+      msgs <<- c(msgs, conditionMessage(m))
+      invokeRestart("muffleMessage")
+    }
+  )
+  expect_true(any(grepl("Preparing input data", msgs)))
+  expect_true(any(grepl("Estimating compartment scale factors", msgs)))
+  expect_true(any(grepl("Fitting ODE models across 12 feature groups", msgs)))
+  expect_true(any(grepl("Finished fitting 12 ODE models", msgs)))
+
+  expect_silent(
+    EZDynamics(
+      ez,
+      graph = ode_models$nuc2cyto$graph,
+      sub_features = "GF",
+      grouping_features = "GF",
+      sample_feature = "compartment",
+      modeled_to_measured = ode_models$nuc2cyto$formulas,
+      verbose = FALSE
+    )
+  )
+})
