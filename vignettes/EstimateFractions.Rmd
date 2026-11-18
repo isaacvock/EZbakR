@@ -122,10 +122,10 @@ content reads in our +label data (don't worry about -label controls, they
 are properly handled automatically). The second row has a `TC` value of `FALSE`,
 indicating that it pertains to the population of reads with low T-to-C mutation
 content. This population is also expected to exist in a standard NR-seq
-dataset, so its `present` value is also `TRUE.
+dataset, so its `present` value is also `TRUE`.
 
 
-For a more complicated example, consider the fractions design matirx for [TILAC](https://doi.org/10.1093/nar/gkac693). TILAC is a
+For a more complicated example, consider the fractions design matrix for [TILAC](https://doi.org/10.1093/nar/gkac693). TILAC is a
 method where an s^4^U labeled RNA population is mixed with an s^6^G labeled
 population. In this case, there are expected to be reads with either high
 T-to-C content (new reads from the s^4^U labeled sample), high G-to-A content
@@ -170,7 +170,7 @@ your particular experiment. If you don't provide a fraction design table,
 `EstimateFractions()` will use the default output of `create_fraction_design()`
 to ensure that all possible populations are modeled. This is rarely going to
 be a truly accurate fraction design table for multi-label experiments,
-but its a conservative default that you can easily adjust.
+but it's a conservative default that you can easily adjust.
 
 
 ### Tuning the feature set choice and filtering
@@ -179,7 +179,7 @@ fastq2EZbakR, the upstream pipeline I developed to conveniently produce output
 compatible with EZbakR, is able to assign reads to lots of different "features".
 These include genes, exonic regions of genes, transcript equivalence classes,
 exon-exon junctions, and more. To make full effective use of this diverse set
-of feature assignments, its important to understand how `EstimateFractions()`
+of feature assignments, it's important to understand how `EstimateFractions()`
 will treat the various feature columns in your cB. Often, you will be interested
 in analyzing subsets of these features separately. For example, it might make
 sense to estimate fractions for gene + transcript equivalence class combos, gene + 
@@ -285,7 +285,7 @@ that implemented in [grandR](https://www.nature.com/articles/s41467-023-39163-4)
 originally described [here](https://doi.org/10.1093/nar/gkae120). Alternatively, EZbakR also implements
 that previously implemented in bakR. 
 
-Internal benchmarks suggest that that grandR
+Internal benchmarks suggest that the grandR
 strategy is a bit conservative (overestimates dropout) but more robust than the
 bakR strategy. The bakR strategy has the advantage of being explicitly derived
 from a particular generative model of dropout (details [here](https://simonlabcode.github.io/bakR/articles/Dropout.html)), allowing
@@ -304,7 +304,7 @@ ezbdo <- CorrectDropout(ezbdo,
 
 `grouping_factors` is technically not a required argument, as EZbakR will try
 to infer it automatically. EZbakR assumes that all metadf sample characteristic
-columns should be used for grouping though, so its important to know that this
+columns should be used for grouping though, so it's important to know that this
 default can be altered as necessary. To alter the correction strategy,
 set the `strategy` parameter of `CorrectDropout()` (options being "grandR" and
 "bakR").
@@ -349,8 +349,8 @@ GRAND-SLAM, is largely considered the "gold-standard" in analyzing NR-seq data.
 Like any statistical method though, it makes assumptions, and real data will 
 often violate these assumptions. Namely, these models typically assume that
 every RNA synthesized in the presence of metabolic label has an equal probability
-of incorporating said label. What if this is not true though?This may seem like 
-a pedantic statistical question, but there is evidence that some RNA's deviate strongly from this assumption. For example, it has been noted (paper from the Churchman lab [here](https://doi.org/10.1016/j.molcel.2024.02.028)) that mitochondrial RNA have much lower mutation rates in reads from new RNA than other RNA.
+of incorporating said label. What if this is not true though? This may seem like 
+a pedantic statistical question, but there is evidence that some RNAs deviate strongly from this assumption. For example, it has been noted (paper from the Churchman lab [here](https://doi.org/10.1016/j.molcel.2024.02.028)) that mitochondrial RNA have much lower mutation rates in reads from new RNA than other RNA.
 
 To account for this heterogeneity, `EstimateFractions()` can implement what I 
 will term a "hierarchical" two-component mixture model. "Hierarchical" means 
@@ -361,7 +361,7 @@ for its new read mutation rate being different from the sample-wide average,
 then this feature-specific mutation rate will be estimated and used in
 estimating the fraction of high mutation content reads for this feature. If
 a feature has limited coverage though, its new read mutation rate estimate will
-be strongly pushed towards to the sample-wide average. In other words, the
+be strongly pushed towards the sample-wide average. In other words, the
 feature-specific mutation rates are "regularized" towards the sample-wide 
 average. This strategy will take a bit longer to run and can be implemented
 as so:
@@ -373,7 +373,7 @@ ezbdo <- EstimateFractions(ezbdo,
 ```
 
 When doing this, the feature-specific and sample-wide mutation rates will both
-be saved in the `ezbdo$mutation_rates` list.As usual, let's check the 
+be saved in the `ezbdo$mutation_rates` list. As usual, let's check the 
 results:
 
 ```{r}
@@ -421,7 +421,7 @@ If you inspect the cB simulated by `SimulateIsoforms()`, you will note that
 there is a column called `transcripts`, which represents transcript equivalence
 classes. The transcript IDs for all of the transcripts a read is consistent
 with are separated by "+"'s, though in this case, we don't want to separate
-and copy the data for each isoform. Whether, we want to estimate fractions
+and copy the data for each isoform. Rather, we want to estimate fractions
 for each unique equivalence class:
 
 ```{r}
@@ -435,7 +435,7 @@ transcript isoform quantification estimates from tools like RSEM, which will
 be used by `EstimateIsoformFractions()`. To do this, you can use
 `ImportIsoformQuant()`. `ImportIsoformQuant()` has three parameters:
 
-* `obj`: The `EZbakRData` object you want to which you want to add isoform
+* `obj`: The `EZbakRData` object to which you want to add isoform
 quantification information
 * `files`: A named vector of paths to each isoform quantification output file
 you want to import. The names should be the relevant sample names as they appear 
@@ -443,7 +443,7 @@ in your cB.
 * `quant_tool`: The tool you used for isoform quantification.
 
 `ImportIsoformQuant()` is just a convenient wrapper for `tximport::tximport`,
-so I urge you to read that tools's documentation for more information
+so I urge you to read that tool's documentation for more information
 (documentation [here](https://bioconductor.org/packages/release/bioc/vignettes/tximport/inst/doc/tximport.html)).
 
 In this example, I will hack a solution, since I don't have any isoform
@@ -495,7 +495,7 @@ extreme fraction news. Other than that though, it looks good!
 **NOTE:** The documentation for this section lacks good examples as I don't yet
 have an example external dataset included with EZbakR's installation. Thus,
 I will be describing the details of how the analysis would go without showing
-a real analysis. Look for this to change in the not-to-distant future.
+a real analysis. Look for this to change in the not-too-distant future.
 
 What if you have a massive dataset with 10s of samples that you would like to 
 analyze? Loading the entire cB table for such a dataset into memory will surely
@@ -508,7 +508,7 @@ datasets. The steps for this process are described below.
 
 #### Step 1: Create an Arrow Dataset
 
-You need to create an Arrow Dataset partioned by the "sample" column of your cB.
+You need to create an Arrow Dataset partitioned by the "sample" column of your cB.
 This will create a set of .parquet files, with one file created for each sample.
 This will allow `EstimateFractions()` to load your data in one sample at a time,
 so as to only hold a single sample of the cB in RAM at a time:

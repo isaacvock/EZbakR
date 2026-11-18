@@ -1131,7 +1131,7 @@ WriteCBArrow <- function(cB,
 #' ez_arrow <- EZbakRArrowData(ds_dir, simdata$metadf)
 #'
 #' # Materialize two features for interactive inspection
-#' ez_sub <- CollectArrow(ez_arrow, features = c("feature1", "feature2"))
+#' ez_sub <- CollectArrow(ez_arrow, features = c("Gene1", "Gene2"))
 #'
 #' @export
 CollectArrow <- function(obj,

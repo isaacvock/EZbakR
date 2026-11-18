@@ -1,0 +1,334 @@
+---
+title: "Goodness of fit analyses with EZbakR"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{AssessGoF}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.dim = c(6.5, 4.2)
+)
+```
+
+## Introduction
+
+EZbakR makes two major assumptions in its analyses of NR-seq data: 1) what your read-level mutational data looks like, and 2) how the kinetics of biochemical processes influence labeled and unlabeled RNA levels across samples, timepoints, and compartments. A poor match in the former can indicate uncalled SNPs/other mutational anomalies, cross-mapping paralog reads, an unaccounted-for mix of pre-mRNA and mature mRNA reads, etc. A poor match in the latter can indicate misspecification of your kinetic or compartmental model (e.g., non-steady-state behavior or multi-phasic turnover), or sample-specific biases (such as metabolic label dropout or batch effects) that cause certain samples to be notable outliers. Assessing goodness of fit (GoF) with `AssessGoF()`, `EZGoFPlot()`, and `EZFitPlot()` can help you decide which features deserve caution when interpreting downstream results and guide concrete improvements to your workflow (such as stricter SNP calling, separating intronic and exonic features, applying dropout correction/normalization, or refining your kinetic model).
+
+```{r setup}
+library(EZbakR)
+library(dplyr)
+set.seed(42)
+```
+
+
+## Mixture model goodness of fit (`type = "fractions"`)
+
+### What `AssessGoF(type = "fractions")` tests
+
+At the read level, `EstimateFractions()` models each feature's mutation counts as a mixture of Binomial distributions conditioned on each read's mutable base count (`nT` for s^4^U experiments). `AssessGoF(..., type = "fractions")` compares the empirical mutation-count histogram (`0, 1, 2, 3, 4, 5, 6+` mutations) observed in `cB` against the exact `nT`-conditioned Binomial mixture implied by your `fractions` table (supporting `standard` and `hierarchical` two-component models, multi-label mixtures such as TILAC, deconvolved isoform fractions from `EstimateIsoformFractions()` / `DeconvolveFractions()`, `-label` controls, and `EZbakRArrowData` backends).
+
+### Running and visualizing mixture GoF
+
+Let's simulate 150 features (two `+label` replicates and one `-label` control per condition) and inject two classic mutational artifacts:
+
+* **`Gene1` (uncalled heterozygous SNP)**: ~50% of reads carry `+2` extra T-to-C mismatches in both `+label` and `-label` samples.
+* **`Gene2` (paralog / hyper-edited tail)**: ~25% of reads in `+label` samples carry `6` T-to-C mutations.
+
+```{r, message = FALSE}
+simdata <- EZSimulate(nfeatures = 150, nreps = 2)
+
+cB_mod <- bind_rows(
+  simdata$cB %>% filter(!(feature %in% c("Gene1", "Gene2"))),
+  # Split Gene1 reads 50/50 to mimic an uncalled heterozygous SNP (+2 T->C)
+  simdata$cB %>% filter(feature == "Gene1") %>% mutate(n = ceiling(n * 0.5)),
+  simdata$cB %>% filter(feature == "Gene1") %>%
+    mutate(TC = pmin(TC + 2L, nT), n = floor(n * 0.5)) %>% filter(n > 0),
+  # Split Gene2 +label reads 75/25 to mimic cross-mapping high-mutation reads
+  simdata$cB %>% filter(feature == "Gene2") %>%
+    mutate(n = ifelse(sample %in% c("sample1", "sample2", "sample3", "sample4"),
+                      ceiling(n * 0.75), n)),
+  simdata$cB %>%
+    filter(feature == "Gene2",
+           sample %in% c("sample1", "sample2", "sample3", "sample4"),
+           nT >= 6) %>%
+    mutate(TC = 6L, n = floor(n * 0.25)) %>% filter(n > 0)
+)
+
+ezbdo <- EZbakRData(cB_mod, simdata$metadf)
+ezbdo <- EstimateFractions(ezbdo)
+
+# Evaluate mixture goodness of fit
+ezbdo <- AssessGoF(ezbdo, type = "fractions")
+```
+
+One way to visualize the results of this analysis is with `EZGoFPlot()`. Setting `plot_type = "volcano"` gives you a sense of how many features have potential model-fit issues, while setting `plot_type = "sample_qc` gives you a sense of sample-wide trends:
+
+```{r, fig.align = 'center'}
+EZGoFPlot(ezbdo,
+          source_type = "fractions",
+          plot_type = "volcano",
+          features_to_highlight = c("Gene1", "Gene2"))
+```
+
+On the mixture GoF volcano plot, the X-axis is **Mean Total Variation Distance (`mean_tvd`)**, or the average fraction of reads displaced into the wrong mutation-count bin. Poor fits are colored by EZbakR's attempt to classify the anomaly-type (`dominant_failure_mode`). When `-label` (`tl == 0`) controls are present, setting `metric = "nolabel"` plots `-label` background discrepancies directly, which can help isolate sequence-level variants like `Gene1`'s SNP.
+
+```{r, fig.align = 'center'}
+EZGoFPlot(ezbdo,
+          source_type = "fractions",
+          plot_type = "sample_qc")
+```
+
+`EZFitPlot()` then allows you to inspect how well the EZbakR mutational model fits your
+actual data:
+
+```{r, fig.width = 7, fig.height = 4.2, fig.align = 'center'}
+EZFitPlot(ezbdo,
+          source_type = "fractions",
+          rank_by = "worst_gof",
+          top_n = 2)
+```
+
+The `TC = 2` SNP bump in `Gene1` (`interm. spike`) and the `TC = 6+` excess in `Gene2` (`high-mut tail`) are immediately visible!
+
+### Fetching and interpreting mixture GoF metrics
+
+`AssessGoF()` stores a feature-level summary table in `ezbdo$gof` and a sample-by-feature table in `ezbdo$gof_residuals`, both accessible with `EZget()` using `source_type = "fractions"`:
+
+```{r}
+fxn_gof <- EZget(ezbdo, type = "gof", source_type = "fractions")
+fxn_res <- EZget(ezbdo, type = "gof_residuals", source_type = "fractions")
+
+fxn_gof %>%
+  arrange(padj_gof) %>%
+  select(feature, mean_tvd, padj_gof, frac_samples_flagged, dominant_failure_mode) %>%
+  head(5)
+```
+
+**What to prioritize first**: In almost every analysis, focus on **`mean_tvd`** (effect size: how many reads are misplaced, where `< 0.05` is typically benign), **`padj_gof`** (statistical significance after calibration), and **`dominant_failure_mode`** (mechanistic clue). Check **`frac_samples_flagged`** (and `nolabel_padj` if you have `-label` controls) to tell persistent locus-specific artifacts apart from single-sample flukes.
+
+#### Failure modes (`dominant_failure_mode` / `failure_mode`)
+
+| Tag | Pattern in mutation histogram | Typical biological / technical cause |
+| :--- | :--- | :--- |
+| `"ok"` | Passes `padj` or `tvd` threshold | Consistent with Binomial mixture model |
+| `"intermediate_spike"` | Excess reads with 1–2 mutations | Uncalled heterozygous/homozygous SNP or A-to-I / C-to-U RNA editing |
+| `"high_mut_tail"` | Excess reads with 4+ mutations | Cross-mapping paralog/pseudogene reads or hyper-editing |
+| `"overdispersed_muts"` | Simultaneous excess of 0-mut and high-mut reads | Unmodeled mix of fast-turnover pre-mRNA and stable mRNA, or strong within-feature `pnew` heterogeneity |
+| `"deconvolution_mismatch"` | Contradictory equivalence classes (`TEC`s) | Unannotated isoform or inaccurate RSEM/Salmon weights in `EstimateIsoformFractions()` |
+| `"multilabel_mismatch"` | Joint multi-mutation bin discrepancy | Unexpected co-labeled reads (e.g., doublets in TILAC) |
+| `"nolabel_anomaly"` | Excess mutations in `tl == 0` sample (`gof_residuals` only) | Background SNP, editing site, or alignment artifact independent of metabolic label |
+
+#### Complete column reference: mixture `gof` and `gof_residuals`
+
+**Feature summary table (`EZget(ezbdo, type = "gof", source_type = "fractions")`)**:
+
+| Column | Meaning |
+| :--- | :--- |
+| `mean_tvd` / `max_tvd` | Mean and worst single-sample Total Variation Distance ($\frac{1}{2}\sum_m |P_{\text{obs},m} - P_{\text{exp},m}| \in [0, 1]$) across labeled samples; represents the fraction of displaced reads. |
+| `padj_gof` / `pval_gof` | BH-adjusted and raw $\chi^2$ p-values testing overall mixture lack-of-fit across labeled samples. |
+| `dominant_failure_mode` | Most frequent `failure_mode` among flagged samples (or worst-`tvd` mode if only the combined cross-sample test is significant). |
+| `n_samples` / `n_labeled_samples` | Total samples and labeled (`tl > 0`) samples where the feature passed `min_reads`. |
+| `n_samples_flagged` / `frac_samples_flagged` | Count and proportion (`n_samples_flagged / n_samples`) of samples individually failing both `sample_padj_cutoff` and `sample_tvd_cutoff`. |
+| `mean_n` | Mean read count across passing labeled samples. |
+| `mean_kl_div` | Mean Kullback-Leibler divergence $\sum_m P_{\text{obs},m}\log(P_{\text{obs},m}/P_{\text{exp},m})$ across labeled samples (extra sensitive to rare tail spikes). |
+| `chisq_gof` / `df_gof` | Summed overdispersion-calibrated likelihood-ratio deviance and effective degrees of freedom across labeled samples. |
+| `nolabel_tvd` / `nolabel_pval` / `nolabel_padj` | *(Only when `tl == 0` samples exist)* Mean TVD, raw p-value, and BH-adjusted p-value in `-label` controls against a single `pold` Binomial model. |
+
+**Sample-level table (`EZget(ezbdo, type = "gof_residuals", source_type = "fractions")`)**:
+
+| Column | Meaning |
+| :--- | :--- |
+| `n` | Read count in this sample (or RPK-attributed read count for deconvolved isoforms). |
+| `est_fn` / `mle_fn` | Regularized fraction-new estimate from `ezbdo$fractions` vs. unpenalized read-level Binomial mixture MLE in this sample. |
+| `tvd` / `kl_div` | Sample-specific Total Variation Distance and KL divergence. |
+| `chisq_nominal` / `chisq_gof` / `df_gof` | Uncalibrated pooled-bin deviance, sample-overdispersion-calibrated deviance, and effective degrees of freedom. |
+| `std_dev` | Standardized root deviance $\sqrt{\text{chisq\_gof}/\text{df\_gof}}$ (`~1` under a good fit). |
+| `pval_gof` / `padj_gof` | Within-sample raw and BH-adjusted $\chi^2$ p-values. |
+| `failure_mode` | Sample-specific failure tag (`"ok"` if unflagged). |
+
+
+## Kinetic & dynamical systems goodness of fit (`type = "averages"` and `"dynamics"`)
+
+### Separating structural lack-of-fit from replicate noise
+
+Once fractions are estimated, you will often eventually run `AverageAndRegularize()` and/or `EZDynamics()`. Both of these will infer condition-wide averages of various kinetic parameters, such as the RNA degradation rate constant (kdeg). These estimates allow you to make predictions for what you *expect* the sample-specific fractions of labeled and unlabeled reads to be.  `AssessGoF()` compares the "measured" (technically estimated) fractions from `EstimateFractions()` to those predictions. Two different types of 
+comparisons are made:
+
+1. **Structural lack-of-fit (`_lof`)**: Does the kinetic model's predicted trajectory
+actually match the data?
+2. **Replicate overdispersion (`_rep`)**: Is there more replicate-to-replicate variability
+than expected?
+
+**Note on goodness-of-fit and label times**: In a standard single-label-time experiment, each condition's degradation rate (`kdeg`) is fit to a single timepoint—so the model curve is guaranteed to pass directly through each group's average, leaving no way to tell if the assumed decay trajectory is wrong (`padj_lof` will be `NA`). Testing whether the kinetic model itself is misspecified requires **multiple label times** where one trajectory must simultaneously fit several points. In contrast, replicate overdispersion (`padj_rep`) and sample-level residual checks remain available in any replicated design.
+
+### Running and visualizing kinetic / ODE GoF
+
+Let's simulate nuclear, cytoplasmic, and whole-cell NR-seq data across two label times (`tl = 1` and `3`) under the `0 -> N -> C -> 0` nuclear export model (`nuc2cyto`), and introduce two realistic perturbations:
+
+* **`Gene1` (misspecified kinetic mechanism)**: Non-steady-state / bypassed cytoplasmic turnover (high cytoplasmic fraction new at `tl = 1` that drops by `tl = 3`), violating the `0 -> N -> C -> 0` trajectory while keeping valid two-component Binomial read counts within each sample.
+* **`sampleF` (sample-level technical bias)**: Loss of mutated reads mimicking metabolic label dropout in a single replicate.
+
+```{r, message = FALSE}
+sim_dyn <- EZSimulate(
+  nfeatures = 100,
+  ntreatments = 1,
+  nreps = 2,
+  mode = "dynamics",
+  label_time = c(1, 3),
+  dynamics_preset = "nuc2cyto"
+)
+
+# Perturb cB so Gene1 violates 0 -> N -> C -> 0 kinetics and sampleF suffers 4sU dropout
+tl1_cyto <- sim_dyn$metadf$sample[sim_dyn$metadf$compartment != "nuclear" & sim_dyn$metadf$tl == 1]
+
+g1_rows <- sim_dyn$cB %>%
+  filter(GF == "Gene1") %>%
+  slice(rep(row_number(), n)) %>%
+  mutate(
+    is_new = rbinom(n(), 1L, ifelse(sample %in% tl1_cyto, 0.85, 0.12)) == 1L,
+    TC = ifelse(is_new, rbinom(n(), nT, 0.05), rbinom(n(), nT, 0.001))
+  ) %>%
+  count(sample, GF, TC, nT, name = "n")
+
+cB_dyn <- bind_rows(
+  sim_dyn$cB %>% filter(GF != "Gene1"),
+  g1_rows
+) %>%
+  mutate(
+    # Simulate 4sU dropout (loss of mutated reads) in sampleF
+    n = ifelse(sample == "sampleF" & TC >= 1, pmax(1L, floor(n * 0.45)), n)
+  )
+
+ez_dyn <- EZbakRData(cB_dyn, sim_dyn$metadf)
+ez_dyn <- EstimateFractions(ez_dyn)
+
+feature_lengths <- tibble(GF = unique(cB_dyn$GF), length = 1000)
+
+ez_dyn <- AverageAndRegularize(
+  ez_dyn,
+  formula_mean = ~ tl:compartment - 1,
+  type = "fractions",
+  feature_lengths = feature_lengths,
+  parameter = "logit_fraction_highTC"
+)
+
+ez_dyn <- EZDynamics(
+  ez_dyn,
+  graph = ode_models$nuc2cyto$graph,
+  sub_features = "GF",
+  grouping_features = "GF",
+  sample_feature = "compartment",
+  modeled_to_measured = ode_models$nuc2cyto$formulas
+)
+
+# Assess both mixture GoF and ODE GoF on the same object
+ez_dyn <- AssessGoF(ez_dyn, type = "fractions")
+ez_dyn <- AssessGoF(ez_dyn, type = "dynamics")
+```
+
+*(Assessing a standard linear/kinetic model from `AverageAndRegularize()` works identically via `AssessGoF(ezbdo, type = "averages")`.)*
+
+Let's inspect feature-level structural lack-of-fit (`plot_type = "volcano"`), sample-wide residual bias (`plot_type = "sample_qc"`), and continuous ODE trajectory overlays (`EZFitPlot()`):
+
+```{r, fig.align = 'center'}
+EZGoFPlot(ez_dyn,
+          source_type = "dynamics",
+          plot_type = "volcano",
+          features_to_highlight = "Gene1")
+```
+
+One outlier is exactly what we expected: Gene1!
+
+```{r, fig.align = 'center'}
+# Sample-level residual boxplots immediately spotlight the downward shift in sampleF!
+EZGoFPlot(ez_dyn,
+          source_type = "dynamics",
+          plot_type = "sample_qc")
+```
+
+sampleF has systematic deviation from the predicted trends, also as expected!
+
+*(Two additional `EZGoFPlot()` views—`plot_type = "obs_vs_pred"` and `plot_type = "residual_trend"`—let you check global parity against `y = x` and trends across `tl` or predicted fraction.)*
+
+```{r, fig.width = 7, fig.height = 3.8, fig.align = 'center'}
+EZFitPlot(ez_dyn,
+          source_type = "dynamics",
+          rank_by = "worst_lof",
+          top_n = 2)
+```
+
+Inspecting specific features highlights both of these systematic deviations.
+
+In `EZFitPlot()`, solid curves show the fitted ODE trajectories across time while points and error bars show replicate `EstimateFractions()` observations and 95% confidence intervals—making it clear why `Gene1` cannot be explained by `0 -> N -> C -> 0`.
+
+### Fetching and interpreting kinetic & ODE GoF metrics
+
+When multiple GoF tables coexist in the same `EZbakRData` object (here, both `"fractions"` and `"dynamics"`), pass `source_type` to `EZget()`:
+
+```{r}
+dyn_gof <- EZget(ez_dyn, type = "gof", source_type = "dynamics")
+dyn_res <- EZget(ez_dyn, type = "gof_residuals", source_type = "dynamics")
+
+dyn_gof %>%
+  arrange(padj_lof) %>%
+  select(GF, wrmse_fn, padj_lof, padj_lof_joint, padj_rep) %>%
+  head(5)
+```
+
+**What to prioritize first**:
+
+1. **`wrmse_fn`** (effect size on the `[0, 1]` fraction scale; e.g., `0.10` = 10 percentage points error) paired with **`padj_lof`** (tests whether the kinetic/ODE trajectory shape itself is wrong).
+2. **`padj_lof_joint`** (and `wrmse_log10_cov`) when running `EZDynamics()` with `use_coverage = TRUE`, which jointly tests both fraction trajectories and steady-state read abundances.
+3. **`padj_rep`** (and `EZGoFPlot(plot_type = "sample_qc")`) to catch noisy replicates or outlier samples.
+
+#### Complete column reference: kinetic & ODE `gof` and `gof_residuals`
+
+**Feature summary table (`EZget(ezbdo, type = "gof", source_type = "averages" / "dynamics")`)**:
+
+| Column | Meaning |
+| :--- | :--- |
+| `wrmse_fn` | Uncertainty-weighted RMSE of `obs_fn - pred_fn` on `[0, 1]` (default volcano X-axis). |
+| `padj_lof` / `pval_lof` | BH-adjusted and raw p-values for **structural lack-of-fit** of cell means around the model trajectory (`NA` when `df_lof == 0`). |
+| `padj_rep` / `pval_rep` | BH-adjusted and raw $\chi^2$ p-values for **replicate overdispersion** within identical experimental cells. |
+| `mae_fn` / `max_abs_resid_fn` | Unweighted mean and worst single-observation `|obs_fn - pred_fn|` on `[0, 1]`. |
+| `mean_signed_resid_fn` | Uncertainty-weighted signed mean of `obs_fn - pred_fn` (volcano X-axis when `signed = TRUE`; flags systematic under- or over-prediction). |
+| `n_obs` / `n_groups` | Number of evaluated observations and distinct experimental cells (condition $\times$ compartment/species $\times$ `tl`). |
+| `n_params` / `n_at_bounds` | Number of trajectory parameters and how many hit optimization box bounds (active boundary violations retain 1 constrained degree of freedom). |
+| `mean_coverage` | Mean read count `n` across evaluated observations. |
+| `chisq_lof` / `df_lof` | Dispersion-moderated between-group lack-of-fit statistic and degrees of freedom (`n_groups - p_free`). |
+| `chisq_rep` / `df_rep` | Measurement-weighted within-group replicate sum of squares and degrees of freedom (`n_obs - n_groups`). |
+| `dispersion_factor` | Empirical Bayes (or global) replicate biological overdispersion multiplier $\hat{\phi}_f \ge 1$ used to scale `chisq_lof` and `chisq_total`. |
+| `chisq_total` / `df_total` / `reduced_chisq` | Combined dispersion-scaled $\chi^2$, `df_rep + df_lof`, and `chisq_total / df_total` (`~1` under a good fit). |
+| `aic` / `bic` | `chisq_total + 2 * n_params` and `chisq_total + log(n_obs) * n_params` for comparing competing formulas or ODE graphs on the same feature. |
+| `wrmse_log10_cov` | *(`dynamics` with `use_coverage = TRUE`)* Weighted RMSE of observed vs. ODE steady-state $\log_{10}$ normalized read counts (`0.3` $\approx$ 2-fold error). |
+| `chisq_lof_cov` | *(`dynamics` with `use_coverage = TRUE`)* Unscaled lack-of-fit $\chi^2$ of cell-mean $\log_{10}$ abundances around ODE steady-state predictions. |
+| `chisq_lof_joint` / `df_lof_joint` / `pval_lof_joint` / `padj_lof_joint` | *(`dynamics` with `use_coverage = TRUE`)* Joint structural lack-of-fit statistic, degrees of freedom, and p-values combining fraction trajectories and steady-state abundances across all ODE parameters. |
+
+**Sample-level table (`EZget(ezbdo, type = "gof_residuals", source_type = "averages" / "dynamics")`)**:
+
+| Column | Meaning |
+| :--- | :--- |
+| `measured_specie` | *(`dynamics` only)* Assayed RNA species formula target for this observation. |
+| `obs_fn` / `pred_fn` / `resid_fn` | Observed fraction new, model-predicted fraction new, and `obs_fn - pred_fn` on `[0, 1]`. |
+| `obs_logit_fn` / `pred_logit_fn` / `resid_logit_fn` | Observed, predicted, and residual values on the unconstrained `logit(fn)` scale. |
+| `std_resid` | Profile-CI-aware standardized residual ($z$-score; handles `obs_fn = 0` or `1` boundary observations via one-sided 95% profile bounds). |
+| `ci_lower_fn` / `ci_upper_fn` | 95% confidence interval bounds on `obs_fn` (drawn as error bars in `EZFitPlot()`). |
+| `n` | Read count for this observation. |
+| `obs_log10_cov` / `pred_log10_cov` / `resid_log10_cov` / `std_resid_cov` | *(`dynamics` with `use_coverage = TRUE`)* Observed vs. predicted steady-state $\log_{10}$ abundance, their $\log_{10}$ fold-difference, and standardized coverage $z$-residual. |
+
+
+## Practical troubleshooting guide
+
+| Diagnostic pattern | Likely cause | Recommended action |
+| :--- | :--- | :--- |
+| Many `"intermediate_spike"` features (and low `nolabel_padj`) | Uncalled SNPs or RNA editing sites | Enable or relax SNP-calling filters in `fastq2EZbakR` using `-label` controls |
+| `"high_mut_tail"` features | Cross-mapping paralog/multi-feature reads or hyper-editing | Filter multi-mapping reads (`remove_multi_features = TRUE` in `EstimateFractions()` or stricter aligner settings) |
+| `"overdispersed_muts"` on gene-level (`GF`) features | Intronic pre-mRNA mixed with exonic mRNA, or feature-specific `pnew` shifts | Quantify exonic reads (`features = "XF"`), model pre-mRNA explicitly in `EZDynamics()`, or try `EstimateFractions(strategy = "hierarchical")` |
+| `"deconvolution_mismatch"` in isoform GoF | Incomplete transcript annotation or noisy isoform abundance weights | Treat deconvolved `kdeg` for those isoforms with caution; inspect `TEC` coverage |
+| Sample-wide shift away from `0` in `EZGoFPlot(plot_type = "sample_qc")` | Metabolic label dropout or unmodeled batch effect | Run `CorrectDropout()` (if `-label` controls exist) or include batch factors in `AverageAndRegularize(formula_mean = ...)` |
+| Significant `padj_lof` / `padj_lof_joint` in `averages` or `dynamics` | Kinetic or compartmental model is too simple or steady-state is violated | Expand the `EZDynamics()` `graph` (e.g., allow nuclear/pre-RNA degradation via `nuc2cytowithNdeg` / `preRNAwithPdeg`, checked via `aic`/`bic`) or use `EstimateKinetics(strategy = "NSS")` |

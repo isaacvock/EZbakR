@@ -39,7 +39,7 @@ get_density <- function(x, y, ...) {
 Increasingly, subcellular fractionation is being combined with NR-seq, allowing
 researchers to probe the kinetics of flow between subcellular compartments. EZbakR's
 `EZDynamics()` function supports the analysis of this kind of data through generalized
-dynamical systems modeling. In addition, `EZDyamics()`, when combined with fastq2EZbakR's
+dynamical systems modeling. In addition, `EZDynamics()`, when combined with fastq2EZbakR's
 flexible feature assignment strategy, opens the door for analyses of both premature and
 mature RNA dynamics. It is even possible to combine these two. In this vignette,
 we will learn how to run `EZDynamics()`.
@@ -50,7 +50,7 @@ Here we will quickly cover a couple use cases to efficiently showcase the full
 extent of `EZDynamics()` functionality. In the sections that follow, a more detailed
 description of everything shown here will be provided.
 
-### Modeling cytoplasmic to nuclear flow
+### Modeling nuclear to cytoplasmic flow
 
 Data: Whole cell, cytoplasmic fraction, and nuclear fraction NR-seq data. 
 
@@ -493,7 +493,7 @@ The main differences to note are:
 1. There is no sample_feature in EZDynamics. This is because all modeled species (premature and mature RNA) are assayed in all samples.
 
 
-### Cytoplasmic to nuclear flow of pre- and mature RNA
+### Nuclear to cytoplasmic flow of pre- and mature RNA
 
 We can mix and match the two types of data we have discussed thus far, namely nuclear + cytoplasmic fractionation and total RNA data. This allows us to model the nuclear and cytoplasmic dynamics of both premature and mature RNA. For example, consider a model where nuclear premature RNA (NP) is first synthesized, and then either processed to mature nuclear RNA (NM), or exported to the cytoplasm (CP). NM can then be exported to mature cytoplasmic RNA (CM), and CP can be processed to CM. The graph in this case looks like:
 
@@ -653,7 +653,7 @@ In this section we will explore in greater detail the many components that make 
 1. A list of formulas describing how each measured feature relates to the features you model in your "graph".
 1. The feature columns mentioned in your list of formulas (`sub_features`).
 1. The feature columns that will define the overarching features for which you estimate kinetic parameters (`grouping_features`).
-1. The column in your metadf that distinguishes different samples assying different species of RNA. (`sample_feature`).
+1. The column in your metadf that distinguishes different samples assaying different species of RNA (`sample_feature`).
 
 To read more about each of these, check out the function documentation with ?EZDynamics. The "graph" and list of formulas will be described more below.
 
@@ -762,13 +762,13 @@ mtom <- list(
 
 I am assuming that M represents mature RNAs in our graph, and P represents premature RNA. To interpret this set of formulas, we need to note one more thing: GF will be called both a `grouping_feature` and a `sub_feature` in our call to `EZDynamics()`. As a refresher, `grouping_features` are those which never have a value of "__no_feature", or some similar null-assignment value. They will be included in the final output. `sub_features` are what you describe in `modeled_to_measured`; they represent specific RNA species, or combinations of RNA species.
 
-In our example, because GF is both a grouping feature and a sub feature, the GF in our `modeled_to_measured` actually represents all entries of our cB where XF is "__no_feature" (or similar). That is to say, it represents the case where reads overlap intronic portions of the gene. That is why, or formulas say that:
+In our example, because GF is both a grouping feature and a sub feature, the GF in our `modeled_to_measured` actually represents all entries of our cB where XF is "__no_feature" (or similar). That is to say, it represents the case where reads overlap intronic portions of the gene. That is why our formulas say that:
 
 1. XF represents the mature RNA
 1. GF represents the premature RNA
 
 
-**NOTE**: There is a bit of complexity here, as while its true that intronic reads are definitively premature RNA, exonic reads are not necessarily definitely mature RNA. It would be more accurate to split XF into two features, call it XF_sj and XF_nosj (sj = splice junction). The former would be instances of splice junction mapping reads, which are (almost) definitively mature RNA, while the latter would represent reads that don't overlap splice junctions, and could thus come from either premature or mature RNA. The formula in this case would look like:
+**NOTE**: There is a bit of complexity here, as while it's true that intronic reads are definitively premature RNA, exonic reads are not necessarily definitely mature RNA. It would be more accurate to split XF into two features, call it XF_sj and XF_nosj (sj = splice junction). The former would be instances of splice junction mapping reads, which are (almost) definitively mature RNA, while the latter would represent reads that don't overlap splice junctions, and could thus come from either premature or mature RNA. The formula in this case would look like:
 
 ```{r}
 mtom <- list(
@@ -827,7 +827,8 @@ For your convenience, EZbakR provides a list of popular graphs and formulas in a
 1. preRNA: Simplest model of pre-RNA and mature RNA dynamics: 0 -> P -> M -> 0
 1. preRNAwithPdeg: Same as preRNA, but now pre-RNA can also degrade.
 1. nuc2cytowithNdeg: Same as nuc2cyto, but now nuclear RNA can also degrade.
-1. subtlseq: Subcellular TimeLapse-seq model, similar to that described in [Iestwaart et al., 2024](https://doi.org/10.1016/j.molcel.2024.06.008). Simplest model discussed there, lacking nuclear degradation: 0 -> CH -> NP -> CY -> PL -> 0, and CY can also degrade. CH = chromatin bound RNA. NP = nucleoplasmic RNA, not on chromatin. CY = cytoplasmic RNA, not on polysomes. PL = polysome bound RNA.
+1. nuc2cytowithpreRNA: Combined nuclear/cytoplasmic pre-RNA and mature RNA model: 0 -> NP -> NM -> CM -> 0, with NP -> CP -> CM.
+1. subtlseq: Subcellular TimeLapse-seq model, similar to that described in [Ietswaart et al., 2024](https://doi.org/10.1016/j.molcel.2024.06.008). Simplest model discussed there, lacking nuclear degradation: 0 -> CH -> NP -> CY -> PL -> 0, and CY can also degrade. CH = chromatin bound RNA. NP = nucleoplasmic RNA, not on chromatin. CY = cytoplasmic RNA, not on polysomes. PL = polysome bound RNA.
 
 In the Quickstart documentation above, I used the formula lists stored in these in several cases to simplify the code. They make some hard assumptions about what you called certain compartments in your metadf, so be a bit careful with this.
 
@@ -861,7 +862,7 @@ a specified model for a given feature:
 
 The former is an "internally normalized" quantity. It can be thought of as a ratio of
 read counts from the same sample (# of reads from labeled RNA / total # of reads).
-In RNA-seq read count normalization scale factor applied to the numerator would be
+Any RNA-seq read count normalization scale factor applied to the numerator would be
 applied to the denominator as well, and thus cancel out. Thus, the fraction labeled
 does not require read count normalization to be used effectively.
 
@@ -875,7 +876,7 @@ kinetic parameters. This has the downside of greatly limiting the complexity of 
 you can fit.
 1. Let EZbakR infer scale factors automatically.
 
-1 is technically ideal, though getting spike-ins to work well can be a easier said than done. If scale factors are not provided, EZbakR will try 3. This strategy works by modeling the total fraction of reads that are labeled in a given sample as a function of the same value in other samples. For example, if you have cytoplasmic, nuclear, and whole cell NR-seq data, you can model the whole cell global fraction labeled as a weighted average of the cytoplasmic and nuclear global fraction labeled's. The weights are related to the relative molecular abundances of cytoplasmic and nuclear RNA, making them precisely the normalization scale factors we are after.
+1 is technically ideal, though getting spike-ins to work well can be easier said than done. If scale factors are not provided, EZbakR will try 3. This strategy works by modeling the total fraction of reads that are labeled in a given sample as a function of the same value in other samples. For example, if you have cytoplasmic, nuclear, and whole cell NR-seq data, you can model the whole cell global fraction labeled as a weighted average of the cytoplasmic and nuclear global fraction labeled's. The weights are related to the relative molecular abundances of cytoplasmic and nuclear RNA, making them precisely the normalization scale factors we are after.
 
 
 ### Uncertainty quantification

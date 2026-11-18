@@ -403,6 +403,7 @@ EstimateFractions.EZbakRData <- function(obj, features = "all",
   ### Hack to deal with devtools::check() NOTEs
   n <- params <- coverage <- pold <- pnew <- lpnew_uncert <- pnew_prior <- ..colvect <- NULL
   fit <- mixture_fit <- present <- ci_lower_fn <- ci_upper_fn <- NULL
+  pnew_prior_init <- p1 <- p2 <- p1_u <- p2_u <- NULL
 
   rm(..colvect)
 
@@ -1166,6 +1167,7 @@ EstimateFractions.EZbakRArrowData <- function(obj, features = "all",
   ### Hack to deal with devtools::check() NOTEs
   present <- n <- reads <- params <- coverage <- pold <- pnew <- sd <- lpnew_uncert <- pnew_prior <- ..colvect <- NULL
   fit <- mixture_fit <- ci_lower_fn <- ci_upper_fn <- NULL
+  pnew_prior_init <- p1 <- p2 <- p1_u <- p2_u <- NULL
 
   rm(..colvect)
 
@@ -3741,7 +3743,7 @@ solve_tcmm_standard_dt <- function(dt, features_to_analyze, pop_col, base_col,
   dt_work <- data.table::as.data.table(dt)
 
   if(nrow(dt_work) == 0L){
-    empty_dt <- dt_work[, ..grp_cols]
+    empty_dt <- dt_work[, grp_cols, with = FALSE]
     empty_dt[[natural_col_name]] <- numeric(0)
     empty_dt[[col_name]] <- numeric(0)
     empty_dt[[uncertainty_col]] <- numeric(0)
@@ -3763,7 +3765,7 @@ solve_tcmm_standard_dt <- function(dt, features_to_analyze, pop_col, base_col,
     nl_dt[[ci_upper_col]] <- 0
     out_cols <- c("sample", features_to_analyze, natural_col_name, col_name,
                   uncertainty_col, ci_lower_col, ci_upper_col, "n")
-    out_parts[[length(out_parts) + 1L]] <- nl_dt[, ..out_cols]
+    out_parts[[length(out_parts) + 1L]] <- nl_dt[, out_cols, with = FALSE]
   }
 
   if(any(!is_nolabel)){
@@ -3790,7 +3792,7 @@ solve_tcmm_standard_dt <- function(dt, features_to_analyze, pop_col, base_col,
       sample_grp = lb_dt[["sample"]][grp_end]
     )
 
-    lb_out <- lb_dt[grp_end, ..grp_cols]
+    lb_out <- lb_dt[grp_end, grp_cols, with = FALSE]
     lb_out[[natural_col_name]] <- inv_logit(fit_res$logit_fn)
     lb_out[[col_name]] <- fit_res$logit_fn
     lb_out[[uncertainty_col]] <- fit_res$se
@@ -3820,7 +3822,7 @@ solve_tcmm_hier_dt <- function(dt, features_to_analyze, pop_col, base_col,
   dt_work <- data.table::as.data.table(dt)
 
   if(nrow(dt_work) == 0L){
-    empty_dt <- dt_work[, ..grp_cols]
+    empty_dt <- dt_work[, grp_cols, with = FALSE]
     empty_dt[, c("p1", "p2", "p1_u", "p2_u", "pold", "n") :=
                .(numeric(0), numeric(0), numeric(0), numeric(0), numeric(0), numeric(0))]
     if(compute_ci){
@@ -4221,7 +4223,7 @@ solve_tcmm_hier_dt <- function(dt, features_to_analyze, pop_col, base_col,
       }
     }
 
-    lb_out <- lb_dt[grp_end, ..grp_cols]
+    lb_out <- lb_dt[grp_end, grp_cols, with = FALSE]
     lb_out[, c("p1", "p2", "p1_u", "p2_u", "pold", "n") :=
              .(e1_all, e2_all, p1_u, p2_u, pold_vec[grp_end], N_grp)]
     if(compute_ci){
@@ -4264,7 +4266,7 @@ solve_general_mixture_dt <- function(dt, features_to_analyze, mutrate_design,
   listnames <- c(ism_cols, frac_cols, se_cols, ci_lo_cols, ci_hi_cols)
 
   if(nrow(dt_work) == 0L){
-    empty_dt <- dt_work[, ..grp_cols]
+    empty_dt <- dt_work[, grp_cols, with = FALSE]
     for(cn in listnames) empty_dt[[cn]] <- numeric(0)
     empty_dt[["n"]] <- numeric(0)
     return(dplyr::as_tibble(empty_dt))
@@ -4303,7 +4305,7 @@ solve_general_mixture_dt <- function(dt, features_to_analyze, mutrate_design,
         nl_dt[[ci_hi_cols[k]]] <- rep(if(is_all_low[k]) 1 else 0, n_nl)
       }
       col_ord <- c("sample", features_to_analyze, listnames, "n")
-      out_parts[[s_idx]] <- nl_dt[, ..col_ord]
+      out_parts[[s_idx]] <- nl_dt[, col_ord, with = FALSE]
       next
     }
 
@@ -4563,7 +4565,7 @@ solve_general_mixture_dt <- function(dt, features_to_analyze, mutrate_design,
       ci_hi_mat[, k] <- pr_k$ci_upper_fn
     }
 
-    s_out <- s_dt[grp_end, ..grp_cols]
+    s_out <- s_dt[grp_end, grp_cols, with = FALSE]
     for(k in seq_len(K)) s_out[[ism_cols[k]]] <- clr_mat[, k]
     for(k in seq_len(K)) s_out[[frac_cols[k]]] <- frac_mat[, k]
     for(k in seq_len(K)) s_out[[se_cols[k]]] <- se_mat[, k]

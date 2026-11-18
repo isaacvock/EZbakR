@@ -24,7 +24,7 @@ account for complex experimental designs and potential batch effects. This is th
 task of generalized linear modeling, and in this vignette, we will see how to perform
 this kind of modeling in EZbakR. EZbakR significantly improves upon its predecessor,
 bakR, by allowing users to specify any identifiable design matrix, thus supporting
-a wider arrange of comparative analyses than was possible in bakR.
+a wider array of comparative analyses than was possible in bakR.
 
 ```{r setup}
 library(EZbakR)
@@ -44,7 +44,7 @@ to fit will be done through the `formula_mean` argument of EZbakR's `AverageAndR
 
 Often, the difference between samples can be described with a single factor.
 For example, you may have performed NR-seq in wild-type (WT) cells, and a variety
-of knock-out (KO) cell lines. In this, case, there will likely be a single
+of knock-out (KO) cell lines. In this case, there will likely be a single
 experimental detail factor in your metadf:
 
 ```{r, echo = F, results = 'hide'}
@@ -115,7 +115,7 @@ ezbdo <- CompareParameters(ezbdo,
                            reference = "WT",
                            experimental = "KO")
 
-# Calculate differe in log(ksyn) between the two genotypes
+# Calculate difference in log(ksyn) between the two genotypes
 ezbdo <- CompareParameters(ezbdo,
                            parameter = "log_ksyn",
                            design_factor = "genotype",
@@ -382,7 +382,7 @@ the reference level genotype (WT in this case)**.
 4. `genotypeKO:treatmentdrug`: This is the "interaction term", but more intuitively
 represents the difference in the KO and WT drug effects.
 
-With this in mind, some things you can do with `CompareParameters()` includes:
+With this in mind, some things you can do with `CompareParameters()` include:
 
 ```{r}
 # Assess significance of interaction term
@@ -421,7 +421,7 @@ technical factors that can influence parameter estimates and thus risk being a
 confounder in your analyses. Linear modeling offers a simple strategy for attempting
 to deal with this problem. Consider the following metadf:
 
-```{r, echo = F, hide = T}
+```{r, echo = F, results = 'hide'}
 metadf <- tibble(sample = c("sampleA", "sampleB", "sampleC", "sampleD", "sampleE",
                             "sampleF", "sampleG", "sampleH", "sampleI", "sampleJ"),
                  tl = c(0, 2, 2, 2, 2,
@@ -441,7 +441,7 @@ knitr::kable(metadf, "pipe")
 There is a technical factor I am calling "batch" that we suspect may influence
 our NR-seq data, independent of any biological difference between the two
 genotypes. We would like to "regress out" this technical effect. This can be done
-by specifying `~genotype + batch` in the `formula_mean` of `AverageAndRegularize()`.:
+by specifying `~genotype + batch` in the `formula_mean` of `AverageAndRegularize()`:
 
 ```{r}
 # factor() ensures that WT is treated as the reference
@@ -516,7 +516,7 @@ to estimate all parameters in your desired linear model, EZbakR won't let you fi
 said model. Consider the following metadf, which contains a technical factor "batch"
 as in the other examples discussed in this section:
 
-```{r, echo = F, hide = T}
+```{r, echo = F, results = 'hide'}
 metadf <- tibble(sample = c("sampleA", "sampleB", "sampleC", "sampleD", "sampleE",
                             "sampleF", "sampleG", "sampleH", "sampleI", "sampleJ"),
                  tl = c(0, 2, 2, 2, 2,

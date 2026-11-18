@@ -160,8 +160,9 @@ modeling stage (\code{type = "fractions"}, assessing \code{EstimateFractions()})
 cross-sample kinetic / compartmental ODE modeling stage (\code{type = "averages"} or
 \code{"dynamics"}, assessing \code{AverageAndRegularize()} or \code{EZDynamics()}):
 \itemize{
-\item \strong{Mixture model goodness of fit (\code{type = "fractions"})}: Evaluates how well
-each feature's observed read-level mutational distribution in \code{cB} (or \code{EZbakRArrowData})
+\item \strong{Mixture model goodness of fit (\code{type = "fractions"})}: Evaluates the
+goodness of the EZbakR mutational mixture model fit. More specifically, evaluates how well
+each feature's observed read-level mutational distribution
 agrees with the exact \code{nT}-conditioned Binomial mixture distribution implied by
 \code{EstimateFractions()}, \code{EstimateIsoformFractions()}, or \code{DeconvolveFractions()}
 (supporting standard 2-component, hierarchical feature-specific \code{pnew}, general
@@ -175,10 +176,11 @@ tags (including \code{"deconvolution_mismatch"} when equivalence classes disagre
 isoform deconvolution). Input filtering (\code{min_reads}, \code{min_samples},
 \code{feature_sample_counts}) determines which features enter the \code{AssessGoF()} output tables
 without modifying \code{obj$fractions} or any other table.
-\item \strong{Kinetic & ODE goodness of fit (\code{type = "averages"} or \code{"dynamics"})}:
-Evaluates how well model-predicted sample-by-sample fractions (\verb{fraction_high<muttype>})
+\item \strong{Kinetic & ODE goodness of fit (\code{type = "averages"} or \code{"dynamics"})}: Evaluates
+the goodness of the RNA-kinetics model fit. More specifically,
+evaluates how well model-predicted sample-by-sample fractions (\verb{fraction_high<muttype>})
 agree with \code{EstimateFractions()} point estimates and 95\% profile-likelihood confidence
-intervals, orthogonally decomposing total discrepancy into \strong{replicate overdispersion}
+intervals, decomposing total discrepancy into \strong{replicate overdispersion}
 (\code{chisq_rep}, \code{pval_rep}, \code{padj_rep}) and \strong{structural model lack-of-fit}
 (\code{chisq_lof}, \code{pval_lof}, \code{padj_lof}), alongside probability-scale \code{wrmse_fn}.
 }

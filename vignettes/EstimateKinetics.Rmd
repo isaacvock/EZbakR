@@ -182,7 +182,7 @@ ezbdo <- EstimateKinetics(ezbdo,
 ### What is the "shortfeed" strategy?
 
 In the case of an extremely short label feed time (relative to the average
-half-life of RNA being analyzed), we can assume that there is no degradation
+half-life of RNA being analyzed), we can assume that there is no degradation of
 newly synthesized RNA during the label time. Thus, the following differential
 equation and solution to said ODE describes the dynamics of the new RNA:
 
@@ -215,7 +215,7 @@ the "standard" estimate strategy. This is no coincidence, as the assumption of
 a short feed is equivalent to assuming that $\theta$ is close to 0 (most of the
 RNA is old). It may also seem odd that this estimate is bounded between 0 
 and 1/tl, but this just reflects the assumption made by this strategy that RNA
-half lives are much shorter than the label time.
+half lives are much longer than the label time.
 
 
 ## Non-steady-state (NSS) analyses
@@ -229,9 +229,9 @@ assumption that RNA levels are at steady-state during the labeling. This
 assumption can be violated if a perturbation was applied to cells shortly
 before the start of, or during, labeling. It can also be violated if you are
 studying a process (e.g., development) where the state of the cells is changing
-over the course of the experiment. `EstimateKinetic()` can adjust its kinetic
+over the course of the experiment. `EstimateKinetics()` can adjust its kinetic
 parameter estimation strategy accordingly, though it requires making some
-assumptions about how the experiment was performed. See below for details
+assumptions about how the experiment was performed. See below for details.
 
 ### Requirements of the "NSS" strategy
 
@@ -271,7 +271,7 @@ metadf <- data.frame(
             "c"),
   reference = c("a",
                 "a",
-                "c")
+                "b")
 )
 ```
 
@@ -314,9 +314,6 @@ ezbdo <- EstimateKinetics(ezbdo,
                           grouping_factor = "group",
                           reference_factor = "ref")
 ```
-
-In this case, the only experimental details column of the metadf is called
-"treatment", so this is specified in `grouping_factors`.
 
 
 ### What is the "NSS" strategy?
@@ -377,7 +374,7 @@ the labeling period.
 ## Pulse-chase analyses
 
 The infrastructure is in place for EZbakR to support pulse-chase analyses of
-kinetic parmaeters (e.g., metadf can accept specification of a pulse and chase
+kinetic parameters (e.g., metadf can accept specification of a pulse and chase
 time). Thus, in the future, EZbakR will provide such support. That being said,
 I would like to take some time to argue against *almost* ever doing a pulse-chase
 NR-seq experiment. Pulse-chase experimental designs suffer from a number of 

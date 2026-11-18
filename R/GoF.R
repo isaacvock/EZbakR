@@ -5,8 +5,9 @@
 #' cross-sample kinetic / compartmental ODE modeling stage (`type = "averages"` or
 #' `"dynamics"`, assessing `AverageAndRegularize()` or `EZDynamics()`):
 #' \itemize{
-#'   \item \strong{Mixture model goodness of fit (`type = "fractions"`)}: Evaluates how well
-#'   each feature's observed read-level mutational distribution in `cB` (or `EZbakRArrowData`)
+#'   \item \strong{Mixture model goodness of fit (`type = "fractions"`)}: Evaluates the 
+#'   goodness of the EZbakR mutational mixture model fit. More specifically, evaluates how well
+#'   each feature's observed read-level mutational distribution
 #'   agrees with the exact `nT`-conditioned Binomial mixture distribution implied by
 #'   `EstimateFractions()`, `EstimateIsoformFractions()`, or `DeconvolveFractions()`
 #'   (supporting standard 2-component, hierarchical feature-specific `pnew`, general
@@ -20,12 +21,13 @@
 #'   isoform deconvolution). Input filtering (`min_reads`, `min_samples`,
 #'   `feature_sample_counts`) determines which features enter the `AssessGoF()` output tables
 #'   without modifying `obj$fractions` or any other table.
-#'   \item \strong{Kinetic & ODE goodness of fit (`type = "averages"` or `"dynamics"`)}:
-#'   Evaluates how well model-predicted sample-by-sample fractions (`fraction_high<muttype>`)
+#'   \item \strong{Kinetic & ODE goodness of fit (`type = "averages"` or `"dynamics"`)}: Evaluates
+#'   the goodness of the RNA-kinetics model fit. More specifically, 
+#'   evaluates how well model-predicted sample-by-sample fractions (`fraction_high<muttype>`)
 #'   agree with `EstimateFractions()` point estimates and 95% profile-likelihood confidence
-#'   intervals, orthogonally decomposing total discrepancy into \strong{replicate overdispersion}
+#'   intervals, decomposing total discrepancy into \strong{replicate overdispersion}
 #'   (`chisq_rep`, `pval_rep`, `padj_rep`) and \strong{structural model lack-of-fit}
-#'   (`chisq_lof`, `pval_lof`, `padj_lof`), alongside probability-scale `wrmse_fn`.
+#'   (`chisq_lof`, `pval_lof`, `padj_lof`), alongside probability-scale `wrmse_fn`. 
 #' }
 #'
 #' Summary statistics per feature are stored in `obj$gof[[output_name]]` and

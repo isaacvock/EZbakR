@@ -22,7 +22,7 @@ Quality control checks are an important part of any high throughput dataset anal
 library(EZbakR)
 ```
 
-**NOTE**: `EZQC()` is EZbakR's instantiation of bakR's  `QC_checks()`, though differs in a number of key ways. Thus, don't expect its output or behavior to exactly mimic that of `QC_checks()`. That being said, much of the discussion of QCing NR-seq data present in [bakR's vignette](https://simonlabcode.github.io/bakR/articles/Troubleshooting.html) is still relevant for interpreting EZbakR's output.
+**NOTE**: `EZQC()` is EZbakR's instantiation of bakR's `QC_checks()`, though differs in a number of key ways. Thus, don't expect its output or behavior to exactly mimic that of `QC_checks()`. That being said, much of the discussion of QCing NR-seq data present in [bakR's vignette](https://simonlabcode.github.io/bakR/articles/Troubleshooting.html) is still relevant for interpreting EZbakR's output.
 
 
 ## EZQC
@@ -32,7 +32,7 @@ library(EZbakR)
 1. An `EZbakRData` object. This can be created with `EZbakRData()`.
 1. An `EZbakRFractions` object. This is an `EZbakRData` object on which you have run `EstimateFractions()`.
 
-An example of both of these are shown below:
+Examples of both of these are shown below:
 
 ```{r}
 simdata <- EZSimulate(250)
@@ -76,15 +76,15 @@ Inside of the output objects (`qc` and `qc_fn` in the above code), you will find
     * Raw mutation rate should be high in samples fed the relevant label, and low in unfed samples.
 1. `Inferred_mutrates`: If you have a single mutation type in your cB, this will be a barplot of the inferred labeled and unlabeled read mutation rates in all samples. If you have multiple mutation types, then it will be a named list of similar barplots for each mutation type, as in `Raw_mutrates`.
     * The inferred labeled mutation rate is the rate of a mutation of a particular type seen in reads from RNA synthesized in the presence of the relevant metabolic label. The inferred unlabeled mutation rate is this same mutation rate, but in reads from RNA synthesized prior to labeling. These are sometimes referred to as the conversion and background rates, respectively.
-    * The plot includes a subtitle with some guidelines for interpretation. Inferred labeled mutation rates is preferably much higher than the unlabeled mutation rates in all samples.
+    * The plot includes a subtitle with some guidelines for interpretation. Inferred labeled mutation rates are preferably much higher than the unlabeled mutation rates in all samples.
 1. `Readcount_corr`: This is a list, whose elements are collections of read count correlation plots for a given group of replicates. Groups of replicates are determined by the provided metadf in your `EZbakRData` object. +label and -label replicates of a given treatment condition are grouped together.
 Different label times for the same treatment condition are also grouped together here.
     * The plots are named according to the samples compared (e.g., "sample1_vs_sample2").
 1. `Fraction_labeled_dist`: This is a list of density plots for each label fed sample. In the case of a single label experiment, these will be the distribution of estimated fraction labeled's for each sample. If you have multiple labels/mutation types, then this will be a list with density plots for each estimated fraction.
     * Ideally, these will peak around 1 / (# of populations). For a standard, single label experiment, this would be 0.5 (# of populations = 2; labeled and unlabeled).
-    * This is only present if you provided a `EZbakRFractions` object as input!
+    * This is only present if you provided an `EZbakRFractions` object as input!
 1. `Fraction_labeled_corr`: Same as `Readcount_corr`, but this time correlating fraction estimates provided by `EstimateFractions()`. Unlike in `Readcount_corr`, this excludes -label samples, and considers distinct label times distinct replicates.
-    * This is only present if you provided a `EZbakRFractions` object as input!
+    * This is only present if you provided an `EZbakRFractions` object as input!
 
 ### What to do if the QC looks iffy?
 
@@ -94,8 +94,8 @@ Possible solutions:
 
 1. Better read alignment settings to ensure recovery of high mutation content reads. [fastq2EZbakR's](https://github.com/isaacvock/fastq2EZbakR) default [config](https://github.com/isaacvock/fastq2EZbakR/blob/main/config/config.yaml) includes STAR settings used by multiple labs to help with this. Tools like [grandRescue](https://github.com/erhard-lab/grandRescue) developed by the Erhard lab may also help.
 1. If you ran fastq2EZbakR, did you properly set the strandedness of your library? You can check some of the intermediate files produced by fastq2EZbakR to test this hypothesis; see [here](https://fastq2ezbakr.readthedocs.io/en/latest/faq/) for details.
-1. If using a short label time, or if incorporation rates are low, EZbakR may just be having a tough time estimating the labeled read mutation rate. If you have -label data, you can use this to infer a single background mutation rate for all samples, and then estimate the labeled read mutation rate, fixing this unlabeled read mutation rate. This can be done by setting `pold_from_no_label=TRUE` in your call to `EstimateFractions()`. In fact, I even like defaulting to this setting when -label samples are available.
-1. You may need to optimize the concentration of metabolic label being fed to cells. A simple TAMRA-labeling dot blot assay can be used to broadly access the incorporation of metabolic label in your particular system.
+1. If using a short label time, or if incorporation rates are low, EZbakR may just be having a tough time estimating the labeled read mutation rate. If you have -label data, you can use this to infer a single background mutation rate for all samples, and then estimate the labeled read mutation rate, fixing this unlabeled read mutation rate. This can be done by setting `pold_from_nolabel = TRUE` in your call to `EstimateFractions()`. In fact, I even like defaulting to this setting when -label samples are available.
+1. You may need to optimize the concentration of metabolic label being fed to cells. A simple TAMRA-labeling dot blot assay can be used to broadly assess the incorporation of metabolic label in your particular system.
 
 
 **Potential problem #2**: Labeled read mutation rates are acceptable, but raw mutation rates are low. In this case, fraction estimate replicate correlation may also be low.
@@ -103,11 +103,11 @@ Possible solutions:
 Possible solutions:
 
 1. You may need to use a longer label time to ensure better representation of labeled RNA in your samples.
-1. Either way, using `pold_from_no_label=TRUE` in your `EstimateFractions()` call, as described above, is likely a good idea to ensure accurate labeled read mutation rate inference.
+1. Either way, using `pold_from_nolabel = TRUE` in your `EstimateFractions()` call, as described above, is likely a good idea to ensure accurate labeled read mutation rate inference.
 
 **Potential problem #3**: Poor correlation of read counts across replicates, especially between -label and +label, or different label time +label, samples.
 
-This may be a sign of dropout, described [here](https://doi.org/10.1093/nar/gkae120), , [here](https://doi.org/10.1101/2023.05.24.542133), and [here](https://simonlabcode.github.io/bakR/articles/Dropout.html). This is when reads from highly labeled RNA are underrepresented in +label data. You can try:
+This may be a sign of dropout, described [here](https://doi.org/10.1093/nar/gkae120), [here](https://doi.org/10.1101/2023.05.24.542133), and [here](https://simonlabcode.github.io/bakR/articles/Dropout.html). This is when reads from highly labeled RNA are underrepresented in +label data. You can try:
 
 1. Decreasing metabolic label concentration.
 1. Decreasing metabolic label feed time.
@@ -115,7 +115,7 @@ This may be a sign of dropout, described [here](https://doi.org/10.1093/nar/gkae
 1. Better read alignment settings to avoid loss of high mutation content reads. See the potential solutions to problem #1 described above for details.
 1. Running EZbakR's `CorrectDropout()` to try and bioinformatically correct for the biases induced by dropout. This requires you to have -label data from all distinct biological conditions. 
 
-Suggestions 1 and 2 can help no matter the cause of dropout (e.g., adverse effects of the label, RNA handling problems, read alignment problems, etc.). The other three suggestions are more suited in the case when dropout does not seem to have a biological origin. A general, proven strategy to distinguish the cause of dropout does not exist, but you may want to try assessing trends in sequencing tracks (e.g., look dropoff in coverage near the 3' end of transcripts upon increased labeling) or performing differential expression and GO analysis of + and -label samples to assess potential upregulation of transcriptional repression stress pathways.
+Suggestions 1 and 2 can help no matter the cause of dropout (e.g., adverse effects of the label, RNA handling problems, read alignment problems, etc.). The other three suggestions are more suited in the case when dropout does not seem to have a biological origin. A general, proven strategy to distinguish the cause of dropout does not exist, but you may want to try assessing trends in sequencing tracks (e.g., look for dropoff in coverage near the 3' end of transcripts upon increased labeling) or performing differential expression and GO analysis of + and -label samples to assess potential upregulation of transcriptional repression stress pathways.
 
 
 ## Characteristics of a good NR-seq experiment:
